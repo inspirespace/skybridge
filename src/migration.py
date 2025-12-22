@@ -490,16 +490,19 @@ def _migrate_single(
     dry_run: bool,
 ) -> MigrationResult:
     try:
+        aircraft = None
         if not dry_run:
             metadata = _extract_metadata(detail.raw_payload)
             tail_number = metadata.get("tail_number")
             aircraft_type = metadata.get("aircraft_type")
-            aircraft = None
             if tail_number:
                 aircraft = flysto.ensure_aircraft(tail_number, aircraft_type)
             if aircraft and aircraft.get("id"):
                 flysto.assign_aircraft(str(aircraft.get("id")))
         flysto.upload_flight(detail, dry_run=dry_run)
+        if not dry_run and aircraft and aircraft.get("id") and detail.file_path:
+            filename = Path(detail.file_path).name
+            flysto.assign_aircraft_for_file(filename, str(aircraft.get("id")))
         return MigrationResult(flight_id=detail.id, status="ok")
     except Exception as exc:  # noqa: BLE001 - surfacing per-flight failure
         return MigrationResult(

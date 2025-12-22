@@ -195,6 +195,62 @@ class FlyStoClient:
             )
         self.assigned_avionics.add(key)
 
+
+    def resolve_log_for_file(self, filename: str) -> tuple[str | None, str | None]:
+        session = requests.Session()
+        self._ensure_session(session)
+        params = {"type": "flight", "logs": 250, "order": "descending"}
+        response = session.get(self.base_url.rstrip("/") + "/api/log-list", params=params, timeout=60)
+        decoded = _decode_flysto_payload(response.text)
+        if isinstance(decoded, str):
+            try:
+                log_ids = json.loads(decoded)
+            except json.JSONDecodeError:
+                return None, None
+        elif isinstance(decoded, list):
+            log_ids = decoded
+        else:
+            return None, None
+        log_ids = [str(log_id) for log_id in log_ids]
+        if not log_ids:
+            return None, None
+        keys = "57,tf,ec,hq,86,b2,lb,8q,p2,85,bl,hk,4n,ee,yu,1y,t3,ng,ho,hq,x9,g3,6n,hq,0s,83,6h,am"
+        summary = session.get(
+            self.base_url.rstrip("/") + "/api/log-summary",
+            params={"logs": ",".join(log_ids), "keys": keys, "update": "false"},
+            timeout=60,
+        )
+        decoded = _decode_flysto_payload(summary.text)
+        if isinstance(decoded, str):
+            try:
+                data = json.loads(decoded)
+            except json.JSONDecodeError:
+                return None, None
+        elif isinstance(decoded, dict):
+            data = decoded
+        else:
+            return None, None
+        items = data.get("items", []) if isinstance(data, dict) else []
+        for item in items:
+            summary_data = item.get("summary", {}).get("data", {})
+            files = summary_data.get("t3") or []
+            for entry in files:
+                if entry.get("file") == filename:
+                    signature = summary_data.get("6h")
+                    return str(item.get("id")), signature
+        return None, None
+
+    def assign_aircraft_for_file(
+        self,
+        filename: str,
+        aircraft_id: str,
+        log_format_id: str = "GenericGpx",
+    ) -> None:
+        log_id, signature = self.resolve_log_for_file(filename)
+        if not signature:
+            return
+        self.assign_aircraft(aircraft_id, log_format_id=log_format_id, system_id=signature)
+
     def _ensure_session(self, session: requests.Session) -> None:
         if self.session_cookie:
             hostname = urlparse(self.base_url).hostname or "www.flysto.net"
