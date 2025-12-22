@@ -4,6 +4,7 @@
 Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal local dependencies. Long-term goal is a hosted SaaS offering with billing.
 
 ## Current Status
+- Auto-assigns FlySto aircraft to GenericGpx logs via /api/assign-aircraft after upload.
 - Experiments: CSV-only zip upload returns 200; GPX+CSV and GPX+JSON zip uploads return 500; log list endpoints still unclear (no log IDs visible via API yet).
 - All 46 flights imported into FlySto on 2025-12-22 via API upload (GPX zipped).
 - CLI wiring and migration flow exist with CloudAhoy API + FlySto API upload (default).

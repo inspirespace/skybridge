@@ -25,6 +25,7 @@ class FlyStoClient:
     password: str | None = None
     aircraft_profiles_cache: list[dict[str, Any]] | None = None
     aircraft_cache: list[dict[str, Any]] | None = None
+    assigned_avionics: set[tuple[str, str | None]] | None = None
 
     def prepare(self) -> bool:
         session = requests.Session()
@@ -162,6 +163,37 @@ class FlyStoClient:
             data = []
         self.aircraft_profiles_cache = data if isinstance(data, list) else []
         return self.aircraft_profiles_cache
+
+
+    def assign_aircraft(
+        self,
+        aircraft_id: str,
+        log_format_id: str = "GenericGpx",
+        system_id: str | None = None,
+    ) -> None:
+        if not aircraft_id:
+            return
+        key = (log_format_id, system_id)
+        if self.assigned_avionics is None:
+            self.assigned_avionics = set()
+        if key in self.assigned_avionics:
+            return
+        session = requests.Session()
+        self._ensure_session(session)
+        payload = {
+            "avionics": {"logFormatId": log_format_id, "systemId": system_id},
+            "aircraftIdString": aircraft_id,
+        }
+        response = session.post(
+            self.base_url.rstrip("/") + "/api/assign-aircraft",
+            json=payload,
+            timeout=60,
+        )
+        if response.status_code >= 300:
+            raise RuntimeError(
+                f"FlySto assign-aircraft failed: {response.status_code} {response.text[:200]}"
+            )
+        self.assigned_avionics.add(key)
 
     def _ensure_session(self, session: requests.Session) -> None:
         if self.session_cookie:
