@@ -1,0 +1,85 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="skyGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#6EC6FF" />
+      <stop offset="100%" stop-color="#EAF7FF" />
+    </linearGradient>
+    <linearGradient id="bridgeGradient" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2C3E50" />
+      <stop offset="100%" stop-color="#4B6B88" />
+    </linearGradient>
+    <linearGradient id="sunGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FFD66B" />
+      <stop offset="100%" stop-color="#FFB347" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#skyGradient)" />
+  <circle cx="392" cy="120" r="56" fill="url(#sunGradient)" opacity="0.9" />
+  <path
+    d="M96 312C144 240 224 216 256 216C288 216 368 240 416 312"
+    stroke="#9ED8FF"
+    stroke-width="20"
+    stroke-linecap="round"
+  />
+  <path
+    d="M104 320C160 256 228 248 256 248C284 248 352 256 408 320"
+    stroke="#B7E6FF"
+    stroke-width="14"
+    stroke-linecap="round"
+  />
+  <path
+    d="M96 336H416"
+    stroke="url(#bridgeGradient)"
+    stroke-width="18"
+    stroke-linecap="round"
+  />
+  <path
+    d="M128 336V264"
+    stroke="url(#bridgeGradient)"
+    stroke-width="16"
+    stroke-linecap="round"
+  />
+  <path
+    d="M384 336V264"
+    stroke="url(#bridgeGradient)"
+    stroke-width="16"
+    stroke-linecap="round"
+  />
+  <path
+    d="M176 336V256"
+    stroke="url(#bridgeGradient)"
+    stroke-width="12"
+    stroke-linecap="round"
+  />
+  <path
+    d="M336 336V256"
+    stroke="url(#bridgeGradient)"
+    stroke-width="12"
+    stroke-linecap="round"
+  />
+  <path
+    d="M96 360C144 392 224 408 256 408C288 408 368 392 416 360"
+    stroke="#7FBCE6"
+    stroke-width="16"
+    stroke-linecap="round"
+  />
+  <path
+    d="M160 360L216 424"
+    stroke="#7FBCE6"
+    stroke-width="12"
+    stroke-linecap="round"
+  />
+  <path
+    d="M352 360L296 424"
+    stroke="#7FBCE6"
+    stroke-width="12"
+    stroke-linecap="round"
+  />
+  <path
+    d="M212 360L256 424L300 360"
+    stroke="#7FBCE6"
+    stroke-width="10"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

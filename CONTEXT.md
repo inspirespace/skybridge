@@ -7,6 +7,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - All 46 flights imported into FlySto on 2025-12-22 via API upload (GPX zipped).
 - CLI wiring and migration flow exist with CloudAhoy API + FlySto API upload (default).
 - Docker image runs the CLI (`python -m src.cli`).
+- Added a vector logo asset at `assets/skybridge-logo.svg`.
 - Config uses env vars and `.env` via Docker `--env-file` (MODE defaults to `auto`).
 - Web automation mode (Playwright) is available but not used in auto mode.
 - Discovery mode writes endpoint hints to `data/discovery/discovery.json`.
