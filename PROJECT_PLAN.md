@@ -1,7 +1,7 @@
 # Project Plan
 
 ## Status Snapshot
-- Review flow works for all flights; exports GPX from `flt.points`; metadata captured; 46 flights imported on 2025-12-22.
+- Review flow works for all flights; exports GPX from `flt.points` (CSV retained); metadata captured; 46 flights imported on 2025-12-22.
 - Upload to FlySto uses API (`/api/login`, `/api/log-upload`).
 - `migration.db` now stores file/metadata hashes for idempotent skips.
 - Review manifests include `review_id` and approve-import requires it.

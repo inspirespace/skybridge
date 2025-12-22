@@ -10,7 +10,7 @@ Build the image:
 docker build -t skybridge .
 ```
 
-Run a review (generates GPX exports from `flt.points`):
+Run a review (generates GPX exports from `flt.points` and retains CSV sidecars):
 
 ```sh
 docker run --rm \

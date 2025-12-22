@@ -12,7 +12,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Discovery mode writes endpoint hints to `data/discovery/discovery.json`.
 - CloudAhoy JSON APIs discovered: `t-flights.cgi` and `t-debrief.cgi` (full flight data incl. `flt.points`).
 - Review gating: non-dry-run uploads require a review manifest (`--review` or auto) and `--approve-import`.
-- Review manifests now include `flt.points` schema + preview and exports are GPX by default.
+- Review manifests now include `flt.points` schema + preview and exports are GPX by default (CSV sidecar retained).
 - Hybrid mode uses the web UI to page through CloudAhoy flights (`Load more`) and uses API for flight detail fetch.
 - FlySto API endpoints discovered via UI: `/api/login` (text/plain JSON body) and `/api/log-upload?id=<filename>@@@0` with `content-type: application/zip`. `x-version` is inferred from the JS bundle if not provided.
 

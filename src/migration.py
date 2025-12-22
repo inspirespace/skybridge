@@ -33,6 +33,8 @@ class ReviewItem:
     file_path: str | None
     file_type: str | None
     file_hash: str | None
+    csv_path: str | None
+    csv_hash: str | None
     points_count: int | None
     points_schema: list[dict]
     points_preview: list[dict]
@@ -54,6 +56,8 @@ class ReviewItem:
             "file_path": self.file_path,
             "file_type": self.file_type,
             "file_hash": self.file_hash,
+            "csv_path": self.csv_path,
+            "csv_hash": self.csv_hash,
             "points_count": self.points_count,
             "points_schema": self.points_schema,
             "points_preview": self.points_preview,
@@ -90,6 +94,8 @@ def prepare_review(
                         file_path=None,
                         file_type=None,
                         file_hash=None,
+                        csv_path=None,
+                        csv_hash=None,
                         points_count=None,
                         points_schema=[],
                         points_preview=[],
@@ -107,6 +113,7 @@ def prepare_review(
             detail.raw_payload, detail.file_path
         )
         file_hash = _hash_file(detail.file_path)
+        csv_hash = _hash_file(detail.csv_path)
         metadata_hash = _hash_file(detail.metadata_path)
         metadata = _extract_metadata(detail.raw_payload)
         validation_warnings = _validate_detail(
@@ -123,6 +130,8 @@ def prepare_review(
                 file_path=detail.file_path,
                 file_type=detail.file_type,
                 file_hash=file_hash,
+                csv_path=detail.csv_path,
+                csv_hash=csv_hash,
                 points_count=points_count,
                 points_schema=schema,
                 points_preview=preview,
@@ -158,6 +167,8 @@ def _review_item(
     file_path: str | None,
     file_type: str | None,
     file_hash: str | None,
+    csv_path: str | None,
+    csv_hash: str | None,
     points_count: int | None,
     points_schema: list[dict],
     points_preview: list[dict],
@@ -178,6 +189,8 @@ def _review_item(
         file_path=file_path,
         file_type=file_type,
         file_hash=file_hash,
+        csv_path=csv_path,
+        csv_hash=csv_hash,
         points_count=points_count,
         points_schema=points_schema,
         points_preview=points_preview,
@@ -267,6 +280,13 @@ def _cleanup_exports_dir(cloudahoy: CloudAhoyClient, items: list[ReviewItem]) ->
             if item.metadata_path
         }
     )
+    keep.update(
+        {
+            Path(item.csv_path).resolve()
+            for item in items
+            if item.csv_path
+        }
+    )
     for entry in exports_dir.iterdir():
         if not entry.is_file():
             continue
@@ -320,6 +340,7 @@ def _compute_review_id(items: list[ReviewItem]) -> str:
         {
             "flight_id": item.flight_id,
             "file_hash": item.file_hash,
+            "csv_hash": item.csv_hash,
             "metadata_hash": item.metadata_hash,
         }
         for item in sorted(items, key=lambda i: i.flight_id)

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import requests
 
-from src.cloudahoy.points import build_points_schema, write_points_gpx
+from src.cloudahoy.points import build_points_schema, write_points_gpx, write_points_csv
 from src.models import FlightDetail, FlightSummary
 import json
 import string
@@ -87,6 +87,7 @@ class CloudAhoyClient:
         file_path = None
         file_type = None
         metadata_path = None
+        csv_path = None
         if isinstance(points, list) and points:
             schema = build_points_schema(flt)
             if schema:
@@ -101,6 +102,8 @@ class CloudAhoyClient:
                     track_name=flight_id,
                 )
                 file_type = "gpx"
+                csv_path = self.exports_dir / f"{flight_id}.csv"
+                write_points_csv(points, schema, csv_path)
         if not file_path:
             kml_text = _extract_kml(data)
             if kml_text:
@@ -120,6 +123,7 @@ class CloudAhoyClient:
             file_path=str(file_path) if file_path else None,
             file_type=file_type,
             metadata_path=str(metadata_path) if metadata_path else None,
+            csv_path=str(csv_path) if csv_path else None,
         )
 
 

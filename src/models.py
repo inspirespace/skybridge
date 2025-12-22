@@ -18,6 +18,7 @@ class FlightDetail:
     file_path: str | None = None
     file_type: str | None = None
     metadata_path: str | None = None
+    csv_path: str | None = None
 
 
 @dataclass(frozen=True)
