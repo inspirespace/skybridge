@@ -12,6 +12,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 These are needed to complete the adapters:
 - CloudAhoy: auth method, flight list endpoint, pagination, flight detail export format, rate limits.
 - FlySto: auth method, flight upload endpoint, accepted payload formats (e.g., GPX/IGC/CSV/JSON), rate limits, dedupe keys.
+See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 
 ## Assumptions (until docs arrive)
 - Auth uses API keys in headers.
