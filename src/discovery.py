@@ -93,6 +93,10 @@ def discover_flysto(config: DiscoveryConfig) -> dict[str, Any]:
         )
     )
     session.on_response(lambda url, data: _log_response(url, data, response_log))
+    page.on(
+        "response",
+        lambda response: _log_response_raw(response, response_log),
+    )
 
     _login_flysto(page, config)
 
@@ -114,6 +118,33 @@ def discover_flysto(config: DiscoveryConfig) -> dict[str, Any]:
     }
 
 
+def _log_response_raw(response, log: list[dict[str, Any]]) -> None:
+    url = response.url
+    if "flysto.net/api" not in url:
+        return
+    content_type = response.headers.get("content-type", "")
+    payload: Any = None
+    try:
+        if "application/json" in content_type:
+            payload = response.json()
+        else:
+            text = response.text()
+            if text and len(text) < 5000:
+                payload = text
+    except Exception:
+        payload = None
+    if isinstance(payload, dict):
+        payload = _redact_json(payload)
+    log.append(
+        {
+            "url": url,
+            "status": response.status,
+            "content_type": content_type,
+            "payload": payload,
+        }
+    )
+
+
 def _login_cloudahoy(page: Page, config: DiscoveryConfig) -> None:
     page.goto(f"{config.cloudahoy_base_url}/login.php", wait_until="networkidle")
     if page.locator("form#ca_loginform").count() == 0:
@@ -128,12 +159,20 @@ def _login_cloudahoy(page: Page, config: DiscoveryConfig) -> None:
 
 def _login_flysto(page: Page, config: DiscoveryConfig) -> None:
     page.goto(f"{config.flysto_base_url}/login", wait_until="networkidle")
-    if page.locator("input[name=email]").count() == 0:
+    email_input = page.locator(
+        "input[name=email], input[type='email'], input[placeholder*='email' i]"
+    )
+    if email_input.count() == 0:
         return
     if not config.flysto_email or not config.flysto_password:
         raise RuntimeError("FlySto login requires FLYSTO_EMAIL and FLYSTO_PASSWORD")
-    page.fill("input[name=email]", config.flysto_email)
-    page.fill("input[name=password]", config.flysto_password)
+    password_input = page.locator(
+        "input[name=password], input[type='password'], input[placeholder*='password' i]"
+    )
+    if password_input.count() == 0:
+        raise RuntimeError("FlySto login password input not found")
+    email_input.first.fill(config.flysto_email)
+    password_input.first.fill(config.flysto_password)
     page.keyboard.press("Enter")
     page.wait_for_load_state("load")
 
@@ -171,11 +210,20 @@ def _click_export_button(page: Page) -> str | None:
 
 def _attempt_upload(page: Page, file_path: Path) -> str | None:
     if page.locator("input[type=file]").count() == 0:
-        for label in ("Upload", "Add flight", "Import", "Upload flight"):
+        for label in ("Load logs", "Upload", "Add flight", "Import", "Upload flight"):
             if page.get_by_text(label).count() > 0:
                 page.get_by_text(label).first.click()
                 page.wait_for_load_state("networkidle")
                 break
+
+    if page.locator("input[type=file]").count() == 0:
+        if page.get_by_text("Browse files").count() > 0:
+            page.get_by_text("Browse files").first.click()
+            page.wait_for_timeout(1000)
+        if page.locator("input[type=file]").count() == 0:
+            return None
+    else:
+        pass
 
     if page.locator("input[type=file]").count() == 0:
         return None

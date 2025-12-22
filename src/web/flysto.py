@@ -48,12 +48,20 @@ class FlyStoWebClient:
 
     def _ensure_login(self, page: Page) -> None:
         page.goto(f"{self._config.base_url}/login", wait_until="networkidle")
-        if page.locator("input[name=email]").count() == 0:
+        email_input = page.locator(
+            "input[name=email], input[type='email'], input[placeholder*='email' i]"
+        )
+        if email_input.count() == 0:
             return
         if not self._config.email or not self._config.password:
             raise RuntimeError("FlySto login required. Set FLYSTO_EMAIL and FLYSTO_PASSWORD.")
-        page.fill("input[name=email]", self._config.email)
-        page.fill("input[name=password]", self._config.password)
+        password_input = page.locator(
+            "input[name=password], input[type='password'], input[placeholder*='password' i]"
+        )
+        if password_input.count() == 0:
+            raise RuntimeError("FlySto login password input not found.")
+        email_input.first.fill(self._config.email)
+        password_input.first.fill(self._config.password)
         page.keyboard.press("Enter")
         page.wait_for_load_state("load")
 
