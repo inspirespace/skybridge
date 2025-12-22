@@ -1,10 +1,12 @@
 import argparse
 import sys
+from pathlib import Path
 
 from src.cloudahoy.client import CloudAhoyClient
 from src.config import ConfigError, load_config
 from src.flysto.client import FlyStoClient
 from src.migration import migrate_flights
+from src.state import MigrationState
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -23,6 +25,16 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Limit number of flights to migrate",
     )
+    parser.add_argument(
+        "--state-path",
+        default="data/migration.db",
+        help="Path to SQLite state database (default: data/migration.db)",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Re-upload flights even if they were already migrated",
+    )
     return parser
 
 
@@ -38,6 +50,7 @@ def run(argv: list[str]) -> int:
 
     dry_run = args.dry_run or config.dry_run
     max_flights = args.max_flights or config.max_flights
+    state = MigrationState(Path(args.state_path))
 
     cloudahoy = CloudAhoyClient(
         api_key=config.cloudahoy_api_key,
@@ -53,11 +66,15 @@ def run(argv: list[str]) -> int:
         flysto=flysto,
         dry_run=dry_run,
         max_flights=max_flights,
+        state=state,
+        force=args.force,
     )
 
     for result in results:
         if result.status == "ok":
             print(f"OK {result.flight_id}")
+        elif result.status == "skipped":
+            print(f"SKIP {result.flight_id}: {result.message}")
         else:
             print(f"ERR {result.flight_id}: {result.message}")
 

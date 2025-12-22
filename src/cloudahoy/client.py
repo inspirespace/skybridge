@@ -17,16 +17,15 @@ class CloudAhoyClient:
         Expected fields: flight id, start time, duration, aircraft type, tail number.
         """
         _ = limit
-        return []
+        raise NotImplementedError(
+            "CloudAhoy list_flights needs API docs (endpoint, auth, pagination)."
+        )
 
     def fetch_flight(self, flight_id: str) -> FlightDetail:
         """
         TODO: Implement CloudAhoy API call for detailed flight payload.
         """
-        return FlightDetail(
-            id=flight_id,
-            raw_payload={
-                "placeholder": True,
-                "fetched_at": datetime.utcnow().isoformat(),
-            },
+        _ = flight_id
+        raise NotImplementedError(
+            "CloudAhoy fetch_flight needs API docs (endpoint, export format)."
         )

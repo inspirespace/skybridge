@@ -17,4 +17,6 @@ class FlyStoClient:
         if dry_run:
             return
         _ = flight
-        raise NotImplementedError("FlySto upload is not implemented yet")
+        raise NotImplementedError(
+            "FlySto upload needs API docs (endpoint, auth, payload format)."
+        )

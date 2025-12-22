@@ -32,6 +32,10 @@ Optional:
 - `DRY_RUN` (`true`/`false`)
 - `MAX_FLIGHTS` (integer)
 
+CLI options:
+- `--state-path` (default `data/migration.db`)
+- `--force` to re-upload already migrated flights
+
 ## Status
 
 Core CLI wiring and migration workflow are stubbed. The next step is to implement the CloudAhoy and FlySto API calls in:

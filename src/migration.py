@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from src.cloudahoy.client import CloudAhoyClient
 from src.flysto.client import FlyStoClient
 from src.models import FlightSummary, MigrationResult
+from src.state import MigrationState
 
 
 @dataclass(frozen=True)
@@ -19,6 +20,8 @@ def migrate_flights(
     flysto: FlyStoClient,
     dry_run: bool = False,
     max_flights: int | None = None,
+    state: MigrationState | None = None,
+    force: bool = False,
 ) -> tuple[list[MigrationResult], MigrationStats]:
     summaries = cloudahoy.list_flights(limit=max_flights)
     results: list[MigrationResult] = []
@@ -26,12 +29,26 @@ def migrate_flights(
     failed = 0
 
     for summary in summaries:
+        if state and not force:
+            record = state.get(summary.id)
+            if record and record.status == "ok":
+                results.append(
+                    MigrationResult(
+                        flight_id=summary.id,
+                        status="skipped",
+                        message="already migrated",
+                    )
+                )
+                continue
         result = _migrate_single(summary, cloudahoy, flysto, dry_run)
         results.append(result)
         if result.status == "ok":
             succeeded += 1
         else:
             failed += 1
+
+        if state:
+            state.upsert(summary.id, result.status, result.message)
 
     return results, MigrationStats(
         attempted=len(summaries),
