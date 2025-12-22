@@ -15,7 +15,8 @@ Run a dry migration:
 ```sh
 docker run --rm \
   --env-file .env \
-  cloudahoy2flysto --mode hybrid --dry-run --max-flights 5
+  cloudahoy2flysto --mode hybrid --review --max-flights 5
+  cloudahoy2flysto --mode hybrid --approve-import --max-flights 5
 ```
 
 ## Configuration
@@ -73,7 +74,8 @@ Discovery mode will attempt to log in and collect endpoint hints; it writes a sa
 Local execution without Docker is possible with:
 
 ```sh
-python -m src.cli --dry-run
+python -m src.cli --review
+python -m src.cli --approve-import
 ```
 
 (No extra dependencies required.)
