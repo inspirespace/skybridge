@@ -178,9 +178,20 @@ def run(argv: list[str]) -> int:
         print("API-only mode is not implemented for FlySto yet.", file=sys.stderr)
         return 2
 
+    summaries = None
+    if mode == "hybrid":
+        try:
+            summaries = cloudahoy.list_flights(limit=max_flights)
+        except Exception as exc:
+            print(
+                f"Warning: web flight listing failed, falling back to API: {exc}",
+                file=sys.stderr,
+            )
+
     if args.review or (not dry_run and not args.approve_import):
         prepare_review(
             cloudahoy=cloudahoy_client,
+            summaries=summaries,
             max_flights=max_flights,
             state=state,
             force=args.force,
@@ -199,6 +210,7 @@ def run(argv: list[str]) -> int:
         cloudahoy=cloudahoy_client,
         flysto=flysto,
         dry_run=dry_run,
+        summaries=summaries,
         max_flights=max_flights,
         state=state,
         force=args.force,

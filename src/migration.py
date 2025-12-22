@@ -55,12 +55,15 @@ class ReviewItem:
 
 def prepare_review(
     cloudahoy: CloudAhoyClient,
+    summaries: list[FlightSummary] | None = None,
     max_flights: int | None = None,
     state: MigrationState | None = None,
     force: bool = False,
     output_path: Path | None = None,
 ) -> list[ReviewItem]:
-    summaries = cloudahoy.list_flights(limit=max_flights)
+    summaries = summaries or cloudahoy.list_flights(limit=max_flights)
+    if max_flights:
+        summaries = summaries[:max_flights]
     items: list[ReviewItem] = []
 
     for summary in summaries:
@@ -238,11 +241,14 @@ def migrate_flights(
     cloudahoy: CloudAhoyClient,
     flysto: FlyStoClient,
     dry_run: bool = False,
+    summaries: list[FlightSummary] | None = None,
     max_flights: int | None = None,
     state: MigrationState | None = None,
     force: bool = False,
 ) -> tuple[list[MigrationResult], MigrationStats]:
-    summaries = cloudahoy.list_flights(limit=max_flights)
+    summaries = summaries or cloudahoy.list_flights(limit=max_flights)
+    if max_flights:
+        summaries = summaries[:max_flights]
     results: list[MigrationResult] = []
     succeeded = 0
     failed = 0
