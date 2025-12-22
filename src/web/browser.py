@@ -43,12 +43,17 @@ class BrowserSession:
 
         def _handle(response) -> None:
             content_type = response.headers.get("content-type", "")
-            if "application/json" not in content_type:
+            if "application/json" not in content_type and "t-flights.cgi" not in response.url:
                 return
             try:
                 data = response.json()
             except Exception:
-                data = None
+                try:
+                    import json
+
+                    data = json.loads(response.text())
+                except Exception:
+                    data = None
             handler(response.url, data)
 
         self._page.on("response", _handle)

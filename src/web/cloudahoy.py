@@ -42,7 +42,7 @@ class CloudAhoyWebClient:
             )
 
         page.goto(flights_url, wait_until="networkidle")
-        self._load_more_flights(page, limit)
+        self._load_more_flights(page, responses, limit)
 
         summaries = self._extract_flights(page, responses)
         if limit:
@@ -162,21 +162,55 @@ class CloudAhoyWebClient:
             )
         return summaries
 
-    def _load_more_flights(self, page: Page, limit: int | None) -> None:
+    def _load_more_flights(
+        self, page: Page, responses: list[dict[str, Any]], limit: int | None
+    ) -> None:
+        stalled = 0
         for _ in range(50):
-            if limit and self._dom_flight_count(page) >= limit:
+            current_count = self._count_flights_from_responses(responses)
+            if current_count == 0:
+                current_count = self._dom_flight_count(page)
+            if limit and current_count >= limit:
                 return
-            button = page.locator("button:has-text('Load more'), a:has-text('Load more')")
+
+            button = page.locator(
+                "button:has-text('Load more'), a:has-text('Load more'), "
+                "button[aria-label*='load' i], button[aria-label*='more' i]"
+            )
             if button.count() == 0:
-                return
+                page.mouse.wheel(0, 2000)
+                page.wait_for_timeout(800)
+                new_count = self._count_flights_from_responses(responses)
+                if new_count == current_count:
+                    stalled += 1
+                else:
+                    stalled = 0
+                if stalled >= 2:
+                    return
+                continue
+
             if button.first.is_disabled():
                 return
             button.first.click()
             page.wait_for_load_state("networkidle")
-            page.wait_for_timeout(750)
+            page.wait_for_timeout(800)
+            new_count = self._count_flights_from_responses(responses)
+            if new_count == current_count:
+                stalled += 1
+            else:
+                stalled = 0
+            if stalled >= 3:
+                return
 
     def _dom_flight_count(self, page: Page) -> int:
         return page.locator("[data-flight-id], [data-debrief-id]").count()
+
+    def _count_flights_from_responses(self, responses: list[dict[str, Any]]) -> int:
+        count = 0
+        for payload in responses:
+            extracted = _extract_flight_items(payload.get("data"))
+            count += len(extracted)
+        return count
 
     def _download_file(self, page: Page, export_url: str) -> Path:
         self._config.downloads_dir.mkdir(parents=True, exist_ok=True)
