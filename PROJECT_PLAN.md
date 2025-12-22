@@ -1,6 +1,7 @@
 # Project Plan
 
 ## Status Snapshot
+- FlySto field ingestion experiment pending: CSV-only accepted, GPX+CSV/GPX+JSON failed; need log list endpoint to verify field visibility.
 - Review flow works for all flights; exports GPX from `flt.points` (CSV retained); metadata captured; 46 flights imported on 2025-12-22.
 - Upload to FlySto uses API (`/api/login`, `/api/log-upload`).
 - `migration.db` now stores file/metadata hashes for idempotent skips.
