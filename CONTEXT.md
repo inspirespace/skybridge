@@ -15,6 +15,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Review manifests now include `flt.points` schema + preview and exports are CSV by default.
 - Hybrid mode uses the web UI to page through CloudAhoy flights (`Load more`) and uses API for flight detail fetch.
 - FlySto API login/upload currently returns 503 in our environment; API upload not yet implemented.
+- FlySto API endpoints discovered via UI: `/api/login` (text/plain JSON body) and `/api/log-upload?id=<filename>@@@0` with `content-type: application/zip` and optional `x-version` header.
 
 ## Required API Details
 These are needed to complete the adapters:

@@ -47,6 +47,7 @@ Optional:
 - `FLYSTO_SESSION_COOKIE` (API auth cookie value for `USER_SESSION`)
 - `FLYSTO_LOG_UPLOAD_URL` (API endpoint for log upload, e.g., `https://www.flysto.net/api/log-upload`)
 - `FLYSTO_INCLUDE_METADATA` (`true`/`false`, attach metadata when using API)
+- `FLYSTO_API_VERSION` (API version header value if required, observed `141`)
 - `MODE` (`web`, `hybrid`, or `api`, default `web`)
 - `BROWSER_HEADLESS` (`true`/`false`)
 - `DRY_RUN` (`true`/`false`)
