@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import json
+import re
 
 import requests
 
@@ -25,10 +26,10 @@ class FlyStoClient:
             _validate_flight_for_upload(flight)
             return
         _validate_flight_for_upload(flight)
-        if not self.upload_url:
-            raise NotImplementedError("FlySto upload URL is not configured.")
         session = requests.Session()
         self._ensure_session(session)
+        if not self.api_version:
+            self.api_version = _infer_api_version(self.base_url)
 
         file_path = Path(flight.file_path)
         payload = file_path.read_bytes()
@@ -36,7 +37,7 @@ class FlyStoClient:
         if self.api_version:
             headers["x-version"] = self.api_version
         response = session.post(
-            _upload_url(self.upload_url, file_path.name),
+            _upload_url(self.upload_url, self.base_url, file_path.name),
             data=payload,
             headers=headers,
             timeout=120,
@@ -77,10 +78,11 @@ def _metadata_payload(flight: FlightDetail) -> dict:
     return payload
 
 
-def _upload_url(base_url: str, filename: str) -> str:
-    if "?" in base_url:
-        return base_url
-    return f"{base_url}?id={filename}@@@0"
+def _upload_url(upload_url: str | None, base_url: str, filename: str) -> str:
+    url = upload_url or (base_url.rstrip("/") + "/api/log-upload")
+    if "?" in url:
+        return url
+    return f"{url}?id={filename}@@@0"
 
 
 def _api_login(
@@ -98,3 +100,21 @@ def _api_login(
     response = session.post(url, data=payload, headers=headers, timeout=60)
     if response.status_code >= 300:
         raise RuntimeError(f"FlySto API login failed: {response.status_code}")
+
+
+def _infer_api_version(base_url: str) -> str | None:
+    try:
+        login = requests.get(base_url.rstrip("/") + "/login", timeout=30)
+        login.raise_for_status()
+        match = re.search(r"/static/(flysto\\.[^\\\"']+\\.js)", login.text)
+        if not match:
+            return None
+        bundle_url = base_url.rstrip("/") + "/static/" + match.group(1)
+        bundle = requests.get(bundle_url, timeout=30)
+        bundle.raise_for_status()
+        match = re.search(r"x-version\"\\s*[:,]\\s*\"?(\\d+)\"?", bundle.text)
+        if match:
+            return match.group(1)
+    except Exception:
+        return None
+    return None
