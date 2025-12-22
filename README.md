@@ -22,6 +22,12 @@ docker run --rm \
   cloudahoy2flysto --mode hybrid --approve-import --max-flights 5
 ```
 
+Or use the wrapper script:
+
+```sh
+./scripts/run-review.sh
+```
+
 ## Configuration
 
 Create a `.env` file from `.env.example` and fill in your API keys.
