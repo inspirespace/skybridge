@@ -42,6 +42,7 @@ class CloudAhoyWebClient:
             )
 
         page.goto(flights_url, wait_until="networkidle")
+        self._load_more_flights(page, limit)
 
         summaries = self._extract_flights(page, responses)
         if limit:
@@ -160,6 +161,22 @@ class CloudAhoyWebClient:
                 "No flights found. Provide CLOUD_AHOY_FLIGHTS_URL or export URL template."
             )
         return summaries
+
+    def _load_more_flights(self, page: Page, limit: int | None) -> None:
+        for _ in range(50):
+            if limit and self._dom_flight_count(page) >= limit:
+                return
+            button = page.locator("button:has-text('Load more'), a:has-text('Load more')")
+            if button.count() == 0:
+                return
+            if button.first.is_disabled():
+                return
+            button.first.click()
+            page.wait_for_load_state("networkidle")
+            page.wait_for_timeout(750)
+
+    def _dom_flight_count(self, page: Page) -> int:
+        return page.locator("[data-flight-id], [data-debrief-id]").count()
 
     def _download_file(self, page: Page, export_url: str) -> Path:
         self._config.downloads_dir.mkdir(parents=True, exist_ok=True)
