@@ -7,6 +7,7 @@
 - Review manifests include `review_id` and approve-import requires it.
 - FlySto API base URL defaults to `https://www.flysto.net`; API version inferred from JS bundle.
 - MODE defaults to `auto` and no longer falls back to web.
+- Added a project logo asset at `assets/logo.svg`.
 
 ## Next Implementation Steps
 1) Confirm metadata mapping coverage (pilot/crew/remarks/tail number).
