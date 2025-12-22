@@ -96,17 +96,13 @@ class CloudAhoyWebClient:
             content_type = response.headers.get("content-type", "")
             if not _is_cesium_candidate(url, content_type):
                 return
-            try:
-                body = response.text()
-            except Exception:
-                return
-            if not body:
-                return
             seen_urls.add(url)
-            suffix = "czml" if "czml" in url or "czml" in content_type else "json"
+            body, suffix = _response_payload(response, url, content_type)
+            if body is None:
+                return
             self._config.downloads_dir.mkdir(parents=True, exist_ok=True)
             path = self._config.downloads_dir / f"{flight_id}.cesium.{len(captures)+1}.{suffix}"
-            path.write_text(body)
+            path.write_bytes(body)
             captures.append(path)
 
         page.on("response", handle_response)
@@ -226,6 +222,9 @@ class CloudAhoyWebClient:
             f"{base}/debrief/?f={flight_id}",
             f"{base}/debrief/?key={flight_id}",
             f"{base}/debrief/index.php?flight={flight_id}",
+            f"{base}/debrief/#/flight/{flight_id}",
+            f"{base}/debrief/flight/{flight_id}",
+            f"{base}/debrief/?flightId={flight_id}",
         ]
 
 
@@ -233,9 +232,40 @@ def _is_cesium_candidate(url: str, content_type: str) -> bool:
     lowered = url.lower()
     if "czml" in lowered or "cesium" in lowered:
         return True
-    if "czml" in content_type.lower():
+    if any(token in lowered for token in ("geojson", "terrain", "tileset")):
+        return True
+    if any(
+        token in content_type.lower()
+        for token in ("czml", "cesium", "geo+json", "octet-stream", "application/json")
+    ):
         return True
     return False
+
+
+def _response_payload(response, url: str, content_type: str) -> tuple[bytes | None, str]:
+    suffix = _guess_suffix(url, content_type)
+    try:
+        body = response.body()
+        if not body:
+            return None, suffix
+        return body, suffix
+    except Exception:
+        try:
+            text = response.text()
+        except Exception:
+            return None, suffix
+        return text.encode("utf-8", errors="replace"), suffix
+
+
+def _guess_suffix(url: str, content_type: str) -> str:
+    lowered = url.lower()
+    if lowered.endswith(".czml") or "czml" in content_type.lower():
+        return "czml"
+    if lowered.endswith(".geojson") or "geo+json" in content_type.lower():
+        return "geojson"
+    if lowered.endswith(".json") or "application/json" in content_type.lower():
+        return "json"
+    return "bin"
 
 
 def _extract_flight_items(data: Any) -> list[FlightSummary]:
