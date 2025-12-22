@@ -15,6 +15,8 @@ class FlightSummary:
 class FlightDetail:
     id: str
     raw_payload: dict
+    file_path: str | None = None
+    file_type: str | None = None
 
 
 @dataclass(frozen=True)

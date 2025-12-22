@@ -7,6 +7,8 @@ Fill in these details once available. This file is used to keep context in-repo.
 - Header name:
 - Token format:
 
+Observed web login form posts to `/api/signin.cgi?form`.
+
 ## Endpoints
 ### List Flights
 - Method:

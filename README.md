@@ -28,19 +28,36 @@ Required:
 
 Optional:
 - `CLOUD_AHOY_BASE_URL` (default `https://api.cloudahoy.com`)
+- `CLOUD_AHOY_WEB_BASE_URL` (default `https://www.cloudahoy.com`)
+- `CLOUD_AHOY_EMAIL` / `CLOUD_AHOY_PASSWORD` (web mode login)
+- `CLOUD_AHOY_FLIGHTS_URL` (direct flights page URL if auto-detect fails)
+- `CLOUD_AHOY_EXPORT_URL_TEMPLATE` (example: `https://www.cloudahoy.com/api/export.cgi?id={flight_id}`)
 - `FLYSTO_BASE_URL` (default `https://api.flysto.net`)
+- `FLYSTO_WEB_BASE_URL` (default `https://www.flysto.net`)
+- `FLYSTO_EMAIL` / `FLYSTO_PASSWORD` (web mode login)
+- `FLYSTO_UPLOAD_URL` (direct upload page URL if auto-detect fails)
+- `MODE` (`web` or `api`, default `web`)
+- `BROWSER_HEADLESS` (`true`/`false`)
 - `DRY_RUN` (`true`/`false`)
 - `MAX_FLIGHTS` (integer)
 
 CLI options:
 - `--state-path` (default `data/migration.db`)
 - `--force` to re-upload already migrated flights
+- `--mode` to select `web` or `api`
+- `--headful` to run browser non-headless
+- `--cloudahoy-state-path` / `--flysto-state-path` for browser storage state
+- `--exports-dir` for downloaded CloudAhoy exports
 
 ## Status
 
-Core CLI wiring and migration workflow are stubbed. The next step is to implement the CloudAhoy and FlySto API calls in:
+Core CLI wiring and migration workflow are implemented with web automation. API calls are still stubbed in:
 - `src/cloudahoy/client.py`
 - `src/flysto/client.py`
+
+## Web Automation Notes
+
+The web mode uses Playwright to log in and export/upload flights when no official APIs are available. Provide `CLOUD_AHOY_EXPORT_URL_TEMPLATE` and `FLYSTO_UPLOAD_URL` to bypass UI discovery if needed. For interactive debugging, run with `--headful` and watch the browser session.
 
 ## SaaS Roadmap (draft)
 

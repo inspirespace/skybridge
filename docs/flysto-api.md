@@ -7,6 +7,8 @@ Fill in these details once available. This file is used to keep context in-repo.
 - Header name:
 - Token format:
 
+Observed public bundle references `/api/profile` and `/api/koulouraki-consent`.
+
 ## Endpoints
 ### Upload Flight
 - Method:

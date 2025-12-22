@@ -13,6 +13,7 @@ class ConfigTests(unittest.TestCase):
         os.environ.update(self._env_backup)
 
     def test_missing_env(self) -> None:
+        os.environ["MODE"] = "api"
         os.environ.pop("CLOUD_AHOY_API_KEY", None)
         os.environ.pop("FLYSTO_API_KEY", None)
 
@@ -20,6 +21,7 @@ class ConfigTests(unittest.TestCase):
             load_config()
 
     def test_loads_defaults(self) -> None:
+        os.environ["MODE"] = "api"
         os.environ["CLOUD_AHOY_API_KEY"] = "ca"
         os.environ["FLYSTO_API_KEY"] = "fs"
 
