@@ -61,8 +61,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--mode",
-        choices=["api", "web", "hybrid"],
-        help="Select API or web automation mode",
+        choices=["auto", "api", "web", "hybrid"],
+        help="Select API or web automation mode (default: auto)",
     )
     parser.add_argument(
         "--headful",
@@ -117,10 +117,13 @@ def run(argv: list[str]) -> int:
     state = MigrationState(Path(args.state_path))
 
     mode = (args.mode or config.mode).lower()
-    if mode not in {"api", "web", "hybrid"}:
+    if mode not in {"auto", "api", "web", "hybrid"}:
         print(f"Unsupported mode: {mode}", file=sys.stderr)
         return 2
     headless = config.headless and not args.headful
+
+    if mode == "auto":
+        mode = "api"
 
     if mode in {"web", "hybrid"}:
         cloudahoy = CloudAhoyWebClient(
@@ -181,6 +184,13 @@ def run(argv: list[str]) -> int:
             print(f"Discovery results written to {discovery_path}")
             return 0
     else:
+        cloudahoy_client = CloudAhoyClient(
+            api_key=config.cloudahoy_api_key,
+            base_url=config.cloudahoy_base_url,
+            email=config.cloudahoy_email or "",
+            password=config.cloudahoy_password or "",
+            exports_dir=Path(args.exports_dir),
+        )
         flysto = FlyStoClient(
             api_key=config.flysto_api_key or "",
             base_url=config.flysto_base_url,
@@ -191,6 +201,22 @@ def run(argv: list[str]) -> int:
             email=config.flysto_email,
             password=config.flysto_password,
         )
+        if args.mode in {None, "auto"} and not flysto.prepare():
+            print("FlySto API not available; falling back to web upload.", file=sys.stderr)
+            mode = "hybrid"
+            fallback_args = [
+                    "--mode",
+                    "hybrid",
+                    *(["--dry-run"] if args.dry_run else []),
+                    *(["--review"] if args.review else []),
+                    *(["--review-path", args.review_path] if args.review_path else []),
+                    *(["--approve-import"] if args.approve_import else []),
+                    *(["--review-id", args.review_id] if args.review_id else []),
+                    *(["--max-flights", str(args.max_flights)] if args.max_flights else []),
+                    *(["--state-path", args.state_path] if args.state_path else []),
+                    *(["--force"] if args.force else []),
+                ]
+            return run(fallback_args)
 
     summaries = None
     if mode == "hybrid":

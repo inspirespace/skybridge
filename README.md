@@ -48,7 +48,7 @@ Optional:
 - `FLYSTO_LOG_UPLOAD_URL` (optional override for API endpoint; defaults to `https://www.flysto.net/api/log-upload`)
 - `FLYSTO_INCLUDE_METADATA` (`true`/`false`, attach metadata when using API)
 - `FLYSTO_API_VERSION` (optional; inferred from FlySto bundle if omitted)
-- `MODE` (`web`, `hybrid`, or `api`, default `web`)
+- `MODE` (`auto`, `web`, `hybrid`, or `api`, default `auto`)
 - `BROWSER_HEADLESS` (`true`/`false`)
 - `DRY_RUN` (`true`/`false`)
 - `MAX_FLIGHTS` (integer)
