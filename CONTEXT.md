@@ -4,13 +4,14 @@
 Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal local dependencies. Long-term goal is a hosted SaaS offering with billing.
 
 ## Current Status
-- CLI wiring and migration flow exist but API adapters are stubs.
+- CLI wiring and migration flow exist with CloudAhoy API + FlySto web upload (hybrid mode).
 - Docker image runs the CLI (`python -m src.cli`).
 - Config uses env vars and `.env` via Docker `--env-file`.
 - Web automation mode (Playwright) is implemented for login/export/upload when APIs are unknown.
 - Discovery mode writes endpoint hints to `data/discovery/discovery.json`.
 - CloudAhoy JSON APIs discovered: `t-flights.cgi` and `t-debrief.cgi` (full flight data incl. KML).
 - FlySto upload UI: `/logs` → `Load logs` → `Browse files`.
+- Review gating: non-dry-run uploads require a review manifest (`--review` or auto) and `--approve-import`.
 
 ## Required API Details
 These are needed to complete the adapters:
@@ -29,6 +30,6 @@ See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 - Browser storage state is persisted under `data/` to reuse sessions.
 
 ## Next Steps
-1) Implement CloudAhoy list + detail calls.
-2) Implement FlySto upload.
-3) Add mapping logic once payload shapes are known.
+1) Replace FlySto UI upload with API client if available.
+2) Add a conversion step from CloudAhoy points to GPX/CSV/IGC for richer trajectories.
+3) Add SaaS multi-tenant auth, billing, and per-user job tracking.

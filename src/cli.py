@@ -6,7 +6,7 @@ from src.cloudahoy.client import CloudAhoyClient
 from src.config import ConfigError, load_config
 from src.discovery import DiscoveryConfig, run_discovery
 from src.flysto.client import FlyStoClient
-from src.migration import migrate_flights
+from src.migration import migrate_flights, prepare_review
 from src.state import MigrationState
 from src.web.cloudahoy import CloudAhoyWebClient, CloudAhoyWebConfig
 from src.web.flysto import FlyStoWebClient, FlyStoWebConfig
@@ -21,6 +21,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--dry-run",
         action="store_true",
         help="Fetch from CloudAhoy without uploading to FlySto",
+    )
+    parser.add_argument(
+        "--review",
+        action="store_true",
+        help="Generate a review manifest and exit without importing",
+    )
+    parser.add_argument(
+        "--review-path",
+        default="data/review.json",
+        help="Path to write the review manifest (default: data/review.json)",
+    )
+    parser.add_argument(
+        "--approve-import",
+        action="store_true",
+        help="Allow uploads to FlySto after review",
     )
     parser.add_argument(
         "--max-flights",
@@ -162,6 +177,23 @@ def run(argv: list[str]) -> int:
     else:
         print("API-only mode is not implemented for FlySto yet.", file=sys.stderr)
         return 2
+
+    if args.review or (not dry_run and not args.approve_import):
+        prepare_review(
+            cloudahoy=cloudahoy_client,
+            max_flights=max_flights,
+            state=state,
+            force=args.force,
+            output_path=Path(args.review_path),
+        )
+        if not args.review and not dry_run:
+            print(
+                "Review required before upload. "
+                "Check the manifest and rerun with --approve-import to proceed."
+            )
+        else:
+            print(f"Review manifest written to {args.review_path}")
+        return 0
 
     results, stats = migrate_flights(
         cloudahoy=cloudahoy_client,
