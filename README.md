@@ -15,11 +15,11 @@ Run a review (generates CSV exports from `flt.points`):
 ```sh
 docker run --rm \
   --env-file .env \
-  cloudahoy2flysto --mode hybrid --review --max-flights 5
+  cloudahoy2flysto --review --max-flights 5
 
 docker run --rm \
   --env-file .env \
-  cloudahoy2flysto --mode hybrid --approve-import --max-flights 5
+  cloudahoy2flysto --approve-import --max-flights 5
 ```
 
 Or use the wrapper scripts:
@@ -27,12 +27,12 @@ Or use the wrapper scripts:
 ```sh
 ./scripts/run-review.sh
 ./scripts/run-import.sh
-./scripts/run.sh --mode hybrid --approve-import --max-flights 10
+./scripts/run.sh --approve-import --max-flights 10
 ```
 
 ## Configuration
 
-Create a `.env` file from `.env.example` and fill in your credentials.
+Create a `.env` file from `.env.example` and fill in your credentials. The CLI infers upload URLs and API version automatically.
 
 Optional:
 - `CLOUD_AHOY_BASE_URL` (default `https://www.cloudahoy.com/api`)
@@ -40,7 +40,7 @@ Optional:
 - `CLOUD_AHOY_EMAIL` / `CLOUD_AHOY_PASSWORD` (web mode login)
 - `CLOUD_AHOY_FLIGHTS_URL` (direct flights page URL if auto-detect fails)
 - `CLOUD_AHOY_EXPORT_URL_TEMPLATE` (example: `https://www.cloudahoy.com/api/export.cgi?id={flight_id}`)
-- `FLYSTO_BASE_URL` (default `https://api.flysto.net`)
+- `FLYSTO_BASE_URL` (default `https://www.flysto.net`)
 - `FLYSTO_WEB_BASE_URL` (default `https://www.flysto.net`)
 - `FLYSTO_EMAIL` / `FLYSTO_PASSWORD` (web mode login)
 - `FLYSTO_UPLOAD_URL` (direct upload page URL if auto-detect fails)
@@ -48,7 +48,7 @@ Optional:
 - `FLYSTO_LOG_UPLOAD_URL` (optional override for API endpoint; defaults to `https://www.flysto.net/api/log-upload`)
 - `FLYSTO_INCLUDE_METADATA` (`true`/`false`, attach metadata when using API)
 - `FLYSTO_API_VERSION` (optional; inferred from FlySto bundle if omitted)
-- `MODE` (`auto`, `web`, `hybrid`, or `api`, default `auto`)
+- `MODE` (`auto`, `web`, `hybrid`, or `api`, default `auto`; auto uses API only)
 - `BROWSER_HEADLESS` (`true`/`false`)
 - `DRY_RUN` (`true`/`false`)
 - `MAX_FLIGHTS` (integer)
@@ -67,11 +67,11 @@ CLI options:
 
 ## Status
 
-Hybrid mode uses CloudAhoy JSON APIs for full-flight data and FlySto web upload. API-only mode is not implemented for FlySto yet.
+The default path uses CloudAhoy JSON APIs for full-flight data and FlySto API upload.
 
 ## Web Automation Notes
 
-The web mode uses Playwright to log in and export/upload flights when no official APIs are available. Provide `CLOUD_AHOY_EXPORT_URL_TEMPLATE` and `FLYSTO_UPLOAD_URL` to bypass UI discovery if needed. For interactive debugging, run with `--headful` and watch the browser session. FlySto uploads are driven through the `Load logs` → `Browse files` flow on `/logs`. The CloudAhoy flights list uses the web UI and auto-clicks `Load more` to fetch additional pages when available.
+The web mode uses Playwright to log in and export/upload flights when no official APIs are available. Provide `CLOUD_AHOY_EXPORT_URL_TEMPLATE` and `FLYSTO_UPLOAD_URL` to bypass UI discovery if needed. For interactive debugging, run with `--headful` and watch the browser session. FlySto uploads are driven through the `Load logs` → `Browse files` flow on `/logs`. The CloudAhoy flights list uses the web UI and auto-clicks `Load more` to fetch additional pages when available. Auto mode does not fall back to web automation.
 
 Review manifests include a `points_schema` and `points_preview` derived from `flt.points` so you can validate the trajectory fields before import.
 Approved imports require a review ID; `./scripts/run-import.sh` reads it from `data/review.json` automatically.

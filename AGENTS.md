@@ -11,9 +11,11 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 ## Build, Test, and Development Commands
 - `docker build -t cloudahoy2flysto .` — build the image.
 - `./scripts/run-review.sh` — run review mode via Docker (default `MAX_FLIGHTS=5`).
-- `docker run --rm --env-file .env cloudahoy2flysto --mode hybrid --approve-import --max-flights 5` — run approved import.
+- `./scripts/run-import.sh` — run approved import using the latest `data/review.json`.
+- `./scripts/run.sh --approve-import --max-flights 5` — run the CLI with explicit options.
 - `python -m src.cli --review` — run locally (requires Python deps).
 - `pytest` — run tests (if installed).
+Note: default `MODE=auto` uses API only and does not fall back to web automation.
 
 ## Coding Style & Naming Conventions
 - Indentation: 2 spaces by default; follow language-specific conventions where standard (e.g., Python 4 spaces).

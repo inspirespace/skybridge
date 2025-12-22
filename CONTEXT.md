@@ -4,18 +4,16 @@
 Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal local dependencies. Long-term goal is a hosted SaaS offering with billing.
 
 ## Current Status
-- CLI wiring and migration flow exist with CloudAhoy API + FlySto web upload (hybrid mode).
+- CLI wiring and migration flow exist with CloudAhoy API + FlySto API upload (default).
 - Docker image runs the CLI (`python -m src.cli`).
 - Config uses env vars and `.env` via Docker `--env-file` (MODE defaults to `auto`).
-- Web automation mode (Playwright) is implemented for login/export/upload when APIs are unknown.
+- Web automation mode (Playwright) is available but not used in auto mode.
 - Discovery mode writes endpoint hints to `data/discovery/discovery.json`.
-- CloudAhoy JSON APIs discovered: `t-flights.cgi` and `t-debrief.cgi` (full flight data incl. KML).
-- FlySto upload UI: `/logs` → `Load logs` → `Browse files`.
+- CloudAhoy JSON APIs discovered: `t-flights.cgi` and `t-debrief.cgi` (full flight data incl. `flt.points`).
 - Review gating: non-dry-run uploads require a review manifest (`--review` or auto) and `--approve-import`.
 - Review manifests now include `flt.points` schema + preview and exports are CSV by default.
 - Hybrid mode uses the web UI to page through CloudAhoy flights (`Load more`) and uses API for flight detail fetch.
-- FlySto API login/upload currently returns 503 in our environment; API upload not yet implemented.
-- FlySto API endpoints discovered via UI: `/api/login` (text/plain JSON body) and `/api/log-upload?id=<filename>@@@0` with `content-type: application/zip`. `x-version` can be inferred from the JS bundle if not provided.
+- FlySto API endpoints discovered via UI: `/api/login` (text/plain JSON body) and `/api/log-upload?id=<filename>@@@0` with `content-type: application/zip`. `x-version` is inferred from the JS bundle if not provided.
 
 ## Required API Details
 These are needed to complete the adapters:
@@ -34,6 +32,6 @@ See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 - Browser storage state is persisted under `data/` to reuse sessions.
 
 ## Next Steps
-1) Replace FlySto UI upload with API client if available.
-2) Add a conversion step from CloudAhoy points to GPX/CSV/IGC for richer trajectories.
+1) Run API upload end-to-end now that FlySto is back online.
+2) Confirm metadata mapping coverage for pilot/crew/remarks/tail number.
 3) Add SaaS multi-tenant auth, billing, and per-user job tracking.

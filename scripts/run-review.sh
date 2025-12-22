@@ -2,7 +2,6 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-IMAGE_NAME="cloudahoy2flysto"
 ENV_FILE="${ENV_FILE:-${ROOT_DIR}/.env}"
 MAX_FLIGHTS="${MAX_FLIGHTS:-}"
 
@@ -17,10 +16,4 @@ if [ ! -f "${ENV_FILE}" ]; then
   exit 1
 fi
 
-DOCKER_BUILDKIT=1 docker build -q -t "${IMAGE_NAME}" "${ROOT_DIR}" >/dev/null
-
-docker run --rm \
-  --env-file "${ENV_FILE}" \
-  -v "${ROOT_DIR}":/app \
-  -w /app \
-  "${IMAGE_NAME}" --mode hybrid --review --max-flights "${MAX_FLIGHTS}"
+exec "${ROOT_DIR}/scripts/run.sh" --review --max-flights "${MAX_FLIGHTS}"

@@ -51,7 +51,7 @@ def load_config() -> Config:
     flysto_log_upload_url = _get_env("FLYSTO_LOG_UPLOAD_URL")
     flysto_api_version = _get_env("FLYSTO_API_VERSION")
 
-    if mode in {"api", "hybrid"}:
+    if mode in {"api", "hybrid", "auto"}:
         missing = [
             name
             for name, value in (
@@ -64,7 +64,7 @@ def load_config() -> Config:
             raise ConfigError(f"Missing required env vars: {', '.join(missing)}")
 
     cloudahoy_base_url = _get_env("CLOUD_AHOY_BASE_URL") or "https://www.cloudahoy.com/api"
-    flysto_base_url = _get_env("FLYSTO_BASE_URL") or "https://api.flysto.net"
+    flysto_base_url = _get_env("FLYSTO_BASE_URL") or "https://www.flysto.net"
     cloudahoy_web_base_url = _get_env("CLOUD_AHOY_WEB_BASE_URL") or "https://www.cloudahoy.com"
     flysto_web_base_url = _get_env("FLYSTO_WEB_BASE_URL") or "https://www.flysto.net"
     cloudahoy_flights_url = _get_env("CLOUD_AHOY_FLIGHTS_URL")

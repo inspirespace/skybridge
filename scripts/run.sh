@@ -11,7 +11,7 @@ if [ ! -f "${ENV_FILE}" ]; then
   exit 1
 fi
 
-DOCKER_BUILDKIT=1 docker build -q -t "${IMAGE_NAME}" "${ROOT_DIR}" >/dev/null
+DOCKER_BUILDKIT=1 docker build -q -t "${IMAGE_NAME}" "${ROOT_DIR}" >/dev/null 2>&1
 
 exec docker run --rm \
   --env-file "${ENV_FILE}" \

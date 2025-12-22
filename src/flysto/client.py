@@ -4,13 +4,14 @@ from dataclasses import dataclass
 from pathlib import Path
 import json
 import re
+from urllib.parse import urljoin, urlparse
 
 import requests
 
 from src.models import FlightDetail
 
 
-@dataclass(frozen=True)
+@dataclass
 class FlyStoClient:
     api_key: str
     base_url: str
@@ -27,10 +28,12 @@ class FlyStoClient:
             self._ensure_session(session)
         except Exception:
             return False
-        if not self.session_cookie:
-            cookie = session.cookies.get("USER_SESSION")
-            if cookie:
-                self.session_cookie = cookie
+        cookie = session.cookies.get("USER_SESSION") or self.session_cookie
+        if not cookie:
+            return False
+        self.session_cookie = cookie
+        if not self.api_version:
+            self.api_version = _infer_api_version(self.base_url)
         return True
 
     def upload_flight(self, flight: FlightDetail, dry_run: bool = False) -> None:
@@ -62,15 +65,19 @@ class FlyStoClient:
 
     def _ensure_session(self, session: requests.Session) -> None:
         if self.session_cookie:
+            hostname = urlparse(self.base_url).hostname or "www.flysto.net"
             session.cookies.set(
                 "USER_SESSION",
                 self.session_cookie,
-                domain="www.flysto.net",
+                domain=hostname,
                 path="/",
             )
             return
         if self.email and self.password:
             _api_login(session, self.base_url, self.email, self.password, self.api_version)
+            cookie = session.cookies.get("USER_SESSION")
+            if not cookie:
+                raise RuntimeError("FlySto API login returned no session cookie.")
             return
         raise NotImplementedError("FlySto API auth not configured.")
 
@@ -115,18 +122,29 @@ def _api_login(
 
 
 def _infer_api_version(base_url: str) -> str | None:
-    try:
-        login = requests.get(base_url.rstrip("/") + "/login", timeout=30)
-        login.raise_for_status()
-        match = re.search(r"/static/(flysto\\.[^\\\"']+\\.js)", login.text)
-        if not match:
-            return None
-        bundle_url = base_url.rstrip("/") + "/static/" + match.group(1)
-        bundle = requests.get(bundle_url, timeout=30)
-        bundle.raise_for_status()
-        match = re.search(r"x-version\"\\s*[:,]\\s*\"?(\\d+)\"?", bundle.text)
-        if match:
-            return match.group(1)
-    except Exception:
-        return None
+    candidates: list[str] = []
+    base = base_url.rstrip("/") + "/"
+    candidates.append(urljoin(base, "login"))
+    if "api.flysto.net" in base_url:
+        candidates.append("https://www.flysto.net/login")
+    elif "flysto.net" in base_url and "www.flysto.net" not in base_url:
+        candidates.append("https://www.flysto.net/login")
+    for login_url in candidates:
+        try:
+            login = requests.get(login_url, timeout=30)
+            login.raise_for_status()
+            match = re.search(r"/static/(flysto\\.[^\\\"']+\\.js)", login.text)
+            if not match:
+                continue
+            base_root = "{uri.scheme}://{uri.netloc}/".format(
+                uri=urlparse(login_url)
+            )
+            bundle_url = urljoin(base_root, f"static/{match.group(1)}")
+            bundle = requests.get(bundle_url, timeout=30)
+            bundle.raise_for_status()
+            match = re.search(r"x-version\"\\s*[:,]\\s*\"?(\\d+)\"?", bundle.text)
+            if match:
+                return match.group(1)
+        except Exception:
+            continue
     return None

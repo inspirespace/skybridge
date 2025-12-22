@@ -1,7 +1,6 @@
 import argparse
 import json
 import sys
-import os
 from pathlib import Path
 
 from src.cloudahoy.client import CloudAhoyClient
@@ -213,24 +212,13 @@ def run(argv: list[str]) -> int:
             email=config.flysto_email,
             password=config.flysto_password,
         )
-        if args.mode in {None, "auto"} and not flysto.prepare():
-            print("FlySto API not available; falling back to web upload.", file=sys.stderr)
-            fallback_args = [
-                sys.executable,
-                "-m",
-                "src.cli",
-                "--mode",
-                "hybrid",
-                *(["--dry-run"] if args.dry_run else []),
-                *(["--review"] if args.review else []),
-                *(["--review-path", args.review_path] if args.review_path else []),
-                *(["--approve-import"] if args.approve_import else []),
-                *(["--review-id", args.review_id] if args.review_id else []),
-                *(["--max-flights", str(args.max_flights)] if args.max_flights else []),
-                *(["--state-path", args.state_path] if args.state_path else []),
-                *(["--force"] if args.force else []),
-            ]
-            os.execv(sys.executable, fallback_args)
+        if not flysto.prepare():
+            print(
+                "FlySto API not available. Verify credentials or set "
+                "FLYSTO_BASE_URL/FLYSTO_SESSION_COOKIE.",
+                file=sys.stderr,
+            )
+            return 2
 
     summaries = None
     if mode == "hybrid":
