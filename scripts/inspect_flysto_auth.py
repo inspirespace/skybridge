@@ -20,8 +20,20 @@ def main() -> None:
         page = context.new_page()
         page.goto("https://www.flysto.net/login", wait_until="load")
         page.wait_for_timeout(3000)
-        page.locator("input[type='email']").first.fill(email)
-        page.locator("input[type='password']").first.fill(password)
+        email_input = page.locator(
+            "input[type='email'], input[name*='email' i], input[placeholder*='email' i]"
+        )
+        if email_input.count() == 0:
+            page.screenshot(path="data/discovery/flysto_login.png", full_page=True)
+            raise RuntimeError("FlySto login email input not found")
+        password_input = page.locator(
+            "input[type='password'], input[name*='pass' i], input[placeholder*='password' i]"
+        )
+        if password_input.count() == 0:
+            page.screenshot(path="data/discovery/flysto_login.png", full_page=True)
+            raise RuntimeError("FlySto login password input not found")
+        email_input.first.fill(email)
+        password_input.first.fill(password)
         page.keyboard.press("Enter")
         page.wait_for_load_state("load")
         page.goto("https://www.flysto.net/logs", wait_until="load")
