@@ -1,0 +1,23 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Skybridge logo">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4FA3FF"/>
+      <stop offset="100%" stop-color="#7ED9FF"/>
+    </linearGradient>
+    <linearGradient id="bridge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1C2A44"/>
+      <stop offset="100%" stop-color="#0F172A"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="120" fill="url(#sky)"/>
+  <circle cx="384" cy="128" r="44" fill="#FFE58A" opacity="0.9"/>
+  <path d="M64 332C120 272 188 240 256 240C324 240 392 272 448 332" stroke="url(#bridge)" stroke-width="28" stroke-linecap="round"/>
+  <path d="M96 352C140 310 196 288 256 288C316 288 372 310 416 352" stroke="#0F172A" stroke-width="18" stroke-linecap="round" opacity="0.85"/>
+  <rect x="84" y="330" width="32" height="116" rx="10" fill="url(#bridge)"/>
+  <rect x="396" y="330" width="32" height="116" rx="10" fill="url(#bridge)"/>
+  <rect x="236" y="320" width="40" height="144" rx="12" fill="url(#bridge)"/>
+  <path d="M64 412H448" stroke="#0B1020" stroke-width="24" stroke-linecap="round"/>
+  <path d="M128 412V368" stroke="#F8FAFC" stroke-width="10" stroke-linecap="round" opacity="0.85"/>
+  <path d="M256 412V352" stroke="#F8FAFC" stroke-width="10" stroke-linecap="round" opacity="0.85"/>
+  <path d="M384 412V368" stroke="#F8FAFC" stroke-width="10" stroke-linecap="round" opacity="0.85"/>
+</svg>

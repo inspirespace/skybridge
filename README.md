@@ -1,5 +1,7 @@
 # CloudAhoy to FlySto Migration CLI
 
+![Skybridge logo](assets/logo.svg)
+
 A Dockerized CLI that migrates flights from CloudAhoy to FlySto. This repo is intentionally minimal so local dev only needs Docker.
 
 ## Quickstart
