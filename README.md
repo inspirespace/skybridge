@@ -22,19 +22,17 @@ docker run --rm \
   cloudahoy2flysto --mode hybrid --approve-import --max-flights 5
 ```
 
-Or use the wrapper script:
+Or use the wrapper scripts:
 
 ```sh
 ./scripts/run-review.sh
+./scripts/run-import.sh
+./scripts/run.sh --mode hybrid --approve-import --max-flights 10
 ```
 
 ## Configuration
 
-Create a `.env` file from `.env.example` and fill in your API keys.
-
-Required:
-- `CLOUD_AHOY_API_KEY`
-- `FLYSTO_API_KEY`
+Create a `.env` file from `.env.example` and fill in your credentials.
 
 Optional:
 - `CLOUD_AHOY_BASE_URL` (default `https://www.cloudahoy.com/api`)
@@ -50,6 +48,7 @@ Optional:
 - `BROWSER_HEADLESS` (`true`/`false`)
 - `DRY_RUN` (`true`/`false`)
 - `MAX_FLIGHTS` (integer)
+Note: `CLOUD_AHOY_API_KEY` and `FLYSTO_API_KEY` are not used yet.
 
 CLI options:
 - `--state-path` (default `data/migration.db`)
