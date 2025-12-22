@@ -21,14 +21,38 @@ class CloudAhoyClient:
     def list_flights(self, limit: int | None = None) -> list[FlightSummary]:
         session, auth = _login(self.email, self.password)
         payload = _build_auth_payload(auth, initial_call=True)
-        response = session.post(
-            f"{_api_base(self.base_url)}/t-flights.cgi",
-            json=payload,
-            timeout=60,
-        )
-        response.raise_for_status()
-        data = response.json()
-        flights = data.get("flights", [])
+        flights: list[dict] = []
+        more = True
+        last_token = None
+        safety = 0
+
+        while more:
+            response = session.post(
+                f"{_api_base(self.base_url)}/t-flights.cgi",
+                json=payload,
+                timeout=60,
+            )
+            response.raise_for_status()
+            data = response.json()
+            batch = data.get("flights", [])
+            if isinstance(batch, list):
+                flights.extend(batch)
+
+            more = bool(data.get("more"))
+            last_token = _extract_last_token(batch)
+            if not last_token:
+                more = False
+
+            if limit and len(flights) >= limit:
+                flights = flights[:limit]
+                break
+
+            safety += 1
+            if not more or safety > 20:
+                break
+
+            payload = _build_auth_payload(auth, initial_call=False)
+            payload["last"] = last_token
 
         summaries: list[FlightSummary] = []
         for flight in flights[: limit or len(flights)]:
@@ -153,3 +177,17 @@ def _api_base(base_url: str) -> str:
     if "api.cloudahoy.com" in base_url:
         return "https://www.cloudahoy.com/api"
     return base_url.rstrip("/")
+
+
+def _extract_last_token(flights: list[dict]) -> str | None:
+    if not flights:
+        return None
+    last = flights[-1]
+    gmt_start = last.get("gmtStart") or last.get("adjTime")
+    if gmt_start is None:
+        return None
+    try:
+        gmt_start = int(float(gmt_start))
+    except (TypeError, ValueError):
+        return None
+    return f"zz14[d-mmm-yy HH:MM]{gmt_start}zz14"
