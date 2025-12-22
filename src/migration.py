@@ -33,6 +33,8 @@ class ReviewItem:
     points_count: int | None
     points_schema: list[dict]
     points_preview: list[dict]
+    metadata_path: str | None
+    metadata: dict
     has_kml: bool
 
     def to_dict(self) -> dict:
@@ -49,6 +51,8 @@ class ReviewItem:
             "points_count": self.points_count,
             "points_schema": self.points_schema,
             "points_preview": self.points_preview,
+            "metadata_path": self.metadata_path,
+            "metadata": self.metadata,
             "has_kml": self.has_kml,
         }
 
@@ -80,6 +84,8 @@ def prepare_review(
                         points_count=None,
                         points_schema=[],
                         points_preview=[],
+                        metadata_path=None,
+                        metadata={},
                         has_kml=False,
                     )
                 )
@@ -89,6 +95,7 @@ def prepare_review(
         points_count, has_kml, schema, preview = _describe_detail(
             detail.raw_payload, detail.file_path
         )
+        metadata = _extract_metadata(detail.raw_payload)
         items.append(
             _review_item(
                 summary,
@@ -99,6 +106,8 @@ def prepare_review(
                 points_count=points_count,
                 points_schema=schema,
                 points_preview=preview,
+                metadata_path=detail.metadata_path,
+                metadata=metadata,
                 has_kml=has_kml,
             )
         )
@@ -127,6 +136,8 @@ def _review_item(
     points_count: int | None,
     points_schema: list[dict],
     points_preview: list[dict],
+    metadata_path: str | None,
+    metadata: dict,
     has_kml: bool,
 ) -> ReviewItem:
     return ReviewItem(
@@ -142,6 +153,8 @@ def _review_item(
         points_count=points_count,
         points_schema=points_schema,
         points_preview=points_preview,
+        metadata_path=metadata_path,
+        metadata=metadata,
         has_kml=has_kml,
     )
 
@@ -215,6 +228,13 @@ def _cleanup_exports_dir(cloudahoy: CloudAhoyClient, items: list[ReviewItem]) ->
         for item in items
         if item.file_path
     }
+    keep.update(
+        {
+            Path(item.metadata_path).resolve()
+            for item in items
+            if item.metadata_path
+        }
+    )
     for entry in exports_dir.iterdir():
         if not entry.is_file():
             continue
@@ -235,6 +255,29 @@ def _payload_has_kml(flt: dict | None) -> bool:
             for value in kml.values()
         )
     return False
+
+
+def _extract_metadata(raw_payload: dict) -> dict:
+    flt = raw_payload.get("flt") if isinstance(raw_payload, dict) else {}
+    meta = flt.get("Meta") if isinstance(flt, dict) else None
+    if not isinstance(meta, dict):
+        return {}
+    fields = {
+        "pilot": meta.get("pilot"),
+        "co_pilot": meta.get("coPilot"),
+        "pilots": meta.get("pilots"),
+        "remarks": meta.get("remarks"),
+        "tags": meta.get("tags"),
+        "tail_number": meta.get("tailNumber"),
+        "aircraft_from": meta.get("from"),
+        "aircraft_to": meta.get("to"),
+        "event_from": meta.get("e_from"),
+        "event_to": meta.get("e_to"),
+        "is_sim_flight": meta.get("isSimFlight"),
+        "summary": meta.get("summary"),
+        "hobbs": meta.get("hobbs"),
+    }
+    return {key: value for key, value in fields.items() if value not in (None, "", [])}
 
 
 def migrate_flights(
