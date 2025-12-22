@@ -18,7 +18,6 @@ class CloudAhoyWebConfig:
     password: str | None
     flights_url: str | None
     export_url_template: str | None
-    debrief_url_template: str | None
     storage_state_path: Path
     downloads_dir: Path
     headless: bool
@@ -62,8 +61,6 @@ class CloudAhoyWebClient:
         page = session.open()
         self._ensure_login(page)
 
-        cesium_files = self.capture_cesium(flight_id)
-
         export_url = self._config.export_url_template.format(flight_id=flight_id)
         download_path = self._download_file(page, export_url)
 
@@ -75,46 +72,10 @@ class CloudAhoyWebClient:
             raw_payload={
                 "source": "cloudahoy",
                 "export_url": export_url,
-                "cesium_files": [str(path) for path in cesium_files],
             },
             file_path=str(download_path),
             file_type=download_path.suffix.lstrip(".") or None,
         )
-
-    def capture_cesium(self, flight_id: str) -> list[Path]:
-        session = self._open_session()
-        page = session.open()
-        self._ensure_login(page)
-
-        captures: list[Path] = []
-        seen_urls: set[str] = set()
-
-        def handle_response(response) -> None:
-            url = response.url
-            if url in seen_urls:
-                return
-            content_type = response.headers.get("content-type", "")
-            if not _is_cesium_candidate(url, content_type):
-                return
-            seen_urls.add(url)
-            body, suffix = _response_payload(response, url, content_type)
-            if body is None:
-                return
-            self._config.downloads_dir.mkdir(parents=True, exist_ok=True)
-            path = self._config.downloads_dir / f"{flight_id}.cesium.{len(captures)+1}.{suffix}"
-            path.write_bytes(body)
-            captures.append(path)
-
-        page.on("response", handle_response)
-        for url in self._debrief_url_candidates(flight_id):
-            page.goto(url, wait_until="networkidle")
-            page.wait_for_timeout(2000)
-            if captures:
-                break
-
-        session.save_state()
-        session.close()
-        return captures
 
     def _open_session(self) -> BrowserSession:
         options = BrowserOptions(
@@ -212,60 +173,6 @@ class CloudAhoyWebClient:
         download.save_as(destination)
         return destination
 
-    def _debrief_url_candidates(self, flight_id: str) -> list[str]:
-        if self._config.debrief_url_template:
-            return [self._config.debrief_url_template.format(flight_id=flight_id)]
-        base = self._config.base_url.rstrip("/")
-        return [
-            f"{base}/debrief/?flight={flight_id}",
-            f"{base}/debrief/?id={flight_id}",
-            f"{base}/debrief/?f={flight_id}",
-            f"{base}/debrief/?key={flight_id}",
-            f"{base}/debrief/index.php?flight={flight_id}",
-            f"{base}/debrief/#/flight/{flight_id}",
-            f"{base}/debrief/flight/{flight_id}",
-            f"{base}/debrief/?flightId={flight_id}",
-        ]
-
-
-def _is_cesium_candidate(url: str, content_type: str) -> bool:
-    lowered = url.lower()
-    if "czml" in lowered or "cesium" in lowered:
-        return True
-    if any(token in lowered for token in ("geojson", "terrain", "tileset")):
-        return True
-    if any(
-        token in content_type.lower()
-        for token in ("czml", "cesium", "geo+json", "octet-stream", "application/json")
-    ):
-        return True
-    return False
-
-
-def _response_payload(response, url: str, content_type: str) -> tuple[bytes | None, str]:
-    suffix = _guess_suffix(url, content_type)
-    try:
-        body = response.body()
-        if not body:
-            return None, suffix
-        return body, suffix
-    except Exception:
-        try:
-            text = response.text()
-        except Exception:
-            return None, suffix
-        return text.encode("utf-8", errors="replace"), suffix
-
-
-def _guess_suffix(url: str, content_type: str) -> str:
-    lowered = url.lower()
-    if lowered.endswith(".czml") or "czml" in content_type.lower():
-        return "czml"
-    if lowered.endswith(".geojson") or "geo+json" in content_type.lower():
-        return "geojson"
-    if lowered.endswith(".json") or "application/json" in content_type.lower():
-        return "json"
-    return "bin"
 
 
 def _extract_flight_items(data: Any) -> list[FlightSummary]:

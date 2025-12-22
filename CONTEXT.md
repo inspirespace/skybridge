@@ -12,7 +12,6 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - CloudAhoy JSON APIs discovered: `t-flights.cgi` and `t-debrief.cgi` (full flight data incl. KML).
 - FlySto upload UI: `/logs` → `Load logs` → `Browse files`.
 - Review gating: non-dry-run uploads require a review manifest (`--review` or auto) and `--approve-import`.
-- Cesium capture: review step loads the CloudAhoy debrief page and saves Cesium/CZML payloads to `data/cloudahoy_exports`.
 
 ## Required API Details
 These are needed to complete the adapters:
