@@ -11,7 +11,6 @@ class Config:
     cloudahoy_web_base_url: str
     cloudahoy_flights_url: str | None
     cloudahoy_export_url_template: str | None
-    cloudahoy_debrief_url_template: str | None
     flysto_api_key: str | None
     flysto_base_url: str
     flysto_email: str | None
@@ -63,7 +62,6 @@ def load_config() -> Config:
     flysto_web_base_url = _get_env("FLYSTO_WEB_BASE_URL") or "https://www.flysto.net"
     cloudahoy_flights_url = _get_env("CLOUD_AHOY_FLIGHTS_URL")
     cloudahoy_export_url_template = _get_env("CLOUD_AHOY_EXPORT_URL_TEMPLATE")
-    cloudahoy_debrief_url_template = _get_env("CLOUD_AHOY_DEBRIEF_URL_TEMPLATE")
     flysto_upload_url = _get_env("FLYSTO_UPLOAD_URL")
 
     headless_value = (_get_env("BROWSER_HEADLESS") or "true").lower()
@@ -83,7 +81,6 @@ def load_config() -> Config:
         cloudahoy_web_base_url=cloudahoy_web_base_url,
         cloudahoy_flights_url=cloudahoy_flights_url,
         cloudahoy_export_url_template=cloudahoy_export_url_template,
-        cloudahoy_debrief_url_template=cloudahoy_debrief_url_template,
         flysto_api_key=flysto_api_key,
         flysto_base_url=flysto_base_url,
         flysto_email=flysto_email,

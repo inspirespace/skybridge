@@ -124,7 +124,6 @@ def run(argv: list[str]) -> int:
                 password=config.cloudahoy_password,
                 flights_url=config.cloudahoy_flights_url,
                 export_url_template=config.cloudahoy_export_url_template,
-                debrief_url_template=config.cloudahoy_debrief_url_template,
                 storage_state_path=Path(args.cloudahoy_state_path),
                 downloads_dir=Path(args.exports_dir),
                 headless=headless,
@@ -182,7 +181,6 @@ def run(argv: list[str]) -> int:
     if args.review or (not dry_run and not args.approve_import):
         prepare_review(
             cloudahoy=cloudahoy_client,
-            cloudahoy_web=cloudahoy,
             max_flights=max_flights,
             state=state,
             force=args.force,
