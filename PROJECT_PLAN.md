@@ -5,6 +5,7 @@
 - Upload to FlySto uses web UI; API still unknown.
 - `migration.db` now stores file/metadata hashes for idempotent skips.
 - Review manifests include `review_id` and approve-import requires it.
+- FlySto API investigation blocked by intermittent 503/server-error responses.
 
 ## Next Implementation Steps
 1) Attach metadata to uploads
