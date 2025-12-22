@@ -6,6 +6,22 @@ from pathlib import Path
 from typing import Any
 
 
+INFERRED_COLUMNS: dict[int, dict[str, Any]] = {
+    6: {"name": "heading_deg", "unit": "deg", "label": "heading/track", "confidence": "high"},
+    7: {"name": "wind_speed_knots", "unit": "knots", "label": "wind speed", "confidence": "medium"},
+    8: {"name": "wind_dir_deg", "unit": "deg", "label": "wind direction", "confidence": "medium"},
+    11: {"name": "mag_variation_deg", "unit": "deg", "label": "mag variation", "confidence": "high"},
+    12: {"name": "vs_knots", "unit": "knots", "label": "vertical speed", "confidence": "medium"},
+    13: {"name": "roll_deg", "unit": "deg", "label": "roll/bank", "confidence": "medium"},
+    14: {"name": "airborne_flag", "unit": None, "label": "airborne flag", "confidence": "high"},
+    15: {"name": "valid_flag", "unit": None, "label": "valid flag", "confidence": "low"},
+    16: {"name": "ias_knots", "unit": "knots", "label": "indicated airspeed", "confidence": "high"},
+    18: {"name": "alt_meters_raw", "unit": "meters", "label": "altitude (raw)", "confidence": "low"},
+    19: {"name": "agl_meters", "unit": "meters", "label": "altitude AGL", "confidence": "high"},
+    20: {"name": "alt_meters_smooth", "unit": "meters", "label": "altitude (smooth)", "confidence": "low"},
+}
+
+
 def build_points_schema(flt: dict) -> list[dict[str, Any]]:
     points = flt.get("points") if isinstance(flt, dict) else None
     if not isinstance(points, list) or not points:
@@ -14,10 +30,19 @@ def build_points_schema(flt: dict) -> list[dict[str, Any]]:
     if max_len == 0:
         return []
 
-    schema = [
-        {"index": idx, "name": f"col_{idx}", "unit": None, "label": None, "id": None}
-        for idx in range(max_len)
-    ]
+    schema = []
+    for idx in range(max_len):
+        schema.append(
+            {
+                "index": idx,
+                "name": f"col_{idx}",
+                "unit": None,
+                "label": None,
+                "id": None,
+                "source": "unknown",
+                "confidence": None,
+            }
+        )
 
     mapping = _extract_profiles(flt.get("p"))
     for idx, meta in mapping.items():
@@ -28,6 +53,8 @@ def build_points_schema(flt: dict) -> list[dict[str, Any]]:
                 "unit": meta["unit"],
                 "label": meta["label"],
                 "id": meta["id"],
+                "source": "profile",
+                "confidence": "high",
             }
 
     if 0 < len(schema):
@@ -37,6 +64,8 @@ def build_points_schema(flt: dict) -> list[dict[str, Any]]:
             "unit": "deg",
             "label": "longitude",
             "id": "LON",
+            "source": "inferred",
+            "confidence": "high",
         }
     if 1 < len(schema):
         schema[1] = {
@@ -45,7 +74,21 @@ def build_points_schema(flt: dict) -> list[dict[str, Any]]:
             "unit": "deg",
             "label": "latitude",
             "id": "LAT",
+            "source": "inferred",
+            "confidence": "high",
         }
+
+    for idx, meta in INFERRED_COLUMNS.items():
+        if idx < len(schema) and schema[idx]["source"] == "unknown":
+            schema[idx] = {
+                "index": idx,
+                "name": meta["name"],
+                "unit": meta["unit"],
+                "label": meta["label"],
+                "id": None,
+                "source": "inferred",
+                "confidence": meta.get("confidence"),
+            }
 
     return schema
 
