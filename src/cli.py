@@ -4,6 +4,7 @@ from pathlib import Path
 
 from src.cloudahoy.client import CloudAhoyClient
 from src.config import ConfigError, load_config
+from src.discovery import DiscoveryConfig, run_discovery
 from src.flysto.client import FlyStoClient
 from src.migration import migrate_flights
 from src.state import MigrationState
@@ -62,6 +63,21 @@ def build_parser() -> argparse.ArgumentParser:
         default="data/cloudahoy_exports",
         help="Download directory for CloudAhoy exports",
     )
+    parser.add_argument(
+        "--discover",
+        action="store_true",
+        help="Run endpoint discovery using web automation and write data/discovery/discovery.json",
+    )
+    parser.add_argument(
+        "--discovery-dir",
+        default="data/discovery",
+        help="Directory for discovery output",
+    )
+    parser.add_argument(
+        "--discovery-upload-file",
+        default=None,
+        help="Optional path to a file to upload during FlySto discovery",
+    )
     return parser
 
 
@@ -108,6 +124,30 @@ def run(argv: list[str]) -> int:
                 headless=headless,
             )
         )
+
+        if args.discover:
+            discovery_path = run_discovery(
+                DiscoveryConfig(
+                    cloudahoy_base_url=config.cloudahoy_web_base_url,
+                    cloudahoy_email=config.cloudahoy_email,
+                    cloudahoy_password=config.cloudahoy_password,
+                    flysto_base_url=config.flysto_web_base_url,
+                    flysto_email=config.flysto_email,
+                    flysto_password=config.flysto_password,
+                    headless=headless,
+                    output_dir=Path(args.discovery_dir),
+                    cloudahoy_flights_url=config.cloudahoy_flights_url,
+                    cloudahoy_export_url_template=config.cloudahoy_export_url_template,
+                    flysto_upload_url=config.flysto_upload_url,
+                    upload_file=(
+                        Path(args.discovery_upload_file)
+                        if args.discovery_upload_file
+                        else None
+                    ),
+                )
+            )
+            print(f"Discovery results written to {discovery_path}")
+            return 0
     else:
         cloudahoy = CloudAhoyClient(
             api_key=config.cloudahoy_api_key or "",

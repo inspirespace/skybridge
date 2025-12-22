@@ -48,6 +48,9 @@ CLI options:
 - `--headful` to run browser non-headless
 - `--cloudahoy-state-path` / `--flysto-state-path` for browser storage state
 - `--exports-dir` for downloaded CloudAhoy exports
+- `--discover` to run endpoint discovery into `data/discovery/discovery.json`
+- `--discovery-dir` to control discovery output directory
+- `--discovery-upload-file` to use a specific file for FlySto upload discovery
 
 ## Status
 
@@ -58,6 +61,8 @@ Core CLI wiring and migration workflow are implemented with web automation. API 
 ## Web Automation Notes
 
 The web mode uses Playwright to log in and export/upload flights when no official APIs are available. Provide `CLOUD_AHOY_EXPORT_URL_TEMPLATE` and `FLYSTO_UPLOAD_URL` to bypass UI discovery if needed. For interactive debugging, run with `--headful` and watch the browser session.
+
+Discovery mode will attempt to log in and collect endpoint hints; it writes a sanitized JSON summary to `data/discovery/discovery.json`.
 
 ## SaaS Roadmap (draft)
 

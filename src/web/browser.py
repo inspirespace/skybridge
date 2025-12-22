@@ -53,6 +53,15 @@ class BrowserSession:
 
         self._page.on("response", _handle)
 
+    def on_request(self, handler: Callable[[str, str, dict], None]) -> None:
+        if not self._page:
+            raise RuntimeError("BrowserSession is not open")
+
+        def _handle(request) -> None:
+            handler(request.url, request.method, request.headers)
+
+        self._page.on("request", _handle)
+
     def save_state(self) -> None:
         if self._context and self._options.storage_state_path:
             self._context.storage_state(path=str(self._options.storage_state_path))
