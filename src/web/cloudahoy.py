@@ -110,8 +110,11 @@ class CloudAhoyWebClient:
             captures.append(path)
 
         page.on("response", handle_response)
-        page.goto(self._debrief_url(flight_id), wait_until="networkidle")
-        page.wait_for_timeout(3000)
+        for url in self._debrief_url_candidates(flight_id):
+            page.goto(url, wait_until="networkidle")
+            page.wait_for_timeout(2000)
+            if captures:
+                break
 
         session.save_state()
         session.close()
@@ -213,10 +216,17 @@ class CloudAhoyWebClient:
         download.save_as(destination)
         return destination
 
-    def _debrief_url(self, flight_id: str) -> str:
+    def _debrief_url_candidates(self, flight_id: str) -> list[str]:
         if self._config.debrief_url_template:
-            return self._config.debrief_url_template.format(flight_id=flight_id)
-        return f"{self._config.base_url}/debrief/?flight={flight_id}"
+            return [self._config.debrief_url_template.format(flight_id=flight_id)]
+        base = self._config.base_url.rstrip("/")
+        return [
+            f"{base}/debrief/?flight={flight_id}",
+            f"{base}/debrief/?id={flight_id}",
+            f"{base}/debrief/?f={flight_id}",
+            f"{base}/debrief/?key={flight_id}",
+            f"{base}/debrief/index.php?flight={flight_id}",
+        ]
 
 
 def _is_cesium_candidate(url: str, content_type: str) -> bool:
