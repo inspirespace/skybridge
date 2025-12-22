@@ -7,7 +7,7 @@ A Dockerized CLI that migrates flights from CloudAhoy to FlySto. This repo is in
 Build the image:
 
 ```sh
-docker build -t cloudahoy2flysto .
+docker build -t skybridge .
 ```
 
 Run a review (generates CSV exports from `flt.points`):
@@ -15,11 +15,11 @@ Run a review (generates CSV exports from `flt.points`):
 ```sh
 docker run --rm \
   --env-file .env \
-  cloudahoy2flysto --review --max-flights 5
+  skybridge --review --max-flights 5
 
 docker run --rm \
   --env-file .env \
-  cloudahoy2flysto --approve-import --max-flights 5
+  skybridge --approve-import --max-flights 5
 ```
 
 Or use the wrapper scripts:

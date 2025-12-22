@@ -9,7 +9,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - If you adopt a different layout, document it here with concrete paths (example: `cmd/`, `internal/`, `pkg/` for Go).
 
 ## Build, Test, and Development Commands
-- `docker build -t cloudahoy2flysto .` — build the image.
+- `docker build -t skybridge .` — build the image.
 - `./scripts/run-review.sh` — run review mode via Docker (default `MAX_FLIGHTS=5`).
 - `./scripts/run-import.sh` — run approved import using the latest `data/review.json`.
 - `./scripts/run.sh --approve-import --max-flights 5` — run the CLI with explicit options.

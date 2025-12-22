@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-IMAGE_NAME="cloudahoy2flysto"
+IMAGE_NAME="skybridge"
 ENV_FILE="${ENV_FILE:-${ROOT_DIR}/.env}"
 
 if [ ! -f "${ENV_FILE}" ]; then

@@ -15,7 +15,7 @@ from src.web.flysto import FlyStoWebClient, FlyStoWebConfig
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="cloudahoy2flysto",
+        prog="skybridge",
         description="Migrate CloudAhoy flights to FlySto",
     )
     parser.add_argument(
