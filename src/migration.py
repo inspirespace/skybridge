@@ -160,9 +160,44 @@ def _describe_detail(
 def _summarize_review(items: list[ReviewItem]) -> dict:
     skipped = sum(1 for item in items if item.status == "skipped")
     ready = sum(1 for item in items if item.status == "ready")
+    points_schema_summary = _summarize_points_schema(items)
     return {
         "ready": ready,
         "skipped": skipped,
+        "points_schema_summary": points_schema_summary,
+    }
+
+
+def _summarize_points_schema(items: list[ReviewItem]) -> dict:
+    by_index: dict[int, dict] = {}
+    total_flights = 0
+    for item in items:
+        if not item.points_schema:
+            continue
+        total_flights += 1
+        for column in item.points_schema:
+            index = column.get("index")
+            if index is None:
+                continue
+            name = column.get("name")
+            unit = column.get("unit")
+            key = int(index)
+            entry = by_index.setdefault(
+                key,
+                {"index": key, "name": name, "unit": unit, "count": 0},
+            )
+            entry["count"] += 1
+            if entry.get("name") == f"col_{key}" and name and name != f"col_{key}":
+                entry["name"] = name
+                entry["unit"] = unit
+
+    columns = [by_index[idx] for idx in sorted(by_index.keys())]
+    unknown = [col for col in columns if col["name"].startswith("col_")]
+    return {
+        "flights_with_schema": total_flights,
+        "column_count": len(columns),
+        "columns": columns,
+        "unknown_columns": [col["index"] for col in unknown],
     }
 
 
