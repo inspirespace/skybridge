@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import csv
+from datetime import datetime, timezone, timedelta
 import re
 from pathlib import Path
 from typing import Any
+from xml.etree.ElementTree import Element, SubElement, ElementTree
 
 
 INFERRED_COLUMNS: dict[int, dict[str, Any]] = {
@@ -104,6 +106,79 @@ def write_points_csv(points: list, schema: list[dict[str, Any]], path: Path) -> 
                 continue
             row = [point[idx] if idx < len(point) else None for idx in range(len(schema))]
             writer.writerow(row)
+
+def infer_point_indices(schema: list[dict[str, Any]]) -> tuple[int, int, int | None]:
+    lat_idx = _index_for(schema, "latitude_deg", fallback=1)
+    lon_idx = _index_for(schema, "longitude_deg", fallback=0)
+    alt_idx = _index_for(schema, "alt_meters", fallback=2)
+    return lat_idx, lon_idx, alt_idx
+
+
+def write_points_gpx(
+    points: list,
+    schema: list[dict[str, Any]],
+    path: Path,
+    start_time: datetime | float | int | None = None,
+    step_seconds: float | None = None,
+    track_name: str | None = None,
+) -> None:
+    lat_idx, lon_idx, alt_idx = infer_point_indices(schema)
+    if start_time is not None:
+        if isinstance(start_time, (int, float)):
+            start_time = datetime.fromtimestamp(float(start_time), tz=timezone.utc)
+        elif isinstance(start_time, datetime):
+            if start_time.tzinfo is None:
+                start_time = start_time.replace(tzinfo=timezone.utc)
+        else:
+            start_time = None
+    if step_seconds is None or step_seconds <= 0:
+        step_seconds = 1.0
+
+    gpx = Element("gpx", {
+        "version": "1.1",
+        "creator": "skybridge",
+        "xmlns": "http://www.topografix.com/GPX/1/1",
+    })
+    trk = SubElement(gpx, "trk")
+    if track_name:
+        name = SubElement(trk, "name")
+        name.text = track_name
+    trkseg = SubElement(trk, "trkseg")
+
+    for idx, point in enumerate(points):
+        if not isinstance(point, list):
+            continue
+        if lon_idx >= len(point) or lat_idx >= len(point):
+            continue
+        lon = point[lon_idx]
+        lat = point[lat_idx]
+        if lon is None or lat is None:
+            continue
+        trkpt = SubElement(trkseg, "trkpt", {
+            "lat": str(lat),
+            "lon": str(lon),
+        })
+        if alt_idx is not None and alt_idx < len(point):
+            alt = point[alt_idx]
+            if alt is not None:
+                ele = SubElement(trkpt, "ele")
+                ele.text = str(alt)
+        if start_time is not None:
+            timestamp = start_time + timedelta(seconds=step_seconds * idx)
+            time_node = SubElement(trkpt, "time")
+            time_node.text = timestamp.isoformat().replace("+00:00", "Z")
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tree = ElementTree(gpx)
+    tree.write(path, encoding="utf-8", xml_declaration=True)
+
+
+def _index_for(schema: list[dict[str, Any]], name: str, fallback: int | None = None) -> int | None:
+    for column in schema:
+        if column.get("name") == name:
+            return int(column.get("index", fallback or 0))
+    return fallback
+
 
 
 def points_preview(

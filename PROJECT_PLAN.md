@@ -1,7 +1,7 @@
 # Project Plan
 
 ## Status Snapshot
-- Review flow works for all flights; exports CSV from `flt.points`; metadata captured.
+- Review flow works for all flights; exports GPX from `flt.points`; metadata captured; 46 flights imported on 2025-12-22.
 - Upload to FlySto uses API (`/api/login`, `/api/log-upload`).
 - `migration.db` now stores file/metadata hashes for idempotent skips.
 - Review manifests include `review_id` and approve-import requires it.
@@ -9,8 +9,8 @@
 - MODE defaults to `auto` and no longer falls back to web.
 
 ## Next Implementation Steps
-1) Run API upload end-to-end for all flights (start with a small batch).
-2) Confirm metadata mapping with FlySto (pilot, crew, remarks, tags, tail number).
+1) Confirm metadata mapping coverage (pilot/crew/remarks/tail number).
+2) Decide whether to persist raw CloudAhoy payloads for audit/replay.
 3) Output format mapping
    - Confirm FlySto’s preferred structured format.
    - Map `flt.points` to that format and add tests.

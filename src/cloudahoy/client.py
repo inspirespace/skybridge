@@ -6,7 +6,7 @@ from pathlib import Path
 
 import requests
 
-from src.cloudahoy.points import build_points_schema, write_points_csv
+from src.cloudahoy.points import build_points_schema, write_points_gpx
 from src.models import FlightDetail, FlightSummary
 import json
 import string
@@ -90,9 +90,17 @@ class CloudAhoyClient:
         if isinstance(points, list) and points:
             schema = build_points_schema(flt)
             if schema:
-                file_path = self.exports_dir / f"{flight_id}.csv"
-                write_points_csv(points, schema, file_path)
-                file_type = "csv"
+                start_time, step_seconds = _infer_point_timing(flt, len(points))
+                file_path = self.exports_dir / f"{flight_id}.gpx"
+                write_points_gpx(
+                    points,
+                    schema,
+                    file_path,
+                    start_time=start_time,
+                    step_seconds=step_seconds,
+                    track_name=flight_id,
+                )
+                file_type = "gpx"
         if not file_path:
             kml_text = _extract_kml(data)
             if kml_text:
@@ -168,6 +176,37 @@ def _from_unix(value: int | float | None) -> datetime:
         return datetime.fromtimestamp(float(value), tz=timezone.utc)
     except (TypeError, ValueError):
         return datetime.now(tz=timezone.utc)
+
+
+def _infer_point_timing(flt: dict, points_count: int) -> tuple[datetime | None, float | None]:
+    meta = flt.get("Meta") if isinstance(flt, dict) else None
+    if not isinstance(meta, dict):
+        return None, None
+    start = meta.get("GMT_start")
+    start_time = None
+    try:
+        if start is not None:
+            start_time = datetime.fromtimestamp(float(start), tz=timezone.utc)
+    except (TypeError, ValueError):
+        start_time = None
+    duration_hours = None
+    air = meta.get("air")
+    gnd = meta.get("gnd")
+    try:
+        if air is not None or gnd is not None:
+            duration_hours = float(air or 0) + float(gnd or 0)
+    except (TypeError, ValueError):
+        duration_hours = None
+    if duration_hours is None or points_count <= 1:
+        return start_time, None
+    duration_seconds = duration_hours * 3600
+    if duration_seconds <= 0:
+        return start_time, None
+    step = duration_seconds / (points_count - 1)
+    if step <= 0 or step > 30:
+        return start_time, None
+    return start_time, step
+
 
 
 def _extract_kml(payload: dict) -> str | None:

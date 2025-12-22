@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import json
 import re
+import zipfile
 from urllib.parse import urljoin, urlparse
 
 import requests
@@ -47,7 +48,7 @@ class FlyStoClient:
             self.api_version = _infer_api_version(self.base_url)
 
         file_path = Path(flight.file_path)
-        payload = file_path.read_bytes()
+        payload = _build_upload_payload(file_path)
         headers = {"content-type": "application/zip"}
         if self.api_version:
             headers["x-version"] = self.api_version
@@ -89,6 +90,17 @@ def _validate_flight_for_upload(flight: FlightDetail) -> None:
     if not path.exists():
         raise RuntimeError("Flight export file missing on disk.")
 
+
+
+
+def _build_upload_payload(path: Path) -> bytes:
+    data = path.read_bytes()
+    if path.suffix.lower() == ".zip":
+        return data
+    buffer = __import__('io').BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(path.name, data)
+    return buffer.getvalue()
 
 def _metadata_payload(flight: FlightDetail) -> dict:
     payload = flight.raw_payload.get("flt", {}).get("Meta", {})

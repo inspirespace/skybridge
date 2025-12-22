@@ -4,6 +4,7 @@
 Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal local dependencies. Long-term goal is a hosted SaaS offering with billing.
 
 ## Current Status
+- All 46 flights imported into FlySto on 2025-12-22 via API upload (GPX zipped).
 - CLI wiring and migration flow exist with CloudAhoy API + FlySto API upload (default).
 - Docker image runs the CLI (`python -m src.cli`).
 - Config uses env vars and `.env` via Docker `--env-file` (MODE defaults to `auto`).
@@ -11,7 +12,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Discovery mode writes endpoint hints to `data/discovery/discovery.json`.
 - CloudAhoy JSON APIs discovered: `t-flights.cgi` and `t-debrief.cgi` (full flight data incl. `flt.points`).
 - Review gating: non-dry-run uploads require a review manifest (`--review` or auto) and `--approve-import`.
-- Review manifests now include `flt.points` schema + preview and exports are CSV by default.
+- Review manifests now include `flt.points` schema + preview and exports are GPX by default.
 - Hybrid mode uses the web UI to page through CloudAhoy flights (`Load more`) and uses API for flight detail fetch.
 - FlySto API endpoints discovered via UI: `/api/login` (text/plain JSON body) and `/api/log-upload?id=<filename>@@@0` with `content-type: application/zip`. `x-version` is inferred from the JS bundle if not provided.
 
@@ -32,6 +33,6 @@ See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 - Browser storage state is persisted under `data/` to reuse sessions.
 
 ## Next Steps
-1) Run API upload end-to-end now that FlySto is back online.
-2) Confirm metadata mapping coverage for pilot/crew/remarks/tail number.
+1) Confirm metadata mapping coverage (pilot/crew/remarks/tail number).
+2) Decide whether to persist raw CloudAhoy payloads for audit/replay.
 3) Add SaaS multi-tenant auth, billing, and per-user job tracking.

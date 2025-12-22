@@ -11,6 +11,7 @@ fi
 MAX_FLIGHTS="${MAX_FLIGHTS:-5}"
 
 REVIEW_PATH="${REVIEW_PATH:-${ROOT_DIR}/data/review.json}"
+REVIEW_PATH_CONTAINER="data/review.json"
 if [ ! -f "${REVIEW_PATH}" ]; then
   echo "Missing review manifest: ${REVIEW_PATH}" >&2
   echo "Run ./scripts/run-review.sh first." >&2
@@ -22,4 +23,4 @@ if [ -z "${REVIEW_ID}" ]; then
   exit 1
 fi
 
-exec "${ROOT_DIR}/scripts/run.sh" --approve-import --review-path "${REVIEW_PATH}" --review-id "${REVIEW_ID}" --max-flights "${MAX_FLIGHTS}"
+exec "${ROOT_DIR}/scripts/run.sh" --approve-import --review-path "${REVIEW_PATH_CONTAINER}" --review-id "${REVIEW_ID}" --max-flights "${MAX_FLIGHTS}"
