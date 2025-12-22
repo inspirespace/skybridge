@@ -9,7 +9,7 @@
 - MODE defaults to `auto` and no longer falls back to web.
 
 ## Next Implementation Steps
-1) Confirm metadata mapping coverage (pilot/crew/remarks/tail number).
+1) Confirm metadata mapping coverage (pilot/crew/remarks/tail number) and aircraft assignment.
 2) Decide whether to persist raw CloudAhoy payloads for audit/replay.
 3) Output format mapping
    - Confirm FlySto’s preferred structured format.

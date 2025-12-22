@@ -428,6 +428,7 @@ def migrate_flights(
     for summary in summaries:
         detail = cloudahoy.fetch_flight(summary.id)
         file_hash = _hash_file(detail.file_path)
+        csv_hash = _hash_file(detail.csv_path)
         metadata_hash = _hash_file(detail.metadata_path)
 
         if state and not force:
@@ -436,6 +437,7 @@ def migrate_flights(
                 record
                 and record.status == "ok"
                 and record.file_hash == file_hash
+                and record.csv_hash == csv_hash
                 and record.metadata_hash == metadata_hash
             ):
                 results.append(
@@ -443,6 +445,17 @@ def migrate_flights(
                         flight_id=summary.id,
                         status="skipped",
                         message="already migrated",
+                    )
+                )
+                continue
+
+            duplicate = state.find_by_hash(file_hash, csv_hash)
+            if duplicate and duplicate.status == "ok":
+                results.append(
+                    MigrationResult(
+                        flight_id=summary.id,
+                        status="skipped",
+                        message=f"duplicate of {duplicate.flight_id}",
                     )
                 )
                 continue
@@ -460,6 +473,7 @@ def migrate_flights(
                 result.status,
                 result.message,
                 file_hash=file_hash,
+                csv_hash=csv_hash,
                 metadata_hash=metadata_hash,
             )
 
@@ -476,6 +490,12 @@ def _migrate_single(
     dry_run: bool,
 ) -> MigrationResult:
     try:
+        if not dry_run:
+            metadata = _extract_metadata(detail.raw_payload)
+            tail_number = metadata.get("tail_number")
+            aircraft_type = metadata.get("aircraft_type")
+            if tail_number:
+                flysto.ensure_aircraft(tail_number, aircraft_type)
         flysto.upload_flight(detail, dry_run=dry_run)
         return MigrationResult(flight_id=detail.id, status="ok")
     except Exception as exc:  # noqa: BLE001 - surfacing per-flight failure

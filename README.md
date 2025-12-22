@@ -1,4 +1,4 @@
-# CloudAhoy to FlySto Migration CLI
+# Skybridge
 
 A Dockerized CLI that migrates flights from CloudAhoy to FlySto. This repo is intentionally minimal so local dev only needs Docker.
 
@@ -10,7 +10,7 @@ Build the image:
 docker build -t skybridge .
 ```
 
-Run a review (generates GPX exports from `flt.points` and retains CSV sidecars):
+Run a review (generates GPX exports from `flt.points`, retains CSV sidecars, and creates FlySto aircraft by tail number):
 
 ```sh
 docker run --rm \

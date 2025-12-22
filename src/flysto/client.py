@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import json
 import re
+from typing import Any
 import zipfile
 from urllib.parse import urljoin, urlparse
 
@@ -22,6 +23,8 @@ class FlyStoClient:
     api_version: str | None = None
     email: str | None = None
     password: str | None = None
+    aircraft_profiles_cache: list[dict[str, Any]] | None = None
+    aircraft_cache: list[dict[str, Any]] | None = None
 
     def prepare(self) -> bool:
         session = requests.Session()
@@ -64,6 +67,97 @@ class FlyStoClient:
                 f"FlySto upload failed: {response.status_code} {response.text[:300]}"
             )
 
+
+    def ensure_aircraft(self, tail_number: str | None, aircraft_type: str | None = None) -> dict[str, Any] | None:
+        if not tail_number:
+            return None
+        session = requests.Session()
+        self._ensure_session(session)
+        existing = self._find_aircraft_by_tail(session, tail_number)
+        if existing:
+            return existing
+        model_id = self._match_model_id(aircraft_type)
+        if not model_id:
+            raise RuntimeError("Unable to infer FlySto aircraft model for tail number.")
+        payload = {
+            "avionics": {"logFormatId": "gpx", "systemId": "gpx"},
+            "tailNumber": tail_number,
+            "serialNumber": None,
+            "notes": None,
+            "model": {
+                "type": "flysto.webapi.AircraftModel.Predefined",
+                "modelId": model_id,
+            },
+            "logAccess": "AuthorizedUserOnly",
+        }
+        response = session.post(
+            self.base_url.rstrip("/") + "/api/create-aircraft",
+            json=payload,
+            timeout=60,
+        )
+        if response.status_code >= 300:
+            raise RuntimeError(
+                f"FlySto create-aircraft failed: {response.status_code} {response.text[:200]}"
+            )
+        # refresh cache
+        self.aircraft_cache = None
+        return self._find_aircraft_by_tail(session, tail_number)
+
+    def _find_aircraft_by_tail(self, session: requests.Session, tail_number: str) -> dict[str, Any] | None:
+        aircraft = self._list_aircraft(session)
+        for entry in aircraft:
+            if entry.get("tail-number") == tail_number:
+                return entry
+        return None
+
+    def _list_aircraft(self, session: requests.Session) -> list[dict[str, Any]]:
+        if self.aircraft_cache is not None:
+            return self.aircraft_cache
+        response = session.get(self.base_url.rstrip("/") + "/api/aircraft", timeout=60)
+        decoded = _decode_flysto_payload(response.text)
+        if isinstance(decoded, str):
+            try:
+                data = json.loads(decoded)
+            except json.JSONDecodeError:
+                data = []
+        elif isinstance(decoded, list):
+            data = decoded
+        else:
+            data = []
+        self.aircraft_cache = data if isinstance(data, list) else []
+        return self.aircraft_cache
+
+    def _match_model_id(self, aircraft_type: str | None) -> str | None:
+        profiles = self._list_aircraft_profiles()
+        if not profiles:
+            return None
+        if aircraft_type:
+            needle = aircraft_type.strip().lower()
+            for profile in profiles:
+                name = (profile.get("modelName") or "").lower()
+                search = " ".join(profile.get("searchNames") or []).lower()
+                if needle in name or needle in search:
+                    return profile.get("modelId")
+        # fallback to first known model
+        return profiles[0].get("modelId")
+
+    def _list_aircraft_profiles(self) -> list[dict[str, Any]]:
+        if self.aircraft_profiles_cache is not None:
+            return self.aircraft_profiles_cache
+        response = requests.get(self.base_url.rstrip("/") + "/api/aircraft-profiles", timeout=60)
+        decoded = _decode_flysto_payload(response.text)
+        if isinstance(decoded, str):
+            try:
+                data = json.loads(decoded)
+            except json.JSONDecodeError:
+                data = []
+        elif isinstance(decoded, list):
+            data = decoded
+        else:
+            data = []
+        self.aircraft_profiles_cache = data if isinstance(data, list) else []
+        return self.aircraft_profiles_cache
+
     def _ensure_session(self, session: requests.Session) -> None:
         if self.session_cookie:
             hostname = urlparse(self.base_url).hostname or "www.flysto.net"
@@ -83,6 +177,32 @@ class FlyStoClient:
         raise NotImplementedError("FlySto API auth not configured.")
 
 
+
+
+def _decode_flysto_payload(text: str) -> Any:
+    if text.startswith("wait\n"):
+        text = text.split("\n", 1)[1]
+    if text.startswith("{"):
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError:
+            return text
+        if isinstance(data, dict) and "RESPONSE" in data:
+            decoded = _swap_chars(str(data.get("RESPONSE", "")))
+            return decoded
+        return data
+    return text
+
+
+def _swap_chars(value: str) -> str:
+    chars: list[str] = []
+    for ch in value:
+        code = ord(ch)
+        if 32 <= code <= 127:
+            chars.append(chr((127 - code) + 32))
+        else:
+            chars.append(ch)
+    return "".join(chars)
 def _validate_flight_for_upload(flight: FlightDetail) -> None:
     if not flight.file_path:
         raise RuntimeError("Flight export file is required for FlySto upload.")

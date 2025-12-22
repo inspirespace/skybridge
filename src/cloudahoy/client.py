@@ -57,11 +57,16 @@ class CloudAhoyClient:
             payload["last"] = last_token
 
         summaries: list[FlightSummary] = []
+        seen: set[str] = set()
         for flight in flights[: limit or len(flights)]:
+            flight_id = flight.get("key") or flight.get("fdID")
+            if not flight_id or flight_id in seen:
+                continue
+            seen.add(flight_id)
             started_at = _from_unix(flight.get("gmtStart") or flight.get("adjTime"))
             summaries.append(
                 FlightSummary(
-                    id=flight.get("key") or flight.get("fdID"),
+                    id=flight_id,
                     started_at=started_at,
                     duration_seconds=flight.get("nSec"),
                     aircraft_type=flight.get("aircraft", {}).get("P", {}).get("typeAircraft"),
