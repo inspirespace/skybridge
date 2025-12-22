@@ -9,6 +9,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - If you adopt a different layout, document it here with concrete paths (example: `cmd/`, `internal/`, `pkg/` for Go).
 
 ## Build, Test, and Development Commands
+- `./scripts/cleanup-merged-branches.sh` — delete local branches already merged into `main` and prune remotes.
 - `docker build -t skybridge .` — build the image.
 - `./scripts/run-review.sh` — run review mode via Docker (default `MAX_FLIGHTS=5`).
 - `./scripts/run-import.sh` — run approved import using the latest `data/review.json`.
