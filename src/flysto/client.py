@@ -21,6 +21,18 @@ class FlyStoClient:
     email: str | None = None
     password: str | None = None
 
+    def prepare(self) -> bool:
+        session = requests.Session()
+        try:
+            self._ensure_session(session)
+        except Exception:
+            return False
+        if not self.session_cookie:
+            cookie = session.cookies.get("USER_SESSION")
+            if cookie:
+                self.session_cookie = cookie
+        return True
+
     def upload_flight(self, flight: FlightDetail, dry_run: bool = False) -> None:
         if dry_run:
             _validate_flight_for_upload(flight)

@@ -39,7 +39,7 @@ def _get_env(name: str) -> str | None:
 
 
 def load_config() -> Config:
-    mode = (_get_env("MODE") or "web").lower()
+    mode = (_get_env("MODE") or "auto").lower()
 
     cloudahoy_email = _get_env("CLOUD_AHOY_EMAIL")
     cloudahoy_password = _get_env("CLOUD_AHOY_PASSWORD")

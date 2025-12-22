@@ -7,6 +7,7 @@
 - Review manifests include `review_id` and approve-import requires it.
 - FlySto API investigation blocked by intermittent 503/server-error responses.
 - API client scaffolding added (cookie-based), pending working FlySto API.
+- MODE now defaults to `auto` and prefers API when available.
 
 ## Next Implementation Steps
 1) Attach metadata to uploads
