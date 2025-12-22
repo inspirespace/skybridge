@@ -138,8 +138,13 @@ class FlyStoClient:
                 search = " ".join(profile.get("searchNames") or []).lower()
                 if needle in name or needle in search:
                     return profile.get("modelId")
+        # Prefer a generic "Other" model when present.
+        for profile in profiles:
+            name = (profile.get("modelName") or "").strip().lower()
+            if name == "other" or name.startswith("other "):
+                return profile.get("modelId")
         # fallback to first known model
-        return profiles[0].get("modelId")
+        return profiles[0].get("modelId") or "Other"
 
     def _list_aircraft_profiles(self) -> list[dict[str, Any]]:
         if self.aircraft_profiles_cache is not None:
