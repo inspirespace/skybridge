@@ -1,6 +1,7 @@
 import argparse
 import json
 import sys
+import os
 from pathlib import Path
 
 from src.cloudahoy.client import CloudAhoyClient
@@ -214,30 +215,22 @@ def run(argv: list[str]) -> int:
         )
         if args.mode in {None, "auto"} and not flysto.prepare():
             print("FlySto API not available; falling back to web upload.", file=sys.stderr)
-            mode = "hybrid"
-            cloudahoy = CloudAhoyWebClient(
-                CloudAhoyWebConfig(
-                    base_url=config.cloudahoy_web_base_url,
-                    email=config.cloudahoy_email,
-                    password=config.cloudahoy_password,
-                    flights_url=config.cloudahoy_flights_url,
-                    export_url_template=config.cloudahoy_export_url_template,
-                    storage_state_path=Path(args.cloudahoy_state_path),
-                    downloads_dir=Path(args.exports_dir),
-                    headless=headless,
-                )
-            )
-            flysto = FlyStoWebClient(
-                FlyStoWebConfig(
-                    base_url=config.flysto_web_base_url,
-                    email=config.flysto_email,
-                    password=config.flysto_password,
-                    upload_url=config.flysto_upload_url,
-                    storage_state_path=Path(args.flysto_state_path),
-                    headless=headless,
-                )
-            )
-            cloudahoy_client = cloudahoy
+            fallback_args = [
+                sys.executable,
+                "-m",
+                "src.cli",
+                "--mode",
+                "hybrid",
+                *(["--dry-run"] if args.dry_run else []),
+                *(["--review"] if args.review else []),
+                *(["--review-path", args.review_path] if args.review_path else []),
+                *(["--approve-import"] if args.approve_import else []),
+                *(["--review-id", args.review_id] if args.review_id else []),
+                *(["--max-flights", str(args.max_flights)] if args.max_flights else []),
+                *(["--state-path", args.state_path] if args.state_path else []),
+                *(["--force"] if args.force else []),
+            ]
+            os.execv(sys.executable, fallback_args)
 
     summaries = None
     if mode == "hybrid":
