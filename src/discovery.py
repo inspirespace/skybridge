@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
-from playwright.sync_api import Page
+from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
 
 from src.web.browser import BrowserOptions, BrowserSession
 
@@ -49,7 +49,11 @@ def discover_cloudahoy(config: DiscoveryConfig) -> dict[str, Any]:
 
     request_log: list[dict[str, Any]] = []
     response_log: list[dict[str, Any]] = []
-    session.on_request(lambda url, method, headers: _log_request(url, method, headers, request_log))
+    session.on_request(
+        lambda url, method, headers, post_data: _log_request(
+            url, method, headers, post_data, request_log
+        )
+    )
     session.on_response(lambda url, data: _log_response(url, data, response_log))
 
     _login_cloudahoy(page, config)
@@ -83,7 +87,11 @@ def discover_flysto(config: DiscoveryConfig) -> dict[str, Any]:
 
     request_log: list[dict[str, Any]] = []
     response_log: list[dict[str, Any]] = []
-    session.on_request(lambda url, method, headers: _log_request(url, method, headers, request_log))
+    session.on_request(
+        lambda url, method, headers, post_data: _log_request(
+            url, method, headers, post_data, request_log
+        )
+    )
     session.on_response(lambda url, data: _log_response(url, data, response_log))
 
     _login_flysto(page, config)
@@ -115,7 +123,7 @@ def _login_cloudahoy(page: Page, config: DiscoveryConfig) -> None:
     page.fill("input[name=email]", config.cloudahoy_email)
     page.fill("input[name=password]", config.cloudahoy_password)
     page.click("#btnlogin")
-    page.wait_for_load_state("networkidle")
+    page.wait_for_load_state("load")
 
 
 def _login_flysto(page: Page, config: DiscoveryConfig) -> None:
@@ -127,15 +135,16 @@ def _login_flysto(page: Page, config: DiscoveryConfig) -> None:
     page.fill("input[name=email]", config.flysto_email)
     page.fill("input[name=password]", config.flysto_password)
     page.keyboard.press("Enter")
-    page.wait_for_load_state("networkidle")
+    page.wait_for_load_state("load")
 
 
 def _guess_flights_url(page: Page, base_url: str) -> str | None:
     for label in ("My Debriefs", "Debriefs", "Flights", "My Flights"):
-        if page.get_by_text(label).count() > 0:
-            page.get_by_text(label).first.click()
-            page.wait_for_load_state("networkidle")
-            return page.url
+        locator = page.locator(f"a:has-text('{label}')")
+        if locator.count() > 0:
+            href = locator.first.get_attribute("href")
+            if href:
+                return href if href.startswith("http") else f"{base_url}/{href.lstrip('/')}"
     links = page.locator("a")
     for idx in range(min(links.count(), 75)):
         href = links.nth(idx).get_attribute("href")
@@ -150,10 +159,13 @@ def _click_export_button(page: Page) -> str | None:
     export_labels = ["Export", "Download", "IGC", "GPX", "CSV"]
     for label in export_labels:
         if page.get_by_text(label).count() > 0:
-            with page.expect_download() as download_info:
-                page.get_by_text(label).first.click()
-            download = download_info.value
-            return download.url
+            try:
+                with page.expect_download(timeout=5000) as download_info:
+                    page.get_by_text(label).first.click()
+                download = download_info.value
+                return download.url
+            except PlaywrightTimeoutError:
+                continue
     return None
 
 
@@ -202,17 +214,55 @@ def _infer_template_from_url(url: str | None) -> str | None:
     return url
 
 
-def _log_request(url: str, method: str, headers: dict, log: list[dict[str, Any]]) -> None:
+def _log_request(
+    url: str,
+    method: str,
+    headers: dict,
+    post_data: str | None,
+    log: list[dict[str, Any]],
+) -> None:
     content_type = headers.get("content-type", "")
     is_upload = method.upper() == "POST" and "multipart/form-data" in content_type
+    payload = None
+    if post_data and ("cloudahoy.com" in url or "flysto.net" in url):
+        payload = _scrub_payload(post_data)
     log.append(
         {
             "url": url,
             "method": method,
             "content_type": content_type,
             "upload": is_upload,
+            "payload": payload,
         }
     )
+
+
+def _scrub_payload(post_data: str) -> str | None:
+    if not post_data:
+        return None
+    try:
+        parsed = json.loads(post_data)
+    except json.JSONDecodeError:
+        parsed = None
+
+    if isinstance(parsed, dict):
+        return json.dumps(_redact_json(parsed))
+
+    redacted = post_data
+    redacted = re.sub(r"=([^&]+)", "=REDACTED", redacted)
+    if len(redacted) > 2000:
+        return redacted[:2000] + "...(truncated)"
+    return redacted
+
+
+def _redact_json(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {key: _redact_json(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return []
+    if isinstance(value, bool) or value is None:
+        return value
+    return "REDACTED"
 
 
 def _log_response(url: str, data: dict | list | None, log: list[dict[str, Any]]) -> None:

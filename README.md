@@ -15,7 +15,7 @@ Run a dry migration:
 ```sh
 docker run --rm \
   --env-file .env \
-  cloudahoy2flysto --dry-run --max-flights 5
+  cloudahoy2flysto --mode hybrid --dry-run --max-flights 5
 ```
 
 ## Configuration
@@ -27,7 +27,7 @@ Required:
 - `FLYSTO_API_KEY`
 
 Optional:
-- `CLOUD_AHOY_BASE_URL` (default `https://api.cloudahoy.com`)
+- `CLOUD_AHOY_BASE_URL` (default `https://www.cloudahoy.com/api`)
 - `CLOUD_AHOY_WEB_BASE_URL` (default `https://www.cloudahoy.com`)
 - `CLOUD_AHOY_EMAIL` / `CLOUD_AHOY_PASSWORD` (web mode login)
 - `CLOUD_AHOY_FLIGHTS_URL` (direct flights page URL if auto-detect fails)
@@ -36,7 +36,7 @@ Optional:
 - `FLYSTO_WEB_BASE_URL` (default `https://www.flysto.net`)
 - `FLYSTO_EMAIL` / `FLYSTO_PASSWORD` (web mode login)
 - `FLYSTO_UPLOAD_URL` (direct upload page URL if auto-detect fails)
-- `MODE` (`web` or `api`, default `web`)
+- `MODE` (`web`, `hybrid`, or `api`, default `web`)
 - `BROWSER_HEADLESS` (`true`/`false`)
 - `DRY_RUN` (`true`/`false`)
 - `MAX_FLIGHTS` (integer)
@@ -54,13 +54,11 @@ CLI options:
 
 ## Status
 
-Core CLI wiring and migration workflow are implemented with web automation. API calls are still stubbed in:
-- `src/cloudahoy/client.py`
-- `src/flysto/client.py`
+Hybrid mode uses CloudAhoy JSON APIs for full-flight data and FlySto web upload. API-only mode is not implemented for FlySto yet.
 
 ## Web Automation Notes
 
-The web mode uses Playwright to log in and export/upload flights when no official APIs are available. Provide `CLOUD_AHOY_EXPORT_URL_TEMPLATE` and `FLYSTO_UPLOAD_URL` to bypass UI discovery if needed. For interactive debugging, run with `--headful` and watch the browser session.
+The web mode uses Playwright to log in and export/upload flights when no official APIs are available. Provide `CLOUD_AHOY_EXPORT_URL_TEMPLATE` and `FLYSTO_UPLOAD_URL` to bypass UI discovery if needed. For interactive debugging, run with `--headful` and watch the browser session. FlySto uploads are driven through the `Load logs` → `Browse files` flow on `/logs`.
 
 Discovery mode will attempt to log in and collect endpoint hints; it writes a sanitized JSON summary to `data/discovery/discovery.json`.
 

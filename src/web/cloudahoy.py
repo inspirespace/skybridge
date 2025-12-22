@@ -92,7 +92,7 @@ class CloudAhoyWebClient:
         page.fill("input[name=email]", self._config.email)
         page.fill("input[name=password]", self._config.password)
         page.click("#btnlogin")
-        page.wait_for_load_state("networkidle")
+        page.wait_for_load_state("load")
 
     def _guess_flights_url(self, page: Page) -> str | None:
         links = page.locator("a")

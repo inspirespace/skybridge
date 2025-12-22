@@ -1,10 +1,9 @@
-FROM python:3.11-slim
+FROM mcr.microsoft.com/playwright/python:v1.49.0-jammy
 
 WORKDIR /app
 
 COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt \
-  && python -m playwright install --with-deps chromium
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY src/ /app/src/
 
