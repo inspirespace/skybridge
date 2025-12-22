@@ -1,0 +1,1 @@
+"""CloudAhoy API client."""
