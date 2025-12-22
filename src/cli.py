@@ -187,6 +187,9 @@ def run(argv: list[str]) -> int:
             upload_url=config.flysto_log_upload_url,
             session_cookie=config.flysto_session_cookie,
             include_metadata=config.flysto_include_metadata,
+            api_version=config.flysto_api_version,
+            email=config.flysto_email,
+            password=config.flysto_password,
         )
 
     summaries = None

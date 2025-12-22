@@ -20,6 +20,7 @@ class Config:
     flysto_session_cookie: str | None
     flysto_log_upload_url: str | None
     flysto_include_metadata: bool
+    flysto_api_version: str | None
     mode: str
     headless: bool
     dry_run: bool
@@ -48,6 +49,7 @@ def load_config() -> Config:
     flysto_api_key = _get_env("FLYSTO_API_KEY")
     flysto_session_cookie = _get_env("FLYSTO_SESSION_COOKIE")
     flysto_log_upload_url = _get_env("FLYSTO_LOG_UPLOAD_URL")
+    flysto_api_version = _get_env("FLYSTO_API_VERSION")
 
     if mode in {"api", "hybrid"}:
         missing = [
@@ -97,6 +99,7 @@ def load_config() -> Config:
         flysto_session_cookie=flysto_session_cookie,
         flysto_log_upload_url=flysto_log_upload_url,
         flysto_include_metadata=flysto_include_metadata,
+        flysto_api_version=flysto_api_version,
         mode=mode,
         headless=headless,
         dry_run=dry_run,

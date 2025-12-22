@@ -39,6 +39,8 @@ def main() -> None:
                     headers[key] = "***redacted***"
             post_data = request.post_data
             data = post_data() if callable(post_data) else post_data
+            if "/api/login" in url and data:
+                data = "REDACTED"
             captured.append(
                 {
                     "url": url,
