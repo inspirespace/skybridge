@@ -212,7 +212,8 @@ def run(argv: list[str]) -> int:
             email=config.flysto_email,
             password=config.flysto_password,
         )
-        if not flysto.prepare():
+        needs_flysto = not (args.review or dry_run)
+        if needs_flysto and not flysto.prepare():
             print(
                 "FlySto API not available. Verify credentials or set "
                 "FLYSTO_BASE_URL/FLYSTO_SESSION_COOKIE.",
