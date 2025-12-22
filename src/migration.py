@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+import hashlib
 import json
 from pathlib import Path
 import string
@@ -9,7 +10,7 @@ import string
 from src.cloudahoy.client import CloudAhoyClient
 from src.cloudahoy.points import build_points_schema, points_preview
 from src.flysto.client import FlyStoClient
-from src.models import FlightSummary, MigrationResult
+from src.models import FlightDetail, FlightSummary, MigrationResult
 from src.state import MigrationState
 
 
@@ -31,10 +32,12 @@ class ReviewItem:
     message: str | None
     file_path: str | None
     file_type: str | None
+    file_hash: str | None
     points_count: int | None
     points_schema: list[dict]
     points_preview: list[dict]
     metadata_path: str | None
+    metadata_hash: str | None
     metadata: dict
     has_kml: bool
 
@@ -49,10 +52,12 @@ class ReviewItem:
             "message": self.message,
             "file_path": self.file_path,
             "file_type": self.file_type,
+            "file_hash": self.file_hash,
             "points_count": self.points_count,
             "points_schema": self.points_schema,
             "points_preview": self.points_preview,
             "metadata_path": self.metadata_path,
+            "metadata_hash": self.metadata_hash,
             "metadata": self.metadata,
             "has_kml": self.has_kml,
         }
@@ -65,7 +70,7 @@ def prepare_review(
     state: MigrationState | None = None,
     force: bool = False,
     output_path: Path | None = None,
-) -> list[ReviewItem]:
+) -> tuple[list[ReviewItem], str]:
     summaries = summaries or cloudahoy.list_flights(limit=max_flights)
     if max_flights:
         summaries = summaries[:max_flights]
@@ -82,10 +87,12 @@ def prepare_review(
                         message="already migrated",
                         file_path=None,
                         file_type=None,
+                        file_hash=None,
                         points_count=None,
                         points_schema=[],
                         points_preview=[],
                         metadata_path=None,
+                        metadata_hash=None,
                         metadata={},
                         has_kml=False,
                     )
@@ -96,6 +103,8 @@ def prepare_review(
         points_count, has_kml, schema, preview = _describe_detail(
             detail.raw_payload, detail.file_path
         )
+        file_hash = _hash_file(detail.file_path)
+        metadata_hash = _hash_file(detail.metadata_path)
         metadata = _extract_metadata(detail.raw_payload)
         items.append(
             _review_item(
@@ -104,19 +113,23 @@ def prepare_review(
                 message=None,
                 file_path=detail.file_path,
                 file_type=detail.file_type,
+                file_hash=file_hash,
                 points_count=points_count,
                 points_schema=schema,
                 points_preview=preview,
                 metadata_path=detail.metadata_path,
+                metadata_hash=metadata_hash,
                 metadata=metadata,
                 has_kml=has_kml,
             )
         )
 
+    review_id = _compute_review_id(items)
     if output_path:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "generated_at": datetime.utcnow().isoformat() + "Z",
+            "review_id": review_id,
             "count": len(items),
             "summary": _summarize_review(items),
             "items": [item.to_dict() for item in items],
@@ -125,7 +138,7 @@ def prepare_review(
 
     _cleanup_exports_dir(cloudahoy, items)
 
-    return items
+    return items, review_id
 
 
 def _review_item(
@@ -134,10 +147,12 @@ def _review_item(
     message: str | None,
     file_path: str | None,
     file_type: str | None,
+    file_hash: str | None,
     points_count: int | None,
     points_schema: list[dict],
     points_preview: list[dict],
     metadata_path: str | None,
+    metadata_hash: str | None,
     metadata: dict,
     has_kml: bool,
 ) -> ReviewItem:
@@ -151,10 +166,12 @@ def _review_item(
         message=message,
         file_path=file_path,
         file_type=file_type,
+        file_hash=file_hash,
         points_count=points_count,
         points_schema=points_schema,
         points_preview=points_preview,
         metadata_path=metadata_path,
+        metadata_hash=metadata_hash,
         metadata=metadata,
         has_kml=has_kml,
     )
@@ -284,6 +301,19 @@ def _extract_metadata(raw_payload: dict) -> dict:
     return {key: value for key, value in fields.items() if value not in (None, "", [])}
 
 
+def _compute_review_id(items: list[ReviewItem]) -> str:
+    payload = [
+        {
+            "flight_id": item.flight_id,
+            "file_hash": item.file_hash,
+            "metadata_hash": item.metadata_hash,
+        }
+        for item in sorted(items, key=lambda i: i.flight_id)
+    ]
+    blob = json.dumps(payload, sort_keys=True).encode("utf-8")
+    return hashlib.sha256(blob).hexdigest()
+
+
 def _normalize_tail_number(value: object) -> tuple[str | None, str | None, list[str] | None]:
     if isinstance(value, str):
         tail = value.strip()
@@ -361,9 +391,18 @@ def migrate_flights(
     failed = 0
 
     for summary in summaries:
+        detail = cloudahoy.fetch_flight(summary.id)
+        file_hash = _hash_file(detail.file_path)
+        metadata_hash = _hash_file(detail.metadata_path)
+
         if state and not force:
             record = state.get(summary.id)
-            if record and record.status == "ok":
+            if (
+                record
+                and record.status == "ok"
+                and record.file_hash == file_hash
+                and record.metadata_hash == metadata_hash
+            ):
                 results.append(
                     MigrationResult(
                         flight_id=summary.id,
@@ -372,7 +411,8 @@ def migrate_flights(
                     )
                 )
                 continue
-        result = _migrate_single(summary, cloudahoy, flysto, dry_run)
+
+        result = _migrate_single(detail, flysto, dry_run)
         results.append(result)
         if result.status == "ok":
             succeeded += 1
@@ -380,7 +420,13 @@ def migrate_flights(
             failed += 1
 
         if state:
-            state.upsert(summary.id, result.status, result.message)
+            state.upsert(
+                summary.id,
+                result.status,
+                result.message,
+                file_hash=file_hash,
+                metadata_hash=metadata_hash,
+            )
 
     return results, MigrationStats(
         attempted=len(summaries),
@@ -390,18 +436,29 @@ def migrate_flights(
 
 
 def _migrate_single(
-    summary: FlightSummary,
-    cloudahoy: CloudAhoyClient,
+    detail: FlightDetail,
     flysto: FlyStoClient,
     dry_run: bool,
 ) -> MigrationResult:
     try:
-        detail = cloudahoy.fetch_flight(summary.id)
         flysto.upload_flight(detail, dry_run=dry_run)
-        return MigrationResult(flight_id=summary.id, status="ok")
+        return MigrationResult(flight_id=detail.id, status="ok")
     except Exception as exc:  # noqa: BLE001 - surfacing per-flight failure
         return MigrationResult(
-            flight_id=summary.id,
+            flight_id=detail.id,
             status="error",
             message=str(exc),
         )
+
+
+def _hash_file(path: str | None) -> str | None:
+    if not path:
+        return None
+    file_path = Path(path)
+    if not file_path.exists():
+        return None
+    hasher = hashlib.sha256()
+    with file_path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()

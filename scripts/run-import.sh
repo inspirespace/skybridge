@@ -10,4 +10,16 @@ if [ -z "${MAX_FLIGHTS}" ] && [ -f "${ENV_FILE}" ]; then
 fi
 MAX_FLIGHTS="${MAX_FLIGHTS:-5}"
 
-exec "${ROOT_DIR}/scripts/run.sh" --mode hybrid --approve-import --max-flights "${MAX_FLIGHTS}"
+REVIEW_PATH="${REVIEW_PATH:-${ROOT_DIR}/data/review.json}"
+if [ ! -f "${REVIEW_PATH}" ]; then
+  echo "Missing review manifest: ${REVIEW_PATH}" >&2
+  echo "Run ./scripts/run-review.sh first." >&2
+  exit 1
+fi
+REVIEW_ID="$(python - <<'PY'\nimport json\nfrom pathlib import Path\npath = Path(\"${REVIEW_PATH}\")\ntry:\n    data = json.loads(path.read_text())\nexcept Exception:\n    print(\"\")\nelse:\n    print(data.get(\"review_id\", \"\"))\nPY\n)"
+if [ -z "${REVIEW_ID}" ]; then
+  echo "Review ID not found in ${REVIEW_PATH}" >&2
+  exit 1
+fi
+
+exec "${ROOT_DIR}/scripts/run.sh" --mode hybrid --approve-import --review-path "${REVIEW_PATH}" --review-id "${REVIEW_ID}" --max-flights "${MAX_FLIGHTS}"

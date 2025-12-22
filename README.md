@@ -70,6 +70,7 @@ Hybrid mode uses CloudAhoy JSON APIs for full-flight data and FlySto web upload.
 The web mode uses Playwright to log in and export/upload flights when no official APIs are available. Provide `CLOUD_AHOY_EXPORT_URL_TEMPLATE` and `FLYSTO_UPLOAD_URL` to bypass UI discovery if needed. For interactive debugging, run with `--headful` and watch the browser session. FlySto uploads are driven through the `Load logs` → `Browse files` flow on `/logs`. The CloudAhoy flights list uses the web UI and auto-clicks `Load more` to fetch additional pages when available.
 
 Review manifests include a `points_schema` and `points_preview` derived from `flt.points` so you can validate the trajectory fields before import.
+Approved imports require a review ID; `./scripts/run-import.sh` reads it from `data/review.json` automatically.
 
 
 Discovery mode will attempt to log in and collect endpoint hints; it writes a sanitized JSON summary to `data/discovery/discovery.json`.

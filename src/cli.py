@@ -1,4 +1,5 @@
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -26,6 +27,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--review",
         action="store_true",
         help="Generate a review manifest and exit without importing",
+    )
+    parser.add_argument(
+        "--review-id",
+        default=None,
+        help="Review ID required to approve import (from review manifest)",
     )
     parser.add_argument(
         "--review-path",
@@ -189,7 +195,7 @@ def run(argv: list[str]) -> int:
             )
 
     if args.review or (not dry_run and not args.approve_import):
-        prepare_review(
+        _, review_id = prepare_review(
             cloudahoy=cloudahoy_client,
             summaries=summaries,
             max_flights=max_flights,
@@ -204,7 +210,29 @@ def run(argv: list[str]) -> int:
             )
         else:
             print(f"Review manifest written to {args.review_path}")
+            print(f"Review ID: {review_id}")
         return 0
+
+    if args.approve_import and not dry_run:
+        review_id = _read_review_id(Path(args.review_path))
+        if not review_id:
+            print(
+                "Review ID not found. Re-run review to generate a manifest.",
+                file=sys.stderr,
+            )
+            return 2
+        if not args.review_id:
+            print(
+                "Review ID required. Re-run with --review-id <id> from the manifest.",
+                file=sys.stderr,
+            )
+            return 2
+        if args.review_id != review_id:
+            print(
+                "Review ID does not match the manifest. Aborting.",
+                file=sys.stderr,
+            )
+            return 2
 
     results, stats = migrate_flights(
         cloudahoy=cloudahoy_client,
@@ -236,3 +264,14 @@ def run(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(run(sys.argv[1:]))
+
+
+def _read_review_id(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return None
+    review_id = payload.get("review_id")
+    return review_id if isinstance(review_id, str) and review_id else None
