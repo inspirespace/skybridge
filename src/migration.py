@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from src.cloudahoy.client import CloudAhoyClient
+from src.cloudahoy.points import build_points_schema, points_preview
 from src.flysto.client import FlyStoClient
 from src.models import FlightSummary, MigrationResult
 from src.state import MigrationState
@@ -30,6 +31,8 @@ class ReviewItem:
     file_path: str | None
     file_type: str | None
     points_count: int | None
+    points_schema: list[dict]
+    points_preview: list[dict]
     has_kml: bool
 
     def to_dict(self) -> dict:
@@ -44,6 +47,8 @@ class ReviewItem:
             "file_path": self.file_path,
             "file_type": self.file_type,
             "points_count": self.points_count,
+            "points_schema": self.points_schema,
+            "points_preview": self.points_preview,
             "has_kml": self.has_kml,
         }
 
@@ -70,13 +75,17 @@ def prepare_review(
                         file_path=None,
                         file_type=None,
                         points_count=None,
+                        points_schema=[],
+                        points_preview=[],
                         has_kml=False,
                     )
                 )
                 continue
 
         detail = cloudahoy.fetch_flight(summary.id)
-        points_count, has_kml = _describe_detail(detail.raw_payload, detail.file_path)
+        points_count, has_kml, schema, preview = _describe_detail(
+            detail.raw_payload, detail.file_path
+        )
         items.append(
             _review_item(
                 summary,
@@ -85,6 +94,8 @@ def prepare_review(
                 file_path=detail.file_path,
                 file_type=detail.file_type,
                 points_count=points_count,
+                points_schema=schema,
+                points_preview=preview,
                 has_kml=has_kml,
             )
         )
@@ -99,6 +110,8 @@ def prepare_review(
         }
         output_path.write_text(json.dumps(payload, indent=2))
 
+    _cleanup_exports_dir(cloudahoy, items)
+
     return items
 
 
@@ -109,6 +122,8 @@ def _review_item(
     file_path: str | None,
     file_type: str | None,
     points_count: int | None,
+    points_schema: list[dict],
+    points_preview: list[dict],
     has_kml: bool,
 ) -> ReviewItem:
     return ReviewItem(
@@ -122,16 +137,24 @@ def _review_item(
         file_path=file_path,
         file_type=file_type,
         points_count=points_count,
+        points_schema=points_schema,
+        points_preview=points_preview,
         has_kml=has_kml,
     )
 
 
-def _describe_detail(raw_payload: dict, file_path: str | None) -> tuple[int | None, bool]:
+def _describe_detail(
+    raw_payload: dict, file_path: str | None
+) -> tuple[int | None, bool, list[dict], list[dict]]:
     flt = raw_payload.get("flt") if isinstance(raw_payload, dict) else {}
     points = flt.get("points") if isinstance(flt, dict) else None
     points_count = len(points) if isinstance(points, list) else None
     has_kml = bool(file_path) or _payload_has_kml(flt)
-    return points_count, has_kml
+    schema = build_points_schema(flt) if isinstance(flt, dict) else []
+    preview = (
+        points_preview(points, schema) if isinstance(points, list) and schema else []
+    )
+    return points_count, has_kml, schema, preview
 
 
 def _summarize_review(items: list[ReviewItem]) -> dict:
@@ -141,6 +164,25 @@ def _summarize_review(items: list[ReviewItem]) -> dict:
         "ready": ready,
         "skipped": skipped,
     }
+
+
+def _cleanup_exports_dir(cloudahoy: CloudAhoyClient, items: list[ReviewItem]) -> None:
+    exports_dir = getattr(cloudahoy, "exports_dir", None)
+    if not isinstance(exports_dir, Path):
+        return
+    if not exports_dir.exists():
+        return
+    keep = {
+        Path(item.file_path).resolve()
+        for item in items
+        if item.file_path
+    }
+    for entry in exports_dir.iterdir():
+        if not entry.is_file():
+            continue
+        if entry.resolve() in keep:
+            continue
+        entry.unlink()
 
 
 def _payload_has_kml(flt: dict | None) -> bool:

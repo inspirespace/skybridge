@@ -6,6 +6,7 @@ from pathlib import Path
 
 import requests
 
+from src.cloudahoy.points import build_points_schema, write_points_csv
 from src.models import FlightDetail, FlightSummary
 
 
@@ -55,18 +56,29 @@ class CloudAhoyClient:
         response.raise_for_status()
         data = response.json()
 
-        kml_text = _extract_kml(data)
+        flt = data.get("flt", {})
+        points = flt.get("points") if isinstance(flt, dict) else None
         file_path = None
-        if kml_text:
-            self.exports_dir.mkdir(parents=True, exist_ok=True)
-            file_path = self.exports_dir / f"{flight_id}.kml"
-            file_path.write_text(kml_text)
+        file_type = None
+        if isinstance(points, list) and points:
+            schema = build_points_schema(flt)
+            if schema:
+                file_path = self.exports_dir / f"{flight_id}.csv"
+                write_points_csv(points, schema, file_path)
+                file_type = "csv"
+        if not file_path:
+            kml_text = _extract_kml(data)
+            if kml_text:
+                self.exports_dir.mkdir(parents=True, exist_ok=True)
+                file_path = self.exports_dir / f"{flight_id}.kml"
+                file_path.write_text(kml_text)
+                file_type = "kml"
 
         return FlightDetail(
             id=flight_id,
             raw_payload=data,
             file_path=str(file_path) if file_path else None,
-            file_type="kml" if file_path else None,
+            file_type=file_type,
         )
 
 
