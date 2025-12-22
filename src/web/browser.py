@@ -53,12 +53,16 @@ class BrowserSession:
 
         self._page.on("response", _handle)
 
-    def on_request(self, handler: Callable[[str, str, dict], None]) -> None:
+    def on_request(self, handler: Callable[[str, str, dict, str | None], None]) -> None:
         if not self._page:
             raise RuntimeError("BrowserSession is not open")
 
         def _handle(request) -> None:
-            handler(request.url, request.method, request.headers)
+            post_data = None
+            if request.method.upper() != "GET":
+                post_data_attr = request.post_data
+                post_data = post_data_attr() if callable(post_data_attr) else post_data_attr
+            handler(request.url, request.method, request.headers, post_data)
 
         self._page.on("request", _handle)
 

@@ -37,29 +37,29 @@ def _get_env(name: str) -> str | None:
 def load_config() -> Config:
     mode = (_get_env("MODE") or "web").lower()
 
+    cloudahoy_email = _get_env("CLOUD_AHOY_EMAIL")
+    cloudahoy_password = _get_env("CLOUD_AHOY_PASSWORD")
+    flysto_email = _get_env("FLYSTO_EMAIL")
+    flysto_password = _get_env("FLYSTO_PASSWORD")
     cloudahoy_api_key = _get_env("CLOUD_AHOY_API_KEY")
     flysto_api_key = _get_env("FLYSTO_API_KEY")
 
-    if mode == "api":
+    if mode in {"api", "hybrid"}:
         missing = [
             name
             for name, value in (
-                ("CLOUD_AHOY_API_KEY", cloudahoy_api_key),
-                ("FLYSTO_API_KEY", flysto_api_key),
+                ("CLOUD_AHOY_EMAIL", cloudahoy_email),
+                ("CLOUD_AHOY_PASSWORD", cloudahoy_password),
             )
             if value is None
         ]
         if missing:
             raise ConfigError(f"Missing required env vars: {', '.join(missing)}")
 
-    cloudahoy_base_url = _get_env("CLOUD_AHOY_BASE_URL") or "https://api.cloudahoy.com"
+    cloudahoy_base_url = _get_env("CLOUD_AHOY_BASE_URL") or "https://www.cloudahoy.com/api"
     flysto_base_url = _get_env("FLYSTO_BASE_URL") or "https://api.flysto.net"
     cloudahoy_web_base_url = _get_env("CLOUD_AHOY_WEB_BASE_URL") or "https://www.cloudahoy.com"
     flysto_web_base_url = _get_env("FLYSTO_WEB_BASE_URL") or "https://www.flysto.net"
-    cloudahoy_email = _get_env("CLOUD_AHOY_EMAIL")
-    cloudahoy_password = _get_env("CLOUD_AHOY_PASSWORD")
-    flysto_email = _get_env("FLYSTO_EMAIL")
-    flysto_password = _get_env("FLYSTO_PASSWORD")
     cloudahoy_flights_url = _get_env("CLOUD_AHOY_FLIGHTS_URL")
     cloudahoy_export_url_template = _get_env("CLOUD_AHOY_EXPORT_URL_TEMPLATE")
     flysto_upload_url = _get_env("FLYSTO_UPLOAD_URL")

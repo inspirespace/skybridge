@@ -16,6 +16,8 @@ class ConfigTests(unittest.TestCase):
         os.environ["MODE"] = "api"
         os.environ.pop("CLOUD_AHOY_API_KEY", None)
         os.environ.pop("FLYSTO_API_KEY", None)
+        os.environ.pop("CLOUD_AHOY_EMAIL", None)
+        os.environ.pop("CLOUD_AHOY_PASSWORD", None)
 
         with self.assertRaises(ConfigError):
             load_config()
@@ -24,6 +26,8 @@ class ConfigTests(unittest.TestCase):
         os.environ["MODE"] = "api"
         os.environ["CLOUD_AHOY_API_KEY"] = "ca"
         os.environ["FLYSTO_API_KEY"] = "fs"
+        os.environ["CLOUD_AHOY_EMAIL"] = "user@example.com"
+        os.environ["CLOUD_AHOY_PASSWORD"] = "secret"
 
         config = load_config()
 

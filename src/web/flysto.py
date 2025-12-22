@@ -55,7 +55,7 @@ class FlyStoWebClient:
         page.fill("input[name=email]", self._config.email)
         page.fill("input[name=password]", self._config.password)
         page.keyboard.press("Enter")
-        page.wait_for_load_state("networkidle")
+        page.wait_for_load_state("load")
 
     def _navigate_to_upload(self, page: Page) -> None:
         if self._config.upload_url:
@@ -63,10 +63,8 @@ class FlyStoWebClient:
             return
 
         page.goto(f"{self._config.base_url}/logs", wait_until="networkidle")
-        if page.locator("input[type=file]").count() > 0:
-            return
-
-        upload_triggers = ["Upload", "Add flight", "Import", "Upload flight"]
+        page.wait_for_timeout(2000)
+        upload_triggers = ["Load logs", "Upload", "Add flight", "Import", "Upload flight"]
         for label in upload_triggers:
             if page.get_by_text(label).count() > 0:
                 page.get_by_text(label).first.click()
@@ -78,7 +76,15 @@ class FlyStoWebClient:
         )
 
     def _upload_file(self, page: Page, file_path: Path) -> None:
-        file_input = page.locator("input[type=file]").first
+        file_inputs = page.locator("input[type=file]")
+        if file_inputs.count() == 0 and page.get_by_text("Browse files").count() > 0:
+            page.get_by_text("Browse files").first.click()
+            page.wait_for_timeout(1000)
+            file_inputs = page.locator("input[type=file]")
+        if file_inputs.count() == 0:
+            raise RuntimeError("FlySto upload input not found after opening modal.")
+
+        file_input = file_inputs.first
         file_input.set_input_files(str(file_path))
 
         submit_buttons = ["Upload", "Import", "Submit", "Save"]

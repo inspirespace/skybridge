@@ -40,7 +40,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--mode",
-        choices=["api", "web"],
+        choices=["api", "web", "hybrid"],
         help="Select API or web automation mode",
     )
     parser.add_argument(
@@ -96,12 +96,12 @@ def run(argv: list[str]) -> int:
     state = MigrationState(Path(args.state_path))
 
     mode = (args.mode or config.mode).lower()
-    if mode not in {"api", "web"}:
+    if mode not in {"api", "web", "hybrid"}:
         print(f"Unsupported mode: {mode}", file=sys.stderr)
         return 2
     headless = config.headless and not args.headful
 
-    if mode == "web":
+    if mode in {"web", "hybrid"}:
         cloudahoy = CloudAhoyWebClient(
             CloudAhoyWebConfig(
                 base_url=config.cloudahoy_web_base_url,
@@ -114,6 +114,17 @@ def run(argv: list[str]) -> int:
                 headless=headless,
             )
         )
+        if mode == "web":
+            cloudahoy_client = cloudahoy
+        else:
+            cloudahoy_client = CloudAhoyClient(
+                api_key=config.cloudahoy_api_key,
+                base_url=config.cloudahoy_base_url,
+                email=config.cloudahoy_email or "",
+                password=config.cloudahoy_password or "",
+                exports_dir=Path(args.exports_dir),
+            )
+
         flysto = FlyStoWebClient(
             FlyStoWebConfig(
                 base_url=config.flysto_web_base_url,
@@ -149,17 +160,11 @@ def run(argv: list[str]) -> int:
             print(f"Discovery results written to {discovery_path}")
             return 0
     else:
-        cloudahoy = CloudAhoyClient(
-            api_key=config.cloudahoy_api_key or "",
-            base_url=config.cloudahoy_base_url,
-        )
-        flysto = FlyStoClient(
-            api_key=config.flysto_api_key or "",
-            base_url=config.flysto_base_url,
-        )
+        print("API-only mode is not implemented for FlySto yet.", file=sys.stderr)
+        return 2
 
     results, stats = migrate_flights(
-        cloudahoy=cloudahoy,
+        cloudahoy=cloudahoy_client,
         flysto=flysto,
         dry_run=dry_run,
         max_flights=max_flights,

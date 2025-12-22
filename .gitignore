@@ -2,6 +2,4 @@ __pycache__/
 *.pyc
 .env
 .DS_Store
-data/*.db
-data/*.json
-data/cloudahoy_exports/
+data/

@@ -9,6 +9,8 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Config uses env vars and `.env` via Docker `--env-file`.
 - Web automation mode (Playwright) is implemented for login/export/upload when APIs are unknown.
 - Discovery mode writes endpoint hints to `data/discovery/discovery.json`.
+- CloudAhoy JSON APIs discovered: `t-flights.cgi` and `t-debrief.cgi` (full flight data incl. KML).
+- FlySto upload UI: `/logs` → `Load logs` → `Browse files`.
 
 ## Required API Details
 These are needed to complete the adapters:
