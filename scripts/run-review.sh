@@ -4,6 +4,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IMAGE_NAME="cloudahoy2flysto"
 ENV_FILE="${ENV_FILE:-${ROOT_DIR}/.env}"
+MAX_FLIGHTS="${MAX_FLIGHTS:-}"
+
+if [ -z "${MAX_FLIGHTS}" ] && [ -f "${ENV_FILE}" ]; then
+  MAX_FLIGHTS="$(grep -E '^MAX_FLIGHTS=' "${ENV_FILE}" | tail -n1 | cut -d= -f2-)"
+fi
 MAX_FLIGHTS="${MAX_FLIGHTS:-5}"
 
 if [ ! -f "${ENV_FILE}" ]; then
