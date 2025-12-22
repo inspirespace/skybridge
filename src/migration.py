@@ -29,6 +29,7 @@ class ReviewItem:
     message: str | None
     file_path: str | None
     file_type: str | None
+    cesium_files: list[str]
     points_count: int | None
     has_kml: bool
 
@@ -43,6 +44,7 @@ class ReviewItem:
             "message": self.message,
             "file_path": self.file_path,
             "file_type": self.file_type,
+            "cesium_files": self.cesium_files,
             "points_count": self.points_count,
             "has_kml": self.has_kml,
         }
@@ -50,6 +52,7 @@ class ReviewItem:
 
 def prepare_review(
     cloudahoy: CloudAhoyClient,
+    cloudahoy_web: object | None = None,
     max_flights: int | None = None,
     state: MigrationState | None = None,
     force: bool = False,
@@ -69,6 +72,7 @@ def prepare_review(
                         message="already migrated",
                         file_path=None,
                         file_type=None,
+                        cesium_files=[],
                         points_count=None,
                         has_kml=False,
                     )
@@ -77,6 +81,7 @@ def prepare_review(
 
         detail = cloudahoy.fetch_flight(summary.id)
         points_count, has_kml = _describe_detail(detail.raw_payload, detail.file_path)
+        cesium_files = _capture_cesium_files(cloudahoy_web, summary.id)
         items.append(
             _review_item(
                 summary,
@@ -84,6 +89,7 @@ def prepare_review(
                 message=None,
                 file_path=detail.file_path,
                 file_type=detail.file_type,
+                cesium_files=cesium_files,
                 points_count=points_count,
                 has_kml=has_kml,
             )
@@ -107,6 +113,7 @@ def _review_item(
     message: str | None,
     file_path: str | None,
     file_type: str | None,
+    cesium_files: list[str],
     points_count: int | None,
     has_kml: bool,
 ) -> ReviewItem:
@@ -120,6 +127,7 @@ def _review_item(
         message=message,
         file_path=file_path,
         file_type=file_type,
+        cesium_files=cesium_files,
         points_count=points_count,
         has_kml=has_kml,
     )
@@ -131,6 +139,19 @@ def _describe_detail(raw_payload: dict, file_path: str | None) -> tuple[int | No
     points_count = len(points) if isinstance(points, list) else None
     has_kml = bool(file_path) or _payload_has_kml(flt)
     return points_count, has_kml
+
+
+def _capture_cesium_files(cloudahoy_web: object | None, flight_id: str) -> list[str]:
+    if cloudahoy_web is None:
+        return []
+    capture = getattr(cloudahoy_web, "capture_cesium", None)
+    if not callable(capture):
+        return []
+    try:
+        files = capture(flight_id)
+    except Exception:
+        return []
+    return [str(path) for path in files]
 
 
 def _payload_has_kml(flt: dict | None) -> bool:
