@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 import json
 from pathlib import Path
+import string
 
 from src.cloudahoy.client import CloudAhoyClient
 from src.cloudahoy.points import build_points_schema, points_preview
@@ -262,13 +263,16 @@ def _extract_metadata(raw_payload: dict) -> dict:
     meta = flt.get("Meta") if isinstance(flt, dict) else None
     if not isinstance(meta, dict):
         return {}
+    tail_number, aircraft_type, tail_raw = _normalize_tail_number(meta.get("tailNumber"))
     fields = {
         "pilot": meta.get("pilot"),
         "co_pilot": meta.get("coPilot"),
         "pilots": meta.get("pilots"),
         "remarks": meta.get("remarks"),
         "tags": meta.get("tags"),
-        "tail_number": meta.get("tailNumber"),
+        "tail_number": tail_number,
+        "tail_number_raw": tail_raw,
+        "aircraft_type": aircraft_type,
         "aircraft_from": meta.get("from"),
         "aircraft_to": meta.get("to"),
         "event_from": meta.get("e_from"),
@@ -278,6 +282,50 @@ def _extract_metadata(raw_payload: dict) -> dict:
         "hobbs": meta.get("hobbs"),
     }
     return {key: value for key, value in fields.items() if value not in (None, "", [])}
+
+
+def _normalize_tail_number(value: object) -> tuple[str | None, str | None, list[str] | None]:
+    if isinstance(value, str):
+        tail = value.strip()
+        if _is_placeholder(tail):
+            return None, None, [tail]
+        return tail, None, None
+    if isinstance(value, list):
+        tail_candidates = [v for v in value if isinstance(v, str)]
+        tail_raw = [v for v in tail_candidates if v]
+        tail_number = None
+        aircraft_type = None
+        for entry in tail_candidates:
+            if _is_tail_candidate(entry):
+                tail_number = entry
+                break
+        for entry in tail_candidates:
+            if _is_placeholder(entry):
+                continue
+            if tail_number and entry == tail_number:
+                continue
+            if not _is_tail_candidate(entry):
+                aircraft_type = entry
+                break
+        return tail_number, aircraft_type, tail_raw or None
+    return None, None, None
+
+
+def _is_tail_candidate(value: str) -> bool:
+    stripped = value.strip()
+    if _is_placeholder(stripped):
+        return False
+    if len(stripped) < 2 or len(stripped) > 12:
+        return False
+    if not all(ch in (string.ascii_letters + string.digits + "-") for ch in stripped):
+        return False
+    if not any(ch.isdigit() for ch in stripped):
+        return False
+    return True
+
+
+def _is_placeholder(value: str) -> bool:
+    return value.strip().upper() in {"", "OTHER", "UNKNOWN"}
 
 
 def migrate_flights(
