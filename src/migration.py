@@ -30,6 +30,8 @@ class ReviewItem:
     file_path: str | None
     file_type: str | None
     cesium_files: list[str]
+    cesium_count: int
+    cesium_total_bytes: int
     points_count: int | None
     has_kml: bool
 
@@ -45,6 +47,8 @@ class ReviewItem:
             "file_path": self.file_path,
             "file_type": self.file_type,
             "cesium_files": self.cesium_files,
+            "cesium_count": self.cesium_count,
+            "cesium_total_bytes": self.cesium_total_bytes,
             "points_count": self.points_count,
             "has_kml": self.has_kml,
         }
@@ -73,6 +77,8 @@ def prepare_review(
                         file_path=None,
                         file_type=None,
                         cesium_files=[],
+                        cesium_count=0,
+                        cesium_total_bytes=0,
                         points_count=None,
                         has_kml=False,
                     )
@@ -81,7 +87,9 @@ def prepare_review(
 
         detail = cloudahoy.fetch_flight(summary.id)
         points_count, has_kml = _describe_detail(detail.raw_payload, detail.file_path)
-        cesium_files = _capture_cesium_files(cloudahoy_web, summary.id)
+        cesium_files, cesium_total_bytes = _capture_cesium_files(
+            cloudahoy_web, summary.id
+        )
         items.append(
             _review_item(
                 summary,
@@ -90,6 +98,8 @@ def prepare_review(
                 file_path=detail.file_path,
                 file_type=detail.file_type,
                 cesium_files=cesium_files,
+                cesium_count=len(cesium_files),
+                cesium_total_bytes=cesium_total_bytes,
                 points_count=points_count,
                 has_kml=has_kml,
             )
@@ -100,6 +110,7 @@ def prepare_review(
         payload = {
             "generated_at": datetime.utcnow().isoformat() + "Z",
             "count": len(items),
+            "summary": _summarize_review(items),
             "items": [item.to_dict() for item in items],
         }
         output_path.write_text(json.dumps(payload, indent=2))
@@ -114,6 +125,8 @@ def _review_item(
     file_path: str | None,
     file_type: str | None,
     cesium_files: list[str],
+    cesium_count: int,
+    cesium_total_bytes: int,
     points_count: int | None,
     has_kml: bool,
 ) -> ReviewItem:
@@ -128,6 +141,8 @@ def _review_item(
         file_path=file_path,
         file_type=file_type,
         cesium_files=cesium_files,
+        cesium_count=cesium_count,
+        cesium_total_bytes=cesium_total_bytes,
         points_count=points_count,
         has_kml=has_kml,
     )
@@ -141,17 +156,41 @@ def _describe_detail(raw_payload: dict, file_path: str | None) -> tuple[int | No
     return points_count, has_kml
 
 
-def _capture_cesium_files(cloudahoy_web: object | None, flight_id: str) -> list[str]:
+def _capture_cesium_files(
+    cloudahoy_web: object | None, flight_id: str
+) -> tuple[list[str], int]:
     if cloudahoy_web is None:
-        return []
+        return [], 0
     capture = getattr(cloudahoy_web, "capture_cesium", None)
     if not callable(capture):
-        return []
+        return [], 0
     try:
         files = capture(flight_id)
     except Exception:
-        return []
-    return [str(path) for path in files]
+        return [], 0
+    file_paths = [str(path) for path in files]
+    total_bytes = 0
+    for path in file_paths:
+        try:
+            total_bytes += Path(path).stat().st_size
+        except OSError:
+            continue
+    return file_paths, total_bytes
+
+
+def _summarize_review(items: list[ReviewItem]) -> dict:
+    skipped = sum(1 for item in items if item.status == "skipped")
+    ready = sum(1 for item in items if item.status == "ready")
+    cesium_files = sum(item.cesium_count for item in items)
+    cesium_bytes = sum(item.cesium_total_bytes for item in items)
+    missing_cesium = sum(1 for item in items if item.cesium_count == 0)
+    return {
+        "ready": ready,
+        "skipped": skipped,
+        "cesium_files": cesium_files,
+        "cesium_total_bytes": cesium_bytes,
+        "missing_cesium": missing_cesium,
+    }
 
 
 def _payload_has_kml(flt: dict | None) -> bool:
