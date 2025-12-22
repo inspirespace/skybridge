@@ -263,9 +263,25 @@ def _is_tail_candidate(value: str) -> bool:
     if not all(ch in (string.ascii_letters + string.digits + "-") for ch in stripped):
         return False
     if not any(ch.isdigit() for ch in stripped):
-        return False
+        if not _matches_tail_pattern(stripped):
+            return False
     return True
 
 
 def _is_placeholder(value: str) -> bool:
     return value.strip().upper() in {"", "OTHER", "UNKNOWN"}
+
+
+def _matches_tail_pattern(value: str) -> bool:
+    if "-" not in value:
+        return False
+    prefix, suffix = value.split("-", 1)
+    if not prefix or not suffix:
+        return False
+    if len(prefix) > 2:
+        return False
+    if not prefix.isalpha():
+        return False
+    if not all(ch.isalnum() for ch in suffix):
+        return False
+    return True
