@@ -39,6 +39,7 @@ class ReviewItem:
     metadata_path: str | None
     metadata_hash: str | None
     metadata: dict
+    validation_warnings: list[str]
     has_kml: bool
 
     def to_dict(self) -> dict:
@@ -59,6 +60,7 @@ class ReviewItem:
             "metadata_path": self.metadata_path,
             "metadata_hash": self.metadata_hash,
             "metadata": self.metadata,
+            "validation_warnings": self.validation_warnings,
             "has_kml": self.has_kml,
         }
 
@@ -94,6 +96,7 @@ def prepare_review(
                         metadata_path=None,
                         metadata_hash=None,
                         metadata={},
+                        validation_warnings=["skipped: already migrated"],
                         has_kml=False,
                     )
                 )
@@ -106,6 +109,12 @@ def prepare_review(
         file_hash = _hash_file(detail.file_path)
         metadata_hash = _hash_file(detail.metadata_path)
         metadata = _extract_metadata(detail.raw_payload)
+        validation_warnings = _validate_detail(
+            detail=detail,
+            points_count=points_count,
+            schema=schema,
+            metadata=metadata,
+        )
         items.append(
             _review_item(
                 summary,
@@ -120,6 +129,7 @@ def prepare_review(
                 metadata_path=detail.metadata_path,
                 metadata_hash=metadata_hash,
                 metadata=metadata,
+                validation_warnings=validation_warnings,
                 has_kml=has_kml,
             )
         )
@@ -154,6 +164,7 @@ def _review_item(
     metadata_path: str | None,
     metadata_hash: str | None,
     metadata: dict,
+    validation_warnings: list[str],
     has_kml: bool,
 ) -> ReviewItem:
     return ReviewItem(
@@ -173,6 +184,7 @@ def _review_item(
         metadata_path=metadata_path,
         metadata_hash=metadata_hash,
         metadata=metadata,
+        validation_warnings=validation_warnings,
         has_kml=has_kml,
     )
 
@@ -194,10 +206,12 @@ def _describe_detail(
 def _summarize_review(items: list[ReviewItem]) -> dict:
     skipped = sum(1 for item in items if item.status == "skipped")
     ready = sum(1 for item in items if item.status == "ready")
+    warnings = sum(1 for item in items if item.validation_warnings)
     points_schema_summary = _summarize_points_schema(items)
     return {
         "ready": ready,
         "skipped": skipped,
+        "items_with_warnings": warnings,
         "points_schema_summary": points_schema_summary,
     }
 
@@ -462,3 +476,34 @@ def _hash_file(path: str | None) -> str | None:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             hasher.update(chunk)
     return hasher.hexdigest()
+
+
+def _validate_detail(
+    detail: FlightDetail,
+    points_count: int | None,
+    schema: list[dict],
+    metadata: dict,
+) -> list[str]:
+    warnings: list[str] = []
+    if not detail.file_path:
+        warnings.append("missing export file")
+        return warnings
+    file_path = Path(detail.file_path)
+    if not file_path.exists():
+        warnings.append("export file missing on disk")
+    if points_count is None or points_count == 0:
+        warnings.append("no points found in flt.points")
+    if schema:
+        names = {col.get("name") for col in schema}
+        if "longitude_deg" not in names or "latitude_deg" not in names:
+            warnings.append("missing lat/lon columns")
+        unknown = [col for col in schema if str(col.get("name", "")).startswith("col_")]
+        if unknown:
+            warnings.append(f"{len(unknown)} unknown columns remain")
+    else:
+        warnings.append("points schema unavailable")
+    if not metadata.get("tail_number"):
+        warnings.append("missing tail number metadata")
+    if not metadata.get("pilot") and not metadata.get("pilots"):
+        warnings.append("missing pilot metadata")
+    return warnings

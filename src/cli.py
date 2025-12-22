@@ -181,8 +181,13 @@ def run(argv: list[str]) -> int:
             print(f"Discovery results written to {discovery_path}")
             return 0
     else:
-        print("API-only mode is not implemented for FlySto yet.", file=sys.stderr)
-        return 2
+        flysto = FlyStoClient(
+            api_key=config.flysto_api_key or "",
+            base_url=config.flysto_base_url,
+            upload_url=config.flysto_log_upload_url,
+            session_cookie=config.flysto_session_cookie,
+            include_metadata=config.flysto_include_metadata,
+        )
 
     summaries = None
     if mode == "hybrid":
