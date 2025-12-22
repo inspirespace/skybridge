@@ -102,6 +102,17 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _read_review_id(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return None
+    review_id = payload.get("review_id")
+    return review_id if isinstance(review_id, str) and review_id else None
+
+
 def run(argv: list[str]) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -204,19 +215,29 @@ def run(argv: list[str]) -> int:
         if args.mode in {None, "auto"} and not flysto.prepare():
             print("FlySto API not available; falling back to web upload.", file=sys.stderr)
             mode = "hybrid"
-            fallback_args = [
-                    "--mode",
-                    "hybrid",
-                    *(["--dry-run"] if args.dry_run else []),
-                    *(["--review"] if args.review else []),
-                    *(["--review-path", args.review_path] if args.review_path else []),
-                    *(["--approve-import"] if args.approve_import else []),
-                    *(["--review-id", args.review_id] if args.review_id else []),
-                    *(["--max-flights", str(args.max_flights)] if args.max_flights else []),
-                    *(["--state-path", args.state_path] if args.state_path else []),
-                    *(["--force"] if args.force else []),
-                ]
-            return run(fallback_args)
+            cloudahoy = CloudAhoyWebClient(
+                CloudAhoyWebConfig(
+                    base_url=config.cloudahoy_web_base_url,
+                    email=config.cloudahoy_email,
+                    password=config.cloudahoy_password,
+                    flights_url=config.cloudahoy_flights_url,
+                    export_url_template=config.cloudahoy_export_url_template,
+                    storage_state_path=Path(args.cloudahoy_state_path),
+                    downloads_dir=Path(args.exports_dir),
+                    headless=headless,
+                )
+            )
+            flysto = FlyStoWebClient(
+                FlyStoWebConfig(
+                    base_url=config.flysto_web_base_url,
+                    email=config.flysto_email,
+                    password=config.flysto_password,
+                    upload_url=config.flysto_upload_url,
+                    storage_state_path=Path(args.flysto_state_path),
+                    headless=headless,
+                )
+            )
+            cloudahoy_client = cloudahoy
 
     summaries = None
     if mode == "hybrid":
@@ -249,6 +270,12 @@ def run(argv: list[str]) -> int:
 
     if args.approve_import and not dry_run:
         review_id = _read_review_id(Path(args.review_path))
+        if not review_id and args.review_id:
+            print(
+                "Review ID not found in manifest; proceeding with provided review ID.",
+                file=sys.stderr,
+            )
+            review_id = args.review_id
         if not review_id:
             print(
                 "Review ID not found. Re-run review to generate a manifest.",
@@ -298,14 +325,3 @@ def run(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(run(sys.argv[1:]))
-
-
-def _read_review_id(path: Path) -> str | None:
-    if not path.exists():
-        return None
-    try:
-        payload = json.loads(path.read_text())
-    except json.JSONDecodeError:
-        return None
-    review_id = payload.get("review_id")
-    return review_id if isinstance(review_id, str) and review_id else None

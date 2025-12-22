@@ -16,10 +16,10 @@ if [ ! -f "${REVIEW_PATH}" ]; then
   echo "Run ./scripts/run-review.sh first." >&2
   exit 1
 fi
-REVIEW_ID="$(python - <<'PY'\nimport json\nfrom pathlib import Path\npath = Path(\"${REVIEW_PATH}\")\ntry:\n    data = json.loads(path.read_text())\nexcept Exception:\n    print(\"\")\nelse:\n    print(data.get(\"review_id\", \"\"))\nPY\n)"
+REVIEW_ID="$(python -c "import json; from pathlib import Path; path=Path('${REVIEW_PATH}'); data=json.loads(path.read_text()); print(data.get('review_id',''))")"
 if [ -z "${REVIEW_ID}" ]; then
   echo "Review ID not found in ${REVIEW_PATH}" >&2
   exit 1
 fi
 
-exec "${ROOT_DIR}/scripts/run.sh" --mode hybrid --approve-import --review-path "${REVIEW_PATH}" --review-id "${REVIEW_ID}" --max-flights "${MAX_FLIGHTS}"
+exec "${ROOT_DIR}/scripts/run.sh" --approve-import --review-path "${REVIEW_PATH}" --review-id "${REVIEW_ID}" --max-flights "${MAX_FLIGHTS}"
