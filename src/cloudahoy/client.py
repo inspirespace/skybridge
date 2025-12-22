@@ -8,6 +8,7 @@ import requests
 
 from src.cloudahoy.points import build_points_schema, write_points_csv
 from src.models import FlightDetail, FlightSummary
+import json
 
 
 @dataclass(frozen=True)
@@ -84,6 +85,7 @@ class CloudAhoyClient:
         points = flt.get("points") if isinstance(flt, dict) else None
         file_path = None
         file_type = None
+        metadata_path = None
         if isinstance(points, list) and points:
             schema = build_points_schema(flt)
             if schema:
@@ -97,12 +99,18 @@ class CloudAhoyClient:
                 file_path = self.exports_dir / f"{flight_id}.kml"
                 file_path.write_text(kml_text)
                 file_type = "kml"
+        metadata = _extract_metadata(flt)
+        if metadata:
+            self.exports_dir.mkdir(parents=True, exist_ok=True)
+            metadata_path = self.exports_dir / f"{flight_id}.meta.json"
+            metadata_path.write_text(json.dumps(metadata, indent=2))
 
         return FlightDetail(
             id=flight_id,
             raw_payload=data,
             file_path=str(file_path) if file_path else None,
             file_type=file_type,
+            metadata_path=str(metadata_path) if metadata_path else None,
         )
 
 
@@ -191,3 +199,25 @@ def _extract_last_token(flights: list[dict]) -> str | None:
     except (TypeError, ValueError):
         return None
     return f"zz14[d-mmm-yy HH:MM]{gmt_start}zz14"
+
+
+def _extract_metadata(flt: dict) -> dict:
+    meta = flt.get("Meta") if isinstance(flt, dict) else None
+    if not isinstance(meta, dict):
+        return {}
+    fields = {
+        "pilot": meta.get("pilot"),
+        "co_pilot": meta.get("coPilot"),
+        "pilots": meta.get("pilots"),
+        "remarks": meta.get("remarks"),
+        "tags": meta.get("tags"),
+        "tail_number": meta.get("tailNumber"),
+        "aircraft_from": meta.get("from"),
+        "aircraft_to": meta.get("to"),
+        "event_from": meta.get("e_from"),
+        "event_to": meta.get("e_to"),
+        "is_sim_flight": meta.get("isSimFlight"),
+        "summary": meta.get("summary"),
+        "hobbs": meta.get("hobbs"),
+    }
+    return {key: value for key, value in fields.items() if value not in (None, "", [])}
