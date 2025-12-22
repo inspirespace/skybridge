@@ -14,6 +14,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Review gating: non-dry-run uploads require a review manifest (`--review` or auto) and `--approve-import`.
 - Review manifests now include `flt.points` schema + preview and exports are CSV by default.
 - Hybrid mode uses the web UI to page through CloudAhoy flights (`Load more`) and uses API for flight detail fetch.
+- FlySto API login/upload currently returns 503 in our environment; API upload not yet implemented.
 
 ## Required API Details
 These are needed to complete the adapters:
