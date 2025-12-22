@@ -16,6 +16,9 @@ Run a dry migration:
 docker run --rm \
   --env-file .env \
   cloudahoy2flysto --mode hybrid --review --max-flights 5
+
+docker run --rm \
+  --env-file .env \
   cloudahoy2flysto --mode hybrid --approve-import --max-flights 5
 ```
 
@@ -33,6 +36,7 @@ Optional:
 - `CLOUD_AHOY_EMAIL` / `CLOUD_AHOY_PASSWORD` (web mode login)
 - `CLOUD_AHOY_FLIGHTS_URL` (direct flights page URL if auto-detect fails)
 - `CLOUD_AHOY_EXPORT_URL_TEMPLATE` (example: `https://www.cloudahoy.com/api/export.cgi?id={flight_id}`)
+- `CLOUD_AHOY_DEBRIEF_URL_TEMPLATE` (default `https://www.cloudahoy.com/debrief/?flight={flight_id}`)
 - `FLYSTO_BASE_URL` (default `https://api.flysto.net`)
 - `FLYSTO_WEB_BASE_URL` (default `https://www.flysto.net`)
 - `FLYSTO_EMAIL` / `FLYSTO_PASSWORD` (web mode login)
@@ -60,6 +64,8 @@ Hybrid mode uses CloudAhoy JSON APIs for full-flight data and FlySto web upload.
 ## Web Automation Notes
 
 The web mode uses Playwright to log in and export/upload flights when no official APIs are available. Provide `CLOUD_AHOY_EXPORT_URL_TEMPLATE` and `FLYSTO_UPLOAD_URL` to bypass UI discovery if needed. For interactive debugging, run with `--headful` and watch the browser session. FlySto uploads are driven through the `Load logs` → `Browse files` flow on `/logs`.
+
+During review, the CLI also loads the CloudAhoy debrief page and captures Cesium/CZML payloads when present. These are stored in `data/cloudahoy_exports` and referenced in `data/review.json`.
 
 Discovery mode will attempt to log in and collect endpoint hints; it writes a sanitized JSON summary to `data/discovery/discovery.json`.
 

@@ -18,6 +18,7 @@ class CloudAhoyWebConfig:
     password: str | None
     flights_url: str | None
     export_url_template: str | None
+    debrief_url_template: str | None
     storage_state_path: Path
     downloads_dir: Path
     headless: bool
@@ -61,6 +62,8 @@ class CloudAhoyWebClient:
         page = session.open()
         self._ensure_login(page)
 
+        cesium_files = self.capture_cesium(flight_id)
+
         export_url = self._config.export_url_template.format(flight_id=flight_id)
         download_path = self._download_file(page, export_url)
 
@@ -69,10 +72,50 @@ class CloudAhoyWebClient:
 
         return FlightDetail(
             id=flight_id,
-            raw_payload={"source": "cloudahoy", "export_url": export_url},
+            raw_payload={
+                "source": "cloudahoy",
+                "export_url": export_url,
+                "cesium_files": [str(path) for path in cesium_files],
+            },
             file_path=str(download_path),
             file_type=download_path.suffix.lstrip(".") or None,
         )
+
+    def capture_cesium(self, flight_id: str) -> list[Path]:
+        session = self._open_session()
+        page = session.open()
+        self._ensure_login(page)
+
+        captures: list[Path] = []
+        seen_urls: set[str] = set()
+
+        def handle_response(response) -> None:
+            url = response.url
+            if url in seen_urls:
+                return
+            content_type = response.headers.get("content-type", "")
+            if not _is_cesium_candidate(url, content_type):
+                return
+            try:
+                body = response.text()
+            except Exception:
+                return
+            if not body:
+                return
+            seen_urls.add(url)
+            suffix = "czml" if "czml" in url or "czml" in content_type else "json"
+            self._config.downloads_dir.mkdir(parents=True, exist_ok=True)
+            path = self._config.downloads_dir / f"{flight_id}.cesium.{len(captures)+1}.{suffix}"
+            path.write_text(body)
+            captures.append(path)
+
+        page.on("response", handle_response)
+        page.goto(self._debrief_url(flight_id), wait_until="networkidle")
+        page.wait_for_timeout(3000)
+
+        session.save_state()
+        session.close()
+        return captures
 
     def _open_session(self) -> BrowserSession:
         options = BrowserOptions(
@@ -169,6 +212,20 @@ class CloudAhoyWebClient:
         destination = self._config.downloads_dir / filename
         download.save_as(destination)
         return destination
+
+    def _debrief_url(self, flight_id: str) -> str:
+        if self._config.debrief_url_template:
+            return self._config.debrief_url_template.format(flight_id=flight_id)
+        return f"{self._config.base_url}/debrief/?flight={flight_id}"
+
+
+def _is_cesium_candidate(url: str, content_type: str) -> bool:
+    lowered = url.lower()
+    if "czml" in lowered or "cesium" in lowered:
+        return True
+    if "czml" in content_type.lower():
+        return True
+    return False
 
 
 def _extract_flight_items(data: Any) -> list[FlightSummary]:
