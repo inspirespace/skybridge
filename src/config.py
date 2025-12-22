@@ -17,6 +17,9 @@ class Config:
     flysto_password: str | None
     flysto_web_base_url: str
     flysto_upload_url: str | None
+    flysto_session_cookie: str | None
+    flysto_log_upload_url: str | None
+    flysto_include_metadata: bool
     mode: str
     headless: bool
     dry_run: bool
@@ -43,6 +46,8 @@ def load_config() -> Config:
     flysto_password = _get_env("FLYSTO_PASSWORD")
     cloudahoy_api_key = _get_env("CLOUD_AHOY_API_KEY")
     flysto_api_key = _get_env("FLYSTO_API_KEY")
+    flysto_session_cookie = _get_env("FLYSTO_SESSION_COOKIE")
+    flysto_log_upload_url = _get_env("FLYSTO_LOG_UPLOAD_URL")
 
     if mode in {"api", "hybrid"}:
         missing = [
@@ -63,6 +68,8 @@ def load_config() -> Config:
     cloudahoy_flights_url = _get_env("CLOUD_AHOY_FLIGHTS_URL")
     cloudahoy_export_url_template = _get_env("CLOUD_AHOY_EXPORT_URL_TEMPLATE")
     flysto_upload_url = _get_env("FLYSTO_UPLOAD_URL")
+    include_metadata_value = (_get_env("FLYSTO_INCLUDE_METADATA") or "false").lower()
+    flysto_include_metadata = include_metadata_value in {"1", "true", "yes", "on"}
 
     headless_value = (_get_env("BROWSER_HEADLESS") or "true").lower()
     headless = headless_value in {"1", "true", "yes", "on"}
@@ -87,6 +94,9 @@ def load_config() -> Config:
         flysto_password=flysto_password,
         flysto_web_base_url=flysto_web_base_url,
         flysto_upload_url=flysto_upload_url,
+        flysto_session_cookie=flysto_session_cookie,
+        flysto_log_upload_url=flysto_log_upload_url,
+        flysto_include_metadata=flysto_include_metadata,
         mode=mode,
         headless=headless,
         dry_run=dry_run,

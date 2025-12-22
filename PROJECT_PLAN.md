@@ -6,6 +6,7 @@
 - `migration.db` now stores file/metadata hashes for idempotent skips.
 - Review manifests include `review_id` and approve-import requires it.
 - FlySto API investigation blocked by intermittent 503/server-error responses.
+- API client scaffolding added (cookie-based), pending working FlySto API.
 
 ## Next Implementation Steps
 1) Attach metadata to uploads
