@@ -32,8 +32,16 @@ def main() -> None:
 
     headless = os.getenv('PLAYWRIGHT_HEADLESS', '1') not in {'0', 'false', 'False'}
     slow_mo = int(os.getenv('PLAYWRIGHT_SLOWMO_MS', '0') or '0')
+    channel = os.getenv('PLAYWRIGHT_CHANNEL')
+    extra_args = os.getenv('PLAYWRIGHT_ARGS', '')
+    args = [arg for arg in (a.strip() for a in extra_args.split(',')) if arg]
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=headless, slow_mo=slow_mo)
+        browser = p.chromium.launch(
+            headless=headless,
+            slow_mo=slow_mo,
+            channel=channel,
+            args=args or None,
+        )
         context = browser.new_context()
         page = context.new_page()
 

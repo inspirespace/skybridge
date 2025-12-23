@@ -25,6 +25,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - FlySto uploads now set `id=<filename>@@@<system_id>` using tail number as `system_id` to enable per-aircraft avionics mapping.
 - Aircraft assignment now waits longer for log processing and refreshes log summaries (`update=true`) before giving up.
 - FlySto upload zip now embeds `@@@<system_id>` in the entry name to match the web uploader’s file naming convention.
+- Playwright automation currently fails to launch Chromium/Chrome on macOS due to Crashpad permission errors; need manual capture or different environment.
 - Latest local run (direct Python) succeeded: 5/5 flights imported with review-id gating on 2025-12-23.
 - Aircraft model "Other": UI wizard reaches manual profile step (model name/engine/fuel etc.) but no create-aircraft API request observed; direct /api/create-aircraft attempts return 500. Need to capture final payload or determine endpoint.
 - Discovery logs now redact credentials in stored request payloads.

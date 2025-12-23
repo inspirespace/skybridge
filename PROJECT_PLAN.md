@@ -18,6 +18,7 @@
 - Uploads now set FlySto system id to tail number (`id=<filename>@@@<tail>`) to support per-aircraft avionics mapping.
 - Aircraft assignment now retries longer and refreshes log summaries before giving up.
 - Upload zip now embeds `@@@<system_id>` in the file entry name to match FlySto’s uploader behavior.
+- Playwright capture blocked on macOS due to Crashpad permission errors; need manual network capture or alternate environment.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).
