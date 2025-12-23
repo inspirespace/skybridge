@@ -30,8 +30,10 @@ def main() -> None:
         if '/api/create-aircraft' in request.url or '/api/assign-aircraft' in request.url:
             captured = payload
 
+    headless = os.getenv('PLAYWRIGHT_HEADLESS', '1') not in {'0', 'false', 'False'}
+    slow_mo = int(os.getenv('PLAYWRIGHT_SLOWMO_MS', '0') or '0')
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(headless=headless, slow_mo=slow_mo)
         context = browser.new_context()
         page = context.new_page()
 

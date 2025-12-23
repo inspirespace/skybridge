@@ -63,7 +63,7 @@ class FlyStoClient:
             self.api_version = _infer_api_version(self.base_url)
 
         file_path = Path(flight.file_path)
-        payload = _build_upload_payload(file_path)
+        payload = _build_upload_payload(file_path, system_id=system_id)
         headers = {"content-type": "application/zip"}
         if self.api_version:
             headers["x-version"] = self.api_version
@@ -616,13 +616,16 @@ def _validate_flight_for_upload(flight: FlightDetail) -> None:
 
 
 
-def _build_upload_payload(path: Path) -> bytes:
+def _build_upload_payload(path: Path, system_id: str | None = None) -> bytes:
     data = path.read_bytes()
     if path.suffix.lower() == ".zip":
         return data
     buffer = __import__('io').BytesIO()
+    entry_name = path.name
+    if system_id:
+        entry_name = f"{path.name}@@@{system_id}"
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr(path.name, data)
+        archive.writestr(entry_name, data)
     return buffer.getvalue()
 
 def _metadata_payload(flight: FlightDetail) -> dict:

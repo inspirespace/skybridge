@@ -17,6 +17,7 @@
 - Local 5-flight import via direct Python succeeded (review-id gating), pending UI verification of crew roles/aircraft assignment.
 - Uploads now set FlySto system id to tail number (`id=<filename>@@@<tail>`) to support per-aircraft avionics mapping.
 - Aircraft assignment now retries longer and refreshes log summaries before giving up.
+- Upload zip now embeds `@@@<system_id>` in the file entry name to match FlySto’s uploader behavior.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).
