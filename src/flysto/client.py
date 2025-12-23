@@ -126,7 +126,7 @@ class FlyStoClient:
     def _find_aircraft_by_tail(self, session: requests.Session, tail_number: str) -> dict[str, Any] | None:
         aircraft = self._list_aircraft(session)
         for entry in aircraft:
-            if entry.get("tail-number") == tail_number:
+            if entry.get("tail-number") == tail_number or entry.get("tailNumber") == tail_number:
                 return entry
         return None
 
@@ -443,10 +443,10 @@ class FlyStoClient:
         if not roles:
             return None
         candidates = []
-        if role_name:
-            candidates.append(role_name)
         if is_pic:
             candidates.extend(["PIC", "Pilot in command"])
+        if role_name:
+            candidates.append(role_name)
         if role_name:
             role_lower = role_name.strip().lower()
             if role_lower in {"co-pilot", "copilot", "co pilot"}:

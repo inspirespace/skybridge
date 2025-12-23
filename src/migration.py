@@ -343,6 +343,8 @@ def _extract_crew_assignments(metadata: dict) -> list[dict]:
         if not isinstance(name, str) or not name.strip():
             return
         role_value = role if isinstance(role, str) and role.strip() else None
+        if is_pic:
+            role_value = "PIC"
         key = name.strip().lower()
         existing = by_name.get(key)
         entry = {"name": name.strip(), "role": role_value, "is_pic": is_pic}
@@ -361,10 +363,15 @@ def _extract_crew_assignments(metadata: dict) -> list[dict]:
         for entry in pilots:
             if not isinstance(entry, dict):
                 continue
+            role_name = entry.get("role") if isinstance(entry.get("role"), str) else None
+            role_norm = role_name.strip().lower() if role_name else ""
+            is_pic = bool(entry.get("PIC") or entry.get("pic"))
+            if role_norm in {"pic", "pilot in command"}:
+                is_pic = True
             add_entry(
                 entry.get("name"),
-                entry.get("role"),
-                bool(entry.get("PIC") or entry.get("pic")),
+                role_name,
+                is_pic,
             )
 
     # If pilots list exists, it already encodes roles and PIC flags.

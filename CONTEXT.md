@@ -19,7 +19,9 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Hybrid mode uses the web UI to page through CloudAhoy flights (`Load more`) and uses API for flight detail fetch.
 - FlySto API endpoints discovered via UI: `/api/login` (text/plain JSON body) and `/api/log-upload?id=<filename>@@@0` with `content-type: application/zip`. `x-version` is inferred from the JS bundle if not provided.
 - Crew assignment endpoints discovered in FlySto bundle: `/api/assign-crew` (logIds + names + roles) and `/api/user-crew` + `/api/user-crew-roles`. Crew import wiring added in `src/migration.py` and `src/flysto/client.py` (creates crew via `/api/new-crew`, assigns per log after upload).
+- Crew extraction now prefers PIC when CloudAhoy flags PIC or uses a PIC role string; FlySto role resolution now prioritizes PIC candidates for flagged pilots.
 - FlySto API calls now include basic rate limiting and retry on transient 429/5xx to avoid request bursts.
+- FlySto aircraft lookup now matches both `tail-number` and `tailNumber` payload keys for assignment.
 - Aircraft model "Other": UI wizard reaches manual profile step (model name/engine/fuel etc.) but no create-aircraft API request observed; direct /api/create-aircraft attempts return 500. Need to capture final payload or determine endpoint.
 - Discovery logs now redact credentials in stored request payloads.
 
