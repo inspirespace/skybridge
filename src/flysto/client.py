@@ -26,6 +26,8 @@ class FlyStoClient:
     aircraft_profiles_cache: list[dict[str, Any]] | None = None
     aircraft_cache: list[dict[str, Any]] | None = None
     assigned_avionics: set[tuple[str, str | None]] | None = None
+    crew_cache: list[dict[str, Any]] | None = None
+    crew_roles_cache: list[dict[str, Any]] | None = None
 
     def prepare(self) -> bool:
         session = requests.Session()
@@ -96,6 +98,13 @@ class FlyStoClient:
             json=payload,
             timeout=60,
         )
+        if response.status_code >= 300 and model_id != "Other":
+            payload["model"]["modelId"] = "Other"
+            response = session.post(
+                self.base_url.rstrip("/") + "/api/create-aircraft",
+                json=payload,
+                timeout=60,
+            )
         if response.status_code >= 300:
             raise RuntimeError(
                 f"FlySto create-aircraft failed: {response.status_code} {response.text[:200]}"
@@ -133,19 +142,12 @@ class FlyStoClient:
         if not profiles:
             return None
         if aircraft_type:
-            needle = aircraft_type.strip().lower()
+            target = aircraft_type.strip().lower()
             for profile in profiles:
-                name = (profile.get("modelName") or "").lower()
-                search = " ".join(profile.get("searchNames") or []).lower()
-                if needle in name or needle in search:
+                name = (profile.get("modelName") or "").strip().lower()
+                if name == target:
                     return profile.get("modelId")
-        # Prefer a generic "Other" model when present.
-        for profile in profiles:
-            name = (profile.get("modelName") or "").strip().lower()
-            if name == "other" or name.startswith("other "):
-                return profile.get("modelId")
-        # fallback to first known model
-        return profiles[0].get("modelId") or "Other"
+        return profiles[0].get("modelId")
 
     def _list_aircraft_profiles(self) -> list[dict[str, Any]]:
         if self.aircraft_profiles_cache is not None:
@@ -251,6 +253,168 @@ class FlyStoClient:
             return
         self.assign_aircraft(aircraft_id, log_format_id=log_format_id, system_id=signature)
 
+    def assign_crew_for_file(self, filename: str, crew: list[dict[str, Any]]) -> None:
+        if not crew:
+            return
+        log_id, _signature = self.resolve_log_for_file(filename)
+        if not log_id:
+            return
+        names: list[str] = []
+        roles: list[str] = []
+        crew_names = [entry.get("name") for entry in crew if entry.get("name")]
+        self._ensure_crew_members([name for name in crew_names if isinstance(name, str)])
+        default_role_id = self._default_role_id()
+        for entry in crew:
+            name = entry.get("name")
+            if not isinstance(name, str) or not name.strip():
+                continue
+            role_name = entry.get("role")
+            role_id = self._resolve_role_id(role_name, bool(entry.get("is_pic")))
+            if not role_id:
+                role_id = default_role_id
+            if not role_id:
+                continue
+            names.append(name.strip())
+            roles.append(role_id)
+        if not names or not roles:
+            return
+        self._assign_crew([log_id], names, roles)
+
+    def _assign_crew(self, log_ids: list[str], names: list[str], roles: list[str]) -> None:
+        if not log_ids or not names or not roles:
+            return
+        if len(names) != len(roles):
+            raise ValueError("FlySto crew assignment requires matching names and roles length.")
+        session = requests.Session()
+        self._ensure_session(session)
+        payload = {"logIds": log_ids, "names": names, "roles": roles}
+        response = session.post(
+            self.base_url.rstrip("/") + "/api/assign-crew",
+            json=payload,
+            timeout=60,
+        )
+        if response.status_code >= 300:
+            raise RuntimeError(
+                f"FlySto assign-crew failed: {response.status_code} {response.text[:200]}"
+            )
+
+    def _ensure_crew_members(self, names: list[str]) -> None:
+        clean = sorted({name.strip() for name in names if name and isinstance(name, str)})
+        if not clean:
+            return
+        existing = {self._crew_name(entry) for entry in self._list_crew() if self._crew_name(entry)}
+        missing = [name for name in clean if name not in existing]
+        if not missing:
+            return
+        session = requests.Session()
+        self._ensure_session(session)
+        for name in missing:
+            response = session.post(
+                self.base_url.rstrip("/") + "/api/new-crew",
+                json={"name": name},
+                timeout=60,
+            )
+            if response.status_code >= 300:
+                raise RuntimeError(
+                    f"FlySto create-crew failed: {response.status_code} {response.text[:200]}"
+                )
+        self.crew_cache = None
+
+    def _list_crew(self) -> list[dict[str, Any]]:
+        if self.crew_cache is not None:
+            return self.crew_cache
+        session = requests.Session()
+        self._ensure_session(session)
+        response = session.get(self.base_url.rstrip("/") + "/api/user-crew", timeout=60)
+        decoded = _decode_flysto_payload(response.text)
+        if isinstance(decoded, str):
+            try:
+                data = json.loads(decoded)
+            except json.JSONDecodeError:
+                data = []
+        elif isinstance(decoded, list):
+            data = decoded
+        else:
+            data = decoded.get("items", []) if isinstance(decoded, dict) else []
+        self.crew_cache = data if isinstance(data, list) else []
+        return self.crew_cache
+
+    def _crew_name(self, entry: dict[str, Any]) -> str | None:
+        for key in ("name", "fullName", "crewName"):
+            value = entry.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return None
+
+    def _list_crew_roles(self) -> list[dict[str, Any]]:
+        if self.crew_roles_cache is not None:
+            return self.crew_roles_cache
+        session = requests.Session()
+        self._ensure_session(session)
+        response = session.get(self.base_url.rstrip("/") + "/api/user-crew-roles", timeout=60)
+        decoded = _decode_flysto_payload(response.text)
+        if isinstance(decoded, str):
+            try:
+                data = json.loads(decoded)
+            except json.JSONDecodeError:
+                data = []
+        elif isinstance(decoded, list):
+            data = decoded
+        else:
+            data = decoded.get("items", []) if isinstance(decoded, dict) else []
+        self.crew_roles_cache = data if isinstance(data, list) else []
+        return self.crew_roles_cache
+
+    def _default_role_id(self) -> str | None:
+        roles = self._list_crew_roles()
+        if not roles:
+            return None
+        preferred = ["pic", "pilot in command", "pilot"]
+        for role in roles:
+            role_id, role_name = self._role_id_name(role)
+            if not role_id or not role_name:
+                continue
+            if _normalize_role(role_name) in {_normalize_role(value) for value in preferred}:
+                return role_id
+        role_id, _name = self._role_id_name(roles[0])
+        return role_id
+
+    def _resolve_role_id(self, role_name: str | None, is_pic: bool) -> str | None:
+        roles = self._list_crew_roles()
+        if not roles:
+            return None
+        candidates = []
+        if role_name:
+            candidates.append(role_name)
+        if is_pic:
+            candidates.extend(["PIC", "Pilot in command", "Pilot"])
+        if role_name:
+            role_lower = role_name.strip().lower()
+            if role_lower in {"co-pilot", "copilot", "co pilot"}:
+                candidates.extend(["Copilot", "Co-pilot", "Co pilot"])
+            elif role_lower in {"safety pilot", "safety"}:
+                candidates.append("Safety pilot")
+            elif role_lower in {"instructor", "cfi", "cfii"}:
+                candidates.append("Instructor")
+            elif role_lower in {"student", "trainee"}:
+                candidates.append("Student")
+        candidate_norm = {_normalize_role(value) for value in candidates if value}
+        for role in roles:
+            role_id, name = self._role_id_name(role)
+            if not role_id or not name:
+                continue
+            if _normalize_role(name) in candidate_norm:
+                return role_id
+        return None
+
+    def _role_id_name(self, role: dict[str, Any]) -> tuple[str | None, str | None]:
+        role_id = role.get("id") or role.get("crewRoleId") or role.get("roleId")
+        name = role.get("name") or role.get("crewRoleName") or role.get("roleName")
+        role_id = str(role_id) if role_id is not None else None
+        if isinstance(name, str):
+            name = name.strip()
+        return role_id, name if isinstance(name, str) else None
+
     def _ensure_session(self, session: requests.Session) -> None:
         if self.session_cookie:
             hostname = urlparse(self.base_url).hostname or "www.flysto.net"
@@ -296,6 +460,11 @@ def _swap_chars(value: str) -> str:
         else:
             chars.append(ch)
     return "".join(chars)
+
+
+def _normalize_role(value: str) -> str:
+    lowered = value.strip().lower()
+    return "".join(ch for ch in lowered if ch.isalnum())
 def _validate_flight_for_upload(flight: FlightDetail) -> None:
     if not flight.file_path:
         raise RuntimeError("Flight export file is required for FlySto upload.")

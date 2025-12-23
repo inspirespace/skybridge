@@ -9,14 +9,18 @@
 - Review manifests include `review_id` and approve-import requires it.
 - FlySto API base URL defaults to `https://www.flysto.net`; API version inferred from JS bundle.
 - MODE defaults to `auto` and no longer falls back to web.
+- Blocker: FlySto "Other" aircraft model creation — UI reaches manual profile step but no create-aircraft request captured; direct /api/create-aircraft attempts return 500.
+- Crew import wiring added (create crew via `/api/new-crew`, assign via `/api/assign-crew`, map roles from `/api/user-crew-roles`) but requires validation against live API.
 
 ## Next Implementation Steps
-1) Confirm metadata mapping coverage (pilot/crew/remarks/tail number) and aircraft assignment.
-2) Decide whether to persist raw CloudAhoy payloads for audit/replay.
-3) Output format mapping
+1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).
+2) Validate crew role mapping coverage (PIC/Student/Instructor/etc.) and verify crew assignment shows on logs.
+3) Confirm metadata mapping coverage (remarks/tail number) and aircraft assignment.
+4) Decide whether to persist raw CloudAhoy payloads for audit/replay.
+5) Output format mapping
    - Confirm FlySto’s preferred structured format.
    - Map `flt.points` to that format and add tests.
-4) Hardening & tests
+6) Hardening & tests
    - Add unit tests for pagination, parsing, and mapping.
    - Add integration tests for a small flight sample (if allowed).
 

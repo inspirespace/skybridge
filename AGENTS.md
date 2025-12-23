@@ -31,6 +31,8 @@ Note: default `MODE=auto` uses API only and does not fall back to web automation
 ## Commit & Pull Request Guidelines
 - Use Conventional Commits (`feat:`, `fix:`, `chore:`).
 - PRs should include: a concise description, linked issue (if applicable), test results, and screenshots for UI changes.
+- Work in feature branches for non-trivial changes (e.g., `feature/...`, `fix/...`), then merge into `main`.
+- After merging, delete merged feature branches and prune remotes (use `./scripts/cleanup-merged-branches.sh`).
 
 ## Agent Update Policy
 - If you add or change developer workflows, commands, or project structure, update this file in the same change set.
@@ -38,4 +40,5 @@ Note: default `MODE=auto` uses API only and does not fall back to web automation
 
 ## Security & Configuration Tips
 - Never commit secrets. Use `.env` files and add an `.env.example` template.
+- Redact credentials from discovery artifacts in `data/discovery` before committing or sharing.
 - Document required environment variables and local setup steps in `README.md`.
