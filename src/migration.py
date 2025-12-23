@@ -549,19 +549,26 @@ def _migrate_single(
     try:
         aircraft = None
         crew: list[dict] = []
+        system_id: str | None = None
         if not dry_run:
             metadata = _extract_metadata(detail.raw_payload)
             tail_number = metadata.get("tail_number")
             aircraft_type = metadata.get("aircraft_type")
+            if isinstance(tail_number, str) and tail_number.strip():
+                system_id = tail_number.strip()
             if tail_number:
                 aircraft = flysto.ensure_aircraft(tail_number, aircraft_type)
-            if aircraft and aircraft.get("id"):
-                flysto.assign_aircraft(str(aircraft.get("id")))
             crew = _extract_crew_assignments(metadata)
-        flysto.upload_flight(detail, dry_run=dry_run)
-        if not dry_run and aircraft and aircraft.get("id") and detail.file_path:
-            filename = Path(detail.file_path).name
-            flysto.assign_aircraft_for_file(filename, str(aircraft.get("id")))
+        flysto.upload_flight(detail, dry_run=dry_run, system_id=system_id)
+        if not dry_run and aircraft and aircraft.get("id"):
+            flysto.assign_aircraft(str(aircraft.get("id")), system_id=system_id)
+            if detail.file_path:
+                filename = Path(detail.file_path).name
+                flysto.assign_aircraft_for_file(
+                    filename,
+                    str(aircraft.get("id")),
+                    system_id=system_id,
+                )
         if not dry_run and crew and detail.file_path:
             filename = Path(detail.file_path).name
             flysto.assign_crew_for_file(filename, crew)

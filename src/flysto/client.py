@@ -47,7 +47,12 @@ class FlyStoClient:
             self.api_version = _infer_api_version(self.base_url)
         return True
 
-    def upload_flight(self, flight: FlightDetail, dry_run: bool = False) -> None:
+    def upload_flight(
+        self,
+        flight: FlightDetail,
+        dry_run: bool = False,
+        system_id: str | None = None,
+    ) -> None:
         if dry_run:
             _validate_flight_for_upload(flight)
             return
@@ -65,7 +70,7 @@ class FlyStoClient:
         response = self._request(
             session,
             "post",
-            _upload_url(self.upload_url, self.base_url, file_path.name),
+            _upload_url(self.upload_url, self.base_url, file_path.name, system_id),
             data=payload,
             headers=headers,
             timeout=120,
@@ -291,7 +296,11 @@ class FlyStoClient:
         filename: str,
         aircraft_id: str,
         log_format_id: str = "GenericGpx",
+        system_id: str | None = None,
     ) -> None:
+        if system_id:
+            self.assign_aircraft(aircraft_id, log_format_id=log_format_id, system_id=system_id)
+            return
         log_id, signature, resolved_format = self.resolve_log_for_file(filename)
         if not signature:
             return
@@ -595,11 +604,21 @@ def _metadata_payload(flight: FlightDetail) -> dict:
     return payload
 
 
-def _upload_url(upload_url: str | None, base_url: str, filename: str) -> str:
+def _upload_url(
+    upload_url: str | None,
+    base_url: str,
+    filename: str,
+    system_id: str | None = None,
+) -> str:
     url = upload_url or (base_url.rstrip("/") + "/api/log-upload")
     if "?" in url:
         return url
-    return f"{url}?id={filename}@@@0"
+    suffix = system_id.strip() if isinstance(system_id, str) else "0"
+    if not suffix:
+        suffix = "0"
+    safe_suffix = requests.utils.quote(suffix, safe="")
+    safe_name = requests.utils.quote(filename, safe="")
+    return f"{url}?id={safe_name}@@@{safe_suffix}"
 
 
 def _api_login(
