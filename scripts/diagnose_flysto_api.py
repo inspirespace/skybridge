@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import requests
+import time
 from playwright.sync_api import sync_playwright
 
 
@@ -63,11 +64,17 @@ def main() -> None:
 
     url = "https://www.flysto.net/api/log-upload"
     fields = ["file", "files", "log", "data"]
+    min_interval = float(os.getenv("FLYSTO_DEBUG_REQUEST_INTERVAL", "1.0"))
+    last_request_at = 0.0
 
     for field in fields:
+        elapsed = time.monotonic() - last_request_at
+        if elapsed < min_interval:
+            time.sleep(min_interval - elapsed)
         with open(file_path, "rb") as handle:
             files = {field: (Path(file_path).name, handle)}
             response = session.post(url, files=files, headers=headers, timeout=60)
+        last_request_at = time.monotonic()
 
         print("field", field, "status", response.status_code)
         print(response.text[:500])
