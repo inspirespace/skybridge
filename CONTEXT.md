@@ -23,6 +23,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - FlySto API calls now include basic rate limiting and retry on transient 429/5xx to avoid request bursts.
 - FlySto aircraft lookup now matches both `tail-number` and `tailNumber` payload keys for assignment.
 - FlySto uploads now set `id=<filename>@@@<system_id>` using tail number as `system_id` to enable per-aircraft avionics mapping.
+- Aircraft assignment now waits longer for log processing and refreshes log summaries (`update=true`) before giving up.
 - Latest local run (direct Python) succeeded: 5/5 flights imported with review-id gating on 2025-12-23.
 - Aircraft model "Other": UI wizard reaches manual profile step (model name/engine/fuel etc.) but no create-aircraft API request observed; direct /api/create-aircraft attempts return 500. Need to capture final payload or determine endpoint.
 - Discovery logs now redact credentials in stored request payloads.

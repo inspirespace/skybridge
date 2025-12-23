@@ -230,8 +230,8 @@ class FlyStoClient:
     def resolve_log_for_file(
         self,
         filename: str,
-        retries: int = 5,
-        delay_seconds: float = 2.0,
+        retries: int = 8,
+        delay_seconds: float = 3.0,
     ) -> tuple[str | None, str | None, str | None]:
         session = requests.Session()
         self._ensure_session(session)
@@ -289,6 +289,34 @@ class FlyStoClient:
                         return str(item.get("id")), signature, log_format
             if attempt < retries - 1:
                 time.sleep(delay_seconds * (attempt + 1))
+        # Final attempt with update=true to refresh summaries.
+        if log_ids:
+            summary = self._request(
+                session,
+                "get",
+                self.base_url.rstrip("/") + "/api/log-summary",
+                params={"logs": ",".join(log_ids), "keys": keys, "update": "true"},
+                timeout=60,
+            )
+            decoded = _decode_flysto_payload(summary.text)
+            if isinstance(decoded, str):
+                try:
+                    data = json.loads(decoded)
+                except json.JSONDecodeError:
+                    data = None
+            elif isinstance(decoded, dict):
+                data = decoded
+            else:
+                data = None
+            items = data.get("items", []) if isinstance(data, dict) else []
+            for item in items:
+                summary_data = item.get("summary", {}).get("data", {})
+                files = summary_data.get("t3") or []
+                for entry in files:
+                    if entry.get("file") == filename:
+                        signature = summary_data.get("6h")
+                        log_format = entry.get("format")
+                        return str(item.get("id")), signature, log_format
         return None, None, None
 
     def assign_aircraft_for_file(
