@@ -628,7 +628,7 @@ def _upload_url(upload_url: str | None, base_url: str, filename: str) -> str:
     if "?" in url:
         return url
     safe_name = requests.utils.quote(filename, safe="")
-    return f\"{url}?id={safe_name}@@@0\"
+    return f"{url}?id={safe_name}@@@0"
 
 
 def _api_login(
