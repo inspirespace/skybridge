@@ -31,10 +31,11 @@ def main() -> None:
     def handle_response(response) -> None:
         if "/api/" not in response.url:
             return
+        body = None
         try:
             body = response.text()
         except Exception:
-            body = None
+            pass
         captured.append(
             {
                 "response": {
@@ -65,12 +66,16 @@ def main() -> None:
         page.goto("https://www.flysto.net/logs", wait_until="load", timeout=60000)
         page.wait_for_timeout(4000)
 
-        # Click first row checkbox in logs table.
-        checkbox = page.locator("table input[type='checkbox']").first
-        if checkbox.count() == 0:
+        # Select first visible row (checkbox may be hidden until hover).
+        row = page.locator("table tbody tr").first
+        if row.count() == 0:
             page.screenshot(path=str(SCREENSHOT_PATH), full_page=True)
-            raise RuntimeError("No row checkbox found in logs table.")
-        checkbox.click()
+            raise RuntimeError("No log rows found.")
+        row.scroll_into_view_if_needed()
+        row.click()
+        checkbox = row.locator("input[type='checkbox']")
+        if checkbox.count() > 0:
+            checkbox.first.click()
         page.wait_for_timeout(1000)
 
         # Try to open assign-aircraft action.
