@@ -335,6 +335,46 @@ def _extract_metadata(raw_payload: dict) -> dict:
     return {key: value for key, value in fields.items() if value not in (None, "", [])}
 
 
+def _extract_crew_assignments(metadata: dict) -> list[dict]:
+    crew: list[dict] = []
+    seen: set[tuple[str, str | None]] = set()
+
+    def add_entry(name: object, role: object, is_pic: bool = False) -> None:
+        if not isinstance(name, str) or not name.strip():
+            return
+        role_value = role if isinstance(role, str) and role.strip() else None
+        key = (name.strip().lower(), role_value.lower() if role_value else None)
+        if key in seen:
+            return
+        seen.add(key)
+        crew.append({"name": name.strip(), "role": role_value, "is_pic": is_pic})
+
+    pilots = metadata.get("pilots")
+    if isinstance(pilots, list):
+        for entry in pilots:
+            if not isinstance(entry, dict):
+                continue
+            add_entry(
+                entry.get("name"),
+                entry.get("role"),
+                bool(entry.get("PIC") or entry.get("pic")),
+            )
+
+    pilot = metadata.get("pilot")
+    if isinstance(pilot, list):
+        add_entry(pilot[0] if pilot else None, "PIC", True)
+    elif isinstance(pilot, str):
+        add_entry(pilot, "PIC", True)
+
+    co_pilot = metadata.get("co_pilot")
+    if isinstance(co_pilot, list):
+        add_entry(co_pilot[0] if co_pilot else None, "Copilot")
+    elif isinstance(co_pilot, str):
+        add_entry(co_pilot, "Copilot")
+
+    return crew
+
+
 def _compute_review_id(items: list[ReviewItem]) -> str:
     payload = [
         {
@@ -491,6 +531,7 @@ def _migrate_single(
 ) -> MigrationResult:
     try:
         aircraft = None
+        crew: list[dict] = []
         if not dry_run:
             metadata = _extract_metadata(detail.raw_payload)
             tail_number = metadata.get("tail_number")
@@ -499,10 +540,14 @@ def _migrate_single(
                 aircraft = flysto.ensure_aircraft(tail_number, aircraft_type)
             if aircraft and aircraft.get("id"):
                 flysto.assign_aircraft(str(aircraft.get("id")))
+            crew = _extract_crew_assignments(metadata)
         flysto.upload_flight(detail, dry_run=dry_run)
         if not dry_run and aircraft and aircraft.get("id") and detail.file_path:
             filename = Path(detail.file_path).name
             flysto.assign_aircraft_for_file(filename, str(aircraft.get("id")))
+        if not dry_run and crew and detail.file_path:
+            filename = Path(detail.file_path).name
+            flysto.assign_crew_for_file(filename, crew)
         return MigrationResult(flight_id=detail.id, status="ok")
     except Exception as exc:  # noqa: BLE001 - surfacing per-flight failure
         return MigrationResult(

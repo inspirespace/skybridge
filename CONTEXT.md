@@ -18,6 +18,9 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Review manifests now include `flt.points` schema + preview and exports are GPX by default (CSV sidecar retained) and creates FlySto aircraft by tail number.
 - Hybrid mode uses the web UI to page through CloudAhoy flights (`Load more`) and uses API for flight detail fetch.
 - FlySto API endpoints discovered via UI: `/api/login` (text/plain JSON body) and `/api/log-upload?id=<filename>@@@0` with `content-type: application/zip`. `x-version` is inferred from the JS bundle if not provided.
+- Crew assignment endpoints discovered in FlySto bundle: `/api/assign-crew` (logIds + names + roles) and `/api/user-crew` + `/api/user-crew-roles`. Crew import wiring added in `src/migration.py` and `src/flysto/client.py` (creates crew via `/api/new-crew`, assigns per log after upload).
+- Aircraft model "Other": UI wizard reaches manual profile step (model name/engine/fuel etc.) but no create-aircraft API request observed; direct /api/create-aircraft attempts return 500. Need to capture final payload or determine endpoint.
+- Discovery logs now redact credentials in stored request payloads.
 
 ## Required API Details
 These are needed to complete the adapters:
@@ -36,6 +39,6 @@ See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 - Browser storage state is persisted under `data/` to reuse sessions.
 
 ## Next Steps
-1) Confirm metadata mapping coverage (pilot/crew/remarks/tail number) and aircraft assignment.
+1) Confirm crew role mapping via `/api/user-crew-roles` (PIC/Student/Instructor/etc.) and validate assignments show up on FlySto logs.
 2) Decide whether to persist raw CloudAhoy payloads for audit/replay.
 3) Add SaaS multi-tenant auth, billing, and per-user job tracking.
