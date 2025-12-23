@@ -15,9 +15,8 @@
 - Crew extraction now forces PIC when CloudAhoy marks PIC or uses PIC role strings; FlySto role resolution prioritizes PIC candidates.
 - FlySto aircraft lookup now tolerates `tail-number` vs `tailNumber` keys for assignment.
 - Local 5-flight import via direct Python succeeded (review-id gating), pending UI verification of crew roles/aircraft assignment.
-- Uploads now set FlySto system id to tail number (`id=<filename>@@@<tail>`) to support per-aircraft avionics mapping.
 - Aircraft assignment now retries longer and refreshes log summaries before giving up.
-- Upload zip now embeds `@@@<system_id>` in the file entry name to match FlySto’s uploader behavior.
+- Regression: uploads using `@@@<tail>` in URL/zip entry do not appear as flights; legacy `@@@0` with plain filename does. Reverted to legacy upload while focusing on assignment API.
 - Playwright capture blocked on macOS due to Crashpad permission errors; need manual network capture or alternate environment.
 
 ## Next Implementation Steps

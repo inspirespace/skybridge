@@ -47,12 +47,7 @@ class FlyStoClient:
             self.api_version = _infer_api_version(self.base_url)
         return True
 
-    def upload_flight(
-        self,
-        flight: FlightDetail,
-        dry_run: bool = False,
-        system_id: str | None = None,
-    ) -> None:
+    def upload_flight(self, flight: FlightDetail, dry_run: bool = False) -> None:
         if dry_run:
             _validate_flight_for_upload(flight)
             return
@@ -70,7 +65,7 @@ class FlyStoClient:
         response = self._request(
             session,
             "post",
-            _upload_url(self.upload_url, self.base_url, file_path.name, system_id),
+            _upload_url(self.upload_url, self.base_url, file_path.name),
             data=payload,
             headers=headers,
             timeout=120,
@@ -324,11 +319,7 @@ class FlyStoClient:
         filename: str,
         aircraft_id: str,
         log_format_id: str = "GenericGpx",
-        system_id: str | None = None,
     ) -> None:
-        if system_id:
-            self.assign_aircraft(aircraft_id, log_format_id=log_format_id, system_id=system_id)
-            return
         log_id, signature, resolved_format = self.resolve_log_for_file(filename)
         if not signature:
             return
@@ -616,16 +607,13 @@ def _validate_flight_for_upload(flight: FlightDetail) -> None:
 
 
 
-def _build_upload_payload(path: Path, system_id: str | None = None) -> bytes:
+def _build_upload_payload(path: Path) -> bytes:
     data = path.read_bytes()
     if path.suffix.lower() == ".zip":
         return data
     buffer = __import__('io').BytesIO()
-    entry_name = path.name
-    if system_id:
-        entry_name = f"{path.name}@@@{system_id}"
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr(entry_name, data)
+        archive.writestr(path.name, data)
     return buffer.getvalue()
 
 def _metadata_payload(flight: FlightDetail) -> dict:
@@ -635,21 +623,12 @@ def _metadata_payload(flight: FlightDetail) -> dict:
     return payload
 
 
-def _upload_url(
-    upload_url: str | None,
-    base_url: str,
-    filename: str,
-    system_id: str | None = None,
-) -> str:
+def _upload_url(upload_url: str | None, base_url: str, filename: str) -> str:
     url = upload_url or (base_url.rstrip("/") + "/api/log-upload")
     if "?" in url:
         return url
-    suffix = system_id.strip() if isinstance(system_id, str) else "0"
-    if not suffix:
-        suffix = "0"
-    safe_suffix = requests.utils.quote(suffix, safe="")
     safe_name = requests.utils.quote(filename, safe="")
-    return f"{url}?id={safe_name}@@@{safe_suffix}"
+    return f\"{url}?id={safe_name}@@@0\"
 
 
 def _api_login(

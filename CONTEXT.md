@@ -22,10 +22,9 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Crew extraction now prefers PIC when CloudAhoy flags PIC or uses a PIC role string; FlySto role resolution now prioritizes PIC candidates for flagged pilots.
 - FlySto API calls now include basic rate limiting and retry on transient 429/5xx to avoid request bursts.
 - FlySto aircraft lookup now matches both `tail-number` and `tailNumber` payload keys for assignment.
-- FlySto uploads now set `id=<filename>@@@<system_id>` using tail number as `system_id` to enable per-aircraft avionics mapping.
 - Aircraft assignment now waits longer for log processing and refreshes log summaries (`update=true`) before giving up.
-- FlySto upload zip now embeds `@@@<system_id>` in the entry name to match the web uploader’s file naming convention.
 - Playwright automation currently fails to launch Chromium/Chrome on macOS due to Crashpad permission errors; need manual capture or different environment.
+- Regression investigation: uploads with `@@@<tail>` in URL or zip entry do not show up in `log-summary`/flights, while legacy `@@@0` with plain filename does. Reverted to legacy upload format while fixing assignment via log-summary.
 - Latest local run (direct Python) succeeded: 5/5 flights imported with review-id gating on 2025-12-23.
 - Aircraft model "Other": UI wizard reaches manual profile step (model name/engine/fuel etc.) but no create-aircraft API request observed; direct /api/create-aircraft attempts return 500. Need to capture final payload or determine endpoint.
 - Discovery logs now redact credentials in stored request payloads.
