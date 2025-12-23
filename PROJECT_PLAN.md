@@ -18,6 +18,7 @@
 - Aircraft assignment now retries longer and refreshes log summaries before giving up.
 - Regression: uploads using `@@@<tail>` in URL/zip entry do not appear as flights; legacy `@@@0` with plain filename does. Reverted to legacy upload while focusing on assignment API.
 - Playwright capture blocked on macOS due to Crashpad permission errors; need manual network capture or alternate environment.
+- Align assign-aircraft request with UI (text/plain JSON body + x-version).
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).

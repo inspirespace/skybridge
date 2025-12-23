@@ -208,11 +208,15 @@ class FlyStoClient:
             "avionics": {"logFormatId": log_format_id, "systemId": system_id},
             "aircraftIdString": aircraft_id,
         }
+        headers = {"content-type": "text/plain;charset=UTF-8"}
+        if self.api_version:
+            headers["x-version"] = self.api_version
         response = self._request(
             session,
             "post",
             self.base_url.rstrip("/") + "/api/assign-aircraft",
-            json=payload,
+            data=json.dumps(payload),
+            headers=headers,
             timeout=60,
         )
         if response.status_code >= 300:
