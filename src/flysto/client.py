@@ -58,7 +58,7 @@ class FlyStoClient:
             self.api_version = _infer_api_version(self.base_url)
 
         file_path = Path(flight.file_path)
-        payload = _build_upload_payload(file_path, system_id=system_id)
+        payload = _build_upload_payload(file_path)
         headers = {"content-type": "application/zip"}
         if self.api_version:
             headers["x-version"] = self.api_version
