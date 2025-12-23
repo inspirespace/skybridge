@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import json
 import re
+import time
 from typing import Any
 import zipfile
 from urllib.parse import urljoin, urlparse
@@ -28,6 +29,9 @@ class FlyStoClient:
     assigned_avionics: set[tuple[str, str | None]] | None = None
     crew_cache: list[dict[str, Any]] | None = None
     crew_roles_cache: list[dict[str, Any]] | None = None
+    min_request_interval: float = 0.5
+    max_request_retries: int = 3
+    _last_request_at: float | None = None
 
     def prepare(self) -> bool:
         session = requests.Session()
@@ -58,7 +62,9 @@ class FlyStoClient:
         headers = {"content-type": "application/zip"}
         if self.api_version:
             headers["x-version"] = self.api_version
-        response = session.post(
+        response = self._request(
+            session,
+            "post",
             _upload_url(self.upload_url, self.base_url, file_path.name),
             data=payload,
             headers=headers,
@@ -93,14 +99,18 @@ class FlyStoClient:
             },
             "logAccess": "AuthorizedUserOnly",
         }
-        response = session.post(
+        response = self._request(
+            session,
+            "post",
             self.base_url.rstrip("/") + "/api/create-aircraft",
             json=payload,
             timeout=60,
         )
         if response.status_code >= 300 and model_id != "Other":
             payload["model"]["modelId"] = "Other"
-            response = session.post(
+            response = self._request(
+                session,
+                "post",
                 self.base_url.rstrip("/") + "/api/create-aircraft",
                 json=payload,
                 timeout=60,
@@ -123,7 +133,12 @@ class FlyStoClient:
     def _list_aircraft(self, session: requests.Session) -> list[dict[str, Any]]:
         if self.aircraft_cache is not None:
             return self.aircraft_cache
-        response = session.get(self.base_url.rstrip("/") + "/api/aircraft", timeout=60)
+        response = self._request(
+            session,
+            "get",
+            self.base_url.rstrip("/") + "/api/aircraft",
+            timeout=60,
+        )
         decoded = _decode_flysto_payload(response.text)
         if isinstance(decoded, str):
             try:
@@ -152,7 +167,14 @@ class FlyStoClient:
     def _list_aircraft_profiles(self) -> list[dict[str, Any]]:
         if self.aircraft_profiles_cache is not None:
             return self.aircraft_profiles_cache
-        response = requests.get(self.base_url.rstrip("/") + "/api/aircraft-profiles", timeout=60)
+        session = requests.Session()
+        self._ensure_session(session)
+        response = self._request(
+            session,
+            "get",
+            self.base_url.rstrip("/") + "/api/aircraft-profiles",
+            timeout=60,
+        )
         decoded = _decode_flysto_payload(response.text)
         if isinstance(decoded, str):
             try:
@@ -186,7 +208,9 @@ class FlyStoClient:
             "avionics": {"logFormatId": log_format_id, "systemId": system_id},
             "aircraftIdString": aircraft_id,
         }
-        response = session.post(
+        response = self._request(
+            session,
+            "post",
             self.base_url.rstrip("/") + "/api/assign-aircraft",
             json=payload,
             timeout=60,
@@ -202,7 +226,13 @@ class FlyStoClient:
         session = requests.Session()
         self._ensure_session(session)
         params = {"type": "flight", "logs": 250, "order": "descending"}
-        response = session.get(self.base_url.rstrip("/") + "/api/log-list", params=params, timeout=60)
+        response = self._request(
+            session,
+            "get",
+            self.base_url.rstrip("/") + "/api/log-list",
+            params=params,
+            timeout=60,
+        )
         decoded = _decode_flysto_payload(response.text)
         if isinstance(decoded, str):
             try:
@@ -217,7 +247,9 @@ class FlyStoClient:
         if not log_ids:
             return None, None
         keys = "57,tf,ec,hq,86,b2,lb,8q,p2,85,bl,hk,4n,ee,yu,1y,t3,ng,ho,hq,x9,g3,6n,hq,0s,83,6h,am"
-        summary = session.get(
+        summary = self._request(
+            session,
+            "get",
             self.base_url.rstrip("/") + "/api/log-summary",
             params={"logs": ",".join(log_ids), "keys": keys, "update": "false"},
             timeout=60,
@@ -288,7 +320,9 @@ class FlyStoClient:
         session = requests.Session()
         self._ensure_session(session)
         payload = {"logIds": log_ids, "names": names, "roles": roles}
-        response = session.post(
+        response = self._request(
+            session,
+            "post",
             self.base_url.rstrip("/") + "/api/assign-crew",
             json=payload,
             timeout=60,
@@ -309,7 +343,9 @@ class FlyStoClient:
         session = requests.Session()
         self._ensure_session(session)
         for name in missing:
-            response = session.post(
+            response = self._request(
+                session,
+                "post",
                 self.base_url.rstrip("/") + "/api/new-crew",
                 json={"name": name},
                 timeout=60,
@@ -325,7 +361,12 @@ class FlyStoClient:
             return self.crew_cache
         session = requests.Session()
         self._ensure_session(session)
-        response = session.get(self.base_url.rstrip("/") + "/api/user-crew", timeout=60)
+        response = self._request(
+            session,
+            "get",
+            self.base_url.rstrip("/") + "/api/user-crew",
+            timeout=60,
+        )
         decoded = _decode_flysto_payload(response.text)
         if isinstance(decoded, str):
             try:
@@ -351,7 +392,12 @@ class FlyStoClient:
             return self.crew_roles_cache
         session = requests.Session()
         self._ensure_session(session)
-        response = session.get(self.base_url.rstrip("/") + "/api/user-crew-roles", timeout=60)
+        response = self._request(
+            session,
+            "get",
+            self.base_url.rstrip("/") + "/api/user-crew-roles",
+            timeout=60,
+        )
         decoded = _decode_flysto_payload(response.text)
         if isinstance(decoded, str):
             try:
@@ -432,6 +478,41 @@ class FlyStoClient:
                 raise RuntimeError("FlySto API login returned no session cookie.")
             return
         raise NotImplementedError("FlySto API auth not configured.")
+
+    def _request(self, session: requests.Session, method: str, url: str, **kwargs) -> requests.Response:
+        method = method.lower()
+        last_error = None
+        for attempt in range(self.max_request_retries):
+            self._respect_rate_limit()
+            try:
+                response = session.request(method, url, **kwargs)
+            except requests.RequestException as exc:
+                last_error = exc
+                time.sleep(self._retry_delay(attempt))
+                continue
+            if response.status_code in {429, 502, 503, 504}:
+                time.sleep(self._retry_delay(attempt))
+                continue
+            return response
+        if last_error:
+            raise last_error
+        return response
+
+    def _respect_rate_limit(self) -> None:
+        if self.min_request_interval <= 0:
+            return
+        now = time.monotonic()
+        if self._last_request_at is None:
+            self._last_request_at = now
+            return
+        elapsed = now - self._last_request_at
+        if elapsed < self.min_request_interval:
+            time.sleep(self.min_request_interval - elapsed)
+        self._last_request_at = time.monotonic()
+
+    def _retry_delay(self, attempt: int) -> float:
+        base = 0.5 * (2 ** attempt)
+        return min(8.0, base)
 
 
 
