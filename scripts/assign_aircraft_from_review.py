@@ -2,19 +2,15 @@ import json
 import os
 from pathlib import Path
 
-from src.flysto.client import FlyStoClient
-from src.migration import _extract_metadata
+from src.flysto.client import FlyStoClient, _decode_flysto_payload
+
+import requests
 
 
 def main() -> None:
-    review_path = Path(os.getenv("REVIEW_PATH", "data/review.json"))
-    if not review_path.exists():
-        raise SystemExit(f"Missing review manifest: {review_path}")
-
-    data = json.loads(review_path.read_text())
-    items = data.get("items", data) if isinstance(data, dict) else data
-    if not isinstance(items, list):
-        raise SystemExit("Invalid review manifest format.")
+    exports_dir = Path(os.getenv("EXPORTS_DIR", "data/cloudahoy_exports"))
+    if not exports_dir.exists():
+        raise SystemExit(f"Missing exports dir: {exports_dir}")
 
     client = FlyStoClient(
         api_key="",
@@ -28,29 +24,74 @@ def main() -> None:
     if not client.prepare():
         raise SystemExit("FlySto API not available. Verify credentials or session cookie.")
 
+    meta_map = {}
+    for meta_path in exports_dir.glob("*.meta.json"):
+        try:
+            data = json.loads(meta_path.read_text())
+        except json.JSONDecodeError:
+            continue
+        tail = data.get("tail_number") or data.get("tailNumber")
+        if not isinstance(tail, str) or not tail.strip():
+            continue
+        filename = meta_path.name.replace(".meta.json", ".gpx")
+        meta_map[filename] = {"tail_number": tail.strip(), "aircraft_type": data.get("aircraft_type")}
+
+    session = requests.Session()
+    client._ensure_session(session)
+    params = {"type": "flight", "logs": 250, "order": "descending"}
+    resp = session.get(client.base_url.rstrip("/") + "/api/log-list", params=params, timeout=60)
+    log_ids = _decode_flysto_payload(resp.text)
+    if isinstance(log_ids, str):
+        try:
+            log_ids = json.loads(log_ids)
+        except json.JSONDecodeError:
+            log_ids = []
+    log_ids = [str(x) for x in (log_ids or [])]
+    if not log_ids:
+        raise SystemExit("No FlySto logs found to assign.")
+
+    keys = "57,tf,ec,hq,86,b2,lb,8q,p2,85,bl,hk,4n,ee,yu,1y,t3,ng,ho,hq,x9,g3,6n,hq,0s,83,6h,am"
+    summary = session.get(
+        client.base_url.rstrip("/") + "/api/log-summary",
+        params={"logs": ",".join(log_ids), "keys": keys, "update": "true"},
+        timeout=60,
+    )
+    decoded = _decode_flysto_payload(summary.text)
+    if isinstance(decoded, str):
+        try:
+            decoded = json.loads(decoded)
+        except json.JSONDecodeError:
+            decoded = {}
+    items = decoded.get("items", []) if isinstance(decoded, dict) else []
+    candidates = []
     for item in items:
-        file_path = item.get("file_path") or item.get("filePath")
-        raw_payload = item.get("raw_payload") or {}
-        if not file_path:
+        summary_data = item.get("summary", {}).get("data", {})
+        signature = summary_data.get("6h")
+        files = summary_data.get("t3") or []
+        for entry in files:
+            filename = entry.get("file")
+            log_format = entry.get("format") or "GenericGpx"
+            if filename:
+                candidates.append((filename, signature, log_format))
+
+    if not candidates:
+        raise SystemExit("No log files found in FlySto summary.")
+
+    for filename, signature, log_format in candidates:
+        meta = meta_map.get(filename)
+        if not meta:
+            print("SKIP no metadata", filename)
             continue
-        metadata = item.get("metadata")
-        if not isinstance(metadata, dict):
-            metadata = _extract_metadata(raw_payload) if isinstance(raw_payload, dict) else {}
-        tail_number = metadata.get("tail_number")
-        aircraft_type = metadata.get("aircraft_type")
-        if not tail_number:
-            print("SKIP no tail", item.get("flight_id"))
-            continue
+        tail_number = meta.get("tail_number")
+        aircraft_type = meta.get("aircraft_type")
         aircraft = client.ensure_aircraft(tail_number, aircraft_type)
         if not aircraft or not aircraft.get("id"):
-            print("SKIP no aircraft", item.get("flight_id"))
+            print("SKIP no aircraft", filename)
             continue
-        filename = Path(file_path).name
-        log_id, signature, log_format = client.resolve_log_for_file(filename)
         if not signature:
             print("SKIP no signature", filename)
             continue
-        client.assign_aircraft(str(aircraft.get("id")), log_format_id=log_format or "GenericGpx", system_id=signature)
+        client.assign_aircraft(str(aircraft.get("id")), log_format_id=log_format, system_id=signature)
         print("OK", filename, "->", tail_number)
 
 
