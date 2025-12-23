@@ -222,57 +222,69 @@ class FlyStoClient:
         self.assigned_avionics.add(key)
 
 
-    def resolve_log_for_file(self, filename: str) -> tuple[str | None, str | None]:
+    def resolve_log_for_file(
+        self,
+        filename: str,
+        retries: int = 5,
+        delay_seconds: float = 2.0,
+    ) -> tuple[str | None, str | None, str | None]:
         session = requests.Session()
         self._ensure_session(session)
-        params = {"type": "flight", "logs": 250, "order": "descending"}
-        response = self._request(
-            session,
-            "get",
-            self.base_url.rstrip("/") + "/api/log-list",
-            params=params,
-            timeout=60,
-        )
-        decoded = _decode_flysto_payload(response.text)
-        if isinstance(decoded, str):
-            try:
-                log_ids = json.loads(decoded)
-            except json.JSONDecodeError:
-                return None, None
-        elif isinstance(decoded, list):
-            log_ids = decoded
-        else:
-            return None, None
-        log_ids = [str(log_id) for log_id in log_ids]
-        if not log_ids:
-            return None, None
         keys = "57,tf,ec,hq,86,b2,lb,8q,p2,85,bl,hk,4n,ee,yu,1y,t3,ng,ho,hq,x9,g3,6n,hq,0s,83,6h,am"
-        summary = self._request(
-            session,
-            "get",
-            self.base_url.rstrip("/") + "/api/log-summary",
-            params={"logs": ",".join(log_ids), "keys": keys, "update": "false"},
-            timeout=60,
-        )
-        decoded = _decode_flysto_payload(summary.text)
-        if isinstance(decoded, str):
-            try:
-                data = json.loads(decoded)
-            except json.JSONDecodeError:
-                return None, None
-        elif isinstance(decoded, dict):
-            data = decoded
-        else:
-            return None, None
-        items = data.get("items", []) if isinstance(data, dict) else []
-        for item in items:
-            summary_data = item.get("summary", {}).get("data", {})
-            files = summary_data.get("t3") or []
-            for entry in files:
-                if entry.get("file") == filename:
-                    signature = summary_data.get("6h")
-                    return str(item.get("id")), signature
-        return None, None
+        for attempt in range(retries):
+            params = {"type": "flight", "logs": 250, "order": "descending"}
+            response = self._request(
+                session,
+                "get",
+                self.base_url.rstrip("/") + "/api/log-list",
+                params=params,
+                timeout=60,
+            )
+            decoded = _decode_flysto_payload(response.text)
+            if isinstance(decoded, str):
+                try:
+                    log_ids = json.loads(decoded)
+                except json.JSONDecodeError:
+                    log_ids = []
+            elif isinstance(decoded, list):
+                log_ids = decoded
+            else:
+                log_ids = []
+            log_ids = [str(log_id) for log_id in log_ids]
+            if not log_ids:
+                if attempt < retries - 1:
+                    time.sleep(delay_seconds * (attempt + 1))
+                    continue
+                return None, None, None
+            summary = self._request(
+                session,
+                "get",
+                self.base_url.rstrip("/") + "/api/log-summary",
+                params={"logs": ",".join(log_ids), "keys": keys, "update": "false"},
+                timeout=60,
+            )
+            decoded = _decode_flysto_payload(summary.text)
+            if isinstance(decoded, str):
+                try:
+                    data = json.loads(decoded)
+                except json.JSONDecodeError:
+                    data = None
+            elif isinstance(decoded, dict):
+                data = decoded
+            else:
+                data = None
+            items = data.get("items", []) if isinstance(data, dict) else []
+            for item in items:
+                summary_data = item.get("summary", {}).get("data", {})
+                files = summary_data.get("t3") or []
+                for entry in files:
+                    if entry.get("file") == filename:
+                        signature = summary_data.get("6h")
+                        log_format = entry.get("format")
+                        return str(item.get("id")), signature, log_format
+            if attempt < retries - 1:
+                time.sleep(delay_seconds * (attempt + 1))
+        return None, None, None
 
     def assign_aircraft_for_file(
         self,
@@ -280,15 +292,16 @@ class FlyStoClient:
         aircraft_id: str,
         log_format_id: str = "GenericGpx",
     ) -> None:
-        log_id, signature = self.resolve_log_for_file(filename)
+        log_id, signature, resolved_format = self.resolve_log_for_file(filename)
         if not signature:
             return
-        self.assign_aircraft(aircraft_id, log_format_id=log_format_id, system_id=signature)
+        effective_format = resolved_format or log_format_id
+        self.assign_aircraft(aircraft_id, log_format_id=effective_format, system_id=signature)
 
     def assign_crew_for_file(self, filename: str, crew: list[dict[str, Any]]) -> None:
         if not crew:
             return
-        log_id, _signature = self.resolve_log_for_file(filename)
+        log_id, _signature, _format = self.resolve_log_for_file(filename)
         if not log_id:
             return
         names: list[str] = []
