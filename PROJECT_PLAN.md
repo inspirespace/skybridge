@@ -13,6 +13,7 @@
 - Crew import wiring added (create crew via `/api/new-crew`, assign via `/api/assign-crew`, map roles from `/api/user-crew-roles`) but requires validation against live API.
 - FlySto client adds basic rate limiting + retry to reduce request bursts and handle transient outages.
 - Crew extraction now forces PIC when CloudAhoy marks PIC or uses PIC role strings; FlySto role resolution prioritizes PIC candidates.
+- Crew mapping updated: CloudAhoy "safety pilot" maps to FlySto "copilot"; if CloudAhoy provides only "pilot" without PIC, it becomes PIC.
 - FlySto aircraft lookup now tolerates `tail-number` vs `tailNumber` keys for assignment.
 - Local 5-flight import via direct Python succeeded (review-id gating), pending UI verification of crew roles/aircraft assignment.
 - Aircraft assignment now retries longer and refreshes log summaries before giving up.

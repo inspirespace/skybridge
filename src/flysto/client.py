@@ -484,7 +484,7 @@ class FlyStoClient:
             if role_lower in {"co-pilot", "copilot", "co pilot"}:
                 candidates.extend(["Copilot", "Co-pilot", "Co pilot"])
             elif role_lower in {"safety pilot", "safety"}:
-                candidates.append("Safety pilot")
+                candidates.extend(["Copilot", "Co-pilot", "Co pilot"])
             elif role_lower in {"instructor", "cfi", "cfii"}:
                 candidates.append("Instructor")
             elif role_lower in {"student", "trainee"}:

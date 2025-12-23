@@ -359,6 +359,7 @@ def _extract_crew_assignments(metadata: dict) -> list[dict]:
             by_name[key] = entry
 
     pilots = metadata.get("pilots")
+    has_pic = False
     if isinstance(pilots, list):
         for entry in pilots:
             if not isinstance(entry, dict):
@@ -368,11 +369,14 @@ def _extract_crew_assignments(metadata: dict) -> list[dict]:
             is_pic = bool(entry.get("PIC") or entry.get("pic"))
             if role_norm in {"pic", "pilot in command"}:
                 is_pic = True
+            if role_norm in {"safety pilot", "safety"}:
+                role_name = "Copilot"
             add_entry(
                 entry.get("name"),
                 role_name,
                 is_pic,
             )
+            has_pic = has_pic or is_pic
 
     # If pilots list exists, it already encodes roles and PIC flags.
     if not isinstance(pilots, list) or not pilots:
@@ -387,6 +391,15 @@ def _extract_crew_assignments(metadata: dict) -> list[dict]:
             add_entry(co_pilot[0] if co_pilot else None, "Copilot")
         elif isinstance(co_pilot, str):
             add_entry(co_pilot, "Copilot")
+    else:
+        # CloudAhoy sometimes marks a single "pilot" without PIC; treat as PIC when no PIC exists.
+        if not has_pic:
+            for entry in by_name.values():
+                role_value = entry.get("role") or ""
+                if isinstance(role_value, str) and role_value.strip().lower() == "pilot":
+                    entry["role"] = "PIC"
+                    entry["is_pic"] = True
+                    break
 
     crew = list(by_name.values())
     return crew
