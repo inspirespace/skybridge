@@ -337,17 +337,24 @@ def _extract_metadata(raw_payload: dict) -> dict:
 
 def _extract_crew_assignments(metadata: dict) -> list[dict]:
     crew: list[dict] = []
-    seen: set[tuple[str, str | None]] = set()
+    by_name: dict[str, dict] = {}
 
     def add_entry(name: object, role: object, is_pic: bool = False) -> None:
         if not isinstance(name, str) or not name.strip():
             return
         role_value = role if isinstance(role, str) and role.strip() else None
-        key = (name.strip().lower(), role_value.lower() if role_value else None)
-        if key in seen:
+        key = name.strip().lower()
+        existing = by_name.get(key)
+        entry = {"name": name.strip(), "role": role_value, "is_pic": is_pic}
+        if not existing:
+            by_name[key] = entry
             return
-        seen.add(key)
-        crew.append({"name": name.strip(), "role": role_value, "is_pic": is_pic})
+        # Prefer PIC role if available, otherwise keep first non-empty role.
+        if entry.get("is_pic") and not existing.get("is_pic"):
+            by_name[key] = entry
+            return
+        if existing.get("role") is None and entry.get("role") is not None:
+            by_name[key] = entry
 
     pilots = metadata.get("pilots")
     if isinstance(pilots, list):
@@ -360,18 +367,21 @@ def _extract_crew_assignments(metadata: dict) -> list[dict]:
                 bool(entry.get("PIC") or entry.get("pic")),
             )
 
-    pilot = metadata.get("pilot")
-    if isinstance(pilot, list):
-        add_entry(pilot[0] if pilot else None, "PIC", True)
-    elif isinstance(pilot, str):
-        add_entry(pilot, "PIC", True)
+    # If pilots list exists, it already encodes roles and PIC flags.
+    if not isinstance(pilots, list) or not pilots:
+        pilot = metadata.get("pilot")
+        if isinstance(pilot, list):
+            add_entry(pilot[0] if pilot else None, "PIC", True)
+        elif isinstance(pilot, str):
+            add_entry(pilot, "PIC", True)
 
-    co_pilot = metadata.get("co_pilot")
-    if isinstance(co_pilot, list):
-        add_entry(co_pilot[0] if co_pilot else None, "Copilot")
-    elif isinstance(co_pilot, str):
-        add_entry(co_pilot, "Copilot")
+        co_pilot = metadata.get("co_pilot")
+        if isinstance(co_pilot, list):
+            add_entry(co_pilot[0] if co_pilot else None, "Copilot")
+        elif isinstance(co_pilot, str):
+            add_entry(co_pilot, "Copilot")
 
+    crew = list(by_name.values())
     return crew
 
 

@@ -433,7 +433,7 @@ class FlyStoClient:
         if role_name:
             candidates.append(role_name)
         if is_pic:
-            candidates.extend(["PIC", "Pilot in command", "Pilot"])
+            candidates.extend(["PIC", "Pilot in command"])
         if role_name:
             role_lower = role_name.strip().lower()
             if role_lower in {"co-pilot", "copilot", "co pilot"}:
@@ -444,6 +444,9 @@ class FlyStoClient:
                 candidates.append("Instructor")
             elif role_lower in {"student", "trainee"}:
                 candidates.append("Student")
+            elif role_lower in {"pilot"} and not is_pic:
+                # Prefer non-PIC pilot roles when available.
+                candidates.append("Pilot")
         candidate_norm = {_normalize_role(value) for value in candidates if value}
         for role in roles:
             role_id, name = self._role_id_name(role)
@@ -451,6 +454,13 @@ class FlyStoClient:
                 continue
             if _normalize_role(name) in candidate_norm:
                 return role_id
+        if role_name and role_name.strip().lower() == "pilot" and not is_pic:
+            for role in roles:
+                role_id, name = self._role_id_name(role)
+                if not role_id or not name:
+                    continue
+                if _normalize_role(name) in {_normalize_role("Copilot"), _normalize_role("Co-pilot")}:
+                    return role_id
         return None
 
     def _role_id_name(self, role: dict[str, Any]) -> tuple[str | None, str | None]:
