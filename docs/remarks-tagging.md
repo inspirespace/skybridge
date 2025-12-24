@@ -22,6 +22,11 @@
 - Store a per-flight marker in FlySto (tag) so repeated imports can detect and skip or update in-place.
 - Additionally, record the marker in `data/migration.db` so local re-runs avoid duplicate API calls.
 
+### Current Implementation Notes
+- Uses `/api/log-metadata` to update `remarks` and `tags` for a log (via `logIdString`).
+- Fetches existing log metadata (best-effort) and merges tags to avoid clobbering.
+- Always appends `cloudahoy:<flight_id>` (case-insensitive de-dupe).
+
 ### Implementation Outline
 1) Locate CloudAhoy remarks in the raw payload (add extraction in `src/migration.py` / metadata helper).
 2) Add FlySto client calls for remarks and tags:

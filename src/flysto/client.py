@@ -358,6 +358,71 @@ class FlyStoClient:
             return
         self._assign_crew([log_id], names, roles)
 
+    def assign_metadata_for_file(
+        self,
+        filename: str,
+        remarks: str | None = None,
+        tags: list[str] | None = None,
+    ) -> None:
+        if not remarks and not tags:
+            return
+        log_id, _signature, _format = self.resolve_log_for_file(filename)
+        if not log_id:
+            return
+        existing = self._fetch_log_metadata(log_id)
+        merged_tags = _merge_tags(existing.get("tags"), tags)
+        final_remarks = remarks or existing.get("remarks")
+        if not merged_tags and not final_remarks:
+            return
+        self._update_log_metadata(log_id, remarks=final_remarks, tags=merged_tags)
+
+    def _fetch_log_metadata(self, log_id: str) -> dict[str, Any]:
+        session = requests.Session()
+        self._ensure_session(session)
+        response = self._request(
+            session,
+            "get",
+            self.base_url.rstrip("/") + "/api/log-metadata",
+            params={"logIdString": log_id},
+            timeout=60,
+        )
+        decoded = _decode_flysto_payload(response.text)
+        if isinstance(decoded, str):
+            try:
+                data = json.loads(decoded)
+            except json.JSONDecodeError:
+                return {}
+        elif isinstance(decoded, dict):
+            data = decoded
+        else:
+            return {}
+        return data if isinstance(data, dict) else {}
+
+    def _update_log_metadata(
+        self,
+        log_id: str,
+        remarks: str | None = None,
+        tags: list[str] | None = None,
+    ) -> None:
+        payload: dict[str, Any] = {"logIdString": log_id}
+        if remarks:
+            payload["remarks"] = remarks
+        if tags:
+            payload["tags"] = tags
+        session = requests.Session()
+        self._ensure_session(session)
+        response = self._request(
+            session,
+            "post",
+            self.base_url.rstrip("/") + "/api/log-metadata",
+            json=payload,
+            timeout=60,
+        )
+        if response.status_code >= 300:
+            raise RuntimeError(
+                f"FlySto log-metadata failed: {response.status_code} {response.text[:200]}"
+            )
+
     def _assign_crew(self, log_ids: list[str], names: list[str], roles: list[str]) -> None:
         if not log_ids or not names or not roles:
             return
@@ -602,6 +667,34 @@ def _swap_chars(value: str) -> str:
 def _normalize_role(value: str) -> str:
     lowered = value.strip().lower()
     return "".join(ch for ch in lowered if ch.isalnum())
+
+
+def _normalize_tag_list(value: object) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        raw = [entry for entry in value if isinstance(entry, str)]
+    elif isinstance(value, str):
+        raw = [entry.strip() for entry in value.split(",")]
+    else:
+        return []
+    tags = [entry.strip() for entry in raw if entry and entry.strip()]
+    return tags
+
+
+def _merge_tags(existing: object, incoming: object) -> list[str]:
+    existing_tags = _normalize_tag_list(existing)
+    incoming_tags = _normalize_tag_list(incoming)
+    combined = existing_tags + incoming_tags
+    output: list[str] = []
+    seen: set[str] = set()
+    for tag in combined:
+        lowered = tag.lower()
+        if lowered in seen:
+            continue
+        seen.add(lowered)
+        output.append(tag)
+    return output
 def _validate_flight_for_upload(flight: FlightDetail) -> None:
     if not flight.file_path:
         raise RuntimeError("Flight export file is required for FlySto upload.")

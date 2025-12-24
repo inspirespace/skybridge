@@ -405,6 +405,43 @@ def _extract_crew_assignments(metadata: dict) -> list[dict]:
     return crew
 
 
+def _normalize_remarks(value: object) -> str | None:
+    if not isinstance(value, str):
+        return None
+    cleaned = value.strip()
+    return cleaned if cleaned else None
+
+
+def _normalize_tags(value: object) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        raw = [entry for entry in value if isinstance(entry, str)]
+    elif isinstance(value, str):
+        raw = [entry.strip() for entry in value.split(",")]
+    else:
+        return []
+    tags = [entry.strip() for entry in raw if entry and entry.strip()]
+    return tags
+
+
+def _build_import_tags(value: object, flight_id: str) -> list[str]:
+    tags = _normalize_tags(value)
+    import_tag = f"cloudahoy:{flight_id}"
+    seen = {tag.lower() for tag in tags}
+    if import_tag.lower() not in seen:
+        tags.append(import_tag)
+    output: list[str] = []
+    seen_lower: set[str] = set()
+    for tag in tags:
+        lowered = tag.lower()
+        if lowered in seen_lower:
+            continue
+        seen_lower.add(lowered)
+        output.append(tag)
+    return output
+
+
 def _compute_review_id(items: list[ReviewItem]) -> str:
     payload = [
         {
@@ -536,6 +573,8 @@ def migrate_flights(
         tail_number = metadata.get("tail_number") if isinstance(metadata, dict) else None
         aircraft_type = metadata.get("aircraft_type") if isinstance(metadata, dict) else None
         crew = _extract_crew_assignments(metadata) if not dry_run else []
+        remarks = _normalize_remarks(metadata.get("remarks")) if metadata else None
+        tags = _build_import_tags(metadata.get("tags") if metadata else None, summary.id)
         pending.setdefault(tail_number, []).append(
             {
                 "summary_id": summary.id,
@@ -546,6 +585,8 @@ def migrate_flights(
                 "tail_number": tail_number,
                 "aircraft_type": aircraft_type,
                 "crew": crew,
+                "remarks": remarks,
+                "tags": tags,
             }
         )
 
@@ -563,7 +604,17 @@ def migrate_flights(
         for item in group:
             detail = item["detail"]
             crew = item.get("crew") or []
-            result = _migrate_single(detail, flysto, dry_run, aircraft=aircraft, crew=crew)
+            remarks = item.get("remarks")
+            tags = item.get("tags") or []
+            result = _migrate_single(
+                detail,
+                flysto,
+                dry_run,
+                aircraft=aircraft,
+                crew=crew,
+                remarks=remarks,
+                tags=tags,
+            )
             results.append(result)
             if result.status == "ok":
                 succeeded += 1
@@ -597,6 +648,8 @@ def _migrate_single(
     dry_run: bool,
     aircraft: dict | None = None,
     crew: list[dict] | None = None,
+    remarks: str | None = None,
+    tags: list[str] | None = None,
 ) -> MigrationResult:
     try:
         crew = crew or []
@@ -617,6 +670,9 @@ def _migrate_single(
         if not dry_run and crew and detail.file_path:
             filename = Path(detail.file_path).name
             flysto.assign_crew_for_file(filename, crew)
+        if not dry_run and detail.file_path:
+            filename = Path(detail.file_path).name
+            flysto.assign_metadata_for_file(filename, remarks=remarks, tags=tags)
         return MigrationResult(flight_id=detail.id, status="ok")
     except Exception as exc:  # noqa: BLE001 - surfacing per-flight failure
         return MigrationResult(

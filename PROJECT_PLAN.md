@@ -23,6 +23,8 @@
 - Group uploads by tail number and assign unknown GPX groups per tail after uploads.
 - Prevent caching of unknown-group assignments (systemId=None) so each tail can be assigned.
 - Added offline unit tests for tail grouping and assign-aircraft caching behavior.
+- CloudAhoy remarks/tags now map to FlySto log metadata; imports also add `cloudahoy:<flight_id>` tag.
+- FlySto log metadata updates merge existing tags to avoid clobbering.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).
@@ -37,9 +39,8 @@
    - Add integration tests for a small flight sample (if allowed).
    - Extend tests to cover crew mapping and metadata extraction edge cases.
 7) Remarks + import tagging
-   - Identify CloudAhoy remarks fields and map to FlySto remarks/notes per log.
-   - Add per-flight import marker (tag or equivalent) such as `cloudahoy:<flight_id>`.
-   - Ensure idempotency in state/review to avoid duplicate tags/notes.
+   - Validate in UI that remarks/tags are visible on logs.
+   - Confirm `cloudahoy:<flight_id>` tag appears and supports duplicate detection.
 
 ## Backlog / Ideas
 - Replace FlySto UI automation with API client.

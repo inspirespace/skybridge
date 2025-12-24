@@ -24,6 +24,7 @@ class FakeFlySto:
         self.assigned_files: list[tuple[str, str]] = []
         self.assigned_unknown: list[str] = []
         self.ensured: list[str] = []
+        self.metadata_calls: list[tuple[str, str | None, list[str]]] = []
 
     def ensure_aircraft(self, tail_number: str, aircraft_type: str | None = None):
         self.ensured.append(tail_number)
@@ -42,6 +43,9 @@ class FakeFlySto:
     def assign_aircraft(self, aircraft_id: str, log_format_id: str = "GenericGpx", system_id=None):
         # Track group assignment calls
         self.assigned_unknown.append(aircraft_id)
+
+    def assign_metadata_for_file(self, filename: str, remarks: str | None = None, tags: list[str] | None = None):
+        self.metadata_calls.append((filename, remarks, tags or []))
 
 
 def _detail(flight_id: str, tail: str) -> FlightDetail:
@@ -82,3 +86,37 @@ def test_grouped_uploads_assign_unknown_per_tail():
 
     # Unknown group assignment should run once per tail
     assert set(flysto.assigned_unknown) == {"id-D-KLVW", "id-OE-9487"}
+
+
+def test_migration_adds_cloudahoy_tag_and_remarks():
+    summaries = [
+        FlightSummary("A1", datetime.utcnow(), None, None, None),
+    ]
+    detail = FlightDetail(
+        id="A1",
+        raw_payload={
+            "flt": {
+                "Meta": {
+                    "remarks": "Night flight",
+                    "tags": ["training", "circuit"],
+                    "tailNumber": "D-KLVW",
+                }
+            }
+        },
+        file_path="/tmp/A1.gpx",
+        metadata_path="/tmp/A1.meta.json",
+        csv_path="/tmp/A1.csv",
+    )
+    details = {"A1": detail}
+    cloudahoy = FakeCloudAhoy(summaries, details)
+    flysto = FakeFlySto()
+
+    migrate_flights(cloudahoy, flysto, dry_run=False)
+
+    assert flysto.metadata_calls
+    filename, remarks, tags = flysto.metadata_calls[0]
+    assert filename == "A1.gpx"
+    assert remarks == "Night flight"
+    assert "cloudahoy:A1" in tags
+    assert "training" in tags
+    assert "circuit" in tags
