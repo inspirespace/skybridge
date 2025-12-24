@@ -355,6 +355,37 @@ def run(argv: list[str]) -> int:
             flight_id = payload.get("flight_id")
             start_times[flight_id] = time.monotonic()
             print(f"{_stamp()} START {flight_id}", flush=True)
+        elif event == "cloudahoy_fetch_start":
+            print(f"{_stamp()} CloudAhoy fetch {payload.get('flight_id')}", flush=True)
+        elif event == "cloudahoy_fetch_done":
+            print(
+                f"{_stamp()} CloudAhoy fetched {payload.get('flight_id')} ({payload.get('file_path')})",
+                flush=True,
+            )
+        elif event == "flysto_upload_start":
+            print(f"{_stamp()} FlySto upload {payload.get('flight_id')}", flush=True)
+        elif event == "flysto_upload_done":
+            print(f"{_stamp()} FlySto uploaded {payload.get('flight_id')}", flush=True)
+        elif event == "flysto_assign_aircraft_file":
+            print(
+                f"{_stamp()} FlySto assign aircraft file {payload.get('flight_id')} -> {payload.get('aircraft_id')}",
+                flush=True,
+            )
+        elif event == "flysto_assign_crew":
+            print(
+                f"{_stamp()} FlySto assign crew {payload.get('flight_id')} ({payload.get('crew_count')} members)",
+                flush=True,
+            )
+        elif event == "flysto_assign_metadata":
+            print(
+                f"{_stamp()} FlySto assign metadata {payload.get('flight_id')} (remarks={payload.get('has_remarks')}, tags={payload.get('tag_count')})",
+                flush=True,
+            )
+        elif event == "flysto_assign_aircraft_group":
+            print(
+                f"{_stamp()} FlySto assign aircraft group {payload.get('tail_number')} -> {payload.get('aircraft_id')}",
+                flush=True,
+            )
         elif event == "end":
             flight_id = payload.get("flight_id")
             status = payload.get("status")

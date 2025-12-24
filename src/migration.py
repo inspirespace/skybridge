@@ -538,7 +538,14 @@ def migrate_flights(
     import_tag = f"cloudahoy:{_format_timestamp_tag(import_run_at)}"
 
     for summary in summaries:
+        if progress:
+            progress("cloudahoy_fetch_start", {"flight_id": summary.id})
         detail = cloudahoy.fetch_flight(summary.id)
+        if progress:
+            progress(
+                "cloudahoy_fetch_done",
+                {"flight_id": summary.id, "file_path": detail.file_path},
+            )
         file_hash = _hash_file(detail.file_path)
         csv_hash = _hash_file(detail.csv_path)
         metadata_hash = _hash_file(detail.metadata_path)
@@ -621,6 +628,7 @@ def migrate_flights(
                 crew=crew,
                 remarks=remarks,
                 tags=tags,
+                progress=progress,
             )
             results.append(result)
             if result.status == "ok":
@@ -662,6 +670,11 @@ def migrate_flights(
 
         # Assign the unknown GPX group to this tail after uploading all flights for the tail.
         if not dry_run and aircraft and aircraft.get("id"):
+            if progress:
+                progress(
+                    "flysto_assign_aircraft_group",
+                    {"tail_number": tail_number, "aircraft_id": aircraft.get("id")},
+                )
             flysto.assign_aircraft(str(aircraft.get("id")), log_format_id="GenericGpx", system_id=None)
 
     if report_path:
@@ -691,6 +704,7 @@ def _migrate_single(
     crew: list[dict] | None = None,
     remarks: str | None = None,
     tags: list[str] | None = None,
+    progress: Callable[[str, dict], None] | None = None,
 ) -> MigrationResult:
     try:
         crew = crew or []
@@ -704,15 +718,38 @@ def _migrate_single(
             if not crew:
                 metadata = _extract_metadata(detail.raw_payload)
                 crew = _extract_crew_assignments(metadata)
+        if progress:
+            progress("flysto_upload_start", {"flight_id": detail.id})
         flysto.upload_flight(detail, dry_run=dry_run)
+        if progress:
+            progress("flysto_upload_done", {"flight_id": detail.id})
         if not dry_run and aircraft and aircraft.get("id") and detail.file_path:
             filename = Path(detail.file_path).name
+            if progress:
+                progress(
+                    "flysto_assign_aircraft_file",
+                    {"flight_id": detail.id, "aircraft_id": aircraft.get("id")},
+                )
             flysto.assign_aircraft_for_file(filename, str(aircraft.get("id")))
         if not dry_run and crew and detail.file_path:
             filename = Path(detail.file_path).name
+            if progress:
+                progress(
+                    "flysto_assign_crew",
+                    {"flight_id": detail.id, "crew_count": len(crew)},
+                )
             flysto.assign_crew_for_file(filename, crew)
         if not dry_run and detail.file_path:
             filename = Path(detail.file_path).name
+            if progress:
+                progress(
+                    "flysto_assign_metadata",
+                    {
+                        "flight_id": detail.id,
+                        "has_remarks": bool(remarks),
+                        "tag_count": len(tags or []),
+                    },
+                )
             flysto.assign_metadata_for_file(filename, remarks=remarks, tags=tags)
         return MigrationResult(flight_id=detail.id, status="ok")
     except Exception as exc:  # noqa: BLE001 - surfacing per-flight failure
