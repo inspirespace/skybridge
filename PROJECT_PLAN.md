@@ -36,6 +36,10 @@
    - Add unit tests for pagination, parsing, and mapping.
    - Add integration tests for a small flight sample (if allowed).
    - Extend tests to cover crew mapping and metadata extraction edge cases.
+7) Remarks + import tagging
+   - Identify CloudAhoy remarks fields and map to FlySto remarks/notes per log.
+   - Add per-flight import marker (tag or equivalent) such as `cloudahoy:<flight_id>`.
+   - Ensure idempotency in state/review to avoid duplicate tags/notes.
 
 ## Backlog / Ideas
 - Replace FlySto UI automation with API client.
