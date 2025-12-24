@@ -369,36 +369,13 @@ class FlyStoClient:
         log_id, _signature, _format = self.resolve_log_for_file(filename)
         if not log_id:
             return
-        existing = self._fetch_log_metadata(log_id)
-        merged_tags = _merge_tags(existing.get("tags"), tags)
-        final_remarks = remarks or existing.get("remarks")
+        merged_tags = _normalize_tag_list(tags)
+        final_remarks = remarks
         if not merged_tags and not final_remarks:
             return
-        self._update_log_metadata(log_id, remarks=final_remarks, tags=merged_tags)
+        self._update_log_annotations(log_id, remarks=final_remarks, tags=merged_tags)
 
-    def _fetch_log_metadata(self, log_id: str) -> dict[str, Any]:
-        session = requests.Session()
-        self._ensure_session(session)
-        response = self._request(
-            session,
-            "get",
-            self.base_url.rstrip("/") + "/api/log-metadata",
-            params={"logIdString": log_id},
-            timeout=60,
-        )
-        decoded = _decode_flysto_payload(response.text)
-        if isinstance(decoded, str):
-            try:
-                data = json.loads(decoded)
-            except json.JSONDecodeError:
-                return {}
-        elif isinstance(decoded, dict):
-            data = decoded
-        else:
-            return {}
-        return data if isinstance(data, dict) else {}
-
-    def _update_log_metadata(
+    def _update_log_annotations(
         self,
         log_id: str,
         remarks: str | None = None,
@@ -413,14 +390,14 @@ class FlyStoClient:
         self._ensure_session(session)
         response = self._request(
             session,
-            "post",
-            self.base_url.rstrip("/") + "/api/log-metadata",
+            "put",
+            self.base_url.rstrip("/") + f"/api/log-annotations/{log_id}",
             json=payload,
             timeout=60,
         )
         if response.status_code >= 300:
             raise RuntimeError(
-                f"FlySto log-metadata failed: {response.status_code} {response.text[:200]}"
+                f"FlySto log-annotations failed: {response.status_code} {response.text[:200]}"
             )
 
     def _assign_crew(self, log_ids: list[str], names: list[str], roles: list[str]) -> None:
@@ -682,19 +659,6 @@ def _normalize_tag_list(value: object) -> list[str]:
     return tags
 
 
-def _merge_tags(existing: object, incoming: object) -> list[str]:
-    existing_tags = _normalize_tag_list(existing)
-    incoming_tags = _normalize_tag_list(incoming)
-    combined = existing_tags + incoming_tags
-    output: list[str] = []
-    seen: set[str] = set()
-    for tag in combined:
-        lowered = tag.lower()
-        if lowered in seen:
-            continue
-        seen.add(lowered)
-        output.append(tag)
-    return output
 def _validate_flight_for_upload(flight: FlightDetail) -> None:
     if not flight.file_path:
         raise RuntimeError("Flight export file is required for FlySto upload.")

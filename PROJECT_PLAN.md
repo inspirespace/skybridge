@@ -24,7 +24,7 @@
 - Prevent caching of unknown-group assignments (systemId=None) so each tail can be assigned.
 - Added offline unit tests for tail grouping and assign-aircraft caching behavior.
 - CloudAhoy remarks/tags now map to FlySto log metadata; imports also add `cloudahoy:<flight_id>` tag.
-- FlySto log metadata updates merge existing tags to avoid clobbering.
+- FlySto log annotations updates are write-only; tags are sent as-is.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).
