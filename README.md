@@ -50,6 +50,16 @@ Optional:
 - `FLYSTO_API_VERSION` (optional; inferred from FlySto bundle if omitted)
 - `FLYSTO_MIN_REQUEST_INTERVAL` (optional seconds between FlySto API calls; default `0.5`)
 - `FLYSTO_MAX_REQUEST_RETRIES` (optional FlySto request retries; default `3`)
+
+### Run Artifacts
+When using `./scripts/run.sh`, artifacts are grouped under `data/runs/<RUN_ID>/`:
+- `review.json`
+- `import_report.json`
+- `cloudahoy_exports/`
+- `migration.db`
+- `docker.log`
+
+You can override the defaults with `RUN_ID`, `RUNS_DIR`, `REVIEW_PATH`, `IMPORT_REPORT`, `EXPORTS_DIR`, `STATE_PATH`, and `LOG_PATH`.
 - `MODE` (`auto`, `web`, `hybrid`, or `api`, default `auto`; auto uses API only)
 - `BROWSER_HEADLESS` (`true`/`false`)
 - `DRY_RUN` (`true`/`false`)

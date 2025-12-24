@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import sys
 import time
 from datetime import datetime, timezone
@@ -37,8 +38,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--review-path",
-        default="data/review.json",
-        help="Path to write the review manifest (default: data/review.json)",
+        default=None,
+        help="Path to write the review manifest (default: data/review.json or RUN_ID-based path)",
     )
     parser.add_argument(
         "--approve-import",
@@ -47,8 +48,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--import-report",
-        default="data/import_report.json",
-        help="Path to write an import report after upload (default: data/import_report.json)",
+        default=None,
+        help="Path to write an import report after upload (default: data/import_report.json or RUN_ID-based path)",
     )
     parser.add_argument(
         "--max-flights",
@@ -58,8 +59,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--state-path",
-        default="data/migration.db",
-        help="Path to SQLite state database (default: data/migration.db)",
+        default=None,
+        help="Path to SQLite state database (default: data/migration.db or RUN_ID-based path)",
     )
     parser.add_argument(
         "--force",
@@ -88,8 +89,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--exports-dir",
-        default="data/cloudahoy_exports",
-        help="Download directory for CloudAhoy exports",
+        default=None,
+        help="Download directory for CloudAhoy exports (default: data/cloudahoy_exports or RUN_ID-based path)",
     )
     parser.add_argument(
         "--discover",
@@ -133,6 +134,29 @@ def _read_review_id(path: Path) -> str | None:
 def run(argv: list[str]) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    run_id = (os.getenv("RUN_ID") or "").strip()
+    runs_dir = (os.getenv("RUNS_DIR") or "data/runs").strip()
+
+    if run_id:
+        run_dir = Path(runs_dir) / run_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+        if args.review_path is None:
+            args.review_path = str(run_dir / "review.json")
+        if args.import_report is None:
+            args.import_report = str(run_dir / "import_report.json")
+        if args.exports_dir is None:
+            args.exports_dir = str(run_dir / "cloudahoy_exports")
+        if args.state_path is None:
+            args.state_path = str(run_dir / "migration.db")
+    else:
+        if args.review_path is None:
+            args.review_path = "data/review.json"
+        if args.import_report is None:
+            args.import_report = "data/import_report.json"
+        if args.exports_dir is None:
+            args.exports_dir = "data/cloudahoy_exports"
+        if args.state_path is None:
+            args.state_path = "data/migration.db"
 
     try:
         config = load_config()
