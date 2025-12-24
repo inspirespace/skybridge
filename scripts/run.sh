@@ -14,6 +14,7 @@ fi
 DOCKER_BUILDKIT=1 docker build -q -t "${IMAGE_NAME}" "${ROOT_DIR}" >/dev/null 2>&1
 
 exec docker run --rm \
+  --name "${IMAGE_NAME}" \
   --env-file "${ENV_FILE}" \
   -v "${ROOT_DIR}":/app \
   -w /app \
