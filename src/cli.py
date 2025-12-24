@@ -348,6 +348,17 @@ def run(argv: list[str]) -> int:
     def _stamp() -> str:
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+    step_times: dict[tuple[str, str], float] = {}
+
+    def _step_start(flight_id: str, step: str) -> None:
+        step_times[(flight_id, step)] = time.monotonic()
+
+    def _step_done(flight_id: str, step: str) -> str:
+        key = (flight_id, step)
+        if key not in step_times:
+            return ""
+        return f" ({time.monotonic() - step_times[key]:.1f}s)"
+
     def progress(event: str, payload: dict) -> None:
         if not args.verbose:
             return
@@ -356,29 +367,54 @@ def run(argv: list[str]) -> int:
             start_times[flight_id] = time.monotonic()
             print(f"{_stamp()} START {flight_id}", flush=True)
         elif event == "cloudahoy_fetch_start":
+            _step_start(payload.get("flight_id"), "cloudahoy_fetch")
             print(f"{_stamp()} CloudAhoy fetch {payload.get('flight_id')}", flush=True)
         elif event == "cloudahoy_fetch_done":
+            duration = _step_done(payload.get("flight_id"), "cloudahoy_fetch")
             print(
-                f"{_stamp()} CloudAhoy fetched {payload.get('flight_id')} ({payload.get('file_path')})",
+                f"{_stamp()} CloudAhoy fetched {payload.get('flight_id')} ({payload.get('file_path')}){duration}",
                 flush=True,
             )
         elif event == "flysto_upload_start":
+            _step_start(payload.get("flight_id"), "flysto_upload")
             print(f"{_stamp()} FlySto upload {payload.get('flight_id')}", flush=True)
         elif event == "flysto_upload_done":
-            print(f"{_stamp()} FlySto uploaded {payload.get('flight_id')}", flush=True)
-        elif event == "flysto_assign_aircraft_file":
+            duration = _step_done(payload.get("flight_id"), "flysto_upload")
+            print(f"{_stamp()} FlySto uploaded {payload.get('flight_id')}{duration}", flush=True)
+        elif event == "flysto_assign_aircraft_file_start":
+            _step_start(payload.get("flight_id"), "flysto_assign_aircraft")
             print(
                 f"{_stamp()} FlySto assign aircraft file {payload.get('flight_id')} -> {payload.get('aircraft_id')}",
                 flush=True,
             )
-        elif event == "flysto_assign_crew":
+        elif event == "flysto_assign_aircraft_file_done":
+            duration = _step_done(payload.get("flight_id"), "flysto_assign_aircraft")
+            print(
+                f"{_stamp()} FlySto assigned aircraft file {payload.get('flight_id')}{duration}",
+                flush=True,
+            )
+        elif event == "flysto_assign_crew_start":
+            _step_start(payload.get("flight_id"), "flysto_assign_crew")
             print(
                 f"{_stamp()} FlySto assign crew {payload.get('flight_id')} ({payload.get('crew_count')} members)",
                 flush=True,
             )
-        elif event == "flysto_assign_metadata":
+        elif event == "flysto_assign_crew_done":
+            duration = _step_done(payload.get("flight_id"), "flysto_assign_crew")
+            print(
+                f"{_stamp()} FlySto assigned crew {payload.get('flight_id')}{duration}",
+                flush=True,
+            )
+        elif event == "flysto_assign_metadata_start":
+            _step_start(payload.get("flight_id"), "flysto_assign_metadata")
             print(
                 f"{_stamp()} FlySto assign metadata {payload.get('flight_id')} (remarks={payload.get('has_remarks')}, tags={payload.get('tag_count')})",
+                flush=True,
+            )
+        elif event == "flysto_assign_metadata_done":
+            duration = _step_done(payload.get("flight_id"), "flysto_assign_metadata")
+            print(
+                f"{_stamp()} FlySto assigned metadata {payload.get('flight_id')}{duration}",
                 flush=True,
             )
         elif event == "flysto_assign_aircraft_group":

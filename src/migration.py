@@ -727,23 +727,33 @@ def _migrate_single(
             filename = Path(detail.file_path).name
             if progress:
                 progress(
-                    "flysto_assign_aircraft_file",
+                    "flysto_assign_aircraft_file_start",
                     {"flight_id": detail.id, "aircraft_id": aircraft.get("id")},
                 )
             flysto.assign_aircraft_for_file(filename, str(aircraft.get("id")))
+            if progress:
+                progress(
+                    "flysto_assign_aircraft_file_done",
+                    {"flight_id": detail.id, "aircraft_id": aircraft.get("id")},
+                )
         if not dry_run and crew and detail.file_path:
             filename = Path(detail.file_path).name
             if progress:
                 progress(
-                    "flysto_assign_crew",
+                    "flysto_assign_crew_start",
                     {"flight_id": detail.id, "crew_count": len(crew)},
                 )
             flysto.assign_crew_for_file(filename, crew)
+            if progress:
+                progress(
+                    "flysto_assign_crew_done",
+                    {"flight_id": detail.id, "crew_count": len(crew)},
+                )
         if not dry_run and detail.file_path:
             filename = Path(detail.file_path).name
             if progress:
                 progress(
-                    "flysto_assign_metadata",
+                    "flysto_assign_metadata_start",
                     {
                         "flight_id": detail.id,
                         "has_remarks": bool(remarks),
@@ -751,6 +761,15 @@ def _migrate_single(
                     },
                 )
             flysto.assign_metadata_for_file(filename, remarks=remarks, tags=tags)
+            if progress:
+                progress(
+                    "flysto_assign_metadata_done",
+                    {
+                        "flight_id": detail.id,
+                        "has_remarks": bool(remarks),
+                        "tag_count": len(tags or []),
+                    },
+                )
         return MigrationResult(flight_id=detail.id, status="ok")
     except Exception as exc:  # noqa: BLE001 - surfacing per-flight failure
         return MigrationResult(
