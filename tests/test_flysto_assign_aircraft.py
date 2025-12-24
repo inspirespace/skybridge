@@ -50,7 +50,7 @@ def test_assign_aircraft_caches_known_system_id():
 def test_assign_metadata_for_file_puts_remarks_and_tags():
     client = DummyFlySto()
 
-    client.assign_metadata_for_file("A1.gpx", remarks="New remarks", tags=["cloudahoy:A1", "training"])
+    client.assign_metadata_for_file("A1.gpx", remarks="New remarks", tags=["cloudahoy", "cloudahoy:2025-03-20T15:37Z"])
 
     post_calls = [call for call in client.request_calls if call[0] == "post"]
     assert not post_calls
@@ -61,5 +61,5 @@ def test_assign_metadata_for_file_puts_remarks_and_tags():
     payload = kwargs.get("json", {})
     assert payload.get("logIdString") == "log-1"
     assert payload.get("remarks") == "New remarks"
-    assert "cloudahoy:A1" in payload.get("tags", [])
-    assert "training" in payload.get("tags", [])
+    assert "cloudahoy" in payload.get("tags", [])
+    assert "cloudahoy:2025-03-20T15:37Z" in payload.get("tags", [])

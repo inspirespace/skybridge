@@ -89,8 +89,9 @@ def test_grouped_uploads_assign_unknown_per_tail():
 
 
 def test_migration_adds_cloudahoy_tag_and_remarks():
+    started_at = datetime(2025, 3, 20, 15, 37)
     summaries = [
-        FlightSummary("A1", datetime.utcnow(), None, None, None),
+        FlightSummary("A1", started_at, None, None, None),
     ]
     detail = FlightDetail(
         id="A1",
@@ -98,7 +99,6 @@ def test_migration_adds_cloudahoy_tag_and_remarks():
             "flt": {
                 "Meta": {
                     "remarks": "Night flight",
-                    "tags": ["training", "circuit"],
                     "tailNumber": "D-KLVW",
                 }
             }
@@ -117,6 +117,32 @@ def test_migration_adds_cloudahoy_tag_and_remarks():
     filename, remarks, tags = flysto.metadata_calls[0]
     assert filename == "A1.gpx"
     assert remarks == "Night flight"
-    assert "cloudahoy:A1" in tags
-    assert "training" in tags
-    assert "circuit" in tags
+    assert "cloudahoy" in tags
+    assert "cloudahoy:2025-03-20T15:37Z" in tags
+
+
+def test_migration_repairs_mojibake_remarks():
+    summaries = [
+        FlightSummary("A2", datetime(2025, 9, 4, 15, 26), None, None, None),
+    ]
+    detail = FlightDetail(
+        id="A2",
+        raw_payload={
+            "flt": {
+                "Meta": {
+                    "remarks": "Solo Ãœberland",
+                    "tailNumber": "D-KLVW",
+                }
+            }
+        },
+        file_path="/tmp/A2.gpx",
+        metadata_path="/tmp/A2.meta.json",
+        csv_path="/tmp/A2.csv",
+    )
+    cloudahoy = FakeCloudAhoy(summaries, {"A2": detail})
+    flysto = FakeFlySto()
+
+    migrate_flights(cloudahoy, flysto, dry_run=False)
+
+    _filename, remarks, _tags = flysto.metadata_calls[0]
+    assert remarks == "Solo Überland"

@@ -23,7 +23,8 @@
 - Group uploads by tail number and assign unknown GPX groups per tail after uploads.
 - Prevent caching of unknown-group assignments (systemId=None) so each tail can be assigned.
 - Added offline unit tests for tail grouping and assign-aircraft caching behavior.
-- CloudAhoy remarks/tags now map to FlySto log metadata; imports also add `cloudahoy:<flight_id>` tag.
+- CloudAhoy remarks map to FlySto log annotations (with mojibake repair).
+- Imported logs now get `cloudahoy` + `cloudahoy:<timestamp>` tags; CloudAhoy tags are ignored.
 - FlySto log annotations updates are write-only; tags are sent as-is.
 
 ## Next Implementation Steps

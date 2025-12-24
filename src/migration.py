@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
@@ -408,38 +408,32 @@ def _extract_crew_assignments(metadata: dict) -> list[dict]:
 def _normalize_remarks(value: object) -> str | None:
     if not isinstance(value, str):
         return None
-    cleaned = value.strip()
+    cleaned = _repair_mojibake(value).strip()
     return cleaned if cleaned else None
 
 
-def _normalize_tags(value: object) -> list[str]:
-    if value is None:
-        return []
-    if isinstance(value, list):
-        raw = [entry for entry in value if isinstance(entry, str)]
-    elif isinstance(value, str):
-        raw = [entry.strip() for entry in value.split(",")]
-    else:
-        return []
-    tags = [entry.strip() for entry in raw if entry and entry.strip()]
-    return tags
+def _build_import_tags(started_at: datetime) -> list[str]:
+    when = _format_timestamp_tag(started_at)
+    return ["cloudahoy", f"cloudahoy:{when}"]
 
 
-def _build_import_tags(value: object, flight_id: str) -> list[str]:
-    tags = _normalize_tags(value)
-    import_tag = f"cloudahoy:{flight_id}"
-    seen = {tag.lower() for tag in tags}
-    if import_tag.lower() not in seen:
-        tags.append(import_tag)
-    output: list[str] = []
-    seen_lower: set[str] = set()
-    for tag in tags:
-        lowered = tag.lower()
-        if lowered in seen_lower:
+def _format_timestamp_tag(value: datetime) -> str:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
+
+
+def _repair_mojibake(value: str) -> str:
+    if "Ã" not in value and "Â" not in value:
+        return value
+    for source in ("cp1252", "latin-1"):
+        try:
+            repaired = value.encode(source).decode("utf-8")
+        except UnicodeError:
             continue
-        seen_lower.add(lowered)
-        output.append(tag)
-    return output
+        if repaired != value:
+            return repaired
+    return value
 
 
 def _compute_review_id(items: list[ReviewItem]) -> str:
@@ -574,7 +568,7 @@ def migrate_flights(
         aircraft_type = metadata.get("aircraft_type") if isinstance(metadata, dict) else None
         crew = _extract_crew_assignments(metadata) if not dry_run else []
         remarks = _normalize_remarks(metadata.get("remarks")) if metadata else None
-        tags = _build_import_tags(metadata.get("tags") if metadata else None, summary.id)
+        tags = _build_import_tags(summary.started_at)
         pending.setdefault(tail_number, []).append(
             {
                 "summary_id": summary.id,

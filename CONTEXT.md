@@ -33,7 +33,8 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Uploads are now grouped by tail number and each tail triggers a FlySto unknown-aircraft assignment call after its batch (GenericGpx, systemId=None).
 - FlySto assign-aircraft caching skips only known systemIds; unknown-group assignments are allowed per tail.
 - Added offline tests for tail-grouped migration behavior and assign-aircraft caching rules.
-- CloudAhoy remarks and tags are now applied to FlySto logs; imports also add a `cloudahoy:<flight_id>` tag for identification.
+- CloudAhoy remarks are applied to FlySto logs with UTF-8 mojibake repair for common cases.
+- Imported logs receive compact tags: `cloudahoy` and `cloudahoy:<timestamp>` (UTC ISO minute). CloudAhoy tags are ignored.
 - FlySto log annotations updates use `PUT /api/log-annotations/{logIdString}` (write-only) without merging existing tags.
 
 ## Required API Details
