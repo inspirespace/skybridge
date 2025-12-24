@@ -200,7 +200,7 @@ class FlyStoClient:
         key = (log_format_id, system_id)
         if self.assigned_avionics is None:
             self.assigned_avionics = set()
-        if key in self.assigned_avionics:
+        if system_id is not None and key in self.assigned_avionics:
             return
         session = requests.Session()
         self._ensure_session(session)
@@ -223,7 +223,8 @@ class FlyStoClient:
             raise RuntimeError(
                 f"FlySto assign-aircraft failed: {response.status_code} {response.text[:200]}"
             )
-        self.assigned_avionics.add(key)
+        if system_id is not None:
+            self.assigned_avionics.add(key)
 
 
     def resolve_log_for_file(

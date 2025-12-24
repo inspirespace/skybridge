@@ -495,6 +495,8 @@ def migrate_flights(
     succeeded = 0
     failed = 0
 
+    pending: dict[str | None, list[dict]] = {}
+
     for summary in summaries:
         detail = cloudahoy.fetch_flight(summary.id)
         file_hash = _hash_file(detail.file_path)
@@ -530,22 +532,57 @@ def migrate_flights(
                 )
                 continue
 
-        result = _migrate_single(detail, flysto, dry_run)
-        results.append(result)
-        if result.status == "ok":
-            succeeded += 1
-        else:
-            failed += 1
+        metadata = _extract_metadata(detail.raw_payload) if not dry_run else {}
+        tail_number = metadata.get("tail_number") if isinstance(metadata, dict) else None
+        aircraft_type = metadata.get("aircraft_type") if isinstance(metadata, dict) else None
+        crew = _extract_crew_assignments(metadata) if not dry_run else []
+        pending.setdefault(tail_number, []).append(
+            {
+                "summary_id": summary.id,
+                "detail": detail,
+                "file_hash": file_hash,
+                "csv_hash": csv_hash,
+                "metadata_hash": metadata_hash,
+                "tail_number": tail_number,
+                "aircraft_type": aircraft_type,
+                "crew": crew,
+            }
+        )
 
-        if state:
-            state.upsert(
-                summary.id,
-                result.status,
-                result.message,
-                file_hash=file_hash,
-                csv_hash=csv_hash,
-                metadata_hash=metadata_hash,
+    # Process uploads grouped by tail number to keep GPX unknown groups isolated.
+    for tail_number in sorted(pending.keys(), key=lambda v: v or ""):
+        group = pending[tail_number]
+        aircraft = None
+        if tail_number and not dry_run:
+            aircraft_type = next(
+                (item.get("aircraft_type") for item in group if item.get("aircraft_type")),
+                None,
             )
+            aircraft = flysto.ensure_aircraft(tail_number, aircraft_type)
+
+        for item in group:
+            detail = item["detail"]
+            crew = item.get("crew") or []
+            result = _migrate_single(detail, flysto, dry_run, aircraft=aircraft, crew=crew)
+            results.append(result)
+            if result.status == "ok":
+                succeeded += 1
+            else:
+                failed += 1
+
+            if state:
+                state.upsert(
+                    item["summary_id"],
+                    result.status,
+                    result.message,
+                    file_hash=item.get("file_hash"),
+                    csv_hash=item.get("csv_hash"),
+                    metadata_hash=item.get("metadata_hash"),
+                )
+
+        # Assign the unknown GPX group to this tail after uploading all flights for the tail.
+        if not dry_run and aircraft and aircraft.get("id"):
+            flysto.assign_aircraft(str(aircraft.get("id")), log_format_id="GenericGpx", system_id=None)
 
     return results, MigrationStats(
         attempted=len(summaries),
@@ -558,17 +595,21 @@ def _migrate_single(
     detail: FlightDetail,
     flysto: FlyStoClient,
     dry_run: bool,
+    aircraft: dict | None = None,
+    crew: list[dict] | None = None,
 ) -> MigrationResult:
     try:
-        aircraft = None
-        crew: list[dict] = []
+        crew = crew or []
         if not dry_run:
-            metadata = _extract_metadata(detail.raw_payload)
-            tail_number = metadata.get("tail_number")
-            aircraft_type = metadata.get("aircraft_type")
-            if tail_number:
-                aircraft = flysto.ensure_aircraft(tail_number, aircraft_type)
-            crew = _extract_crew_assignments(metadata)
+            if aircraft is None:
+                metadata = _extract_metadata(detail.raw_payload)
+                tail_number = metadata.get("tail_number") if isinstance(metadata, dict) else None
+                aircraft_type = metadata.get("aircraft_type") if isinstance(metadata, dict) else None
+                if tail_number:
+                    aircraft = flysto.ensure_aircraft(tail_number, aircraft_type)
+            if not crew:
+                metadata = _extract_metadata(detail.raw_payload)
+                crew = _extract_crew_assignments(metadata)
         flysto.upload_flight(detail, dry_run=dry_run)
         if not dry_run and aircraft and aircraft.get("id") and detail.file_path:
             filename = Path(detail.file_path).name
