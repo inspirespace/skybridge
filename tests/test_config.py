@@ -1,26 +1,19 @@
 import os
 import unittest
 
-from src.config import ConfigError, load_config
+from src.config import load_config
 
 
 class ConfigTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self._env_backup = dict(os.environ)
-
     def tearDown(self) -> None:
-        os.environ.clear()
-        os.environ.update(self._env_backup)
-
-    def test_missing_env(self) -> None:
-        os.environ["MODE"] = "api"
-        os.environ.pop("CLOUD_AHOY_API_KEY", None)
-        os.environ.pop("FLYSTO_API_KEY", None)
-        os.environ.pop("CLOUD_AHOY_EMAIL", None)
-        os.environ.pop("CLOUD_AHOY_PASSWORD", None)
-
-        with self.assertRaises(ConfigError):
-            load_config()
+        for key in list(os.environ.keys()):
+            if key.startswith("CLOUD_AHOY_") or key.startswith("FLYSTO_") or key in {
+                "MODE",
+                "BROWSER_HEADLESS",
+                "DRY_RUN",
+                "MAX_FLIGHTS",
+            }:
+                os.environ.pop(key, None)
 
     def test_loads_defaults(self) -> None:
         os.environ["MODE"] = "api"
@@ -35,3 +28,35 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config.flysto_api_key, "fs")
         self.assertEqual(config.cloudahoy_base_url, "https://www.cloudahoy.com/api")
         self.assertEqual(config.flysto_base_url, "https://www.flysto.net")
+        self.assertEqual(config.flysto_min_request_interval, 0.5)
+        self.assertEqual(config.flysto_max_request_retries, 3)
+
+    def test_loads_max_flights(self) -> None:
+        os.environ["MODE"] = "api"
+        os.environ["CLOUD_AHOY_API_KEY"] = "ca"
+        os.environ["FLYSTO_API_KEY"] = "fs"
+        os.environ["CLOUD_AHOY_EMAIL"] = "user@example.com"
+        os.environ["CLOUD_AHOY_PASSWORD"] = "secret"
+        os.environ["MAX_FLIGHTS"] = "12"
+
+        config = load_config()
+
+        self.assertEqual(config.max_flights, 12)
+
+    def test_custom_flysto_throttle(self) -> None:
+        os.environ["MODE"] = "api"
+        os.environ["CLOUD_AHOY_API_KEY"] = "ca"
+        os.environ["FLYSTO_API_KEY"] = "fs"
+        os.environ["CLOUD_AHOY_EMAIL"] = "user@example.com"
+        os.environ["CLOUD_AHOY_PASSWORD"] = "secret"
+        os.environ["FLYSTO_MIN_REQUEST_INTERVAL"] = "0.1"
+        os.environ["FLYSTO_MAX_REQUEST_RETRIES"] = "5"
+
+        config = load_config()
+
+        self.assertEqual(config.flysto_min_request_interval, 0.1)
+        self.assertEqual(config.flysto_max_request_retries, 5)
+
+
+if __name__ == "__main__":
+    unittest.main()

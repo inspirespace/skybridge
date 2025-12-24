@@ -228,6 +228,8 @@ def run(argv: list[str]) -> int:
             api_version=config.flysto_api_version,
             email=config.flysto_email,
             password=config.flysto_password,
+            min_request_interval=config.flysto_min_request_interval,
+            max_request_retries=config.flysto_max_request_retries,
         )
         needs_flysto = not (args.review or dry_run)
         if needs_flysto and not flysto.prepare():
