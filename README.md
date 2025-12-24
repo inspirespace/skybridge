@@ -48,8 +48,8 @@ Optional:
 - `FLYSTO_LOG_UPLOAD_URL` (optional override for API endpoint; defaults to `https://www.flysto.net/api/log-upload`)
 - `FLYSTO_INCLUDE_METADATA` (`true`/`false`, attach metadata when using API)
 - `FLYSTO_API_VERSION` (optional; inferred from FlySto bundle if omitted)
-- `FLYSTO_MIN_REQUEST_INTERVAL` (optional seconds between FlySto API calls; default `0.5`)
-- `FLYSTO_MAX_REQUEST_RETRIES` (optional FlySto request retries; default `3`)
+- `FLYSTO_MIN_REQUEST_INTERVAL` (optional seconds between FlySto API calls; default `0.1`)
+- `FLYSTO_MAX_REQUEST_RETRIES` (optional FlySto request retries; default `2`)
 
 ### Run Artifacts
 When using `./scripts/run.sh`, artifacts are grouped under `data/runs/<RUN_ID>/`:

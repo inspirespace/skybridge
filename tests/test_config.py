@@ -28,8 +28,8 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config.flysto_api_key, "fs")
         self.assertEqual(config.cloudahoy_base_url, "https://www.cloudahoy.com/api")
         self.assertEqual(config.flysto_base_url, "https://www.flysto.net")
-        self.assertEqual(config.flysto_min_request_interval, 0.5)
-        self.assertEqual(config.flysto_max_request_retries, 3)
+        self.assertEqual(config.flysto_min_request_interval, 0.1)
+        self.assertEqual(config.flysto_max_request_retries, 2)
 
     def test_loads_max_flights(self) -> None:
         os.environ["MODE"] = "api"
