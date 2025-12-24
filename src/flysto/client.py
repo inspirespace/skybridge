@@ -439,9 +439,19 @@ class FlyStoClient:
                 timeout=60,
             )
             if response.status_code >= 300:
+                # If the crew already exists, tolerate the error and continue.
+                self.crew_cache = None
+                existing_now = {
+                    self._crew_name(entry)
+                    for entry in self._list_crew()
+                    if self._crew_name(entry)
+                }
+                if name in existing_now:
+                    continue
                 raise RuntimeError(
                     f"FlySto create-crew failed: {response.status_code} {response.text[:200]}"
                 )
+            existing.add(name)
         self.crew_cache = None
 
     def _list_crew(self) -> list[dict[str, Any]]:

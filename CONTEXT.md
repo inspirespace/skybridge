@@ -37,6 +37,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Imported logs receive compact tags: `cloudahoy` and `cloudahoy:<timestamp>` using the import run timestamp (UTC ISO minute). CloudAhoy tags are ignored.
 - Imports now write `data/import_report.json` with per-flight status and FlySto log resolution details for verification.
 - Added a verify-only mode to re-resolve FlySto log IDs and update the import report, plus timestamped logging with per-flight durations.
+- Crew creation now tolerates already-existing crew entries (handles duplicate errors by re-checking the crew list).
 - FlySto log annotations updates use `PUT /api/log-annotations/{logIdString}` (write-only) without merging existing tags.
 
 ## Required API Details

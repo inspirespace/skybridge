@@ -63,3 +63,32 @@ def test_assign_metadata_for_file_puts_remarks_and_tags():
     assert payload.get("remarks") == "New remarks"
     assert "cloudahoy" in payload.get("tags", [])
     assert "cloudahoy:2025-03-20T15:37Z" in payload.get("tags", [])
+
+
+def test_ensure_crew_members_tolerates_existing():
+    class DummyFlyStoCrew(FlyStoClient):
+        def __init__(self):
+            super().__init__(api_key="", base_url="https://example.test")
+            self.failed_create = False
+            self.requested_names: list[str] = []
+
+        def _ensure_session(self, session):
+            return None
+
+        def _request(self, session, method: str, url: str, **kwargs):
+            if method.lower() == "post" and url.endswith("/api/new-crew"):
+                name = kwargs.get("json", {}).get("name")
+                if name:
+                    self.requested_names.append(name)
+                self.failed_create = True
+                return DummyResponse(status_code=409, text="exists")
+            return DummyResponse()
+
+        def _list_crew(self):
+            if self.failed_create:
+                return [{"name": "Alex"}]
+            return []
+
+    client = DummyFlyStoCrew()
+    client._ensure_crew_members(["Alex"])
+    assert client.requested_names == ["Alex"]
