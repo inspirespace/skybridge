@@ -77,6 +77,8 @@ def main() -> None:
     if not candidates:
         raise SystemExit("No log files found in FlySto summary.")
 
+    unique_tails: set[str] = set()
+
     for filename, signature, log_format in candidates:
         meta = meta_map.get(filename)
         if not meta:
@@ -92,7 +94,35 @@ def main() -> None:
             print("SKIP no signature", filename)
             continue
         client.assign_aircraft(str(aircraft.get("id")), log_format_id=log_format, system_id=signature)
+        if isinstance(tail_number, str) and tail_number.strip():
+            unique_tails.add(tail_number.strip())
         print("OK", filename, "->", tail_number)
+
+    # If FlySto still reports unknown aircraft, assign the unknown GPX group to a single tail.
+    unknown_resp = session.get(
+        client.base_url.rstrip("/") + "/api/unknown-aircraft-features",
+        params={"format": "GenericGpx"},
+        timeout=60,
+    )
+    unknown_decoded = _decode_flysto_payload(unknown_resp.text)
+    if isinstance(unknown_decoded, str):
+        try:
+            unknown_decoded = json.loads(unknown_decoded)
+        except json.JSONDecodeError:
+            unknown_decoded = {}
+    if isinstance(unknown_decoded, dict) and unknown_decoded:
+        if len(unique_tails) == 1:
+            tail_number = next(iter(unique_tails))
+            aircraft = client.ensure_aircraft(tail_number, None)
+            if aircraft and aircraft.get("id"):
+                client.assign_aircraft(
+                    str(aircraft.get("id")),
+                    log_format_id="GenericGpx",
+                    system_id=None,
+                )
+                print("OK unknown group ->", tail_number)
+        else:
+            print("WARN unknown aircraft group remains; multiple tails detected:", sorted(unique_tails))
 
 
 if __name__ == "__main__":

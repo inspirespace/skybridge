@@ -7,6 +7,9 @@ from playwright.sync_api import sync_playwright
 
 OUTPUT_PATH = Path("data/discovery/flysto_assign_requests.json")
 SCREENSHOT_PATH = Path("data/discovery/flysto_assign_screen.png")
+DIALOG_HTML_PATH = Path("data/discovery/flysto_aircraft_dialog.html")
+DIALOG_PAGE_PATH = Path("data/discovery/flysto_page.html")
+CAPTURE_SCRIPT_PATH = Path("scripts/auto_assign.js")
 
 
 def main() -> None:
@@ -18,7 +21,7 @@ def main() -> None:
     captured = []
 
     def handle_request(request) -> None:
-        if request.resource_type not in {"xhr", "fetch"}:
+        if "/api/" not in request.url:
             return
         safe_headers = dict(request.headers)
         safe_headers.pop("cookie", None)
@@ -99,7 +102,13 @@ def main() -> None:
         page.wait_for_timeout(1000)
 
         # If there's a dedicated "Unknown aircraft" tab, open it to force the assign flow.
-        unknown_tab = page.get_by_text("Unknown aircraft", exact=True)
+        # Use role=tab to avoid clicking table cells.
+        page.keyboard.press("Escape")
+        unknown_tab = page.get_by_role("tab", name="Unknown aircraft")
+        if unknown_tab.count() == 0:
+            unknown_tab = page.locator(
+                "a:has-text('Unknown aircraft'), button:has-text('Unknown aircraft')"
+            )
         if unknown_tab.count() > 0:
             unknown_tab.first.click()
             page.wait_for_timeout(1000)
@@ -123,90 +132,143 @@ def main() -> None:
             page.screenshot(path=str(SCREENSHOT_PATH), full_page=True)
             raise RuntimeError("Log row not attached.")
         row.scroll_into_view_if_needed()
-        checkbox = row.locator("input[type='checkbox']").first
-        if checkbox.count() > 0:
-            handle = checkbox.element_handle()
-            if handle is not None:
-                page.evaluate(
-                    "(el) => el.scrollIntoView({block: 'center', inline: 'center'})",
-                    handle,
-                )
-                page.wait_for_timeout(200)
-                page.evaluate("(el) => el.click()", handle)
-            else:
-                checkbox.first.click(force=True)
-        else:
-            # Fallback: click the row itself if checkbox is hidden.
-            page.evaluate("(el) => el.click()", row_handle)
-        page.wait_for_timeout(1000)
-
-        # Try to open assign-aircraft action from toolbar or row context.
-        assign_button = page.get_by_role("button", name="Assign aircraft")
-        if assign_button.count() > 0:
-            assign_button.first.click()
-        else:
-            text_match = page.get_by_text("Assign aircraft", exact=False)
-            if text_match.count() > 0:
-                text_match.first.click()
-            else:
-                # Try toolbar icon buttons for aircraft assignment.
-                toolbar_button = page.locator(
-                    "button[aria-label*='aircraft' i], button[title*='aircraft' i]"
-                )
-                if toolbar_button.count() > 0:
-                    toolbar_button.first.click()
-                    page.wait_for_timeout(500)
-                page.evaluate(
-                    """(el) => el.dispatchEvent(new MouseEvent('contextmenu', {bubbles: true, cancelable: true}))""",
-                    row_handle,
-                )
-                page.wait_for_timeout(500)
-                text_match = page.get_by_text("Assign aircraft", exact=False)
-                if text_match.count() > 0:
-                    text_match.first.click()
-                else:
-                    actions = page.locator(
-                        "button[aria-label*='Action' i], button[aria-label*='More' i], button[aria-label*='Menu' i]"
-                    )
-                    if actions.count() > 0:
-                        actions.first.click()
-        page.wait_for_timeout(1000)
-
-        # If no assign dialog opened, try clicking the aircraft cell to change it.
-        option = page.get_by_role("option").first
-        if option.count() == 0:
-            cells = row.locator("td")
-            if cells.count() > 1:
-                aircraft_cell = cells.nth(1)
-                page.evaluate("(el) => el.click()", aircraft_cell.element_handle())
-                page.wait_for_timeout(500)
-                option = page.get_by_role("option").first
-
-        # Fallback: open details drawer and try to edit aircraft there.
-        if option.count() == 0:
-            row.dblclick()
-            page.wait_for_timeout(1000)
-            dialog = page.locator("[role='dialog'], .modal, .drawer, .panel")
-            combo = dialog.locator("[role='combobox'], select").first
-            if combo.count() > 0:
-                combo.first.click()
-                page.wait_for_timeout(500)
-                option = page.get_by_role("option").first
-
-        # Try to select the first aircraft option and confirm.
-        option = page.get_by_role("option").first
-        if option.count() > 0:
-            option.first.click()
+        # Click the row itself (not the checkbox) to open the aircraft setup dialog.
+        page.evaluate(
+            """
+            (el) => {
+              el.dispatchEvent(new MouseEvent('mousedown', {bubbles: true}));
+              el.dispatchEvent(new MouseEvent('mouseup', {bubbles: true}));
+              el.click();
+            }
+            """,
+            row_handle,
+        )
         page.wait_for_timeout(500)
+        row.dblclick()
+        page.wait_for_timeout(500)
+        # Target a non-checkbox cell directly (date/from-to tend to open the dialog).
+        date_cell = row.locator("td[data-column-id='date']").first
+        if date_cell.count() > 0:
+            page.evaluate("(el) => el.click()", date_cell.element_handle())
+            page.wait_for_timeout(500)
+        from_to = row.locator("td[data-column-id='from-to']").first
+        if from_to.count() > 0:
+            page.evaluate("(el) => el.click()", from_to.element_handle())
+            page.wait_for_timeout(500)
 
-        confirm = page.get_by_role("button", name="Assign")
-        if confirm.count() > 0:
-            confirm.first.click()
+        # Open aircraft setup banner as a fallback.
+        setup_link = page.get_by_role("link", name="here")
+        if setup_link.count() > 0:
+            setup_link.first.click()
+            page.wait_for_timeout(1000)
+
+        # If we're on the Aircraft page, click the "Aircraft setup" button.
+        setup_button = page.get_by_role("button", name="Aircraft setup")
+        if setup_button.count() > 0:
+            setup_button.first.click()
+            page.wait_for_timeout(1000)
+
+        # In the aircraft setup dialog, select an existing aircraft and proceed.
+        dialog = page.locator(
+            "div[role='dialog'], .modal, .dialog, .flysto-dialog, .MuiDialog-root"
+        )
+        if dialog.count() > 0:
+            dialog.first.wait_for(state="visible", timeout=5000)
+            DIALOG_HTML_PATH.parent.mkdir(parents=True, exist_ok=True)
+            DIALOG_HTML_PATH.write_text(dialog.first.inner_html())
         else:
-            confirm = page.get_by_role("button", name="Save")
-            if confirm.count() > 0:
-                confirm.first.click()
-        page.wait_for_timeout(4000)
+            DIALOG_PAGE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            DIALOG_PAGE_PATH.write_text(page.content())
+
+        captured.append(
+            {
+                "dialog_state_before": page.evaluate(
+                    """
+                    () => {
+                      const root = document.querySelector("[role='dialog']")
+                        || document.querySelector(".modal")
+                        || document.querySelector(".dialog")
+                        || document.body;
+                      const radios = Array.from(root.querySelectorAll("input[type='radio']"));
+                      const labels = radios.map(r => ({
+                        text: (r.closest('label')?.textContent || '').trim(),
+                        checked: r.checked,
+                      }));
+                      const next = Array.from(root.querySelectorAll('button'))
+                        .find(b => b.textContent && b.textContent.trim() === 'Next');
+                      const buttons = Array.from(root.querySelectorAll('button'))
+                        .map(b => ({text: (b.textContent || '').trim(), disabled: !!b.disabled}))
+                        .filter(b => b.text);
+                      return {labels, nextDisabled: next ? next.disabled : null, buttons};
+                    }
+                    """
+                )
+            }
+        )
+
+        action_result = page.evaluate(
+            """
+            () => {
+              const root = document.body;
+              const labels = Array.from(root.querySelectorAll('label'));
+              const target = labels.find(l => l.textContent && l.textContent.includes('D-KLVW'))
+                || labels.find(l => l.textContent && l.textContent.includes('OE-9487'))
+                || labels.find(l => l.textContent && l.textContent.includes('D-KIER'))
+                || labels.find(l => l.textContent && l.textContent.includes('D-KBUH'));
+              let picked = false;
+              if (target) {
+                const input = target.querySelector('input[type=radio]');
+                if (input) { input.click(); picked = true; }
+              }
+              return {rootFound: true, picked};
+            }
+            """
+        )
+        page.wait_for_timeout(600)
+        action_step2 = page.evaluate(
+            """
+            () => {
+              const root = document.body;
+              const next = Array.from(root.querySelectorAll('button'))
+                .find(b => b.textContent && b.textContent.trim() === 'Next');
+              let clickedNext = false;
+              if (next && !next.disabled) { next.click(); clickedNext = true; }
+              const finish = Array.from(root.querySelectorAll('button'))
+                .find(b => ['Finish','Assign','Save'].includes(b.textContent && b.textContent.trim()));
+              let clickedFinish = false;
+              if (finish && !finish.disabled) { finish.click(); clickedFinish = true; }
+              return {clickedNext, clickedFinish};
+            }
+            """
+        )
+        captured.append({"dialog_actions": {**action_result, **action_step2}})
+        page.wait_for_timeout(2000)
+
+        captured.append(
+            {
+                "dialog_state_after": page.evaluate(
+                    """
+                    () => {
+                      const root = document.querySelector("[role='dialog']")
+                        || document.querySelector(".modal")
+                        || document.querySelector(".dialog")
+                        || document.body;
+                      const radios = Array.from(root.querySelectorAll("input[type='radio']"));
+                      const labels = radios.map(r => ({
+                        text: (r.closest('label')?.textContent || '').trim(),
+                        checked: r.checked,
+                      }));
+                      const next = Array.from(root.querySelectorAll('button'))
+                        .find(b => b.textContent && b.textContent.trim() === 'Next');
+                      const buttons = Array.from(root.querySelectorAll('button'))
+                        .map(b => ({text: (b.textContent || '').trim(), disabled: !!b.disabled}))
+                        .filter(b => b.text);
+                      return {labels, nextDisabled: next ? next.disabled : null, buttons};
+                    }
+                    """
+                )
+            }
+        )
 
         SCREENSHOT_PATH.parent.mkdir(parents=True, exist_ok=True)
         page.screenshot(path=str(SCREENSHOT_PATH), full_page=True)
@@ -217,3 +279,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+DIALOG_PAGE_PATH = Path("data/discovery/flysto_page.html")
