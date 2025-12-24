@@ -6,6 +6,7 @@ import hashlib
 import json
 from pathlib import Path
 import string
+from typing import Callable
 
 from src.cloudahoy.client import CloudAhoyClient
 from src.cloudahoy.points import build_points_schema, points_preview
@@ -518,11 +519,15 @@ def migrate_flights(
     max_flights: int | None = None,
     state: MigrationState | None = None,
     force: bool = False,
+    report_path: Path | None = None,
+    review_id: str | None = None,
+    progress: Callable[[str, dict], None] | None = None,
 ) -> tuple[list[MigrationResult], MigrationStats]:
     summaries = summaries or cloudahoy.list_flights(limit=max_flights)
     if max_flights:
         summaries = summaries[:max_flights]
     results: list[MigrationResult] = []
+    report_items: list[dict] = []
     succeeded = 0
     failed = 0
 
@@ -581,6 +586,7 @@ def migrate_flights(
                 "crew": crew,
                 "remarks": remarks,
                 "tags": tags,
+                "started_at": summary.started_at,
             }
         )
 
@@ -600,6 +606,9 @@ def migrate_flights(
             crew = item.get("crew") or []
             remarks = item.get("remarks")
             tags = item.get("tags") or []
+            started_at = item.get("started_at")
+            if progress:
+                progress("start", {"flight_id": detail.id, "tail_number": tail_number})
             result = _migrate_single(
                 detail,
                 flysto,
@@ -624,10 +633,44 @@ def migrate_flights(
                     csv_hash=item.get("csv_hash"),
                     metadata_hash=item.get("metadata_hash"),
                 )
+            report_items.append(
+                _build_report_item(
+                    detail=detail,
+                    status=result.status,
+                    message=result.message,
+                    tail_number=tail_number,
+                    aircraft_type=item.get("aircraft_type"),
+                    started_at=started_at,
+                    remarks=remarks,
+                    tags=tags,
+                    flysto=flysto if not dry_run else None,
+                )
+            )
+            if progress:
+                progress(
+                    "end",
+                    {
+                        "flight_id": detail.id,
+                        "status": result.status,
+                        "message": result.message,
+                    },
+                )
 
         # Assign the unknown GPX group to this tail after uploading all flights for the tail.
         if not dry_run and aircraft and aircraft.get("id"):
             flysto.assign_aircraft(str(aircraft.get("id")), log_format_id="GenericGpx", system_id=None)
+
+    if report_path:
+        _write_import_report(
+            report_path=report_path,
+            review_id=review_id,
+            stats=MigrationStats(
+                attempted=len(summaries),
+                succeeded=succeeded,
+                failed=failed,
+            ),
+            items=report_items,
+        )
 
     return results, MigrationStats(
         attempted=len(summaries),
@@ -718,3 +761,59 @@ def _validate_detail(
     if not metadata.get("pilot") and not metadata.get("pilots"):
         warnings.append("missing pilot metadata")
     return warnings
+
+
+def _build_report_item(
+    detail: FlightDetail,
+    status: str,
+    message: str | None,
+    tail_number: str | None,
+    aircraft_type: str | None,
+    started_at: datetime | None,
+    remarks: str | None,
+    tags: list[str] | None,
+    flysto: FlyStoClient | None,
+) -> dict:
+    log_id = None
+    signature = None
+    log_format = None
+    if flysto and detail.file_path:
+        try:
+            filename = Path(detail.file_path).name
+            log_id, signature, log_format = flysto.resolve_log_for_file(
+                filename, retries=3, delay_seconds=1.5
+            )
+        except Exception:
+            pass
+    return {
+        "flight_id": detail.id,
+        "status": status,
+        "message": message,
+        "started_at": started_at.isoformat() if isinstance(started_at, datetime) else None,
+        "tail_number": tail_number,
+        "aircraft_type": aircraft_type,
+        "file_path": detail.file_path,
+        "remarks": remarks,
+        "tags": tags or [],
+        "flysto_log_id": log_id,
+        "flysto_signature": signature,
+        "flysto_format": log_format,
+    }
+
+
+def _write_import_report(
+    report_path: Path,
+    review_id: str | None,
+    stats: MigrationStats,
+    items: list[dict],
+) -> None:
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "review_id": review_id,
+        "attempted": stats.attempted,
+        "succeeded": stats.succeeded,
+        "failed": stats.failed,
+        "items": items,
+    }
+    report_path.write_text(json.dumps(payload, indent=2))

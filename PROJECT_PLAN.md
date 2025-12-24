@@ -25,6 +25,7 @@
 - Added offline unit tests for tail grouping and assign-aircraft caching behavior.
 - CloudAhoy remarks map to FlySto log annotations (with mojibake repair).
 - Imported logs now get `cloudahoy` + `cloudahoy:<timestamp>` tags; CloudAhoy tags are ignored.
+- Import flow now writes `data/import_report.json` for verification (per-flight status + FlySto log resolution).
 - FlySto log annotations updates are write-only; tags are sent as-is.
 
 ## Next Implementation Steps

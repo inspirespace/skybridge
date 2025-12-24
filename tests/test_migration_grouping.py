@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
+import json
+import tempfile
 
 from src.migration import migrate_flights
 from src.models import FlightDetail, FlightSummary
@@ -146,3 +149,34 @@ def test_migration_repairs_mojibake_remarks():
 
     _filename, remarks, _tags = flysto.metadata_calls[0]
     assert remarks == "Solo Überland"
+
+
+def test_import_report_written():
+    summaries = [
+        FlightSummary("A3", datetime(2025, 7, 23, 16, 29), None, None, None),
+    ]
+    detail = FlightDetail(
+        id="A3",
+        raw_payload={"flt": {"Meta": {"tailNumber": "D-KLVW"}}},
+        file_path="/tmp/A3.gpx",
+        metadata_path="/tmp/A3.meta.json",
+        csv_path="/tmp/A3.csv",
+    )
+    cloudahoy = FakeCloudAhoy(summaries, {"A3": detail})
+    flysto = FakeFlySto()
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        report_path = Path(temp_dir) / "report.json"
+        migrate_flights(
+            cloudahoy,
+            flysto,
+            dry_run=False,
+            report_path=report_path,
+            review_id="review-123",
+        )
+        payload = json.loads(report_path.read_text())
+        assert payload["review_id"] == "review-123"
+        assert payload["attempted"] == 1
+        assert payload["succeeded"] == 1
+        assert payload["failed"] == 0
+        assert payload["items"][0]["flight_id"] == "A3"

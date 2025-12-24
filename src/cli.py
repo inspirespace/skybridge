@@ -44,6 +44,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Allow uploads to FlySto after review",
     )
     parser.add_argument(
+        "--import-report",
+        default="data/import_report.json",
+        help="Path to write an import report after upload (default: data/import_report.json)",
+    )
+    parser.add_argument(
         "--max-flights",
         type=int,
         default=None,
@@ -98,6 +103,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--discovery-upload-file",
         default=None,
         help="Optional path to a file to upload during FlySto discovery",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Emit per-flight progress logs during import",
     )
     return parser
 
@@ -277,6 +287,18 @@ def run(argv: list[str]) -> int:
             )
             return 2
 
+    def progress(event: str, payload: dict) -> None:
+        if not args.verbose:
+            return
+        if event == "start":
+            print(f"START {payload.get('flight_id')}", flush=True)
+        elif event == "end":
+            flight_id = payload.get("flight_id")
+            status = payload.get("status")
+            message = payload.get("message")
+            suffix = f": {message}" if message else ""
+            print(f"DONE {flight_id} {status}{suffix}", flush=True)
+
     results, stats = migrate_flights(
         cloudahoy=cloudahoy_client,
         flysto=flysto,
@@ -285,15 +307,18 @@ def run(argv: list[str]) -> int:
         max_flights=max_flights,
         state=state,
         force=args.force,
+        report_path=Path(args.import_report) if args.approve_import and not dry_run else None,
+        review_id=args.review_id,
+        progress=progress,
     )
 
     for result in results:
         if result.status == "ok":
-            print(f"OK {result.flight_id}")
+            print(f"OK {result.flight_id}", flush=True)
         elif result.status == "skipped":
-            print(f"SKIP {result.flight_id}: {result.message}")
+            print(f"SKIP {result.flight_id}: {result.message}", flush=True)
         else:
-            print(f"ERR {result.flight_id}: {result.message}")
+            print(f"ERR {result.flight_id}: {result.message}", flush=True)
 
     print(
         "Summary: attempted={attempted} succeeded={succeeded} failed={failed}".format(
@@ -301,7 +326,9 @@ def run(argv: list[str]) -> int:
             succeeded=stats.succeeded,
             failed=stats.failed,
         )
-    )
+    , flush=True)
+    if args.approve_import and not dry_run:
+        print(f"Import report written to {args.import_report}", flush=True)
     return 0 if stats.failed == 0 else 1
 
 
