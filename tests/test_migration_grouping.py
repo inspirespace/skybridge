@@ -5,7 +5,7 @@ from pathlib import Path
 import json
 import tempfile
 
-from src.migration import migrate_flights
+from src.migration import migrate_flights, verify_import_report
 from src.models import FlightDetail, FlightSummary
 
 
@@ -49,6 +49,9 @@ class FakeFlySto:
 
     def assign_metadata_for_file(self, filename: str, remarks: str | None = None, tags: list[str] | None = None):
         self.metadata_calls.append((filename, remarks, tags or []))
+
+    def resolve_log_for_file(self, filename: str, retries: int = 8, delay_seconds: float = 3.0):
+        return "log-1", "sig", "GenericGpx"
 
 
 def _detail(flight_id: str, tail: str) -> FlightDetail:
@@ -179,3 +182,25 @@ def test_import_report_written():
         assert payload["succeeded"] == 1
         assert payload["failed"] == 0
         assert payload["items"][0]["flight_id"] == "A3"
+
+
+def test_verify_import_report_updates_log_ids():
+    with tempfile.TemporaryDirectory() as temp_dir:
+        report_path = Path(temp_dir) / "report.json"
+        report_path.write_text(
+            json.dumps(
+                {
+                    "items": [
+                        {"flight_id": "A4", "file_path": "/tmp/A4.gpx"},
+                        {"flight_id": "A5", "file_path": None},
+                    ]
+                }
+            )
+        )
+        flysto = FakeFlySto()
+        summary = verify_import_report(report_path, flysto)
+        payload = json.loads(report_path.read_text())
+        assert summary["attempted"] == 2
+        assert summary["resolved"] == 1
+        assert summary["missing"] == 1
+        assert payload["items"][0]["flysto_log_id"] == "log-1"

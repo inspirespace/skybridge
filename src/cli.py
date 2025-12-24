@@ -1,13 +1,15 @@
 import argparse
 import json
 import sys
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 from src.cloudahoy.client import CloudAhoyClient
 from src.config import ConfigError, load_config
 from src.discovery import DiscoveryConfig, run_discovery
 from src.flysto.client import FlyStoClient
-from src.migration import migrate_flights, prepare_review
+from src.migration import migrate_flights, prepare_review, verify_import_report
 from src.state import MigrationState
 from src.web.cloudahoy import CloudAhoyWebClient, CloudAhoyWebConfig
 from src.web.flysto import FlyStoWebClient, FlyStoWebConfig
@@ -108,6 +110,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--verbose",
         action="store_true",
         help="Emit per-flight progress logs during import",
+    )
+    parser.add_argument(
+        "--verify-import-report",
+        action="store_true",
+        help="Verify an existing import report against FlySto without re-importing",
     )
     return parser
 
@@ -241,6 +248,28 @@ def run(argv: list[str]) -> int:
                 file=sys.stderr,
             )
 
+    if args.verify_import_report:
+        if not Path(args.import_report).exists():
+            print(f"Import report not found: {args.import_report}", file=sys.stderr)
+            return 2
+        if not flysto.prepare():
+            print(
+                "FlySto API not available. Verify credentials or set "
+                "FLYSTO_BASE_URL/FLYSTO_SESSION_COOKIE.",
+                file=sys.stderr,
+            )
+            return 2
+        summary = verify_import_report(Path(args.import_report), flysto)
+        print(
+            "Verify summary: attempted={attempted} resolved={resolved} missing={missing}".format(
+                attempted=summary.get("attempted", 0),
+                resolved=summary.get("resolved", 0),
+                missing=summary.get("missing", 0),
+            ),
+            flush=True,
+        )
+        return 0 if summary.get("missing", 0) == 0 else 1
+
     if args.review or (not dry_run and not args.approve_import):
         _, review_id = prepare_review(
             cloudahoy=cloudahoy_client,
@@ -287,17 +316,28 @@ def run(argv: list[str]) -> int:
             )
             return 2
 
+    start_times: dict[str, float] = {}
+    start_all = time.monotonic()
+
+    def _stamp() -> str:
+        return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
     def progress(event: str, payload: dict) -> None:
         if not args.verbose:
             return
         if event == "start":
-            print(f"START {payload.get('flight_id')}", flush=True)
+            flight_id = payload.get("flight_id")
+            start_times[flight_id] = time.monotonic()
+            print(f"{_stamp()} START {flight_id}", flush=True)
         elif event == "end":
             flight_id = payload.get("flight_id")
             status = payload.get("status")
             message = payload.get("message")
             suffix = f": {message}" if message else ""
-            print(f"DONE {flight_id} {status}{suffix}", flush=True)
+            elapsed = ""
+            if flight_id in start_times:
+                elapsed = f" ({time.monotonic() - start_times[flight_id]:.1f}s)"
+            print(f"{_stamp()} DONE {flight_id} {status}{suffix}{elapsed}", flush=True)
 
     results, stats = migrate_flights(
         cloudahoy=cloudahoy_client,
@@ -314,19 +354,22 @@ def run(argv: list[str]) -> int:
 
     for result in results:
         if result.status == "ok":
-            print(f"OK {result.flight_id}", flush=True)
+            print(f"{_stamp()} OK {result.flight_id}", flush=True)
         elif result.status == "skipped":
-            print(f"SKIP {result.flight_id}: {result.message}", flush=True)
+            print(f"{_stamp()} SKIP {result.flight_id}: {result.message}", flush=True)
         else:
-            print(f"ERR {result.flight_id}: {result.message}", flush=True)
+            print(f"{_stamp()} ERR {result.flight_id}: {result.message}", flush=True)
 
+    total_elapsed = time.monotonic() - start_all
     print(
         "Summary: attempted={attempted} succeeded={succeeded} failed={failed}".format(
             attempted=stats.attempted,
             succeeded=stats.succeeded,
             failed=stats.failed,
         )
-    , flush=True)
+        + f" duration={total_elapsed:.1f}s",
+        flush=True,
+    )
     if args.approve_import and not dry_run:
         print(f"Import report written to {args.import_report}", flush=True)
     return 0 if stats.failed == 0 else 1

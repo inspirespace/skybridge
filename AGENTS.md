@@ -15,6 +15,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `./scripts/run-import.sh` — run approved import using the latest `data/review.json`.
 - `./scripts/run.sh --approve-import --max-flights 5` — run the CLI with explicit options (container named `skybridge`).
 - `./scripts/run.sh --approve-import --import-report data/import_report.json` — run import and write a report.
+- `./scripts/run.sh --verify-import-report --import-report data/import_report.json` — verify report entries against FlySto.
 - `python -m src.cli --review` — run locally (requires Python deps).
 - `pytest` — run tests (if installed).
 Note: default `MODE=auto` uses API only and does not fall back to web automation.

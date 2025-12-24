@@ -821,3 +821,38 @@ def _write_import_report(
         "items": items,
     }
     report_path.write_text(json.dumps(payload, indent=2))
+
+
+def verify_import_report(report_path: Path, flysto: FlyStoClient) -> dict[str, int]:
+    payload = json.loads(report_path.read_text())
+    items = payload.get("items", [])
+    resolved = 0
+    missing = 0
+    total = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        total += 1
+        file_path = item.get("file_path")
+        if not file_path:
+            missing += 1
+            continue
+        filename = Path(file_path).name
+        log_id, signature, log_format = flysto.resolve_log_for_file(
+            filename, retries=3, delay_seconds=1.5
+        )
+        item["flysto_log_id"] = log_id
+        item["flysto_signature"] = signature
+        item["flysto_format"] = log_format
+        if log_id:
+            resolved += 1
+        else:
+            missing += 1
+    payload["verified_at"] = datetime.utcnow().isoformat() + "Z"
+    payload["verification"] = {
+        "attempted": total,
+        "resolved": resolved,
+        "missing": missing,
+    }
+    report_path.write_text(json.dumps(payload, indent=2))
+    return payload["verification"]
