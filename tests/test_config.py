@@ -33,5 +33,5 @@ class ConfigTests(unittest.TestCase):
 
         self.assertEqual(config.cloudahoy_api_key, "ca")
         self.assertEqual(config.flysto_api_key, "fs")
-        self.assertEqual(config.cloudahoy_base_url, "https://api.cloudahoy.com")
-        self.assertEqual(config.flysto_base_url, "https://api.flysto.net")
+        self.assertEqual(config.cloudahoy_base_url, "https://www.cloudahoy.com/api")
+        self.assertEqual(config.flysto_base_url, "https://www.flysto.net")

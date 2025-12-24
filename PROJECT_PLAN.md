@@ -20,6 +20,9 @@
 - Regression: uploads using `@@@<tail>` in URL/zip entry do not appear as flights; legacy `@@@0` with plain filename does. Reverted to legacy upload while focusing on assignment API.
 - Playwright capture blocked on macOS due to Crashpad permission errors; need manual network capture or alternate environment.
 - Align assign-aircraft request with UI (text/plain JSON body + x-version).
+- Group uploads by tail number and assign unknown GPX groups per tail after uploads.
+- Prevent caching of unknown-group assignments (systemId=None) so each tail can be assigned.
+- Added offline unit tests for tail grouping and assign-aircraft caching behavior.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).
@@ -32,6 +35,7 @@
 6) Hardening & tests
    - Add unit tests for pagination, parsing, and mapping.
    - Add integration tests for a small flight sample (if allowed).
+   - Extend tests to cover crew mapping and metadata extraction edge cases.
 
 ## Backlog / Ideas
 - Replace FlySto UI automation with API client.

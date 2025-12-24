@@ -30,6 +30,9 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Latest local run (direct Python) succeeded: 5/5 flights imported with review-id gating on 2025-12-23.
 - Aircraft model "Other": UI wizard reaches manual profile step (model name/engine/fuel etc.) but no create-aircraft API request observed; direct /api/create-aircraft attempts return 500. Need to capture final payload or determine endpoint.
 - Discovery logs now redact credentials in stored request payloads.
+- Uploads are now grouped by tail number and each tail triggers a FlySto unknown-aircraft assignment call after its batch (GenericGpx, systemId=None).
+- FlySto assign-aircraft caching skips only known systemIds; unknown-group assignments are allowed per tail.
+- Added offline tests for tail-grouped migration behavior and assign-aircraft caching rules.
 
 ## Required API Details
 These are needed to complete the adapters:
