@@ -83,6 +83,9 @@ def prepare_review(
         summaries = summaries[:max_flights]
     items: list[ReviewItem] = []
 
+    import_run_at = datetime.utcnow().replace(tzinfo=timezone.utc)
+    import_tag = f"cloudahoy:{_format_timestamp_tag(import_run_at)}"
+
     for summary in summaries:
         if state and not force:
             record = state.get(summary.id)
@@ -413,9 +416,8 @@ def _normalize_remarks(value: object) -> str | None:
     return cleaned if cleaned else None
 
 
-def _build_import_tags(started_at: datetime) -> list[str]:
-    when = _format_timestamp_tag(started_at)
-    return ["cloudahoy", f"cloudahoy:{when}"]
+def _build_import_tags(import_tag: str) -> list[str]:
+    return ["cloudahoy", import_tag]
 
 
 def _format_timestamp_tag(value: datetime) -> str:
@@ -532,6 +534,8 @@ def migrate_flights(
     failed = 0
 
     pending: dict[str | None, list[dict]] = {}
+    import_run_at = datetime.utcnow().replace(tzinfo=timezone.utc)
+    import_tag = f"cloudahoy:{_format_timestamp_tag(import_run_at)}"
 
     for summary in summaries:
         detail = cloudahoy.fetch_flight(summary.id)
@@ -573,7 +577,7 @@ def migrate_flights(
         aircraft_type = metadata.get("aircraft_type") if isinstance(metadata, dict) else None
         crew = _extract_crew_assignments(metadata) if not dry_run else []
         remarks = _normalize_remarks(metadata.get("remarks")) if metadata else None
-        tags = _build_import_tags(summary.started_at)
+        tags = _build_import_tags(import_tag)
         pending.setdefault(tail_number, []).append(
             {
                 "summary_id": summary.id,

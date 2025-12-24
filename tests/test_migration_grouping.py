@@ -92,9 +92,8 @@ def test_grouped_uploads_assign_unknown_per_tail():
 
 
 def test_migration_adds_cloudahoy_tag_and_remarks():
-    started_at = datetime(2025, 3, 20, 15, 37)
     summaries = [
-        FlightSummary("A1", started_at, None, None, None),
+        FlightSummary("A1", datetime(2025, 3, 20, 15, 37), None, None, None),
     ]
     detail = FlightDetail(
         id="A1",
@@ -121,7 +120,7 @@ def test_migration_adds_cloudahoy_tag_and_remarks():
     assert filename == "A1.gpx"
     assert remarks == "Night flight"
     assert "cloudahoy" in tags
-    assert "cloudahoy:2025-03-20T15:37Z" in tags
+    assert any(tag.startswith("cloudahoy:") for tag in tags)
 
 
 def test_migration_repairs_mojibake_remarks():

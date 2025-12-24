@@ -2,9 +2,9 @@
 
 ### Goal
 - Import CloudAhoy remarks into an appropriate FlySto field per log.
-- Mark each imported flight in FlySto so we can detect duplicates later using compact tags:
+- Mark each imported flight in FlySto so we can detect duplicates later using compact tags per import run:
   - `cloudahoy`
-  - `cloudahoy:<timestamp>` (ISO UTC, minute precision)
+  - `cloudahoy:<timestamp>` (import run timestamp, ISO UTC, minute precision)
 
 ### Current Unknowns / Discovery Needed
 - CloudAhoy: exact field(s) for remarks in the flight detail payload (likely in `flt.Meta` or a top-level notes field).
@@ -18,7 +18,7 @@
   - Fallback: combine multiple fields (if any) with separators.
   - Normalize whitespace; skip if empty.
 - **FlySto destination:** per-log remarks/notes field if available; otherwise create a `Remarks` tag with the text (last-resort).
-- **Import marker:** `cloudahoy` + `cloudahoy:<timestamp>` (UTC ISO minute).
+- **Import marker:** `cloudahoy` + `cloudahoy:<timestamp>` (import run time, UTC ISO minute).
 
 ### Idempotency Strategy
 - Store a per-flight marker in FlySto (tag) so repeated imports can detect and skip or update in-place.
@@ -26,7 +26,7 @@
 
 ### Current Implementation Notes
 - Uses `PUT /api/log-annotations/{logIdString}` to update `remarks` and `tags` for a log.
-- Sends only `cloudahoy` and `cloudahoy:<timestamp>` tags (CloudAhoy tags are ignored).
+- Sends only `cloudahoy` and `cloudahoy:<timestamp>` tags derived from the import run (CloudAhoy tags are ignored).
 - Repairs common UTF-8 mojibake in remarks (e.g., `Ãœ` → `Ü`).
 - Does not merge existing FlySto tags (endpoint appears write-only).
 
