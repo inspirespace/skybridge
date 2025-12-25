@@ -127,6 +127,10 @@ You can also run the guided CLI with:
 
 The wrapper will auto-load `.env` from the repo root if present (or use `ENV_FILE`).
 
+Devcontainer notes:
+- Shell history is persisted in the workspace (`.bash_history` / `.zsh_history`).
+- The devcontainer build uses a pip cache mount to speed up rebuilds.
+
 Install the guided command globally (default `/usr/local/bin`):
 
 ```sh

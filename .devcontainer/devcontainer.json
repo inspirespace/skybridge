@@ -41,5 +41,9 @@
       ]
     }
   },
-  "postCreateCommand": "pip install --no-cache-dir -r requirements.txt && npm i -g @openai/codex && (grep -qxF 'eval \"$(starship init zsh)\"' ~/.zshrc || echo 'eval \"$(starship init zsh)\"' >> ~/.zshrc)"
+  "remoteEnv": {
+    "HISTFILE": "/workspaces/skybridge/.bash_history",
+    "ZDOTDIR": "/workspaces/skybridge/.zsh"
+  },
+  "postCreateCommand": "pip install --no-cache-dir -r requirements.txt && npm i -g @openai/codex && (grep -qxF 'eval \"$(starship init zsh)\"' ~/.zshrc || echo 'eval \"$(starship init zsh)\"' >> ~/.zshrc) && mkdir -p /workspaces/skybridge/.zsh && touch /workspaces/skybridge/.bash_history /workspaces/skybridge/.zsh_history && printf '\\nHISTFILE=/workspaces/skybridge/.bash_history\\n' >> /root/.bashrc && printf '\\nHISTFILE=/workspaces/skybridge/.zsh_history\\n' >> /workspaces/skybridge/.zsh/.zshrc"
 }

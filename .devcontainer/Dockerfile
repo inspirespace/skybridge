@@ -7,6 +7,7 @@ RUN apt-get update \
 WORKDIR /workspaces/skybridge
 
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip \
+  pip install --no-cache-dir -r /tmp/requirements.txt
 
 ENV PYTHONUNBUFFERED=1
