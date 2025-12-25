@@ -30,6 +30,7 @@ Or use the wrapper scripts:
 ./scripts/run.sh --approve-import --max-flights 10
 ./scripts/run.sh --approve-import --review-id <id> --wait-for-processing
 ./scripts/run.sh --reconcile-import-report --wait-for-processing
+./scripts/verify-run.sh <RUN_ID>
 ```
 
 ## Configuration
@@ -90,6 +91,10 @@ The web mode uses Playwright to log in and export/upload flights when no officia
 
 Review manifests include a `points_schema` and `points_preview` derived from `flt.points` so you can validate the trajectory fields before import.
 Approved imports require a review ID; `./scripts/run-import.sh` reads it from `data/review.json` automatically.
+
+## Run Checklist
+
+See `docs/run-checklist.md` for the step-by-step run procedure and verification steps.
 
 
 Discovery mode will attempt to log in and collect endpoint hints; it writes a sanitized JSON summary to `data/discovery/discovery.json`.
