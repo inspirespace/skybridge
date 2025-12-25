@@ -34,6 +34,7 @@
 - Add wait-for-processing option to block until FlySto ingestion finishes, then verify and reconcile aircraft.
 - Reconcile crew assignments after ingestion using stored report data or review metadata.
 - Run Docker detached in `scripts/run.sh` and stream logs to avoid truncated output for long runs.
+- Added a VS Code devcontainer with Playwright + Python deps and Docker socket access for local development/testing.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).

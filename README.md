@@ -112,3 +112,12 @@ python -m src.cli --reconcile-import-report --wait-for-processing
 ```
 
 (No extra dependencies required.)
+
+### Devcontainer
+
+This repo ships a VS Code devcontainer with Playwright + Python deps preinstalled, plus Docker socket access so you can run the existing container workflows without reinstalling everything locally.
+
+Steps:
+- Open the repo in VS Code.
+- Run **Dev Containers: Reopen in Container**.
+- Run `pytest` or `python -m src.cli --review` inside the container as needed.
