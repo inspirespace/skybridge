@@ -46,5 +46,6 @@
   "remoteEnv": {
     "HISTFILE": "/var/devcontainer/history/.zsh_history"
   },
-  "postCreateCommand": "pip install --no-cache-dir -r requirements.txt && npm i -g @openai/codex && (grep -qxF 'eval \"$(starship init zsh)\"' ~/.zshrc || echo 'eval \"$(starship init zsh)\"' >> ~/.zshrc) && mkdir -p /var/devcontainer/history && touch /var/devcontainer/history/.zsh_history"
+  "postCreateCommand": "pip install --no-cache-dir -r requirements.txt && npm i -g @openai/codex && (grep -qxF 'eval \"$(starship init zsh)\"' ~/.zshrc || echo 'eval \"$(starship init zsh)\"' >> ~/.zshrc)",
+  "postStartCommand": "bash .devcontainer/setup-history.sh"
 }
