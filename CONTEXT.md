@@ -46,6 +46,13 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Added crew reconciliation from import reports (or review metadata) so crew can be applied after FlySto ingestion.
 - `./scripts/run.sh` now runs Docker detached and streams logs to `docker.log` to avoid truncation on long runs.
 - Added a VS Code devcontainer with Playwright + Python deps and Docker socket access for local development/testing.
+- Crew reconciliation now fetches CloudAhoy metadata without re-exporting GPX/CSV files to prevent duplicate exports.
+- Approved imports now reuse the review manifest’s flight list to avoid fetching a different set of flights between review and import.
+- Fixed `--approve-import` guard so matching review IDs no longer exit early.
+- Latest full import run (RUN_ID 20251225T111510Z) wrote an import report with pending=1 / resolved=45 after verification despite 46 uploads (needs follow-up).
+- FlySto log resolution now falls back to `type=all` log listings when `type=flight` misses a file, reducing false missing=1.
+- CLI now tees stdout/stderr to a run-scoped `docker.log` when `RUN_ID` is set (or `LOG_PATH` provided).
+- Added a run checklist (`docs/run-checklist.md`) and a local verification script (`scripts/verify-run.sh`) to validate run artifacts.
 
 ## Required API Details
 These are needed to complete the adapters:

@@ -944,6 +944,31 @@ def verify_import_report(report_path: Path, flysto: FlyStoClient) -> dict[str, i
         processing_queue = None
     if processing_queue is not None:
         payload["flysto_processing_queue"] = processing_queue
+
+    if missing > 0 and (processing_queue == 0 or processing_queue is None):
+        resolved = 0
+        missing = 0
+        total = 0
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            total += 1
+            file_path = item.get("file_path")
+            if not file_path:
+                missing += 1
+                continue
+            filename = Path(file_path).name
+            log_id, signature, log_format = flysto.resolve_log_for_file(
+                filename, retries=6, delay_seconds=2.0, logs_limit=1000
+            )
+            item["flysto_log_id"] = log_id
+            item["flysto_signature"] = signature
+            item["flysto_format"] = log_format
+            if log_id:
+                resolved += 1
+            else:
+                missing += 1
+        payload["pending"] = sum(1 for item in items if not item.get("flysto_log_id"))
     payload["verification"] = {
         "attempted": total,
         "resolved": resolved,
@@ -1013,8 +1038,7 @@ def reconcile_crew_from_report(
                 crew = _extract_crew_assignments(metadata)
         if not crew and cloudahoy:
             try:
-                detail = cloudahoy.fetch_flight(str(item.get("flight_id")))
-                metadata = _extract_metadata(detail.raw_payload)
+                metadata = cloudahoy.fetch_metadata(str(item.get("flight_id")))
                 if isinstance(metadata, dict):
                     crew = _extract_crew_assignments(metadata)
             except Exception:

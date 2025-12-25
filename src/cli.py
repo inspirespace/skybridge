@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from src.cloudahoy.client import CloudAhoyClient
+from src.models import FlightSummary
 from src.config import ConfigError, load_config
 from src.discovery import DiscoveryConfig, run_discovery
 from src.flysto.client import FlyStoClient
@@ -159,11 +160,42 @@ def _read_review_id(path: Path) -> str | None:
     return review_id if isinstance(review_id, str) and review_id else None
 
 
+def _summaries_from_review(path: Path) -> list[FlightSummary]:
+    payload = json.loads(path.read_text())
+    items = payload.get("items", [])
+    summaries: list[FlightSummary] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        flight_id = item.get("flight_id")
+        if not isinstance(flight_id, str) or not flight_id:
+            continue
+        started_at = None
+        started_raw = item.get("started_at")
+        if isinstance(started_raw, str) and started_raw:
+            try:
+                normalized = started_raw.replace("Z", "+00:00")
+                started_at = datetime.fromisoformat(normalized)
+            except ValueError:
+                started_at = None
+        summaries.append(
+            FlightSummary(
+                id=flight_id,
+                started_at=started_at,
+                duration_seconds=item.get("duration_seconds"),
+                aircraft_type=item.get("aircraft_type"),
+                tail_number=item.get("tail_number"),
+            )
+        )
+    return summaries
+
+
 def run(argv: list[str]) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     run_id = (os.getenv("RUN_ID") or "").strip()
     runs_dir = (os.getenv("RUNS_DIR") or "data/runs").strip()
+    log_path = (os.getenv("LOG_PATH") or "").strip()
 
     if run_id:
         run_dir = Path(runs_dir) / run_id
@@ -176,6 +208,8 @@ def run(argv: list[str]) -> int:
             args.exports_dir = str(run_dir / "cloudahoy_exports")
         if args.state_path is None:
             args.state_path = str(run_dir / "migration.db")
+        if not log_path:
+            log_path = str(run_dir / "docker.log")
     else:
         if args.review_path is None:
             args.review_path = "data/review.json"
@@ -185,6 +219,34 @@ def run(argv: list[str]) -> int:
             args.exports_dir = "data/cloudahoy_exports"
         if args.state_path is None:
             args.state_path = "data/migration.db"
+
+    if log_path:
+        log_file_path = Path(log_path)
+        log_file_path.parent.mkdir(parents=True, exist_ok=True)
+        log_handle = log_file_path.open("a", encoding="utf-8")
+
+        class _Tee:
+            def __init__(self, *streams):
+                self._streams = streams
+
+            def write(self, data: str) -> int:
+                written = 0
+                for stream in self._streams:
+                    try:
+                        written = stream.write(data)
+                    except Exception:
+                        continue
+                return written
+
+            def flush(self) -> None:
+                for stream in self._streams:
+                    try:
+                        stream.flush()
+                    except Exception:
+                        continue
+
+        sys.stdout = _Tee(sys.stdout, log_handle)
+        sys.stderr = _Tee(sys.stderr, log_handle)
 
     try:
         config = load_config()
@@ -438,6 +500,9 @@ def run(argv: list[str]) -> int:
                 file=sys.stderr,
             )
             return 2
+
+    if args.approve_import and args.review_path and Path(args.review_path).exists():
+        summaries = _summaries_from_review(Path(args.review_path))
 
     start_times: dict[str, float] = {}
     start_all = time.monotonic()
