@@ -24,10 +24,10 @@ class FakeCloudAhoy:
 class FakeFlySto:
     def __init__(self):
         self.uploaded: list[str] = []
-        self.assigned_files: list[tuple[str, str]] = []
+        self.assigned_signatures: list[tuple[str, str | None, str | None]] = []
         self.assigned_unknown: list[str] = []
         self.ensured: list[str] = []
-        self.metadata_calls: list[tuple[str, str | None, list[str]]] = []
+        self.metadata_calls: list[tuple[str | None, str | None, list[str]]] = []
 
     def ensure_aircraft(self, tail_number: str, aircraft_type: str | None = None):
         self.ensured.append(tail_number)
@@ -36,10 +36,16 @@ class FakeFlySto:
     def upload_flight(self, detail: FlightDetail, dry_run: bool = False):
         self.uploaded.append(detail.id)
 
-    def assign_aircraft_for_file(self, filename: str, aircraft_id: str):
-        self.assigned_files.append((filename, aircraft_id))
+    def assign_aircraft_for_signature(
+        self,
+        aircraft_id: str,
+        signature: str | None,
+        log_format_id: str = "GenericGpx",
+        resolved_format: str | None = None,
+    ):
+        self.assigned_signatures.append((aircraft_id, signature, resolved_format or log_format_id))
 
-    def assign_crew_for_file(self, filename: str, crew: list[dict]):
+    def assign_crew_for_log_id(self, log_id: str | None, crew: list[dict]):
         # Not relevant for grouping test
         return None
 
@@ -47,11 +53,22 @@ class FakeFlySto:
         # Track group assignment calls
         self.assigned_unknown.append(aircraft_id)
 
-    def assign_metadata_for_file(self, filename: str, remarks: str | None = None, tags: list[str] | None = None):
-        self.metadata_calls.append((filename, remarks, tags or []))
+    def assign_metadata_for_log_id(
+        self,
+        log_id: str | None,
+        remarks: str | None = None,
+        tags: list[str] | None = None,
+    ):
+        self.metadata_calls.append((log_id, remarks, tags or []))
 
-    def resolve_log_for_file(self, filename: str, retries: int = 8, delay_seconds: float = 3.0):
-        return "log-1", "sig", "GenericGpx"
+    def resolve_log_for_file(
+        self,
+        filename: str,
+        retries: int = 8,
+        delay_seconds: float = 3.0,
+        logs_limit: int = 250,
+    ):
+        return f"log-{filename}", f"sig-{filename}", "GenericGpx"
 
 
 def _detail(flight_id: str, tail: str) -> FlightDetail:
@@ -88,7 +105,7 @@ def test_grouped_uploads_assign_unknown_per_tail():
     assert set(flysto.uploaded) == {"A1", "A2", "B1"}
 
     # Per-file aircraft assignment should happen for each file
-    assert len(flysto.assigned_files) == 3
+    assert len(flysto.assigned_signatures) == 3
 
     # Unknown group assignment should run once per tail
     assert set(flysto.assigned_unknown) == {"id-D-KLVW", "id-OE-9487"}
@@ -119,8 +136,8 @@ def test_migration_adds_cloudahoy_tag_and_remarks():
     migrate_flights(cloudahoy, flysto, dry_run=False)
 
     assert flysto.metadata_calls
-    filename, remarks, tags = flysto.metadata_calls[0]
-    assert filename == "A1.gpx"
+    log_id, remarks, tags = flysto.metadata_calls[0]
+    assert log_id == "log-A1.gpx"
     assert remarks == "Night flight"
     assert "cloudahoy" in tags
     assert any(tag.startswith("cloudahoy:") for tag in tags)
@@ -149,7 +166,7 @@ def test_migration_repairs_mojibake_remarks():
 
     migrate_flights(cloudahoy, flysto, dry_run=False)
 
-    _filename, remarks, _tags = flysto.metadata_calls[0]
+    _log_id, remarks, _tags = flysto.metadata_calls[0]
     assert remarks == "Solo Überland"
 
 
@@ -203,4 +220,4 @@ def test_verify_import_report_updates_log_ids():
         assert summary["attempted"] == 2
         assert summary["resolved"] == 1
         assert summary["missing"] == 1
-        assert payload["items"][0]["flysto_log_id"] == "log-1"
+        assert payload["items"][0]["flysto_log_id"] == "log-A4.gpx"
