@@ -22,5 +22,6 @@ if [[ ! -x "${CODEX_BIN}" ]]; then
     mkdir -p /home/vscode/.npm-global
     npm config set prefix /home/vscode/.npm-global
     npm i -g @openai/codex || true
+    npm config delete prefix >/dev/null 2>&1 || true
   fi
 fi
