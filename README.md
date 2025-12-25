@@ -32,6 +32,7 @@ Or use the wrapper scripts:
 ./scripts/run.sh --reconcile-import-report --wait-for-processing
 ./scripts/verify-run.sh <RUN_ID>
 python -m src.cli --guided
+./cloudahoy2flysto
 ```
 
 ## Configuration
@@ -116,6 +117,12 @@ docker run --rm -it \
   -v "$PWD":/workspaces/skybridge \
   -w /workspaces/skybridge \
   skybridge-dev pytest
+```
+
+You can also run the guided CLI with:
+
+```sh
+./cloudahoy2flysto
 ```
 
 Local execution without Docker is possible with:
