@@ -43,6 +43,7 @@
 - CLI now writes logs to `docker.log` directly for each run.
 - Added run checklist and verification script for consistent post-run validation.
 - Added GitHub Actions CI workflow to run pytest on pushes to main and pull requests.
+- Added pytest to requirements so the CI workflow has the test runner installed.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).
