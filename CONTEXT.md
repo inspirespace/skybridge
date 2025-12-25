@@ -57,6 +57,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - CI now installs pytest in the workflow and runs pytest with PYTHONPATH set to the workspace to resolve src imports.
 - Devcontainer now installs Codex CLI + VS Code extension and defaults to zsh with starship.
 - Devcontainer usage: prefer the `.devcontainer/Dockerfile` image directly (no devcontainer CLI). Build `skybridge-dev` and run commands inside that container for tests/CLI runs.
+- Planned: add a guided, modern CLI workflow (`--guided`) that orchestrates review → import → verify with prompts and rich progress output, storing run config in `data/runs/<RUN_ID>/guided.json`.
 
 ## Required API Details
 These are needed to complete the adapters:
