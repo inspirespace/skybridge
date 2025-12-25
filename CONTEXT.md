@@ -68,6 +68,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Devcontainer sets the Python interpreter to `/opt/venv/bin/python` and auto-enables pytest discovery.
 - Devcontainer now mounts a named volume at `/var/devcontainer/codex` and symlinks it to `/home/vscode/.codex` to persist Codex login.
 - Devcontainer PATH includes `/home/vscode/.npm-global/bin` so `codex` is available after install.
+- VS Code auto-opens a terminal on folder open via `.vscode/tasks.json`.
 
 ## Required API Details
 These are needed to complete the adapters:
