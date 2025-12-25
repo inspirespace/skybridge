@@ -4,7 +4,7 @@ import json
 import os
 import time
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
@@ -270,7 +270,10 @@ def run_guided(
     if setup_logging:
         setup_logging(str(run_dir / "docker.log"))
     if hasattr(cloudahoy, "exports_dir"):
-        cloudahoy.exports_dir = exports_dir
+        try:
+            cloudahoy = replace(cloudahoy, exports_dir=exports_dir)
+        except Exception:
+            pass
 
     console.print(f"Using run dir: {run_dir}")
     console.print("Running review...")
