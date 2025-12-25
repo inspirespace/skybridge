@@ -125,6 +125,19 @@ You can also run the guided CLI with:
 ./cloudahoy2flysto
 ```
 
+Install the guided command globally (default `/usr/local/bin`):
+
+```sh
+make install
+make uninstall
+```
+
+Override the install path:
+
+```sh
+make install PREFIX=$HOME/.local
+```
+
 Local execution without Docker is possible with:
 
 ```sh
