@@ -467,6 +467,8 @@ class FlyStoClient:
             json=payload,
             timeout=60,
         )
+        if response.status_code == 404:
+            return
         if response.status_code >= 300:
             raise RuntimeError(
                 f"FlySto assign-crew failed: {response.status_code} {response.text[:200]}"

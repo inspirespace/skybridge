@@ -62,6 +62,6 @@
     "PATH": "/opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
     "VIRTUAL_ENV_DISABLE_PROMPT": "1"
   },
-  "postCreateCommand": "uv sync --frozen --extra dev && npm i -g @openai/codex && (grep -qxF 'eval \"$(starship init zsh)\"' ~/.zshrc || echo 'eval \"$(starship init zsh)\"' >> ~/.zshrc)",
+  "postCreateCommand": "uv sync --frozen --extra dev && (command -v npm >/dev/null 2>&1 && npm i -g @openai/codex || true) && (grep -qxF 'eval \"$(starship init zsh)\"' ~/.zshrc || echo 'eval \"$(starship init zsh)\"' >> ~/.zshrc)",
   "postStartCommand": "bash .devcontainer/setup-history.sh && bash .devcontainer/setup-codex.sh"
 }
