@@ -49,6 +49,8 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Approved imports now reuse the review manifest’s flight list to avoid fetching a different set of flights between review and import.
 - Fixed `--approve-import` guard so matching review IDs no longer exit early.
 - Latest full import run (RUN_ID 20251225T111510Z) wrote an import report with pending=1 / resolved=45 after verification despite 46 uploads (needs follow-up).
+- FlySto log resolution now falls back to `type=all` log listings when `type=flight` misses a file, reducing false missing=1.
+- CLI now tees stdout/stderr to a run-scoped `docker.log` when `RUN_ID` is set (or `LOG_PATH` provided).
 
 ## Required API Details
 These are needed to complete the adapters:

@@ -38,6 +38,8 @@
 - Use review manifests as the source of truth for import flight lists to keep runs deterministic.
 - Fix approve-import guard so matching review IDs proceed with imports.
 - Latest full import run (RUN_ID 20251225T111510Z) still reports pending=1/resolved=45 after verification; investigate FlySto log resolution mismatch.
+- FlySto log resolution now falls back to `type=all` log listings to eliminate missing file matches.
+- CLI now writes logs to `docker.log` directly for each run.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).
