@@ -60,9 +60,8 @@
     "STARSHIP_CONFIG": "/workspaces/skybridge/.devcontainer/starship.toml",
     "VIRTUAL_ENV": "/opt/venv",
     "PATH": "/opt/venv/bin:/home/vscode/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-    "VIRTUAL_ENV_DISABLE_PROMPT": "1",
-    "NPM_CONFIG_PREFIX": "/home/vscode/.npm-global"
+    "VIRTUAL_ENV_DISABLE_PROMPT": "1"
   },
-  "postCreateCommand": "uv sync --frozen --extra dev && (command -v npm >/dev/null 2>&1 && mkdir -p /home/vscode/.npm-global && npm config set prefix /home/vscode/.npm-global && npm i -g @openai/codex || true) && (grep -qxF 'eval \"$(starship init zsh)\"' ~/.zshrc || echo 'eval \"$(starship init zsh)\"' >> ~/.zshrc)",
+  "postCreateCommand": "uv sync --frozen --extra dev && (command -v npm >/dev/null 2>&1 && mkdir -p /home/vscode/.npm-global && npm config set prefix /home/vscode/.npm-global && npm i -g @openai/codex || true) && (grep -qxF 'eval \"$(starship init zsh)\"' ~/.zshrc || echo 'eval \"$(starship init zsh)\"' >> ~/.zshrc) && (sed -i '/source \\/opt\\/venv\\/bin\\/activate/d' ~/.zshrc || true)",
   "postStartCommand": "bash .devcontainer/setup-history.sh && bash .devcontainer/setup-codex.sh"
 }
