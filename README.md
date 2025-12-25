@@ -60,6 +60,7 @@ When using `./scripts/run.sh`, artifacts are grouped under `data/runs/<RUN_ID>/`
 - `cloudahoy_exports/`
 - `migration.db`
 - `docker.log`
+`./scripts/run.sh` now runs the container detached and streams logs into `docker.log` to avoid truncation on long runs.
 
 You can override the defaults with `RUN_ID`, `RUNS_DIR`, `REVIEW_PATH`, `IMPORT_REPORT`, `EXPORTS_DIR`, `STATE_PATH`, and `LOG_PATH`.
 - `MODE` (`auto`, `web`, `hybrid`, or `api`, default `auto`; auto uses API only)

@@ -24,14 +24,23 @@ LOG_PATH="${LOG_PATH:-${RUN_DIR}/docker.log}"
 
 DOCKER_BUILDKIT=1 docker build -q -t "${IMAGE_NAME}" "${ROOT_DIR}" >/dev/null 2>&1
 
-exec docker run --rm \
-  --name "${IMAGE_NAME}" \
-  -e RUN_ID="${RUN_ID}" \
-  -e REVIEW_PATH="${REVIEW_PATH}" \
-  -e IMPORT_REPORT="${IMPORT_REPORT}" \
-  -e EXPORTS_DIR="${EXPORTS_DIR}" \
-  -e STATE_PATH="${STATE_PATH}" \
-  --env-file "${ENV_FILE}" \
-  -v "${ROOT_DIR}":/app \
-  -w /app \
-  "${IMAGE_NAME}" "$@" | tee -a "${LOG_PATH}"
+CONTAINER_ID="$(
+  docker run -d --rm \
+    --name "${IMAGE_NAME}" \
+    -e RUN_ID="${RUN_ID}" \
+    -e REVIEW_PATH="${REVIEW_PATH}" \
+    -e IMPORT_REPORT="${IMPORT_REPORT}" \
+    -e EXPORTS_DIR="${EXPORTS_DIR}" \
+    -e STATE_PATH="${STATE_PATH}" \
+    --env-file "${ENV_FILE}" \
+    -v "${ROOT_DIR}":/app \
+    -w /app \
+    "${IMAGE_NAME}" "$@"
+)"
+
+docker logs -f "${CONTAINER_ID}" | tee -a "${LOG_PATH}" &
+LOG_PID=$!
+
+EXIT_CODE="$(docker wait "${CONTAINER_ID}" 2>/dev/null || echo 1)"
+kill "${LOG_PID}" >/dev/null 2>&1 || true
+exit "${EXIT_CODE}"

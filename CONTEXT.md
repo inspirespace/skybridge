@@ -44,6 +44,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Import reports now include a pending count and FlySto processing queue size to explain empty UI while logs are still being ingested.
 - Added a wait-for-processing option to block until FlySto ingestion drains, then verify reports and reconcile aircraft assignments from resolved signatures.
 - Added crew reconciliation from import reports (or review metadata) so crew can be applied after FlySto ingestion.
+- `./scripts/run.sh` now runs Docker detached and streams logs to `docker.log` to avoid truncation on long runs.
 
 ## Required API Details
 These are needed to complete the adapters:
