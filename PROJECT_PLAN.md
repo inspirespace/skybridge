@@ -55,6 +55,7 @@
 - Unified Dockerfiles by using the `devcontainer` target in the root `Dockerfile`.
 - Devcontainer now points VS Code to `/opt/venv/bin/python` and enables pytest discovery.
 - Devcontainer mounts a named volume for Codex login persistence (`/home/vscode/.codex`).
+- Devcontainer PATH now includes `/home/vscode/.npm-global/bin` for the Codex CLI.
 
 ## Guided CLI (planned)
 Goal: provide a step-by-step, user-friendly CLI that guides through review/import/verify with clear progress, prompts, and summaries.
