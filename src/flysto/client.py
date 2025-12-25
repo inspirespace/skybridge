@@ -235,6 +235,7 @@ class FlyStoClient:
         filename: str,
         retries: int = 8,
         delay_seconds: float = 3.0,
+        logs_limit: int = 250,
     ) -> tuple[str | None, str | None, str | None]:
         cached = self.log_cache.get(filename)
         if cached is not None:
@@ -243,6 +244,7 @@ class FlyStoClient:
             filename,
             retries=retries,
             delay_seconds=delay_seconds,
+            logs_limit=logs_limit,
         )
         if log_id or signature or log_format:
             self.log_cache[filename] = (log_id, signature, log_format)
@@ -253,12 +255,13 @@ class FlyStoClient:
         filename: str,
         retries: int = 8,
         delay_seconds: float = 3.0,
+        logs_limit: int = 250,
     ) -> tuple[str | None, str | None, str | None]:
         session = requests.Session()
         self._ensure_session(session)
         keys = "57,tf,ec,hq,86,b2,lb,8q,p2,85,bl,hk,4n,ee,yu,1y,t3,ng,ho,hq,x9,g3,6n,hq,0s,83,6h,am"
         for attempt in range(retries):
-            params = {"type": "flight", "logs": 250, "order": "descending"}
+            params = {"type": "flight", "logs": logs_limit, "order": "descending"}
             response = self._request(
                 session,
                 "get",

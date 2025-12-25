@@ -76,16 +76,7 @@ class CloudAhoyClient:
         return summaries
 
     def fetch_flight(self, flight_id: str) -> FlightDetail:
-        session, auth = _login(self.email, self.password)
-        payload = _build_auth_payload(auth, initial_call=False)
-        payload["flight"] = flight_id
-        response = session.post(
-            f"{_api_base(self.base_url)}/t-debrief.cgi",
-            json=payload,
-            timeout=60,
-        )
-        response.raise_for_status()
-        data = response.json()
+        data = self._fetch_raw(flight_id)
 
         flt = data.get("flt", {})
         points = flt.get("points") if isinstance(flt, dict) else None
@@ -130,6 +121,23 @@ class CloudAhoyClient:
             metadata_path=str(metadata_path) if metadata_path else None,
             csv_path=str(csv_path) if csv_path else None,
         )
+
+    def fetch_metadata(self, flight_id: str) -> dict:
+        data = self._fetch_raw(flight_id)
+        flt = data.get("flt", {})
+        return _extract_metadata(flt)
+
+    def _fetch_raw(self, flight_id: str) -> dict:
+        session, auth = _login(self.email, self.password)
+        payload = _build_auth_payload(auth, initial_call=False)
+        payload["flight"] = flight_id
+        response = session.post(
+            f"{_api_base(self.base_url)}/t-debrief.cgi",
+            json=payload,
+            timeout=60,
+        )
+        response.raise_for_status()
+        return response.json()
 
 
 def _login(email: str, password: str) -> tuple[requests.Session, dict]:

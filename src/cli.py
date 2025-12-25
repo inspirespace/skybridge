@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from src.cloudahoy.client import CloudAhoyClient
+from src.models import FlightSummary
 from src.config import ConfigError, load_config
 from src.discovery import DiscoveryConfig, run_discovery
 from src.flysto.client import FlyStoClient
@@ -157,6 +158,36 @@ def _read_review_id(path: Path) -> str | None:
         return None
     review_id = payload.get("review_id")
     return review_id if isinstance(review_id, str) and review_id else None
+
+
+def _summaries_from_review(path: Path) -> list[FlightSummary]:
+    payload = json.loads(path.read_text())
+    items = payload.get("items", [])
+    summaries: list[FlightSummary] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        flight_id = item.get("flight_id")
+        if not isinstance(flight_id, str) or not flight_id:
+            continue
+        started_at = None
+        started_raw = item.get("started_at")
+        if isinstance(started_raw, str) and started_raw:
+            try:
+                normalized = started_raw.replace("Z", "+00:00")
+                started_at = datetime.fromisoformat(normalized)
+            except ValueError:
+                started_at = None
+        summaries.append(
+            FlightSummary(
+                id=flight_id,
+                started_at=started_at,
+                duration_seconds=item.get("duration_seconds"),
+                aircraft_type=item.get("aircraft_type"),
+                tail_number=item.get("tail_number"),
+            )
+        )
+    return summaries
 
 
 def run(argv: list[str]) -> int:
@@ -438,6 +469,9 @@ def run(argv: list[str]) -> int:
                 file=sys.stderr,
             )
             return 2
+
+    if args.approve_import and args.review_path and Path(args.review_path).exists():
+        summaries = _summaries_from_review(Path(args.review_path))
 
     start_times: dict[str, float] = {}
     start_all = time.monotonic()
