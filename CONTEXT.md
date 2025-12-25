@@ -53,6 +53,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - FlySto log resolution now falls back to `type=all` log listings when `type=flight` misses a file, reducing false missing=1.
 - CLI now tees stdout/stderr to a run-scoped `docker.log` when `RUN_ID` is set (or `LOG_PATH` provided).
 - Added a run checklist (`docs/run-checklist.md`) and a local verification script (`scripts/verify-run.sh`) to validate run artifacts.
+- Added GitHub Actions CI workflow to run pytest on pushes to main and pull requests.
 
 ## Required API Details
 These are needed to complete the adapters:
