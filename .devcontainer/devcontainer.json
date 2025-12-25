@@ -6,15 +6,34 @@
   },
   "workspaceFolder": "/workspaces/skybridge",
   "mounts": [
-    "source=${localWorkspaceFolder},target=/workspaces/skybridge,type=bind,consistency=cached",
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
   ],
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": true,
+      "upgradePackages": true,
+      "username": "root"
+    },
+    "ghcr.io/devcontainers-extra/features/starship:1": {}
+  },
   "customizations": {
     "vscode": {
       "settings": {
-        "python.defaultInterpreterPath": "/usr/local/bin/python"
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "zsh": {
+            "path": "/usr/bin/zsh"
+          }
+        }
       },
       "extensions": [
+        "openai.chatgpt",
         "ms-python.python",
         "ms-python.black-formatter",
         "ms-python.isort",
@@ -22,5 +41,5 @@
       ]
     }
   },
-  "postCreateCommand": "pip install --no-cache-dir -r requirements.txt"
+  "postCreateCommand": "pip install --no-cache-dir -r requirements.txt && npm i -g @openai/codex && (grep -qxF 'eval \"$(starship init zsh)\"' ~/.zshrc || echo 'eval \"$(starship init zsh)\"' >> ~/.zshrc)"
 }

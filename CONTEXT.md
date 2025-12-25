@@ -55,6 +55,8 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Added a run checklist (`docs/run-checklist.md`) and a local verification script (`scripts/verify-run.sh`) to validate run artifacts.
 - Added GitHub Actions CI workflow to run pytest on pushes to main and pull requests.
 - CI now installs pytest in the workflow and runs pytest with PYTHONPATH set to the workspace to resolve src imports.
+- Devcontainer now installs Codex CLI + VS Code extension and defaults to zsh with starship.
+- Devcontainer usage: prefer the `.devcontainer/Dockerfile` image directly (no devcontainer CLI). Build `skybridge-dev` and run commands inside that container for tests/CLI runs.
 
 ## Required API Details
 These are needed to complete the adapters:

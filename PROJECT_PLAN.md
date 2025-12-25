@@ -44,6 +44,8 @@
 - Added run checklist and verification script for consistent post-run validation.
 - Added GitHub Actions CI workflow to run pytest on pushes to main and pull requests.
 - CI now installs pytest in the workflow and runs pytest with PYTHONPATH set to the workspace to resolve src imports.
+- Devcontainer usage standardized: build/run `.devcontainer/Dockerfile` image (`skybridge-dev`) for tests and CLI runs.
+- Devcontainer now includes Codex CLI + VS Code extension and a zsh/starship prompt.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).
