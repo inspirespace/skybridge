@@ -1,1 +1,4 @@
 scan_timeout = 200
+
+[python]
+format = "via 🐍 [$version]($style) "

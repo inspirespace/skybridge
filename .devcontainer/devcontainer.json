@@ -57,7 +57,10 @@
   "remoteUser": "vscode",
   "remoteEnv": {
     "HISTFILE": "/var/devcontainer/history/.zsh_history",
-    "STARSHIP_CONFIG": "/workspaces/skybridge/.devcontainer/starship.toml"
+    "STARSHIP_CONFIG": "/workspaces/skybridge/.devcontainer/starship.toml",
+    "VIRTUAL_ENV": "/opt/venv",
+    "PATH": "/opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "VIRTUAL_ENV_DISABLE_PROMPT": "1"
   },
   "postCreateCommand": "uv sync --frozen --extra dev && npm i -g @openai/codex && (grep -qxF 'eval \"$(starship init zsh)\"' ~/.zshrc || echo 'eval \"$(starship init zsh)\"' >> ~/.zshrc)",
   "postStartCommand": "bash .devcontainer/setup-history.sh && bash .devcontainer/setup-codex.sh"
