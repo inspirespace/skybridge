@@ -63,6 +63,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Added `make install` / `make uninstall` targets to install the wrapper globally (default `/usr/local/bin`, override with `PREFIX`).
 - Devcontainer now uses pip cache mounts for faster rebuilds, persists shell history in a named volume, and fixes volume permissions on start.
 - Added starship config to avoid slow prompt scans and VS Code pytest discovery settings.
+- Migrated dependency management to `uv` with `pyproject.toml` and `uv.lock` (dev deps via `--extra dev`).
 
 ## Required API Details
 These are needed to complete the adapters:

@@ -6,8 +6,12 @@ RUN apt-get update \
 
 WORKDIR /workspaces/skybridge
 
-COPY requirements.txt /tmp/requirements.txt
-RUN --mount=type=cache,target=/root/.cache/pip \
-  pip install --no-cache-dir -r /tmp/requirements.txt
+COPY pyproject.toml uv.lock /workspaces/skybridge/
+RUN pip install --no-cache-dir uv
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+RUN --mount=type=cache,target=/root/.cache/uv \
+  uv sync --frozen --extra dev
 
 ENV PYTHONUNBUFFERED=1

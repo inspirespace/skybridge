@@ -132,6 +132,7 @@ Devcontainer notes:
 - The devcontainer build uses a pip cache mount to speed up rebuilds.
 - History volume permissions are ensured on container start.
 - Starship uses `.devcontainer/starship.toml` to avoid slow prompt scans.
+Python dependencies are managed with `uv` and `pyproject.toml` (dev deps via `--extra dev`).
 
 VS Code testing:
 - Pytest discovery is configured in `.vscode/settings.json`.
@@ -158,7 +159,7 @@ python -m src.cli --approve-import --review-id <id> --wait-for-processing
 python -m src.cli --reconcile-import-report --wait-for-processing
 ```
 
-Install dependencies from `requirements.txt` for local runs, or use the devcontainer for a prebuilt environment.
+Install dependencies with `uv sync --extra dev` for local runs, or use the devcontainer for a prebuilt environment.
 
 ### Devcontainer
 

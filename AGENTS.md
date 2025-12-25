@@ -25,6 +25,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Devcontainer persists shell history in a named volume (`/var/devcontainer/history`) and fixes permissions on start; uses a pip cache mount to speed rebuilds.
 - Starship prompt settings live in `.devcontainer/starship.toml` to avoid slow scans.
 - VS Code pytest discovery is configured via `.vscode/settings.json`.
+- Dependencies are managed by `uv` via `pyproject.toml` (dev deps via `--extra dev`, lockfile in `uv.lock`).
 - `pytest` — run tests (if installed).
 Note: default `MODE=auto` uses API only and does not fall back to web automation.
 
