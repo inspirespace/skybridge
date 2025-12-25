@@ -23,7 +23,13 @@ class DummyFlySto(FlyStoClient):
         self.request_calls.append((method.lower(), url, kwargs))
         return DummyResponse()
 
-    def resolve_log_for_file(self, filename: str, retries: int = 8, delay_seconds: float = 3.0):
+    def resolve_log_for_file(
+        self,
+        filename: str,
+        retries: int = 8,
+        delay_seconds: float = 3.0,
+        logs_limit: int = 250,
+    ):
         return "log-1", "sig", "GenericGpx"
 
 
@@ -104,7 +110,13 @@ def test_resolve_log_cached_across_assignments():
         def _ensure_session(self, session):
             return None
 
-        def _resolve_log_for_file_uncached(self, filename: str, retries: int = 8, delay_seconds: float = 3.0):
+        def _resolve_log_for_file_uncached(
+            self,
+            filename: str,
+            retries: int = 8,
+            delay_seconds: float = 3.0,
+            logs_limit: int = 250,
+        ):
             self.resolve_calls += 1
             return "log-1", "sig", "GenericGpx"
 
@@ -141,7 +153,13 @@ def test_assign_crew_for_log_id_skips_resolution():
         def _ensure_session(self, session):
             return None
 
-        def _resolve_log_for_file_uncached(self, filename: str, retries: int = 8, delay_seconds: float = 3.0):
+        def _resolve_log_for_file_uncached(
+            self,
+            filename: str,
+            retries: int = 8,
+            delay_seconds: float = 3.0,
+            logs_limit: int = 250,
+        ):
             self.resolve_calls += 1
             return "log-1", "sig", "GenericGpx"
 
