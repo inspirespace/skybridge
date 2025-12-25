@@ -50,6 +50,7 @@
 - Added `cloudahoy2flysto` wrapper script as the primary user-facing guided command.
 - Added Makefile install/uninstall targets for the guided wrapper.
 - Devcontainer improvements: pip cache mount for faster rebuilds, persistent shell history in a named volume, and permission fix on start.
+- Devcontainer updates: starship config to avoid prompt scan timeouts; VS Code pytest discovery settings added.
 
 ## Guided CLI (planned)
 Goal: provide a step-by-step, user-friendly CLI that guides through review/import/verify with clear progress, prompts, and summaries.

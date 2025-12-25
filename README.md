@@ -131,6 +131,10 @@ Devcontainer notes:
 - Shell history is persisted in a named Docker volume (`/var/devcontainer/history`) so it won’t show up in git.
 - The devcontainer build uses a pip cache mount to speed up rebuilds.
 - History volume permissions are ensured on container start.
+- Starship uses `.devcontainer/starship.toml` to avoid slow prompt scans.
+
+VS Code testing:
+- Pytest discovery is configured in `.vscode/settings.json`.
 
 Install the guided command globally (default `/usr/local/bin`):
 

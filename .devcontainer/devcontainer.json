@@ -44,7 +44,8 @@
   },
   "remoteUser": "vscode",
   "remoteEnv": {
-    "HISTFILE": "/var/devcontainer/history/.zsh_history"
+    "HISTFILE": "/var/devcontainer/history/.zsh_history",
+    "STARSHIP_CONFIG": "/workspaces/skybridge/.devcontainer/starship.toml"
   },
   "postCreateCommand": "pip install --no-cache-dir -r requirements.txt && npm i -g @openai/codex && (grep -qxF 'eval \"$(starship init zsh)\"' ~/.zshrc || echo 'eval \"$(starship init zsh)\"' >> ~/.zshrc)",
   "postStartCommand": "bash .devcontainer/setup-history.sh"
