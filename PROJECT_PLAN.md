@@ -53,6 +53,7 @@
 - Devcontainer updates: starship config to avoid prompt scan timeouts; VS Code pytest discovery settings added.
 - Migrated dependency management to `uv` with `pyproject.toml` and `uv.lock` (dev deps via `--extra dev`).
 - Unified Dockerfiles by using the `devcontainer` target in the root `Dockerfile`.
+- Devcontainer now points VS Code to `/opt/venv/bin/python` and enables pytest discovery.
 
 ## Guided CLI (planned)
 Goal: provide a step-by-step, user-friendly CLI that guides through review/import/verify with clear progress, prompts, and summaries.

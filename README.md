@@ -136,6 +136,7 @@ Python dependencies are managed with `uv` and `pyproject.toml` (dev deps via `--
 
 VS Code testing:
 - Pytest discovery is configured in `.vscode/settings.json`.
+- Devcontainer overrides the interpreter to `/opt/venv/bin/python` and enables pytest discovery automatically.
 
 Install the guided command globally (default `/usr/local/bin`):
 

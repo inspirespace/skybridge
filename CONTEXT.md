@@ -65,6 +65,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Added starship config to avoid slow prompt scans and VS Code pytest discovery settings.
 - Migrated dependency management to `uv` with `pyproject.toml` and `uv.lock` (dev deps via `--extra dev`).
 - Unified Dockerfiles: devcontainer now uses the `devcontainer` target in the root `Dockerfile`.
+- Devcontainer sets the Python interpreter to `/opt/venv/bin/python` and auto-enables pytest discovery.
 
 ## Required API Details
 These are needed to complete the adapters:
