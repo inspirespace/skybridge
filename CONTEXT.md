@@ -66,7 +66,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Migrated dependency management to `uv` with `pyproject.toml` and `uv.lock` (dev deps via `--extra dev`).
 - Unified Dockerfiles: devcontainer now uses the `devcontainer` target in the root `Dockerfile`.
 - Devcontainer sets the Python interpreter to `/opt/venv/bin/python` and auto-enables pytest discovery.
-- Devcontainer now mounts a named volume at `/home/vscode/.codex` to persist Codex login.
+- Devcontainer now mounts a named volume at `/var/devcontainer/codex` and symlinks it to `/home/vscode/.codex` to persist Codex login.
 - Devcontainer PATH includes `/home/vscode/.npm-global/bin` so `codex` is available after install.
 
 ## Required API Details
