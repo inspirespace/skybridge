@@ -52,6 +52,7 @@
 - Devcontainer improvements: pip cache mount for faster rebuilds, persistent shell history in a named volume, and permission fix on start.
 - Devcontainer updates: starship config to avoid prompt scan timeouts; VS Code pytest discovery settings added.
 - Migrated dependency management to `uv` with `pyproject.toml` and `uv.lock` (dev deps via `--extra dev`).
+- Unified Dockerfiles by using the `devcontainer` target in the root `Dockerfile`.
 
 ## Guided CLI (planned)
 Goal: provide a step-by-step, user-friendly CLI that guides through review/import/verify with clear progress, prompts, and summaries.

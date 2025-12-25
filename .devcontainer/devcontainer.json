@@ -1,8 +1,9 @@
 {
   "name": "skybridge-dev",
   "build": {
-    "dockerfile": "Dockerfile",
-    "context": ".."
+    "dockerfile": "../Dockerfile",
+    "context": "..",
+    "target": "devcontainer"
   },
   "workspaceFolder": "/workspaces/skybridge",
   "mounts": [

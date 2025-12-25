@@ -22,7 +22,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `./cloudahoy2flysto` auto-loads `.env` from the repo root (override with `ENV_FILE`).
 - `make install` / `make uninstall` — install/remove the `cloudahoy2flysto` command (default `/usr/local/bin`, override with `PREFIX`).
 - Devcontainer: use **Dev Containers: Reopen in Container** in VS Code to run `pytest` or `python -m src.cli --review` with dependencies preinstalled; includes Codex CLI + VS Code extension and a zsh/starship shell (requires Docker on the host for the socket mount).
-- Devcontainer persists shell history in a named volume (`/var/devcontainer/history`) and fixes permissions on start; uses a pip cache mount to speed rebuilds.
+- Devcontainer persists shell history in a named volume (`/var/devcontainer/history`) and fixes permissions on start; uses a pip cache mount to speed rebuilds. It uses the `devcontainer` target in the root `Dockerfile`.
 - Starship prompt settings live in `.devcontainer/starship.toml` to avoid slow scans.
 - VS Code pytest discovery is configured via `.vscode/settings.json`.
 - Dependencies are managed by `uv` via `pyproject.toml` (dev deps via `--extra dev`, lockfile in `uv.lock`).

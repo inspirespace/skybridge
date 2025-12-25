@@ -112,7 +112,7 @@ Discovery mode will attempt to log in and collect endpoint hints; it writes a sa
 Preferred devcontainer usage without the devcontainer CLI (no Node required):
 
 ```sh
-docker build -f .devcontainer/Dockerfile -t skybridge-dev .
+docker build --target devcontainer -t skybridge-dev .
 docker run --rm -it \
   -v "$PWD":/workspaces/skybridge \
   -w /workspaces/skybridge \
@@ -163,7 +163,7 @@ Install dependencies with `uv sync --extra dev` for local runs, or use the devco
 
 ### Devcontainer
 
-This repo ships a VS Code devcontainer with Playwright + Python deps preinstalled, plus Docker socket access so you can run the existing container workflows without reinstalling everything locally.
+This repo ships a VS Code devcontainer with Playwright + Python deps preinstalled, plus Docker socket access so you can run the existing container workflows without reinstalling everything locally. The devcontainer uses the `devcontainer` target in the root `Dockerfile`.
 
 Steps:
 - Open the repo in VS Code.

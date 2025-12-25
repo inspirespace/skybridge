@@ -1,16 +1,24 @@
-FROM mcr.microsoft.com/playwright/python:v1.49.0-jammy
+FROM mcr.microsoft.com/playwright/python:v1.49.0-jammy AS base
 
-WORKDIR /app
-
-COPY pyproject.toml uv.lock /app/
 RUN pip install --no-cache-dir uv
-ENV UV_PROJECT_ENVIRONMENT=/opt/venv
-ENV VIRTUAL_ENV=/opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-RUN uv sync --frozen --no-dev
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
+    VIRTUAL_ENV=/opt/venv \
+    PATH="/opt/venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1
 
+FROM base AS prod
+WORKDIR /app
+COPY pyproject.toml uv.lock /app/
+RUN uv sync --frozen --no-dev
 COPY src/ /app/src/
 
-ENV PYTHONUNBUFFERED=1
-
 ENTRYPOINT ["python", "-m", "src.cli"]
+
+FROM base AS devcontainer
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends docker.io git \
+  && rm -rf /var/lib/apt/lists/*
+WORKDIR /workspaces/skybridge
+COPY pyproject.toml uv.lock /workspaces/skybridge/
+RUN --mount=type=cache,target=/root/.cache/uv \
+  uv sync --frozen --extra dev
