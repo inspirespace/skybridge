@@ -49,7 +49,7 @@
 - Implemented guided CLI flow with preflight checks, prompts, and rich progress output.
 - Added `cloudahoy2flysto` wrapper script as the primary user-facing guided command.
 - Added Makefile install/uninstall targets for the guided wrapper.
-- Devcontainer improvements: pip cache mount for faster rebuilds and persistent shell history.
+- Devcontainer improvements: pip cache mount for faster rebuilds and persistent shell history in a named volume.
 
 ## Guided CLI (planned)
 Goal: provide a step-by-step, user-friendly CLI that guides through review/import/verify with clear progress, prompts, and summaries.

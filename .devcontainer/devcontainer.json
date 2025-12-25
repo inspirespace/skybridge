@@ -6,7 +6,8 @@
   },
   "workspaceFolder": "/workspaces/skybridge",
   "mounts": [
-    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
+    "source=skybridge-shell-history,target=/var/devcontainer/history,type=volume"
   ],
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
@@ -17,7 +18,7 @@
       "configureZshAsDefaultShell": true,
       "installOhMyZsh": true,
       "upgradePackages": true,
-      "username": "root"
+      "username": "vscode"
     },
     "ghcr.io/devcontainers-extra/features/starship:1": {}
   },
@@ -41,9 +42,9 @@
       ]
     }
   },
+  "remoteUser": "vscode",
   "remoteEnv": {
-    "HISTFILE": "/workspaces/skybridge/.bash_history",
-    "ZDOTDIR": "/workspaces/skybridge/.zsh"
+    "HISTFILE": "/var/devcontainer/history/.zsh_history"
   },
-  "postCreateCommand": "pip install --no-cache-dir -r requirements.txt && npm i -g @openai/codex && (grep -qxF 'eval \"$(starship init zsh)\"' ~/.zshrc || echo 'eval \"$(starship init zsh)\"' >> ~/.zshrc) && mkdir -p /workspaces/skybridge/.zsh && touch /workspaces/skybridge/.bash_history /workspaces/skybridge/.zsh_history && printf '\\nHISTFILE=/workspaces/skybridge/.bash_history\\n' >> /root/.bashrc && printf '\\nHISTFILE=/workspaces/skybridge/.zsh_history\\n' >> /workspaces/skybridge/.zsh/.zshrc"
+  "postCreateCommand": "pip install --no-cache-dir -r requirements.txt && npm i -g @openai/codex && (grep -qxF 'eval \"$(starship init zsh)\"' ~/.zshrc || echo 'eval \"$(starship init zsh)\"' >> ~/.zshrc) && mkdir -p /var/devcontainer/history && touch /var/devcontainer/history/.zsh_history"
 }
