@@ -46,6 +46,7 @@
 - CI now installs pytest in the workflow and runs pytest with PYTHONPATH set to the workspace to resolve src imports.
 - Devcontainer usage standardized: build/run `.devcontainer/Dockerfile` image (`skybridge-dev`) for tests and CLI runs.
 - Plan: add a guided, modern CLI workflow for end-to-end migrations.
+- Implemented guided CLI flow with preflight checks, prompts, and rich progress output.
 
 ## Guided CLI (planned)
 Goal: provide a step-by-step, user-friendly CLI that guides through review/import/verify with clear progress, prompts, and summaries.
@@ -76,6 +77,7 @@ Implementation plan
 - Reuse existing CLI logic (review/import/verify) behind a small orchestrator.
 - Persist run config and summary in `data/runs/<RUN_ID>/guided.json`.
 - Add unit tests for the orchestrator (no network; mock clients).
+- Add `rich` as a dependency for modern prompts and progress UI.
 - Devcontainer now includes Codex CLI + VS Code extension and a zsh/starship prompt.
 
 ## Next Implementation Steps

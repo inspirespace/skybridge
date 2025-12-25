@@ -10,6 +10,7 @@ from src.cloudahoy.client import CloudAhoyClient
 from src.models import FlightSummary
 from src.config import ConfigError, load_config
 from src.discovery import DiscoveryConfig, run_discovery
+from src.guided import run_guided
 from src.flysto.client import FlyStoClient
 from src.migration import (
     migrate_flights,
@@ -27,6 +28,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="skybridge",
         description="Migrate CloudAhoy flights to FlySto",
+    )
+    parser.add_argument(
+        "--guided",
+        action="store_true",
+        help="Run an interactive guided migration flow",
     )
     parser.add_argument(
         "--dry-run",
@@ -190,13 +196,8 @@ def _summaries_from_review(path: Path) -> list[FlightSummary]:
     return summaries
 
 
-def run(argv: list[str]) -> int:
-    parser = build_parser()
-    args = parser.parse_args(argv)
-    run_id = (os.getenv("RUN_ID") or "").strip()
-    runs_dir = (os.getenv("RUNS_DIR") or "data/runs").strip()
+def _apply_run_paths(args: argparse.Namespace, run_id: str, runs_dir: str) -> tuple[Path, str]:
     log_path = (os.getenv("LOG_PATH") or "").strip()
-
     if run_id:
         run_dir = Path(runs_dir) / run_id
         run_dir.mkdir(parents=True, exist_ok=True)
@@ -211,6 +212,7 @@ def run(argv: list[str]) -> int:
         if not log_path:
             log_path = str(run_dir / "docker.log")
     else:
+        run_dir = Path(runs_dir)
         if args.review_path is None:
             args.review_path = "data/review.json"
         if args.import_report is None:
@@ -219,34 +221,52 @@ def run(argv: list[str]) -> int:
             args.exports_dir = "data/cloudahoy_exports"
         if args.state_path is None:
             args.state_path = "data/migration.db"
+    return run_dir, log_path
 
-    if log_path:
-        log_file_path = Path(log_path)
-        log_file_path.parent.mkdir(parents=True, exist_ok=True)
-        log_handle = log_file_path.open("a", encoding="utf-8")
 
-        class _Tee:
-            def __init__(self, *streams):
-                self._streams = streams
+def _setup_logging(log_path: str) -> None:
+    if not log_path:
+        return
+    log_file_path = Path(log_path)
+    log_file_path.parent.mkdir(parents=True, exist_ok=True)
+    log_handle = log_file_path.open("a", encoding="utf-8")
 
-            def write(self, data: str) -> int:
-                written = 0
-                for stream in self._streams:
-                    try:
-                        written = stream.write(data)
-                    except Exception:
-                        continue
-                return written
+    class _Tee:
+        def __init__(self, *streams):
+            self._streams = streams
 
-            def flush(self) -> None:
-                for stream in self._streams:
-                    try:
-                        stream.flush()
-                    except Exception:
-                        continue
+        def write(self, data: str) -> int:
+            written = 0
+            for stream in self._streams:
+                try:
+                    written = stream.write(data)
+                except Exception:
+                    continue
+            return written
 
-        sys.stdout = _Tee(sys.stdout, log_handle)
-        sys.stderr = _Tee(sys.stderr, log_handle)
+        def flush(self) -> None:
+            for stream in self._streams:
+                try:
+                    stream.flush()
+                except Exception:
+                    continue
+
+    sys.stdout = _Tee(sys.stdout, log_handle)
+    sys.stderr = _Tee(sys.stderr, log_handle)
+
+
+def run(argv: list[str]) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    runs_dir = (os.getenv("RUNS_DIR") or "data/runs").strip()
+    run_id = (os.getenv("RUN_ID") or "").strip()
+
+    if args.guided and not run_id:
+        run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+    run_dir, log_path = _apply_run_paths(args, run_id, runs_dir)
+    if not args.guided:
+        _setup_logging(log_path)
 
     try:
         config = load_config()
@@ -366,6 +386,33 @@ def run(argv: list[str]) -> int:
 
     def _stamp() -> str:
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    if args.guided:
+        from rich.console import Console
+
+        console = Console()
+        if not isinstance(cloudahoy_client, CloudAhoyClient) or not isinstance(
+            flysto, FlyStoClient
+        ):
+            print("Guided mode requires API clients (mode=api).", file=sys.stderr)
+            return 2
+        return run_guided(
+            console=console,
+            cloudahoy=cloudahoy_client,
+            flysto=flysto,
+            state=state,
+            run_dir=Path(runs_dir) / run_id if run_id else Path(runs_dir),
+            review_path=Path(args.review_path),
+            report_path=Path(args.import_report),
+            exports_dir=Path(args.exports_dir),
+            summaries=summaries,
+            max_flights=max_flights,
+            force=args.force,
+            processing_interval=args.processing_interval,
+            processing_timeout=args.processing_timeout,
+            run_id=run_id,
+            setup_logging=_setup_logging,
+        )
 
     if args.verify_import_report:
         if not Path(args.import_report).exists():

@@ -31,6 +31,7 @@ Or use the wrapper scripts:
 ./scripts/run.sh --approve-import --review-id <id> --wait-for-processing
 ./scripts/run.sh --reconcile-import-report --wait-for-processing
 ./scripts/verify-run.sh <RUN_ID>
+python -m src.cli --guided
 ```
 
 ## Configuration

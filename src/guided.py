@@ -1,0 +1,360 @@
+from __future__ import annotations
+
+import json
+import os
+import time
+from collections import Counter
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Callable
+
+from rich import box
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TaskProgressColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
+from rich.prompt import Confirm, IntPrompt, Prompt
+from rich.table import Table
+
+from src.cloudahoy.client import CloudAhoyClient
+from src.flysto.client import FlyStoClient
+from src.migration import (
+    migrate_flights,
+    prepare_review,
+    reconcile_aircraft_from_report,
+    reconcile_crew_from_report,
+    verify_import_report,
+)
+from src.models import FlightSummary
+from src.state import MigrationState
+
+
+@dataclass
+class GuidedOptions:
+    max_flights: int
+    force: bool
+    wait_for_processing: bool
+    verify_after_import: bool
+    reconcile_after_import: bool
+    run_id: str
+
+
+def _timestamp() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _parse_started_at(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _summarize_review(path: Path) -> dict[str, Any]:
+    payload = json.loads(path.read_text())
+    items = payload.get("items", [])
+    tails = Counter()
+    dates: list[datetime] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        tail = item.get("tail_number")
+        if isinstance(tail, str) and tail:
+            tails[tail] += 1
+        started_at = _parse_started_at(item.get("started_at"))
+        if started_at:
+            dates.append(started_at)
+    summary = {
+        "count": len(items),
+        "min_date": min(dates) if dates else None,
+        "max_date": max(dates) if dates else None,
+        "tails": tails,
+    }
+    return summary
+
+
+def _render_review_summary(console: Console, summary: dict[str, Any]) -> None:
+    count = summary.get("count", 0)
+    min_date = summary.get("min_date")
+    max_date = summary.get("max_date")
+    tails: Counter = summary.get("tails", Counter())
+    table = Table(title="Review Summary", box=box.SIMPLE, show_edge=False)
+    table.add_column("Metric")
+    table.add_column("Value")
+    table.add_row("Flights", str(count))
+    if min_date and max_date:
+        table.add_row(
+            "Date range",
+            f"{min_date.date().isoformat()} -> {max_date.date().isoformat()}",
+        )
+    else:
+        table.add_row("Date range", "Unknown")
+    if tails:
+        top = ", ".join(f"{tail} ({count})" for tail, count in tails.most_common(5))
+        table.add_row("Top tails", top)
+    else:
+        table.add_row("Top tails", "Unknown")
+    console.print(table)
+
+
+def _write_guided_summary(
+    run_dir: Path,
+    options: GuidedOptions,
+    review_id: str | None,
+    summary: dict[str, Any] | None,
+) -> None:
+    payload = {
+        "generated_at": _timestamp(),
+        "run_id": options.run_id,
+        "max_flights": options.max_flights,
+        "force": options.force,
+        "wait_for_processing": options.wait_for_processing,
+        "verify_after_import": options.verify_after_import,
+        "reconcile_after_import": options.reconcile_after_import,
+        "review_id": review_id,
+        "review_summary": summary or {},
+    }
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "guided.json").write_text(json.dumps(payload, indent=2))
+
+
+def _prompt_guided_options(
+    console: Console,
+    default_max: int,
+    run_id: str,
+) -> GuidedOptions:
+    console.print(Panel.fit("Skybridge guided migration", style="bold"))
+    max_flights = IntPrompt.ask("Max flights to import", default=default_max)
+    force = Confirm.ask("Force reimport existing flights?", default=False)
+    wait_for_processing = Confirm.ask(
+        "Wait for FlySto processing and verify after import?",
+        default=True,
+    )
+    verify_after_import = wait_for_processing or Confirm.ask(
+        "Verify import report after upload?", default=True
+    )
+    reconcile_after_import = Confirm.ask(
+        "Reconcile crew/aircraft after verification?", default=True
+    )
+    run_id_prompt = Prompt.ask("Run ID", default=run_id)
+    return GuidedOptions(
+        max_flights=max_flights,
+        force=force,
+        wait_for_processing=wait_for_processing,
+        verify_after_import=verify_after_import,
+        reconcile_after_import=reconcile_after_import,
+        run_id=run_id_prompt.strip() or run_id,
+    )
+
+
+def _preflight_checks(console: Console, cloudahoy: CloudAhoyClient, flysto: FlyStoClient) -> bool:
+    table = Table(title="Preflight Checks", box=box.SIMPLE, show_edge=False)
+    table.add_column("Check")
+    table.add_column("Status")
+
+    ok = True
+    try:
+        cloudahoy.list_flights(limit=1)
+        table.add_row("CloudAhoy connectivity", "OK")
+    except Exception as exc:
+        ok = False
+        table.add_row("CloudAhoy connectivity", f"FAILED ({exc})")
+
+    try:
+        if flysto.prepare():
+            table.add_row("FlySto connectivity", "OK")
+        else:
+            ok = False
+            table.add_row("FlySto connectivity", "FAILED (auth)")
+    except Exception as exc:
+        ok = False
+        table.add_row("FlySto connectivity", f"FAILED ({exc})")
+
+    console.print(table)
+    return ok
+
+
+def _build_progress(console: Console, total: int) -> Progress:
+    return Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        TimeElapsedColumn(),
+        TimeRemainingColumn(),
+        console=console,
+    )
+
+
+def _progress_callback(progress: Progress, task_id: int, console: Console) -> Callable[[str, dict], None]:
+    def handler(event: str, payload: dict) -> None:
+        if event == "start":
+            flight_id = payload.get("flight_id") or "flight"
+            progress.update(task_id, description=f"Importing {flight_id}")
+        elif event == "end":
+            status = payload.get("status") or "ok"
+            flight_id = payload.get("flight_id") or "flight"
+            progress.advance(task_id, 1)
+            console.log(f"{_timestamp()} {flight_id} {status}")
+        elif event == "flysto_processing_queue":
+            n_files = payload.get("n_files")
+            if isinstance(n_files, int):
+                console.log(f"{_timestamp()} FlySto queue {n_files}")
+    return handler
+
+
+def _summaries_from_review(path: Path) -> list[FlightSummary]:
+    payload = json.loads(path.read_text())
+    items = payload.get("items", [])
+    summaries: list[FlightSummary] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        flight_id = item.get("flight_id")
+        if not isinstance(flight_id, str) or not flight_id:
+            continue
+        started_at = _parse_started_at(item.get("started_at"))
+        summaries.append(
+            FlightSummary(
+                id=flight_id,
+                started_at=started_at,
+                duration_seconds=item.get("duration_seconds"),
+                aircraft_type=item.get("aircraft_type"),
+                tail_number=item.get("tail_number"),
+            )
+        )
+    return summaries
+
+
+def run_guided(
+    *,
+    console: Console,
+    cloudahoy: CloudAhoyClient,
+    flysto: FlyStoClient,
+    state: MigrationState,
+    run_dir: Path,
+    review_path: Path,
+    report_path: Path,
+    exports_dir: Path,
+    summaries: list[FlightSummary] | None,
+    max_flights: int | None,
+    force: bool,
+    processing_interval: float,
+    processing_timeout: float,
+    run_id: str,
+    setup_logging: Callable[[str], None] | None = None,
+) -> int:
+    default_max = max_flights or 50
+    console.print("Running preflight checks...")
+    preflight_ok = _preflight_checks(console, cloudahoy, flysto)
+    if not preflight_ok and not Confirm.ask("Continue anyway?", default=False):
+        console.print("Aborted.")
+        return 1
+    options = _prompt_guided_options(console, default_max, run_id)
+
+    run_dir = run_dir.parent / options.run_id
+    review_path = run_dir / "review.json"
+    report_path = run_dir / "import_report.json"
+    exports_dir = run_dir / "cloudahoy_exports"
+    state = MigrationState(run_dir / "migration.db")
+    if setup_logging:
+        setup_logging(str(run_dir / "docker.log"))
+    if hasattr(cloudahoy, "exports_dir"):
+        cloudahoy.exports_dir = exports_dir
+
+    console.print(f"Using run dir: {run_dir}")
+    console.print("Running review...")
+    _, review_id = prepare_review(
+        cloudahoy=cloudahoy,
+        summaries=summaries,
+        max_flights=options.max_flights,
+        state=state,
+        force=options.force,
+        output_path=review_path,
+    )
+    summary = _summarize_review(review_path)
+    _render_review_summary(console, summary)
+    _write_guided_summary(run_dir, options, review_id, summary)
+
+    if not Confirm.ask("Proceed with import?", default=True):
+        console.print("Aborted before import.")
+        return 1
+
+    console.print("Starting import...")
+    import_summaries = _summaries_from_review(review_path)
+    with _build_progress(console, summary.get("count", 0)) as progress:
+        task_id = progress.add_task("Uploading", total=summary.get("count", 0))
+        results, stats = migrate_flights(
+            cloudahoy=cloudahoy,
+            flysto=flysto,
+            dry_run=False,
+            summaries=import_summaries,
+            max_flights=None,
+            state=state,
+            force=options.force,
+            report_path=report_path,
+            review_id=review_id,
+            progress=_progress_callback(progress, task_id, console),
+        )
+
+    console.print(
+        f"Import summary: attempted={stats.attempted} succeeded={stats.succeeded} failed={stats.failed}"
+    )
+    if stats.failed:
+        console.print("Some flights failed. Check the report for details.")
+
+    if options.wait_for_processing:
+        console.print("Waiting for FlySto processing queue to drain...")
+        start_wait = time.monotonic()
+        while True:
+            n_files = flysto.log_files_to_process()
+            if n_files is None:
+                console.print("FlySto processing queue unknown.")
+                break
+            console.print(f"FlySto processing queue: {n_files}")
+            if n_files <= 0:
+                break
+            if time.monotonic() - start_wait > processing_timeout:
+                console.print("Processing wait timed out.")
+                break
+            time.sleep(processing_interval)
+
+    if options.verify_after_import:
+        console.print("Verifying import report...")
+        summary_verify = verify_import_report(report_path, flysto)
+        console.print(
+            f"Verify summary: attempted={summary_verify.get('attempted', 0)} "
+            f"resolved={summary_verify.get('resolved', 0)} "
+            f"missing={summary_verify.get('missing', 0)}"
+        )
+
+    if options.reconcile_after_import:
+        console.print("Reconciling crew/aircraft...")
+        reconciled_crew = reconcile_crew_from_report(
+            report_path,
+            flysto,
+            review_path,
+            cloudahoy,
+        )
+        reconciled_aircraft = reconcile_aircraft_from_report(report_path, flysto)
+        console.print(
+            f"Reconciled crew={reconciled_crew} aircraft={reconciled_aircraft}"
+        )
+
+    console.print(
+        Panel.fit(
+            f"Done. Artifacts:\n- {review_path}\n- {report_path}\n- {exports_dir}\n- {run_dir / 'docker.log'}",
+            title="Summary",
+        )
+    )
+    return 0
