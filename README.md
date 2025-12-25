@@ -107,6 +107,16 @@ Discovery mode will attempt to log in and collect endpoint hints; it writes a sa
 
 ## Development
 
+Preferred devcontainer usage without the devcontainer CLI (no Node required):
+
+```sh
+docker build -f .devcontainer/Dockerfile -t skybridge-dev .
+docker run --rm -it \
+  -v "$PWD":/workspaces/skybridge \
+  -w /workspaces/skybridge \
+  skybridge-dev pytest
+```
+
 Local execution without Docker is possible with:
 
 ```sh
