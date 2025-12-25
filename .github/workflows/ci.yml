@@ -24,7 +24,5 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
-      - name: Run tests
-        env:
-          PYTHONPATH: .
-        run: python -m pytest
+      - name: Run pytest
+        run: PYTHONPATH=${{ github.workspace }} python -m pytest
