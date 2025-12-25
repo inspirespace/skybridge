@@ -133,6 +133,7 @@ Devcontainer notes:
 - History volume permissions are ensured on container start.
 - Starship uses `.devcontainer/starship.toml` to avoid slow prompt scans.
 Python dependencies are managed with `uv` and `pyproject.toml` (dev deps via `--extra dev`).
+Codex login is persisted via a named volume mounted to `/home/vscode/.codex`.
 
 VS Code testing:
 - Pytest discovery is configured in `.vscode/settings.json`.

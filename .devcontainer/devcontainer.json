@@ -8,7 +8,8 @@
   "workspaceFolder": "/workspaces/skybridge",
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
-    "source=skybridge-shell-history,target=/var/devcontainer/history,type=volume"
+    "source=skybridge-shell-history,target=/var/devcontainer/history,type=volume",
+    "source=skybridge-codex,target=/home/vscode/.codex,type=volume"
   ],
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
@@ -59,5 +60,5 @@
     "STARSHIP_CONFIG": "/workspaces/skybridge/.devcontainer/starship.toml"
   },
   "postCreateCommand": "uv sync --frozen --extra dev && npm i -g @openai/codex && (grep -qxF 'eval \"$(starship init zsh)\"' ~/.zshrc || echo 'eval \"$(starship init zsh)\"' >> ~/.zshrc)",
-  "postStartCommand": "bash .devcontainer/setup-history.sh"
+  "postStartCommand": "bash .devcontainer/setup-history.sh && bash .devcontainer/setup-codex.sh"
 }

@@ -54,6 +54,7 @@
 - Migrated dependency management to `uv` with `pyproject.toml` and `uv.lock` (dev deps via `--extra dev`).
 - Unified Dockerfiles by using the `devcontainer` target in the root `Dockerfile`.
 - Devcontainer now points VS Code to `/opt/venv/bin/python` and enables pytest discovery.
+- Devcontainer mounts a named volume for Codex login persistence (`/home/vscode/.codex`).
 
 ## Guided CLI (planned)
 Goal: provide a step-by-step, user-friendly CLI that guides through review/import/verify with clear progress, prompts, and summaries.
