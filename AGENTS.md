@@ -28,6 +28,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Devcontainer sets the Python interpreter to `/opt/venv/bin/python` and enables pytest discovery.
 - Codex login is persisted by mounting a named volume to `/home/vscode/.codex`.
 - Codex CLI installs under `/home/vscode/.npm-global/bin` (PATH updated in devcontainer).
+- Zsh history settings are enforced in `.devcontainer/setup-history.sh`.
 - Dependencies are managed by `uv` via `pyproject.toml` (dev deps via `--extra dev`, lockfile in `uv.lock`).
 - `pytest` — run tests (if installed).
 Note: default `MODE=auto` uses API only and does not fall back to web automation.

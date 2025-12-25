@@ -136,6 +136,7 @@ Python dependencies are managed with `uv` and `pyproject.toml` (dev deps via `--
 The devcontainer sets `VIRTUAL_ENV` and `PATH` so the venv is active without emitting activation commands in the terminal.
 Codex install is best-effort in the devcontainer; missing npm will not fail startup.
 Codex installs to `/home/vscode/.npm-global/bin` and that path is added to `PATH` (without setting `NPM_CONFIG_PREFIX` to avoid nvm conflicts).
+Shell history settings are enforced via `.devcontainer/setup-history.sh`.
 Codex login is persisted via a named volume mounted to `/home/vscode/.codex`.
 
 VS Code testing:
