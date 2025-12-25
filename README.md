@@ -139,7 +139,7 @@ Codex installs to `/home/vscode/.npm-global/bin` and that path is added to `PATH
 Shell history settings are enforced via `.devcontainer/setup-history.sh`.
 Codex is installed during `postStartCommand` so it’s available after container startup.
 Shell cleanup removes any lingering `/opt/venv/bin/activate` lines and clears npm prefix settings to avoid nvm warnings.
-Codex login is persisted via a named volume mounted at `/var/devcontainer/codex` and symlinked to `/home/vscode/.codex`.
+Codex login is persisted via a named volume mounted at `/home/vscode/.codex`.
 
 VS Code testing:
 - Pytest discovery is configured in `.vscode/settings.json`.

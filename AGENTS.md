@@ -26,7 +26,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Starship prompt settings live in `.devcontainer/starship.toml` to avoid slow scans.
 - VS Code pytest discovery is configured via `.vscode/settings.json`.
 - Devcontainer sets the Python interpreter to `/opt/venv/bin/python` and enables pytest discovery.
-- Codex login is persisted by mounting a named volume at `/var/devcontainer/codex` and symlinking to `/home/vscode/.codex`.
+- Codex login is persisted by mounting a named volume at `/home/vscode/.codex`.
 - Codex CLI installs under `/home/vscode/.npm-global/bin` (PATH updated in devcontainer).
 - Zsh history settings are enforced in `.devcontainer/setup-history.sh`.
 - Codex installation happens in `.devcontainer/setup-codex.sh` on container start.
