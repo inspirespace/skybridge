@@ -111,7 +111,7 @@ python -m src.cli --approve-import --review-id <id> --wait-for-processing
 python -m src.cli --reconcile-import-report --wait-for-processing
 ```
 
-(No extra dependencies required.)
+Install dependencies from `requirements.txt` for local runs, or use the devcontainer for a prebuilt environment.
 
 ### Devcontainer
 
