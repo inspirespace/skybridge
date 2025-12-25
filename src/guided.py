@@ -74,11 +74,15 @@ def _summarize_review(path: Path) -> dict[str, Any]:
         started_at = _parse_started_at(item.get("started_at"))
         if started_at:
             dates.append(started_at)
+    min_date = min(dates) if dates else None
+    max_date = max(dates) if dates else None
     summary = {
         "count": len(items),
-        "min_date": min(dates) if dates else None,
-        "max_date": max(dates) if dates else None,
+        "min_date": min_date,
+        "max_date": max_date,
         "tails": tails,
+        "min_date_iso": min_date.isoformat() if min_date else None,
+        "max_date_iso": max_date.isoformat() if max_date else None,
     }
     return summary
 
@@ -113,6 +117,15 @@ def _write_guided_summary(
     review_id: str | None,
     summary: dict[str, Any] | None,
 ) -> None:
+    summary_payload: dict[str, Any] = {}
+    if summary:
+        summary_payload = dict(summary)
+        if isinstance(summary_payload.get("tails"), Counter):
+            summary_payload["tails"] = dict(summary_payload["tails"])
+        if isinstance(summary_payload.get("min_date"), datetime):
+            summary_payload["min_date"] = summary_payload["min_date"].isoformat()
+        if isinstance(summary_payload.get("max_date"), datetime):
+            summary_payload["max_date"] = summary_payload["max_date"].isoformat()
     payload = {
         "generated_at": _timestamp(),
         "run_id": options.run_id,
@@ -122,7 +135,7 @@ def _write_guided_summary(
         "verify_after_import": options.verify_after_import,
         "reconcile_after_import": options.reconcile_after_import,
         "review_id": review_id,
-        "review_summary": summary or {},
+        "review_summary": summary_payload,
     }
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "guided.json").write_text(json.dumps(payload, indent=2))
