@@ -10,7 +10,6 @@ from src.cloudahoy.client import CloudAhoyClient
 from src.models import FlightSummary
 from src.config import ConfigError, load_config
 from src.discovery import DiscoveryConfig, run_discovery
-from src.guided import run_guided
 from src.flysto.client import FlyStoClient
 from src.migration import (
     migrate_flights,
@@ -388,7 +387,20 @@ def run(argv: list[str]) -> int:
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     if args.guided:
-        from rich.console import Console
+        try:
+            from rich.console import Console
+        except Exception as exc:
+            print(
+                f"Guided mode requires the 'rich' package. {exc}",
+                file=sys.stderr,
+            )
+            print("Install dependencies or use the devcontainer image.", file=sys.stderr)
+            return 2
+        try:
+            from src.guided import run_guided
+        except Exception as exc:
+            print(f"Guided mode failed to load: {exc}", file=sys.stderr)
+            return 2
 
         console = Console()
         if not isinstance(cloudahoy_client, CloudAhoyClient) or not isinstance(
