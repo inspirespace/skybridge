@@ -28,6 +28,11 @@
 - Import flow now writes `data/import_report.json` for verification (per-flight status + FlySto log resolution).
 - Verify-only mode and timestamped logging added to improve long-run visibility.
 - FlySto log annotations updates are write-only; tags are sent as-is.
+- FlySto log resolution now caches per filename within a run to avoid repeating long polling waits for crew/metadata after aircraft assignment.
+- Resolve FlySto log details once per flight after upload and reuse for aircraft/crew/metadata assignment to avoid extra polling.
+- Report FlySto processing queue size and pending log count to explain why UI may be empty during ingestion.
+- Add wait-for-processing option to block until FlySto ingestion finishes, then verify and reconcile aircraft.
+- Reconcile crew assignments after ingestion using stored report data or review metadata.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).

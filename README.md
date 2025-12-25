@@ -28,6 +28,8 @@ Or use the wrapper scripts:
 ./scripts/run-review.sh
 ./scripts/run-import.sh
 ./scripts/run.sh --approve-import --max-flights 10
+./scripts/run.sh --approve-import --review-id <id> --wait-for-processing
+./scripts/run.sh --reconcile-import-report --wait-for-processing
 ```
 
 ## Configuration
@@ -104,6 +106,8 @@ Local execution without Docker is possible with:
 ```sh
 python -m src.cli --review
 python -m src.cli --approve-import
+python -m src.cli --approve-import --review-id <id> --wait-for-processing
+python -m src.cli --reconcile-import-report --wait-for-processing
 ```
 
 (No extra dependencies required.)

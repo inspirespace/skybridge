@@ -39,6 +39,11 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Added a verify-only mode to re-resolve FlySto log IDs and update the import report, plus timestamped logging with per-flight durations.
 - Crew creation now tolerates already-existing crew entries (handles duplicate errors by re-checking the crew list).
 - FlySto log annotations updates use `PUT /api/log-annotations/{logIdString}` (write-only) without merging existing tags.
+- FlySto log resolution now caches by filename within a run to avoid repeated 85s polling between aircraft/crew/metadata assignment steps.
+- Assignments now resolve the FlySto log once per flight and reuse the log id/signature for aircraft, crew, and metadata, avoiding extra polling.
+- Import reports now include a pending count and FlySto processing queue size to explain empty UI while logs are still being ingested.
+- Added a wait-for-processing option to block until FlySto ingestion drains, then verify reports and reconcile aircraft assignments from resolved signatures.
+- Added crew reconciliation from import reports (or review metadata) so crew can be applied after FlySto ingestion.
 
 ## Required API Details
 These are needed to complete the adapters:

@@ -92,3 +92,73 @@ def test_ensure_crew_members_tolerates_existing():
     client = DummyFlyStoCrew()
     client._ensure_crew_members(["Alex"])
     assert client.requested_names == ["Alex"]
+
+
+def test_resolve_log_cached_across_assignments():
+    class DummyFlyStoCached(FlyStoClient):
+        def __init__(self):
+            super().__init__(api_key="", base_url="https://example.test")
+            self.resolve_calls = 0
+            self.assigned: list[tuple[list[str], list[str], list[str]]] = []
+
+        def _ensure_session(self, session):
+            return None
+
+        def _resolve_log_for_file_uncached(self, filename: str, retries: int = 8, delay_seconds: float = 3.0):
+            self.resolve_calls += 1
+            return "log-1", "sig", "GenericGpx"
+
+        def _ensure_crew_members(self, names):
+            return None
+
+        def _list_crew_roles(self):
+            return [{"id": "role-1", "name": "Pilot"}]
+
+        def assign_aircraft(self, aircraft_id: str, log_format_id: str = "GenericGpx", system_id: str | None = None):
+            return None
+
+        def _assign_crew(self, log_ids: list[str], names: list[str], roles: list[str]) -> None:
+            self.assigned.append((log_ids, names, roles))
+
+    client = DummyFlyStoCached()
+    client.assign_aircraft_for_file("A1.gpx", "tail-1")
+    client.assign_crew_for_file(
+        "A1.gpx",
+        [{"name": "Alex", "role": "Pilot", "is_pic": True}],
+    )
+
+    assert client.resolve_calls == 1
+    assert client.assigned == [(["log-1"], ["Alex"], ["role-1"])]
+
+
+def test_assign_crew_for_log_id_skips_resolution():
+    class DummyFlyStoNoResolve(FlyStoClient):
+        def __init__(self):
+            super().__init__(api_key="", base_url="https://example.test")
+            self.resolve_calls = 0
+            self.assigned: list[tuple[list[str], list[str], list[str]]] = []
+
+        def _ensure_session(self, session):
+            return None
+
+        def _resolve_log_for_file_uncached(self, filename: str, retries: int = 8, delay_seconds: float = 3.0):
+            self.resolve_calls += 1
+            return "log-1", "sig", "GenericGpx"
+
+        def _ensure_crew_members(self, names):
+            return None
+
+        def _list_crew_roles(self):
+            return [{"id": "role-1", "name": "Pilot"}]
+
+        def _assign_crew(self, log_ids: list[str], names: list[str], roles: list[str]) -> None:
+            self.assigned.append((log_ids, names, roles))
+
+    client = DummyFlyStoNoResolve()
+    client.assign_crew_for_log_id(
+        "log-9",
+        [{"name": "Alex", "role": "Pilot", "is_pic": True}],
+    )
+
+    assert client.resolve_calls == 0
+    assert client.assigned == [(["log-9"], ["Alex"], ["role-1"])]

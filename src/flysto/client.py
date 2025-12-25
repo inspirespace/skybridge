@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 import json
 import re
@@ -32,6 +32,9 @@ class FlyStoClient:
     min_request_interval: float = 0.5
     max_request_retries: int = 3
     _last_request_at: float | None = None
+    log_cache: dict[str, tuple[str | None, str | None, str | None]] = field(
+        default_factory=dict
+    )
 
     def prepare(self) -> bool:
         session = requests.Session()
@@ -233,6 +236,24 @@ class FlyStoClient:
         retries: int = 8,
         delay_seconds: float = 3.0,
     ) -> tuple[str | None, str | None, str | None]:
+        cached = self.log_cache.get(filename)
+        if cached is not None:
+            return cached
+        log_id, signature, log_format = self._resolve_log_for_file_uncached(
+            filename,
+            retries=retries,
+            delay_seconds=delay_seconds,
+        )
+        if log_id or signature or log_format:
+            self.log_cache[filename] = (log_id, signature, log_format)
+        return log_id, signature, log_format
+
+    def _resolve_log_for_file_uncached(
+        self,
+        filename: str,
+        retries: int = 8,
+        delay_seconds: float = 3.0,
+    ) -> tuple[str | None, str | None, str | None]:
         session = requests.Session()
         self._ensure_session(session)
         keys = "57,tf,ec,hq,86,b2,lb,8q,p2,85,bl,hk,4n,ee,yu,1y,t3,ng,ho,hq,x9,g3,6n,hq,0s,83,6h,am"
@@ -326,6 +347,20 @@ class FlyStoClient:
         log_format_id: str = "GenericGpx",
     ) -> None:
         log_id, signature, resolved_format = self.resolve_log_for_file(filename)
+        self.assign_aircraft_for_signature(
+            aircraft_id=aircraft_id,
+            signature=signature,
+            log_format_id=log_format_id,
+            resolved_format=resolved_format,
+        )
+
+    def assign_aircraft_for_signature(
+        self,
+        aircraft_id: str,
+        signature: str | None,
+        log_format_id: str = "GenericGpx",
+        resolved_format: str | None = None,
+    ) -> None:
         if not signature:
             return
         effective_format = resolved_format or log_format_id
@@ -335,6 +370,9 @@ class FlyStoClient:
         if not crew:
             return
         log_id, _signature, _format = self.resolve_log_for_file(filename)
+        self.assign_crew_for_log_id(log_id, crew)
+
+    def assign_crew_for_log_id(self, log_id: str | None, crew: list[dict[str, Any]]) -> None:
         if not log_id:
             return
         names: list[str] = []
@@ -367,6 +405,14 @@ class FlyStoClient:
         if not remarks and not tags:
             return
         log_id, _signature, _format = self.resolve_log_for_file(filename)
+        self.assign_metadata_for_log_id(log_id, remarks=remarks, tags=tags)
+
+    def assign_metadata_for_log_id(
+        self,
+        log_id: str | None,
+        remarks: str | None = None,
+        tags: list[str] | None = None,
+    ) -> None:
         if not log_id:
             return
         merged_tags = _normalize_tag_list(tags)
@@ -568,6 +614,27 @@ class FlyStoClient:
         if isinstance(name, str):
             name = name.strip()
         return role_id, name if isinstance(name, str) else None
+
+    def log_files_to_process(self) -> int | None:
+        session = requests.Session()
+        self._ensure_session(session)
+        response = self._request(
+            session,
+            "get",
+            self.base_url.rstrip("/") + "/api/log-files-to-process",
+            timeout=60,
+        )
+        decoded = _decode_flysto_payload(response.text)
+        if isinstance(decoded, str):
+            try:
+                decoded = json.loads(decoded)
+            except json.JSONDecodeError:
+                return None
+        if isinstance(decoded, dict):
+            count = decoded.get("nFiles")
+            if isinstance(count, int):
+                return count
+        return None
 
     def _ensure_session(self, session: requests.Session) -> None:
         if self.session_cookie:

@@ -655,6 +655,7 @@ def migrate_flights(
                     started_at=started_at,
                     remarks=remarks,
                     tags=tags,
+                    crew=crew,
                     flysto=flysto if not dry_run else None,
                 )
             )
@@ -677,6 +678,16 @@ def migrate_flights(
                 )
             flysto.assign_aircraft(str(aircraft.get("id")), log_format_id="GenericGpx", system_id=None)
 
+    processing_queue = None
+    if not dry_run:
+        try:
+            processing_queue = flysto.log_files_to_process()
+        except Exception:
+            processing_queue = None
+
+    if progress and processing_queue is not None:
+        progress("flysto_processing_queue", {"n_files": processing_queue})
+
     if report_path:
         _write_import_report(
             report_path=report_path,
@@ -687,6 +698,7 @@ def migrate_flights(
                 failed=failed,
             ),
             items=report_items,
+            processing_queue=processing_queue,
         )
 
     return results, MigrationStats(
@@ -723,34 +735,44 @@ def _migrate_single(
         flysto.upload_flight(detail, dry_run=dry_run)
         if progress:
             progress("flysto_upload_done", {"flight_id": detail.id})
-        if not dry_run and aircraft and aircraft.get("id") and detail.file_path:
+        resolved_log_id = None
+        resolved_signature = None
+        resolved_format = None
+        if not dry_run and detail.file_path:
             filename = Path(detail.file_path).name
+            resolved_log_id, resolved_signature, resolved_format = flysto.resolve_log_for_file(
+                filename
+            )
+        if not dry_run and aircraft and aircraft.get("id"):
             if progress:
                 progress(
                     "flysto_assign_aircraft_file_start",
                     {"flight_id": detail.id, "aircraft_id": aircraft.get("id")},
                 )
-            flysto.assign_aircraft_for_file(filename, str(aircraft.get("id")))
+            flysto.assign_aircraft_for_signature(
+                aircraft_id=str(aircraft.get("id")),
+                signature=resolved_signature,
+                log_format_id="GenericGpx",
+                resolved_format=resolved_format,
+            )
             if progress:
                 progress(
                     "flysto_assign_aircraft_file_done",
                     {"flight_id": detail.id, "aircraft_id": aircraft.get("id")},
                 )
-        if not dry_run and crew and detail.file_path:
-            filename = Path(detail.file_path).name
+        if not dry_run and crew:
             if progress:
                 progress(
                     "flysto_assign_crew_start",
                     {"flight_id": detail.id, "crew_count": len(crew)},
                 )
-            flysto.assign_crew_for_file(filename, crew)
+            flysto.assign_crew_for_log_id(resolved_log_id, crew)
             if progress:
                 progress(
                     "flysto_assign_crew_done",
                     {"flight_id": detail.id, "crew_count": len(crew)},
                 )
-        if not dry_run and detail.file_path:
-            filename = Path(detail.file_path).name
+        if not dry_run:
             if progress:
                 progress(
                     "flysto_assign_metadata_start",
@@ -760,7 +782,11 @@ def _migrate_single(
                         "tag_count": len(tags or []),
                     },
                 )
-            flysto.assign_metadata_for_file(filename, remarks=remarks, tags=tags)
+            flysto.assign_metadata_for_log_id(
+                resolved_log_id,
+                remarks=remarks,
+                tags=tags,
+            )
             if progress:
                 progress(
                     "flysto_assign_metadata_done",
@@ -832,6 +858,7 @@ def _build_report_item(
     started_at: datetime | None,
     remarks: str | None,
     tags: list[str] | None,
+    crew: list[dict] | None,
     flysto: FlyStoClient | None,
 ) -> dict:
     log_id = None
@@ -855,6 +882,7 @@ def _build_report_item(
         "file_path": detail.file_path,
         "remarks": remarks,
         "tags": tags or [],
+        "crew": crew or [],
         "flysto_log_id": log_id,
         "flysto_signature": signature,
         "flysto_format": log_format,
@@ -866,6 +894,7 @@ def _write_import_report(
     review_id: str | None,
     stats: MigrationStats,
     items: list[dict],
+    processing_queue: int | None = None,
 ) -> None:
     report_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -874,8 +903,11 @@ def _write_import_report(
         "attempted": stats.attempted,
         "succeeded": stats.succeeded,
         "failed": stats.failed,
+        "pending": sum(1 for item in items if not item.get("flysto_log_id")),
         "items": items,
     }
+    if processing_queue is not None:
+        payload["flysto_processing_queue"] = processing_queue
     report_path.write_text(json.dumps(payload, indent=2))
 
 
@@ -905,6 +937,13 @@ def verify_import_report(report_path: Path, flysto: FlyStoClient) -> dict[str, i
         else:
             missing += 1
     payload["verified_at"] = datetime.utcnow().isoformat() + "Z"
+    payload["pending"] = sum(1 for item in items if not item.get("flysto_log_id"))
+    try:
+        processing_queue = flysto.log_files_to_process()
+    except Exception:
+        processing_queue = None
+    if processing_queue is not None:
+        payload["flysto_processing_queue"] = processing_queue
     payload["verification"] = {
         "attempted": total,
         "resolved": resolved,
@@ -912,3 +951,80 @@ def verify_import_report(report_path: Path, flysto: FlyStoClient) -> dict[str, i
     }
     report_path.write_text(json.dumps(payload, indent=2))
     return payload["verification"]
+
+
+def reconcile_aircraft_from_report(report_path: Path, flysto: FlyStoClient) -> int:
+    payload = json.loads(report_path.read_text())
+    items = payload.get("items", [])
+    updated = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        tail_number = item.get("tail_number")
+        signature = item.get("flysto_signature")
+        log_format = item.get("flysto_format") or "GenericGpx"
+        if not tail_number or not signature:
+            continue
+        aircraft = flysto.ensure_aircraft(tail_number, item.get("aircraft_type"))
+        if not aircraft or not aircraft.get("id"):
+            continue
+        flysto.assign_aircraft_for_signature(
+            aircraft_id=str(aircraft.get("id")),
+            signature=signature,
+            log_format_id="GenericGpx",
+            resolved_format=log_format,
+        )
+        updated += 1
+    payload["aircraft_reconciled_at"] = datetime.utcnow().isoformat() + "Z"
+    payload["aircraft_reconciled"] = updated
+    report_path.write_text(json.dumps(payload, indent=2))
+    return updated
+
+
+def reconcile_crew_from_report(
+    report_path: Path,
+    flysto: FlyStoClient,
+    review_path: Path | None = None,
+    cloudahoy: CloudAhoyClient | None = None,
+) -> int:
+    payload = json.loads(report_path.read_text())
+    items = payload.get("items", [])
+    review_metadata: dict[str, dict] = {}
+    if review_path and review_path.exists():
+        review = json.loads(review_path.read_text())
+        for entry in review.get("items", []):
+            if not isinstance(entry, dict):
+                continue
+            flight_id = entry.get("flight_id")
+            metadata = entry.get("metadata")
+            if isinstance(flight_id, str) and isinstance(metadata, dict):
+                review_metadata[flight_id] = metadata
+    updated = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        log_id = item.get("flysto_log_id")
+        if not log_id:
+            continue
+        crew = item.get("crew")
+        if not isinstance(crew, list) or not crew:
+            metadata = review_metadata.get(item.get("flight_id"))
+            if isinstance(metadata, dict):
+                crew = _extract_crew_assignments(metadata)
+        if not crew and cloudahoy:
+            try:
+                detail = cloudahoy.fetch_flight(str(item.get("flight_id")))
+                metadata = _extract_metadata(detail.raw_payload)
+                if isinstance(metadata, dict):
+                    crew = _extract_crew_assignments(metadata)
+            except Exception:
+                crew = None
+        if not crew:
+            continue
+        item["crew"] = crew
+        flysto.assign_crew_for_log_id(log_id, crew)
+        updated += 1
+    payload["crew_reconciled_at"] = datetime.utcnow().isoformat() + "Z"
+    payload["crew_reconciled"] = updated
+    report_path.write_text(json.dumps(payload, indent=2))
+    return updated

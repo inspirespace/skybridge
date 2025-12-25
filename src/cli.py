@@ -10,7 +10,13 @@ from src.cloudahoy.client import CloudAhoyClient
 from src.config import ConfigError, load_config
 from src.discovery import DiscoveryConfig, run_discovery
 from src.flysto.client import FlyStoClient
-from src.migration import migrate_flights, prepare_review, verify_import_report
+from src.migration import (
+    migrate_flights,
+    prepare_review,
+    reconcile_aircraft_from_report,
+    reconcile_crew_from_report,
+    verify_import_report,
+)
 from src.state import MigrationState
 from src.web.cloudahoy import CloudAhoyWebClient, CloudAhoyWebConfig
 from src.web.flysto import FlyStoWebClient, FlyStoWebConfig
@@ -116,6 +122,28 @@ def build_parser() -> argparse.ArgumentParser:
         "--verify-import-report",
         action="store_true",
         help="Verify an existing import report against FlySto without re-importing",
+    )
+    parser.add_argument(
+        "--reconcile-import-report",
+        action="store_true",
+        help="Reconcile crew/aircraft for an existing import report without re-importing",
+    )
+    parser.add_argument(
+        "--wait-for-processing",
+        action="store_true",
+        help="Wait for FlySto ingestion to drain, verify, and reconcile aircraft assignments",
+    )
+    parser.add_argument(
+        "--processing-interval",
+        type=float,
+        default=20.0,
+        help="Seconds between FlySto processing queue checks (default: 20)",
+    )
+    parser.add_argument(
+        "--processing-timeout",
+        type=float,
+        default=3600.0,
+        help="Max seconds to wait for FlySto processing queue (default: 3600)",
     )
     return parser
 
@@ -274,6 +302,9 @@ def run(argv: list[str]) -> int:
                 file=sys.stderr,
             )
 
+    def _stamp() -> str:
+        return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
     if args.verify_import_report:
         if not Path(args.import_report).exists():
             print(f"Import report not found: {args.import_report}", file=sys.stderr)
@@ -292,6 +323,72 @@ def run(argv: list[str]) -> int:
                 resolved=summary.get("resolved", 0),
                 missing=summary.get("missing", 0),
             ),
+            flush=True,
+        )
+        return 0 if summary.get("missing", 0) == 0 else 1
+
+    if args.reconcile_import_report:
+        report_path = Path(args.import_report)
+        if not report_path.exists():
+            print(f"Import report not found: {args.import_report}", file=sys.stderr)
+            return 2
+        if not flysto.prepare():
+            print(
+                "FlySto API not available. Verify credentials or set "
+                "FLYSTO_BASE_URL/FLYSTO_SESSION_COOKIE.",
+                file=sys.stderr,
+            )
+            return 2
+        if args.wait_for_processing:
+            start_wait = time.monotonic()
+            while True:
+                n_files = flysto.log_files_to_process()
+                if n_files is None:
+                    print(
+                        f"{_stamp()} FlySto processing queue unknown",
+                        flush=True,
+                    )
+                    break
+                print(
+                    f"{_stamp()} FlySto processing queue {n_files}",
+                    flush=True,
+                )
+                if n_files <= 0:
+                    break
+                if time.monotonic() - start_wait > args.processing_timeout:
+                    print(
+                        f"{_stamp()} FlySto processing wait timed out after {args.processing_timeout:.0f}s",
+                        flush=True,
+                    )
+                    break
+                time.sleep(args.processing_interval)
+
+        summary = verify_import_report(report_path, flysto)
+        print(
+            "Verify summary: attempted={attempted} resolved={resolved} missing={missing}".format(
+                attempted=summary.get("attempted", 0),
+                resolved=summary.get("resolved", 0),
+                missing=summary.get("missing", 0),
+            ),
+            flush=True,
+        )
+        review_path = Path(args.review_path) if args.review_path else None
+        cloudahoy_for_reconcile = (
+            cloudahoy_client if isinstance(cloudahoy_client, CloudAhoyClient) else None
+        )
+        reconciled_crew = reconcile_crew_from_report(
+            report_path,
+            flysto,
+            review_path,
+            cloudahoy_for_reconcile,
+        )
+        print(
+            f"{_stamp()} FlySto crew reconciled {reconciled_crew}",
+            flush=True,
+        )
+        reconciled = reconcile_aircraft_from_report(report_path, flysto)
+        print(
+            f"{_stamp()} FlySto aircraft reconciled {reconciled}",
             flush=True,
         )
         return 0 if summary.get("missing", 0) == 0 else 1
@@ -344,9 +441,6 @@ def run(argv: list[str]) -> int:
 
     start_times: dict[str, float] = {}
     start_all = time.monotonic()
-
-    def _stamp() -> str:
-        return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     step_times: dict[tuple[str, str], float] = {}
 
@@ -422,6 +516,11 @@ def run(argv: list[str]) -> int:
                 f"{_stamp()} FlySto assign aircraft group {payload.get('tail_number')} -> {payload.get('aircraft_id')}",
                 flush=True,
             )
+        elif event == "flysto_processing_queue":
+            print(
+                f"{_stamp()} FlySto processing queue {payload.get('n_files')}",
+                flush=True,
+            )
         elif event == "end":
             flight_id = payload.get("flight_id")
             status = payload.get("status")
@@ -465,6 +564,65 @@ def run(argv: list[str]) -> int:
     )
     if args.approve_import and not dry_run:
         print(f"Import report written to {args.import_report}", flush=True)
+
+    if (
+        args.wait_for_processing
+        and args.approve_import
+        and not dry_run
+        and args.import_report
+    ):
+        start_wait = time.monotonic()
+        while True:
+            n_files = flysto.log_files_to_process()
+            if n_files is None:
+                print(
+                    f"{_stamp()} FlySto processing queue unknown",
+                    flush=True,
+                )
+                break
+            print(
+                f"{_stamp()} FlySto processing queue {n_files}",
+                flush=True,
+            )
+            if n_files <= 0:
+                break
+            if time.monotonic() - start_wait > args.processing_timeout:
+                print(
+                    f"{_stamp()} FlySto processing wait timed out after {args.processing_timeout:.0f}s",
+                    flush=True,
+                )
+                break
+            time.sleep(args.processing_interval)
+
+        report_path = Path(args.import_report)
+        summary = verify_import_report(report_path, flysto)
+        print(
+            "Verify summary: attempted={attempted} resolved={resolved} missing={missing}".format(
+                attempted=summary.get("attempted", 0),
+                resolved=summary.get("resolved", 0),
+                missing=summary.get("missing", 0),
+            ),
+            flush=True,
+        )
+        review_path = Path(args.review_path) if args.review_path else None
+        cloudahoy_for_reconcile = (
+            cloudahoy_client if isinstance(cloudahoy_client, CloudAhoyClient) else None
+        )
+        reconciled_crew = reconcile_crew_from_report(
+            report_path,
+            flysto,
+            review_path,
+            cloudahoy_for_reconcile,
+        )
+        print(
+            f"{_stamp()} FlySto crew reconciled {reconciled_crew}",
+            flush=True,
+        )
+        reconciled = reconcile_aircraft_from_report(report_path, flysto)
+        print(
+            f"{_stamp()} FlySto aircraft reconciled {reconciled}",
+            flush=True,
+        )
     return 0 if stats.failed == 0 else 1
 
 
