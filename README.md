@@ -125,6 +125,8 @@ You can also run the guided CLI with:
 ./cloudahoy2flysto
 ```
 
+The wrapper will auto-load `.env` from the repo root if present (or use `ENV_FILE`).
+
 Install the guided command globally (default `/usr/local/bin`):
 
 ```sh
