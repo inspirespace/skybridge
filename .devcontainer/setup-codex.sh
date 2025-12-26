@@ -26,8 +26,19 @@ if [[ ! -x "${CODEX_BIN}" ]]; then
 
   if command -v npm >/dev/null 2>&1; then
     mkdir -p /home/vscode/.npm-global
-    npm config set prefix /home/vscode/.npm-global
-    npm i -g @openai/codex || true
-    npm config delete prefix >/dev/null 2>&1 || true
+    NPM_CONFIG_PREFIX="/home/vscode/.npm-global" npm i -g @openai/codex || true
+  fi
+fi
+
+# Clear any persisted prefix that would fight with nvm.
+if [[ -f "${HOME}/.npmrc" ]]; then
+  if grep -q '^prefix=' "${HOME}/.npmrc"; then
+    tmpfile=$(mktemp)
+    grep -v '^prefix=' "${HOME}/.npmrc" > "${tmpfile}" || true
+    if [[ -s "${tmpfile}" ]]; then
+      mv "${tmpfile}" "${HOME}/.npmrc"
+    else
+      rm -f "${HOME}/.npmrc"
+    fi
   fi
 fi
