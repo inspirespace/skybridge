@@ -16,27 +16,16 @@ if [[ ! -f "${HIST_FILE}" ]]; then
 fi
 
 ZSHRC="${HOME}/.zshrc"
-LOCAL_RC="${HOME}/.zshrc.local"
-
-if [[ ! -f "${LOCAL_RC}" ]]; then
-  cat <<'EOF' > "${LOCAL_RC}"
-export HISTFILE=/var/devcontainer/history/.zsh_history
-export HISTSIZE=10000
-export SAVEHIST=10000
-setopt append_history
-setopt inc_append_history
-setopt share_history
-setopt hist_ignore_dups
-setopt hist_reduce_blanks
-EOF
-else
-  if ! grep -q "HISTFILE=/var/devcontainer/history/.zsh_history" "${LOCAL_RC}"; then
-    printf '\nexport HISTFILE=/var/devcontainer/history/.zsh_history\n' >> "${LOCAL_RC}"
-  fi
-fi
+HIST_BLOCK_START="# skybridge-history-start"
+HIST_BLOCK_END="# skybridge-history-end"
+HIST_BLOCK="${HIST_BLOCK_START}\nexport HISTFILE=/var/devcontainer/history/.zsh_history\nexport HISTSIZE=10000\nexport SAVEHIST=10000\nsetopt append_history\nsetopt inc_append_history\nsetopt share_history\nsetopt hist_ignore_dups\nsetopt hist_reduce_blanks\n${HIST_BLOCK_END}"
 
 if [[ -f "${ZSHRC}" ]]; then
-  if ! grep -q "source ${LOCAL_RC}" "${ZSHRC}"; then
-    printf '\nsource %s\n' "${LOCAL_RC}" >> "${ZSHRC}"
+  if ! grep -q "${HIST_BLOCK_START}" "${ZSHRC}"; then
+    printf '\n%b\n' "${HIST_BLOCK}" >> "${ZSHRC}"
   fi
+else
+  printf '%b\n' "${HIST_BLOCK}" > "${ZSHRC}"
 fi
+
+chmod 600 "${HIST_FILE}" || true
