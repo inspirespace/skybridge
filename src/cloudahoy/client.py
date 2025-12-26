@@ -199,8 +199,26 @@ def _infer_point_timing(flt: dict, points_count: int) -> tuple[datetime | None, 
     meta = flt.get("Meta") if isinstance(flt, dict) else None
     if not isinstance(meta, dict):
         return None, None
-    start = meta.get("GMT_start")
     start_time = None
+    summary = meta.get("summary") if isinstance(meta.get("summary"), dict) else None
+    air = summary.get("air") if isinstance(summary, dict) else None
+    air_start = air.get("start") if isinstance(air, dict) else None
+    air_end = air.get("end") if isinstance(air, dict) else None
+    if air_start is not None and air_end is not None:
+        try:
+            air_start_ts = float(air_start)
+            air_end_ts = float(air_end)
+            if air_end_ts > air_start_ts:
+                start_time = datetime.fromtimestamp(air_start_ts, tz=timezone.utc)
+                duration_seconds = air_end_ts - air_start_ts
+                if points_count > 1:
+                    step = duration_seconds / (points_count - 1)
+                    if step > 0 and step <= 30:
+                        return start_time, step
+        except (TypeError, ValueError):
+            start_time = None
+
+    start = meta.get("GMT_start")
     try:
         if start is not None:
             start_time = datetime.fromtimestamp(float(start), tz=timezone.utc)

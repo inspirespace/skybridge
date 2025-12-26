@@ -71,6 +71,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Limit number of flights to migrate",
     )
     parser.add_argument(
+        "--start-date",
+        default=None,
+        help="Filter flights on/after this UTC date or datetime (YYYY-MM-DD or ISO8601)",
+    )
+    parser.add_argument(
+        "--end-date",
+        default=None,
+        help="Filter flights on/before this UTC date or datetime (YYYY-MM-DD or ISO8601)",
+    )
+    parser.add_argument(
         "--state-path",
         default=None,
         help="Path to SQLite state database (default: data/migration.db or RUN_ID-based path)",
@@ -194,6 +204,44 @@ def _summaries_from_review(path: Path) -> list[FlightSummary]:
             )
         )
     return summaries
+
+
+def _parse_date_bound(value: str, is_end: bool) -> datetime:
+    raw = value.strip()
+    normalized = raw.replace("Z", "+00:00")
+    if "T" not in normalized and len(normalized) == 10:
+        dt = datetime.fromisoformat(normalized)
+        if is_end:
+            dt = dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+        else:
+            dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    else:
+        dt = datetime.fromisoformat(normalized)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def _filter_summaries_by_date(
+    summaries: list[FlightSummary],
+    start_date: datetime | None,
+    end_date: datetime | None,
+) -> list[FlightSummary]:
+    if not start_date and not end_date:
+        return summaries
+    filtered: list[FlightSummary] = []
+    for summary in summaries:
+        started_at = summary.started_at
+        if started_at is None:
+            continue
+        if started_at.tzinfo is None:
+            started_at = started_at.replace(tzinfo=timezone.utc)
+        if start_date and started_at < start_date:
+            continue
+        if end_date and started_at > end_date:
+            continue
+        filtered.append(summary)
+    return filtered
 
 
 def _apply_run_paths(args: argparse.Namespace, run_id: str, runs_dir: str) -> tuple[Path, str]:
@@ -323,6 +371,17 @@ def run(argv: list[str]) -> int:
     if mode == "auto":
         mode = "api"
 
+    start_date = (
+        _parse_date_bound(args.start_date, is_end=False)
+        if args.start_date
+        else None
+    )
+    end_date = (
+        _parse_date_bound(args.end_date, is_end=True)
+        if args.end_date
+        else None
+    )
+
     if mode in {"api", "hybrid"} and not config.flysto_session_cookie:
         missing = []
         if not config.flysto_email:
@@ -432,6 +491,15 @@ def run(argv: list[str]) -> int:
                 f"Warning: web flight listing failed, falling back to API: {exc}",
                 file=sys.stderr,
             )
+    if (start_date or end_date) and summaries is None and isinstance(
+        cloudahoy_client, CloudAhoyClient
+    ):
+        summaries = cloudahoy_client.list_flights(limit=max_flights)
+
+    if summaries is not None:
+        summaries = _filter_summaries_by_date(summaries, start_date, end_date)
+        if max_flights:
+            summaries = summaries[:max_flights]
 
     def _stamp() -> str:
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

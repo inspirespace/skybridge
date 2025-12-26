@@ -75,6 +75,7 @@ Note: `CLOUD_AHOY_API_KEY` and `FLYSTO_API_KEY` are not used yet.
 CLI options:
 - `--state-path` (default `data/migration.db`)
 - `--force` to re-upload already migrated flights
+- `--start-date` / `--end-date` to import a specific UTC date or range (YYYY-MM-DD or ISO8601)
 - `--mode` to select `web` or `api`
 - `--headful` to run browser non-headless
 - `--cloudahoy-state-path` / `--flysto-state-path` for browser storage state

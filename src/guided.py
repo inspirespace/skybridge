@@ -45,6 +45,8 @@ class GuidedOptions:
     verify_after_import: bool
     reconcile_after_import: bool
     run_id: str
+    start_date: str | None = None
+    end_date: str | None = None
 
 
 def _timestamp() -> str:
@@ -85,6 +87,44 @@ def _summarize_review(path: Path) -> dict[str, Any]:
         "max_date_iso": max_date.isoformat() if max_date else None,
     }
     return summary
+
+
+def _parse_date_bound(value: str, is_end: bool) -> datetime:
+    raw = value.strip()
+    normalized = raw.replace("Z", "+00:00")
+    if "T" not in normalized and len(normalized) == 10:
+        dt = datetime.fromisoformat(normalized)
+        if is_end:
+            dt = dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+        else:
+            dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    else:
+        dt = datetime.fromisoformat(normalized)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def _filter_summaries_by_date(
+    summaries: list[FlightSummary],
+    start_date: datetime | None,
+    end_date: datetime | None,
+) -> list[FlightSummary]:
+    if not start_date and not end_date:
+        return summaries
+    filtered: list[FlightSummary] = []
+    for summary in summaries:
+        started_at = summary.started_at
+        if started_at is None:
+            continue
+        if started_at.tzinfo is None:
+            started_at = started_at.replace(tzinfo=timezone.utc)
+        if start_date and started_at < start_date:
+            continue
+        if end_date and started_at > end_date:
+            continue
+        filtered.append(summary)
+    return filtered
 
 
 def _render_review_summary(console: Console, summary: dict[str, Any]) -> None:
@@ -130,6 +170,8 @@ def _write_guided_summary(
         "generated_at": _timestamp(),
         "run_id": options.run_id,
         "max_flights": options.max_flights,
+        "start_date": options.start_date,
+        "end_date": options.end_date,
         "force": options.force,
         "wait_for_processing": options.wait_for_processing,
         "verify_after_import": options.verify_after_import,
@@ -149,6 +191,10 @@ def _prompt_guided_options(
     console.print(Panel.fit("Skybridge guided migration", style="bold"))
     max_flights = IntPrompt.ask("Max flights to import", default=default_max)
     force = Confirm.ask("Force reimport existing flights?", default=False)
+    start_date = Prompt.ask("Start date (YYYY-MM-DD, optional)", default="").strip()
+    end_date = Prompt.ask("End date (YYYY-MM-DD, optional)", default="").strip()
+    start_date = start_date or None
+    end_date = end_date or None
     wait_for_processing = True
     verify_after_import = True
     reconcile_after_import = True
@@ -159,6 +205,8 @@ def _prompt_guided_options(
         verify_after_import=verify_after_import,
         reconcile_after_import=reconcile_after_import,
         run_id=run_id,
+        start_date=start_date,
+        end_date=end_date,
     )
 
 
@@ -282,10 +330,27 @@ def run_guided(
 
     console.print(f"Using run dir: {run_dir}")
     console.print("Running review...")
+    if summaries is None:
+        summaries = cloudahoy.list_flights(limit=options.max_flights)
+    if options.start_date or options.end_date:
+        start_date = (
+            _parse_date_bound(options.start_date, is_end=False)
+            if options.start_date
+            else None
+        )
+        end_date = (
+            _parse_date_bound(options.end_date, is_end=True)
+            if options.end_date
+            else None
+        )
+        summaries = _filter_summaries_by_date(summaries, start_date, end_date)
+    if options.max_flights:
+        summaries = summaries[: options.max_flights]
+
     _, review_id = prepare_review(
         cloudahoy=cloudahoy,
         summaries=summaries,
-        max_flights=options.max_flights,
+        max_flights=None,
         state=state,
         force=options.force,
         output_path=review_path,

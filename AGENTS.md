@@ -17,6 +17,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `./scripts/run.sh --approve-import` — writes artifacts under `data/runs/<RUN_ID>/` (review, report, exports, logs, state).
 - `./scripts/run.sh --verify-import-report --import-report data/runs/<RUN_ID>/import_report.json` — verify report entries against FlySto.
 - `python -m src.cli --review` — run locally (requires Python deps).
+- CLI supports `--start-date` / `--end-date` for targeted imports (YYYY-MM-DD or ISO8601).
 - `pytest` — run tests (if installed).
 Note: default `MODE=auto` uses API only and does not fall back to web automation.
 
