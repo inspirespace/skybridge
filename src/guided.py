@@ -149,24 +149,16 @@ def _prompt_guided_options(
     console.print(Panel.fit("Skybridge guided migration", style="bold"))
     max_flights = IntPrompt.ask("Max flights to import", default=default_max)
     force = Confirm.ask("Force reimport existing flights?", default=False)
-    wait_for_processing = Confirm.ask(
-        "Wait for FlySto processing and verify after import?",
-        default=True,
-    )
-    verify_after_import = wait_for_processing or Confirm.ask(
-        "Verify import report after upload?", default=True
-    )
-    reconcile_after_import = Confirm.ask(
-        "Reconcile crew/aircraft after verification?", default=True
-    )
-    run_id_prompt = Prompt.ask("Run ID", default=run_id)
+    wait_for_processing = True
+    verify_after_import = True
+    reconcile_after_import = True
     return GuidedOptions(
         max_flights=max_flights,
         force=force,
         wait_for_processing=wait_for_processing,
         verify_after_import=verify_after_import,
         reconcile_after_import=reconcile_after_import,
-        run_id=run_id_prompt.strip() or run_id,
+        run_id=run_id,
     )
 
 

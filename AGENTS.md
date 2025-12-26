@@ -19,6 +19,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `python -m src.cli --review` — run locally (requires Python deps).
 - `python -m src.cli --guided` — run the step-by-step guided migration flow.
 - `./cloudahoy2flysto` — friendly guided CLI entrypoint (wrapper for `python -m src.cli --guided`).
+- Guided flow uses defaults for wait/verify/reconcile and run-id (no prompts).
 - `./cloudahoy2flysto` auto-loads `.env` from the repo root (override with `ENV_FILE`).
 - `make install` / `make uninstall` — install/remove the `cloudahoy2flysto` command (default `/usr/local/bin`, override with `PREFIX`).
 - Devcontainer: use **Dev Containers: Reopen in Container** in VS Code to run `pytest` or `python -m src.cli --review` with dependencies preinstalled; includes Codex CLI + VS Code extension and a zsh/starship shell (requires Docker on the host for the socket mount).

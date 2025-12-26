@@ -60,6 +60,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Planned: add a guided, modern CLI workflow (`--guided`) that orchestrates review → import → verify with prompts and rich progress output, storing run config in `data/runs/<RUN_ID>/guided.json`.
 - Implemented guided CLI with preflight checks, prompts, rich progress output, and stored run summaries (`guided.json`).
 - Added `./cloudahoy2flysto` wrapper as the preferred guided CLI entrypoint.
+- Guided CLI now auto-enables wait/verify/reconcile and uses auto run-id (no prompts for those).
 - Added `make install` / `make uninstall` targets to install the wrapper globally (default `/usr/local/bin`, override with `PREFIX`).
 - Devcontainer now uses pip cache mounts for faster rebuilds, persists shell history in a named volume, and fixes volume permissions on start.
 - Added starship config to avoid slow prompt scans and VS Code pytest discovery settings.

@@ -127,6 +127,10 @@ You can also run the guided CLI with:
 
 The wrapper will auto-load `.env` from the repo root if present (or use `ENV_FILE`).
 
+Guided flow defaults:
+- Wait for FlySto processing, verify, and reconcile are always enabled.
+- Run ID is auto-generated or taken from `RUN_ID`.
+
 Devcontainer notes:
 - Shell history is persisted in a named Docker volume (`/var/devcontainer/history`) so it won’t show up in git.
 - The devcontainer build uses a pip cache mount to speed up rebuilds.
