@@ -10,6 +10,15 @@ if command -v id >/dev/null 2>&1; then
   chmod 700 "${CODEX_DIR}" || true
 fi
 
+# If the volume is still owned by root, try sudo.
+if [[ ! -w "${CODEX_DIR}" ]] && command -v sudo >/dev/null 2>&1; then
+  sudo chown -R "$(id -u):$(id -g)" "${CODEX_DIR}" || true
+  sudo chmod -R u+rwX "${CODEX_DIR}" || true
+  sudo chmod 700 "${CODEX_DIR}" || true
+fi
+
+touch "${CODEX_DIR}/.touch" 2>/dev/null || true
+
 CODEX_BIN="/home/vscode/.npm-global/bin/codex"
 if [[ ! -x "${CODEX_BIN}" ]]; then
   if command -v npm >/dev/null 2>&1; then
