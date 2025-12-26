@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -149,7 +149,7 @@ class CloudAhoyWebClient:
             summaries.append(
                 FlightSummary(
                     id=str(item.get("id")),
-                    started_at=datetime.utcnow(),
+                    started_at=datetime.now(timezone.utc),
                     duration_seconds=None,
                     aircraft_type=None,
                     tail_number=None,
@@ -219,7 +219,7 @@ class CloudAhoyWebClient:
         download = download_info.value
         filename = download.suggested_filename
         if not filename:
-            filename = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.export"
+            filename = f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}.export"
         destination = self._config.downloads_dir / filename
         download.save_as(destination)
         return destination
@@ -240,10 +240,10 @@ def _extract_flight_items(data: Any) -> list[FlightSummary]:
             started_at = (
                 datetime.fromisoformat(started_at_raw)
                 if isinstance(started_at_raw, str)
-                else datetime.utcnow()
+                else datetime.now(timezone.utc)
             )
         except ValueError:
-            started_at = datetime.utcnow()
+            started_at = datetime.now(timezone.utc)
         flights.append(
             FlightSummary(
                 id=str(flight_id),

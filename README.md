@@ -31,6 +31,8 @@ Or use the wrapper scripts:
 ./scripts/run.sh --approve-import --review-id <id> --wait-for-processing
 ./scripts/run.sh --reconcile-import-report --wait-for-processing
 ./scripts/verify-run.sh <RUN_ID>
+python -m src.cli --guided
+./cloudahoy2flysto
 ```
 
 ## Configuration
@@ -73,6 +75,7 @@ Note: `CLOUD_AHOY_API_KEY` and `FLYSTO_API_KEY` are not used yet.
 CLI options:
 - `--state-path` (default `data/migration.db`)
 - `--force` to re-upload already migrated flights
+- `--start-date` / `--end-date` to import a specific UTC date or range (YYYY-MM-DD or ISO8601)
 - `--mode` to select `web` or `api`
 - `--headful` to run browser non-headless
 - `--cloudahoy-state-path` / `--flysto-state-path` for browser storage state
@@ -97,7 +100,7 @@ Approved imports require a review ID; `./scripts/run-import.sh` reads it from `d
 See `docs/run-checklist.md` for the step-by-step run procedure and verification steps.
 
 
-Discovery mode will attempt to log in and collect endpoint hints; it writes a sanitized JSON summary to `data/discovery/discovery.json`.
+Discovery mode is only needed when the web apps change or an endpoint breaks; it logs in and records endpoint hints to `data/discovery/discovery.json`.
 
 ## SaaS Roadmap (draft)
 
@@ -106,6 +109,34 @@ Discovery mode will attempt to log in and collect endpoint hints; it writes a sa
 - Phase 3: multi-tenant SaaS with billing (per-flight + bundles), admin dashboard, and audit logs
 
 ## Development
+
+Preferred devcontainer usage without the devcontainer CLI:
+
+```sh
+docker build --target base -t skybridge-dev .
+docker run --rm -it \
+  -v "$PWD":/workspaces/skybridge \
+  -w /workspaces/skybridge \
+  skybridge-dev pytest
+```
+
+Devcontainer notes:
+- Shell history is persisted in a named Docker volume (`/var/devcontainer/history`).
+- Codex login is persisted via a named volume at `/home/vscode/.codex` and port 1455 is forwarded for the callback.
+- Python deps are managed via `uv` (`pyproject.toml` + `uv.lock`), dev deps via `--extra dev`.
+
+Install the guided command globally (default `/usr/local/bin`):
+
+```sh
+make install
+make uninstall
+```
+
+Override the install path:
+
+```sh
+make install PREFIX=$HOME/.local
+```
 
 Local execution without Docker is possible with:
 
@@ -116,13 +147,4 @@ python -m src.cli --approve-import --review-id <id> --wait-for-processing
 python -m src.cli --reconcile-import-report --wait-for-processing
 ```
 
-Install dependencies from `requirements.txt` for local runs, or use the devcontainer for a prebuilt environment.
-
-### Devcontainer
-
-This repo ships a VS Code devcontainer with Playwright + Python deps preinstalled, plus Docker socket access so you can run the existing container workflows without reinstalling everything locally.
-
-Steps:
-- Open the repo in VS Code.
-- Run **Dev Containers: Reopen in Container**.
-- Run `pytest` or `python -m src.cli --review` inside the container as needed.
+Install dependencies with `uv sync --extra dev` for local runs, or use the devcontainer for a prebuilt environment.

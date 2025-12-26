@@ -17,8 +17,10 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `./scripts/run.sh --approve-import` — writes artifacts under `data/runs/<RUN_ID>/` (review, report, exports, logs, state).
 - `./scripts/run.sh --verify-import-report --import-report data/runs/<RUN_ID>/import_report.json` — verify report entries against FlySto.
 - `python -m src.cli --review` — run locally (requires Python deps).
-- Devcontainer: use **Dev Containers: Reopen in Container** in VS Code to run `pytest` or `python -m src.cli --review` with dependencies preinstalled (requires Docker on the host for the socket mount).
+- CLI supports `--start-date` / `--end-date` for targeted imports (YYYY-MM-DD or ISO8601).
 - `pytest` — run tests (if installed).
+- Devcontainer post-start uninstalls GitHub Copilot/Copilot Chat to avoid invalid-extension warnings.
+- Devcontainer installs GitHub CLI via the `github-cli` feature for authenticated GH access.
 Note: default `MODE=auto` uses API only and does not fall back to web automation.
 
 ## Coding Style & Naming Conventions

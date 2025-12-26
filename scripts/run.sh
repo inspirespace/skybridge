@@ -22,7 +22,7 @@ EXPORTS_DIR="${EXPORTS_DIR:-${RUN_DIR}/cloudahoy_exports}"
 STATE_PATH="${STATE_PATH:-${RUN_DIR}/migration.db}"
 LOG_PATH="${LOG_PATH:-${RUN_DIR}/docker.log}"
 
-DOCKER_BUILDKIT=1 docker build -q -t "${IMAGE_NAME}" "${ROOT_DIR}" >/dev/null 2>&1
+DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}" docker build -t "${IMAGE_NAME}" "${ROOT_DIR}"
 
 : > "${LOG_PATH}"
 

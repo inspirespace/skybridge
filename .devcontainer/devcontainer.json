@@ -1,26 +1,89 @@
 {
   "name": "skybridge-dev",
   "build": {
-    "dockerfile": "Dockerfile",
-    "context": ".."
+    "dockerfile": "../Dockerfile",
+    "context": "..",
+    "target": "base"
   },
   "workspaceFolder": "/workspaces/skybridge",
   "mounts": [
-    "source=${localWorkspaceFolder},target=/workspaces/skybridge,type=bind,consistency=cached",
-    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
+    "source=skybridge-shell-history,target=/var/devcontainer/history,type=volume",
+    "source=skybridge-codex,target=/home/vscode/.codex,type=volume"
   ],
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    },
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": true,
+      "installOhMyZsh": true,
+      "upgradePackages": true,
+      "username": "vscode"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers-extra/features/starship:1": {}
+  },
   "customizations": {
     "vscode": {
       "settings": {
-        "python.defaultInterpreterPath": "/usr/local/bin/python"
+        "remote.extensionKind": {
+          "github.copilot": [
+            "ui"
+          ],
+          "github.copilot-chat": [
+            "ui"
+          ]
+        },
+        "python.defaultInterpreterPath": "/opt/venv/bin/python",
+        "python.terminal.activateEnvironment": false,
+        "python.analysis.extraPaths": [
+          "${workspaceFolder}"
+        ],
+        "python.testing.pytestEnabled": true,
+        "python.testing.unittestEnabled": false,
+        "python.testing.pytestArgs": [
+          "tests"
+        ],
+        "python.testing.autoTestDiscoverOnSaveEnabled": true,
+        "python.testing.cwd": "${workspaceFolder}",
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "zsh": {
+            "path": "/usr/bin/zsh"
+          }
+        }
       },
       "extensions": [
+        "openai.chatgpt",
+        "eamodio.gitlens",
         "ms-python.python",
         "ms-python.black-formatter",
         "ms-python.isort",
-        "ms-azuretools.vscode-docker"
+        "ms-azuretools.vscode-docker",
+        "mechatroner.rainbow-csv"
       ]
     }
   },
-  "postCreateCommand": "pip install --no-cache-dir -r requirements.txt"
+  "forwardPorts": [
+    1455
+  ],
+  "portsAttributes": {
+    "1455": {
+      "label": "Codex login"
+    }
+  },
+  "remoteUser": "vscode",
+  "remoteEnv": {
+    "HISTFILE": "/var/devcontainer/history/.zsh_history",
+    "STARSHIP_CONFIG": "/workspaces/skybridge/.devcontainer/starship.toml",
+    "VIRTUAL_ENV": "/opt/venv",
+    "PATH": "/opt/venv/bin:/home/vscode/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "VIRTUAL_ENV_DISABLE_PROMPT": "1"
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postStartCommand": "bash .devcontainer/post-start.sh"
 }

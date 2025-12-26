@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
@@ -32,7 +32,7 @@ class DiscoveryConfig:
 def run_discovery(config: DiscoveryConfig) -> Path:
     config.output_dir.mkdir(parents=True, exist_ok=True)
     results: dict[str, Any] = {
-        "started_at": datetime.utcnow().isoformat(),
+        "started_at": datetime.now(timezone.utc).isoformat(),
         "cloudahoy": discover_cloudahoy(config),
         "flysto": discover_flysto(config),
     }

@@ -1,0 +1,20 @@
+[project]
+name = "skybridge"
+version = "0.1.0"
+description = "Migrate CloudAhoy flights to FlySto"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "playwright==1.57.0",
+  "requests==2.32.5",
+  "rich==14.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==9.0.2",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

@@ -43,7 +43,18 @@
 - CLI now writes logs to `docker.log` directly for each run.
 - Added run checklist and verification script for consistent post-run validation.
 - Added GitHub Actions CI workflow to run pytest on pushes to main and pull requests.
-- CI now installs pytest in the workflow and runs pytest with PYTHONPATH set to the workspace to resolve src imports.
+- CI now uses Python 3.12 and `uv sync --frozen --extra dev` before running pytest.
+- Implemented guided CLI flow with preflight checks, prompts, and rich progress output.
+- Added `cloudahoy2flysto` wrapper script as the primary user-facing guided command.
+- Added Makefile install/uninstall targets for the guided wrapper.
+- Devcontainer improvements: persistent shell history in a named volume, and permission fix on start.
+- Devcontainer updates: starship config to avoid prompt scan timeouts; VS Code pytest discovery settings added.
+- Migrated dependency management to `uv` with `pyproject.toml` and `uv.lock` (dev deps via `--extra dev`).
+- Devcontainer now uses the `base` Dockerfile stage (features handle extra tooling).
+- Devcontainer now points VS Code to `/opt/venv/bin/python` and enables pytest discovery.
+- Devcontainer mounts a named volume for Codex login persistence at `/home/vscode/.codex`.
+- Devcontainer PATH now includes `/home/vscode/.npm-global/bin` for the Codex CLI.
+- CLI now prompts for missing API credentials in-memory when `.env` is absent.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).

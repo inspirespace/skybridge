@@ -1,4 +1,5 @@
 import argparse
+import getpass
 import json
 import os
 import sys
@@ -27,6 +28,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="skybridge",
         description="Migrate CloudAhoy flights to FlySto",
+    )
+    parser.add_argument(
+        "--guided",
+        action="store_true",
+        help="Run an interactive guided migration flow",
     )
     parser.add_argument(
         "--dry-run",
@@ -63,6 +69,16 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help="Limit number of flights to migrate",
+    )
+    parser.add_argument(
+        "--start-date",
+        default=None,
+        help="Filter flights on/after this UTC date or datetime (YYYY-MM-DD or ISO8601)",
+    )
+    parser.add_argument(
+        "--end-date",
+        default=None,
+        help="Filter flights on/before this UTC date or datetime (YYYY-MM-DD or ISO8601)",
     )
     parser.add_argument(
         "--state-path",
@@ -190,13 +206,46 @@ def _summaries_from_review(path: Path) -> list[FlightSummary]:
     return summaries
 
 
-def run(argv: list[str]) -> int:
-    parser = build_parser()
-    args = parser.parse_args(argv)
-    run_id = (os.getenv("RUN_ID") or "").strip()
-    runs_dir = (os.getenv("RUNS_DIR") or "data/runs").strip()
-    log_path = (os.getenv("LOG_PATH") or "").strip()
+def _parse_date_bound(value: str, is_end: bool) -> datetime:
+    raw = value.strip()
+    normalized = raw.replace("Z", "+00:00")
+    if "T" not in normalized and len(normalized) == 10:
+        dt = datetime.fromisoformat(normalized)
+        if is_end:
+            dt = dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+        else:
+            dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
+    else:
+        dt = datetime.fromisoformat(normalized)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
+
+def _filter_summaries_by_date(
+    summaries: list[FlightSummary],
+    start_date: datetime | None,
+    end_date: datetime | None,
+) -> list[FlightSummary]:
+    if not start_date and not end_date:
+        return summaries
+    filtered: list[FlightSummary] = []
+    for summary in summaries:
+        started_at = summary.started_at
+        if started_at is None:
+            continue
+        if started_at.tzinfo is None:
+            started_at = started_at.replace(tzinfo=timezone.utc)
+        if start_date and started_at < start_date:
+            continue
+        if end_date and started_at > end_date:
+            continue
+        filtered.append(summary)
+    return filtered
+
+
+def _apply_run_paths(args: argparse.Namespace, run_id: str, runs_dir: str) -> tuple[Path, str]:
+    log_path = (os.getenv("LOG_PATH") or "").strip()
     if run_id:
         run_dir = Path(runs_dir) / run_id
         run_dir.mkdir(parents=True, exist_ok=True)
@@ -211,6 +260,7 @@ def run(argv: list[str]) -> int:
         if not log_path:
             log_path = str(run_dir / "docker.log")
     else:
+        run_dir = Path(runs_dir)
         if args.review_path is None:
             args.review_path = "data/review.json"
         if args.import_report is None:
@@ -219,40 +269,94 @@ def run(argv: list[str]) -> int:
             args.exports_dir = "data/cloudahoy_exports"
         if args.state_path is None:
             args.state_path = "data/migration.db"
+    return run_dir, log_path
 
-    if log_path:
-        log_file_path = Path(log_path)
-        log_file_path.parent.mkdir(parents=True, exist_ok=True)
-        log_handle = log_file_path.open("a", encoding="utf-8")
 
-        class _Tee:
-            def __init__(self, *streams):
-                self._streams = streams
+def _setup_logging(log_path: str) -> None:
+    if not log_path:
+        return
+    log_file_path = Path(log_path)
+    log_file_path.parent.mkdir(parents=True, exist_ok=True)
+    log_handle = log_file_path.open("a", encoding="utf-8")
 
-            def write(self, data: str) -> int:
-                written = 0
-                for stream in self._streams:
-                    try:
-                        written = stream.write(data)
-                    except Exception:
-                        continue
-                return written
+    class _Tee:
+        def __init__(self, *streams):
+            self._streams = streams
 
-            def flush(self) -> None:
-                for stream in self._streams:
-                    try:
-                        stream.flush()
-                    except Exception:
-                        continue
+        def write(self, data: str) -> int:
+            written = 0
+            for stream in self._streams:
+                try:
+                    written = stream.write(data)
+                except Exception:
+                    continue
+            return written
 
-        sys.stdout = _Tee(sys.stdout, log_handle)
-        sys.stderr = _Tee(sys.stderr, log_handle)
+        def flush(self) -> None:
+            for stream in self._streams:
+                try:
+                    stream.flush()
+                except Exception:
+                    continue
+
+    sys.stdout = _Tee(sys.stdout, log_handle)
+    sys.stderr = _Tee(sys.stderr, log_handle)
+
+
+def _parse_missing_env_vars(error: ConfigError) -> list[str]:
+    prefix = "Missing required env vars: "
+    message = str(error)
+    if not message.startswith(prefix):
+        return []
+    missing = message[len(prefix):]
+    return [name.strip() for name in missing.split(",") if name.strip()]
+
+
+def _prompt_env_var(name: str) -> str:
+    if "PASSWORD" in name:
+        value = getpass.getpass(f"{name}: ")
+    else:
+        value = input(f"{name}: ").strip()
+    return value
+
+
+def _prompt_for_missing_env_vars(missing: list[str]) -> bool:
+    if not missing:
+        return False
+    print("Missing required credentials. Enter them to continue.")
+    for name in missing:
+        value = _prompt_env_var(name)
+        if value:
+            os.environ[name] = value
+    return True
+
+
+def run(argv: list[str]) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    runs_dir = (os.getenv("RUNS_DIR") or "data/runs").strip()
+    run_id = (os.getenv("RUN_ID") or "").strip()
+
+    if args.guided and not run_id:
+        run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+    run_dir, log_path = _apply_run_paths(args, run_id, runs_dir)
+    if not args.guided:
+        _setup_logging(log_path)
 
     try:
         config = load_config()
     except ConfigError as exc:
-        print(f"Config error: {exc}", file=sys.stderr)
-        return 2
+        missing = _parse_missing_env_vars(exc)
+        if missing and _prompt_for_missing_env_vars(missing):
+            try:
+                config = load_config()
+            except ConfigError as exc_retry:
+                print(f"Config error: {exc_retry}", file=sys.stderr)
+                return 2
+        else:
+            print(f"Config error: {exc}", file=sys.stderr)
+            return 2
 
     dry_run = args.dry_run or config.dry_run
     max_flights = args.max_flights or config.max_flights
@@ -266,6 +370,30 @@ def run(argv: list[str]) -> int:
 
     if mode == "auto":
         mode = "api"
+
+    start_date = (
+        _parse_date_bound(args.start_date, is_end=False)
+        if args.start_date
+        else None
+    )
+    end_date = (
+        _parse_date_bound(args.end_date, is_end=True)
+        if args.end_date
+        else None
+    )
+
+    if mode in {"api", "hybrid"} and not config.flysto_session_cookie:
+        missing = []
+        if not config.flysto_email:
+            missing.append("FLYSTO_EMAIL")
+        if not config.flysto_password:
+            missing.append("FLYSTO_PASSWORD")
+        if missing and _prompt_for_missing_env_vars(missing):
+            try:
+                config = load_config()
+            except ConfigError as exc_retry:
+                print(f"Config error: {exc_retry}", file=sys.stderr)
+                return 2
 
     if mode in {"web", "hybrid"}:
         cloudahoy = CloudAhoyWebClient(
@@ -363,9 +491,62 @@ def run(argv: list[str]) -> int:
                 f"Warning: web flight listing failed, falling back to API: {exc}",
                 file=sys.stderr,
             )
+    if (start_date or end_date) and summaries is None and isinstance(
+        cloudahoy_client, CloudAhoyClient
+    ):
+        summaries = cloudahoy_client.list_flights(limit=max_flights)
+
+    if summaries is not None:
+        summaries = _filter_summaries_by_date(summaries, start_date, end_date)
+        if max_flights:
+            summaries = summaries[:max_flights]
 
     def _stamp() -> str:
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    if args.guided:
+        try:
+            from rich.console import Console
+        except Exception as exc:
+            print(
+                f"Guided mode requires the 'rich' package. {exc}",
+                file=sys.stderr,
+            )
+            print("Install dependencies or use the devcontainer image.", file=sys.stderr)
+            return 2
+        try:
+            from src.guided import run_guided
+        except Exception as exc:
+            print(f"Guided mode failed to load: {exc}", file=sys.stderr)
+            return 2
+
+        console = Console()
+        if not isinstance(cloudahoy_client, CloudAhoyClient) or not isinstance(
+            flysto, FlyStoClient
+        ):
+            print("Guided mode requires API clients (mode=api).", file=sys.stderr)
+            return 2
+        try:
+            return run_guided(
+                console=console,
+                cloudahoy=cloudahoy_client,
+                flysto=flysto,
+                state=state,
+                run_dir=Path(runs_dir) / run_id if run_id else Path(runs_dir),
+                review_path=Path(args.review_path),
+                report_path=Path(args.import_report),
+                exports_dir=Path(args.exports_dir),
+                summaries=summaries,
+                max_flights=max_flights,
+                force=args.force,
+                processing_interval=args.processing_interval,
+                processing_timeout=args.processing_timeout,
+                run_id=run_id,
+                setup_logging=_setup_logging,
+            )
+        except KeyboardInterrupt:
+            print("\nGuided run cancelled.")
+            return 130
 
     if args.verify_import_report:
         if not Path(args.import_report).exists():
