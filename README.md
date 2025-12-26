@@ -112,7 +112,7 @@ Discovery mode is only needed when the web apps change or an endpoint breaks; it
 Preferred devcontainer usage without the devcontainer CLI:
 
 ```sh
-docker build --target devcontainer -t skybridge-dev .
+docker build --target base -t skybridge-dev .
 docker run --rm -it \
   -v "$PWD":/workspaces/skybridge \
   -w /workspaces/skybridge \

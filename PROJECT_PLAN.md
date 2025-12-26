@@ -47,10 +47,10 @@
 - Implemented guided CLI flow with preflight checks, prompts, and rich progress output.
 - Added `cloudahoy2flysto` wrapper script as the primary user-facing guided command.
 - Added Makefile install/uninstall targets for the guided wrapper.
-- Devcontainer improvements: pip cache mount for faster rebuilds, persistent shell history in a named volume, and permission fix on start.
+- Devcontainer improvements: persistent shell history in a named volume, and permission fix on start.
 - Devcontainer updates: starship config to avoid prompt scan timeouts; VS Code pytest discovery settings added.
 - Migrated dependency management to `uv` with `pyproject.toml` and `uv.lock` (dev deps via `--extra dev`).
-- Unified Dockerfiles by using the `devcontainer` target in the root `Dockerfile`.
+- Devcontainer now uses the `base` Dockerfile stage (features handle extra tooling).
 - Devcontainer now points VS Code to `/opt/venv/bin/python` and enables pytest discovery.
 - Devcontainer mounts a named volume for Codex login persistence at `/home/vscode/.codex`.
 - Devcontainer PATH now includes `/home/vscode/.npm-global/bin` for the Codex CLI.
