@@ -11,8 +11,17 @@ if command -v id >/dev/null 2>&1; then
   chown -R "$(id -u):$(id -g)" "${HIST_DIR}" || true
 fi
 
+if [[ ! -w "${HIST_DIR}" ]] && command -v sudo >/dev/null 2>&1; then
+  sudo chown -R "$(id -u):$(id -g)" "${HIST_DIR}" || true
+  sudo chmod -R u+rwX "${HIST_DIR}" || true
+fi
+
 if [[ ! -f "${HIST_FILE}" ]]; then
-  touch "${HIST_FILE}" || true
+  touch "${HIST_FILE}" 2>/dev/null || true
+  if [[ ! -f "${HIST_FILE}" ]] && command -v sudo >/dev/null 2>&1; then
+    sudo touch "${HIST_FILE}" || true
+    sudo chown "$(id -u):$(id -g)" "${HIST_FILE}" || true
+  fi
 fi
 
 ZSHRC="${HOME}/.zshrc"
@@ -30,6 +39,10 @@ else
 fi
 
 chmod 600 "${HIST_FILE}" || true
+if [[ ! -w "${HIST_FILE}" ]] && command -v sudo >/dev/null 2>&1; then
+  sudo chmod 600 "${HIST_FILE}" || true
+  sudo chown "$(id -u):$(id -g)" "${HIST_FILE}" || true
+fi
 
 # Ensure HISTFILE is set early for all shells.
 if [[ -f "${ZSHENV}" ]]; then
