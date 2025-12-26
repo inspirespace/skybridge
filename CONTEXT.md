@@ -21,6 +21,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Devcontainer post-start installs the Codex CLI via npm using the Node feature toolchain and npm-global prefix.
 - Devcontainer setup now scrubs `~/.npmrc` `prefix` entries to avoid nvm prefix warnings on shell startup.
 - Devcontainer post-start removes Copilot/Copilot Chat to avoid invalid-extension warnings and keep the container extension set minimal.
+- Devcontainer adds the GitHub CLI feature for authenticated GitHub actions from the container.
 - CLI now prompts for missing API credentials in-memory when `.env` is absent.
 
 ## Required API Details

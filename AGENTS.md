@@ -20,6 +20,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - CLI supports `--start-date` / `--end-date` for targeted imports (YYYY-MM-DD or ISO8601).
 - `pytest` — run tests (if installed).
 - Devcontainer post-start uninstalls GitHub Copilot/Copilot Chat to avoid invalid-extension warnings.
+- Devcontainer installs GitHub CLI via the `github-cli` feature for authenticated GH access.
 Note: default `MODE=auto` uses API only and does not fall back to web automation.
 
 ## Coding Style & Naming Conventions
