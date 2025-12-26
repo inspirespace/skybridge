@@ -28,6 +28,7 @@
     "vscode": {
       "settings": {
         "python.defaultInterpreterPath": "/opt/venv/bin/python",
+        "python.terminal.activateEnvironment": false,
         "python.analysis.extraPaths": [
           "${workspaceFolder}"
         ],
@@ -52,6 +53,14 @@
         "ms-python.isort",
         "ms-azuretools.vscode-docker"
       ]
+    }
+  },
+  "forwardPorts": [
+    1455
+  ],
+  "portsAttributes": {
+    "1455": {
+      "label": "Codex login"
     }
   },
   "remoteUser": "vscode",

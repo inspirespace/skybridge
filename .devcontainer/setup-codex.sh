@@ -7,6 +7,7 @@ mkdir -p "${CODEX_DIR}"
 if command -v id >/dev/null 2>&1; then
   chown -R "$(id -u):$(id -g)" "${CODEX_DIR}" || true
   chmod -R u+rwX "${CODEX_DIR}" || true
+  chmod 700 "${CODEX_DIR}" || true
 fi
 
 CODEX_BIN="/home/vscode/.npm-global/bin/codex"
