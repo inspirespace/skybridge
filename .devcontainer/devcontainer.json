@@ -27,6 +27,14 @@
   "customizations": {
     "vscode": {
       "settings": {
+        "remote.extensionKind": {
+          "github.copilot": [
+            "ui"
+          ],
+          "github.copilot-chat": [
+            "ui"
+          ]
+        },
         "python.defaultInterpreterPath": "/opt/venv/bin/python",
         "python.terminal.activateEnvironment": false,
         "python.analysis.extraPaths": [
@@ -48,6 +56,7 @@
       },
       "extensions": [
         "openai.chatgpt",
+        "eamodio.gitlens",
         "ms-python.python",
         "ms-python.black-formatter",
         "ms-python.isort",
@@ -72,5 +81,5 @@
     "VIRTUAL_ENV_DISABLE_PROMPT": "1"
   },
   "postCreateCommand": "uv sync --frozen --extra dev && (grep -qxF 'eval \"$(starship init zsh)\"' ~/.zshrc || echo 'eval \"$(starship init zsh)\"' >> ~/.zshrc)",
-  "postStartCommand": "bash .devcontainer/setup-history.sh && bash .devcontainer/setup-codex.sh && bash .devcontainer/cleanup-shell.sh"
+  "postStartCommand": "bash .devcontainer/setup-history.sh && bash .devcontainer/setup-codex.sh && bash .devcontainer/setup-venv.sh && bash .devcontainer/cleanup-shell.sh"
 }
