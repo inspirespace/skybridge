@@ -109,7 +109,7 @@ Discovery mode will attempt to log in and collect endpoint hints; it writes a sa
 
 ## Development
 
-Preferred devcontainer usage without the devcontainer CLI (no Node required):
+Preferred devcontainer usage without the devcontainer CLI:
 
 ```sh
 docker build --target devcontainer -t skybridge-dev .
@@ -119,37 +119,10 @@ docker run --rm -it \
   skybridge-dev pytest
 ```
 
-You can also run the guided CLI with:
-
-```sh
-./cloudahoy2flysto
-```
-
-The wrapper will auto-load `.env` from the repo root if present (or use `ENV_FILE`).
-
-Guided flow defaults:
-- Wait for FlySto processing, verify, and reconcile are always enabled.
-- Run ID is auto-generated or taken from `RUN_ID`.
-
 Devcontainer notes:
-- Shell history is persisted in a named Docker volume (`/var/devcontainer/history`) so it won’t show up in git.
-- The devcontainer build uses a pip cache mount to speed up rebuilds.
-- History volume permissions are ensured on container start.
-- Starship uses `.devcontainer/starship.toml` to avoid slow prompt scans.
-Python dependencies are managed with `uv` and `pyproject.toml` (dev deps via `--extra dev`).
-The devcontainer sets `VIRTUAL_ENV` and `PATH` so the venv is active without emitting activation commands in the terminal.
-Codex install is best-effort in the devcontainer; missing npm will not fail startup.
-Codex installs to `/home/vscode/.npm-global/bin` and that path is added to `PATH` (without setting `NPM_CONFIG_PREFIX` to avoid nvm conflicts).
-Shell history settings are enforced via `.devcontainer/setup-history.sh`.
-Codex is installed during `postStartCommand` so it’s available after container startup.
-Shell cleanup removes any lingering `/opt/venv/bin/activate` lines and clears npm prefix settings to avoid nvm warnings.
-The devcontainer forwards port 1455 so Codex login callbacks to localhost work.
-If Codex still reports permission errors, rebuild the devcontainer to apply the sudo-based chown in `.devcontainer/setup-codex.sh`.
-Codex login is persisted via a named volume mounted at `/home/vscode/.codex`.
-
-VS Code testing:
-- Pytest discovery is configured in `.vscode/settings.json`.
-- Devcontainer overrides the interpreter to `/opt/venv/bin/python` and enables pytest discovery automatically.
+- Shell history is persisted in a named Docker volume (`/var/devcontainer/history`).
+- Codex login is persisted via a named volume at `/home/vscode/.codex` and port 1455 is forwarded for the callback.
+- Python deps are managed via `uv` (`pyproject.toml` + `uv.lock`), dev deps via `--extra dev`.
 
 Install the guided command globally (default `/usr/local/bin`):
 
@@ -174,12 +147,3 @@ python -m src.cli --reconcile-import-report --wait-for-processing
 ```
 
 Install dependencies with `uv sync --extra dev` for local runs, or use the devcontainer for a prebuilt environment.
-
-### Devcontainer
-
-This repo ships a VS Code devcontainer with Playwright + Python deps preinstalled, plus Docker socket access so you can run the existing container workflows without reinstalling everything locally. The devcontainer uses the `devcontainer` target in the root `Dockerfile`.
-
-Steps:
-- Open the repo in VS Code.
-- Run **Dev Containers: Reopen in Container**.
-- Run `pytest` or `python -m src.cli --review` inside the container as needed.

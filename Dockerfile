@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/playwright/python:v1.49.0-jammy AS base
+FROM mcr.microsoft.com/playwright/python:v1.57.0-noble AS base
 
 RUN pip install --no-cache-dir uv
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
