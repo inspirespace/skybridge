@@ -144,7 +144,6 @@ Codex login is persisted via a named volume mounted at `/home/vscode/.codex`.
 VS Code testing:
 - Pytest discovery is configured in `.vscode/settings.json`.
 - Devcontainer overrides the interpreter to `/opt/venv/bin/python` and enables pytest discovery automatically.
-On open, VS Code launches a terminal via `.vscode/tasks.json` so you don’t need to open it manually.
 
 Install the guided command globally (default `/usr/local/bin`):
 
