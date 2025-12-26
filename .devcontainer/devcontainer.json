@@ -80,6 +80,6 @@
     "PATH": "/opt/venv/bin:/home/vscode/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
     "VIRTUAL_ENV_DISABLE_PROMPT": "1"
   },
-  "postCreateCommand": "uv sync --frozen --extra dev && (grep -qxF 'eval \"$(starship init zsh)\"' ~/.zshrc || echo 'eval \"$(starship init zsh)\"' >> ~/.zshrc)",
-  "postStartCommand": "bash .devcontainer/setup-history.sh && bash .devcontainer/setup-codex.sh && bash .devcontainer/setup-venv.sh && bash .devcontainer/cleanup-shell.sh"
+  "postCreateCommand": "(grep -qxF 'eval \"$(starship init zsh)\"' ~/.zshrc || echo 'eval \"$(starship init zsh)\"' >> ~/.zshrc)",
+  "postStartCommand": "bash .devcontainer/setup-history.sh && bash .devcontainer/setup-codex.sh && bash .devcontainer/setup-venv.sh && UV_CACHE_DIR=/tmp/uv-cache uv sync --frozen --extra dev && bash .devcontainer/cleanup-shell.sh"
 }
