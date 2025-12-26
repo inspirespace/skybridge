@@ -59,6 +59,7 @@ def test_garmin_g3x_csv_header_and_row(tmp_path: Path) -> None:
 
     assert rows[0][0].startswith("#airframe_info")
     units = rows[1]
+    assert "Lcl Date (yyyy-mm-dd)" in units
     assert "UTC Offset (hh:mm)" in units
     header = rows[2]
     assert header[:3] == ["Lcl Date", "Lcl Time", "UTCOfst"]
@@ -92,7 +93,7 @@ def test_garmin_g1000_csv_header_and_row(tmp_path: Path) -> None:
     header = rows[2]
     assert header[:3] == ["Lcl Date", "Lcl Time", "UTCOfst"]
     data = rows[3]
-    assert data[0] == "09/04/2024"
+    assert data[0] == "2024-09-04"
     assert data[1] == "12:00:00"
     assert data[2] == "+00:00"
     assert float(data[3]) == 48.0

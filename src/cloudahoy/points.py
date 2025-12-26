@@ -462,7 +462,7 @@ def write_points_garmin_g1000_csv(
         return float(value) * 101.2686
 
     def fmt_date(ts: datetime) -> str:
-        return ts.strftime("%m/%d/%Y")
+        return ts.strftime("%Y-%m-%d")
 
     def fmt_time(ts: datetime) -> str:
         return ts.strftime("%H:%M:%S")
@@ -472,7 +472,7 @@ def write_points_garmin_g1000_csv(
 
     header_lines = [
         f"#airframe_info,1,{airframe},G1000,{tail}",
-        "Lcl Date (mm/dd/yyyy),Lcl Time (hh:mm:ss),UTC Offset (hh:mm),Latitude (deg),Longitude (deg),"
+        "Lcl Date (yyyy-mm-dd),Lcl Time (hh:mm:ss),UTC Offset (hh:mm),Latitude (deg),Longitude (deg),"
         "AltB (ft),BaroA (ft),AltMSL (ft),OAT (C),IAS (kt),GndSpd (kt),VSpd (ft/min),Pitch (deg),"
         "Roll (deg),HDG (deg),TRK (deg),AltGPS (ft),TAS (kt)",
         "Lcl Date,Lcl Time,UTCOfst,Latitude,Longitude,AltB,BaroA,AltMSL,OAT,IAS,GndSpd,VSpd,"
