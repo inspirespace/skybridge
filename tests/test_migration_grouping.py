@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import json
 import tempfile
@@ -83,9 +83,9 @@ def _detail(flight_id: str, tail: str) -> FlightDetail:
 
 def test_grouped_uploads_assign_unknown_per_tail():
     summaries = [
-        FlightSummary("A1", datetime.utcnow(), None, None, None),
-        FlightSummary("A2", datetime.utcnow(), None, None, None),
-        FlightSummary("B1", datetime.utcnow(), None, None, None),
+    FlightSummary("A1", datetime.now(timezone.utc), None, None, None),
+    FlightSummary("A2", datetime.now(timezone.utc), None, None, None),
+    FlightSummary("B1", datetime.now(timezone.utc), None, None, None),
     ]
     details = {
         "A1": _detail("A1", "D-KLVW"),

@@ -13,7 +13,7 @@
   ],
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
-      "version": "20"
+      "version": "lts"
     },
     "ghcr.io/devcontainers/features/common-utils:2": {
       "installZsh": true,

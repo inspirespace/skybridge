@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -91,7 +91,7 @@ class MigrationState:
         csv_hash: str | None = None,
         metadata_hash: str | None = None,
     ) -> None:
-        updated_at = datetime.utcnow().isoformat()
+        updated_at = datetime.now(timezone.utc).isoformat()
         with sqlite3.connect(self._db_path) as conn:
             conn.execute(
                 """

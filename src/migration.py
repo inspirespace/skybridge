@@ -83,7 +83,7 @@ def prepare_review(
         summaries = summaries[:max_flights]
     items: list[ReviewItem] = []
 
-    import_run_at = datetime.utcnow().replace(tzinfo=timezone.utc)
+    import_run_at = datetime.now(timezone.utc)
     import_tag = f"cloudahoy:{_format_timestamp_tag(import_run_at)}"
 
     for summary in summaries:
@@ -151,7 +151,7 @@ def prepare_review(
     if output_path:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
-            "generated_at": datetime.utcnow().isoformat() + "Z",
+            "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "review_id": review_id,
             "count": len(items),
             "summary": _summarize_review(items),
@@ -534,7 +534,7 @@ def migrate_flights(
     failed = 0
 
     pending: dict[str | None, list[dict]] = {}
-    import_run_at = datetime.utcnow().replace(tzinfo=timezone.utc)
+    import_run_at = datetime.now(timezone.utc)
     import_tag = f"cloudahoy:{_format_timestamp_tag(import_run_at)}"
 
     for summary in summaries:
@@ -898,7 +898,7 @@ def _write_import_report(
 ) -> None:
     report_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "review_id": review_id,
         "attempted": stats.attempted,
         "succeeded": stats.succeeded,
@@ -936,7 +936,7 @@ def verify_import_report(report_path: Path, flysto: FlyStoClient) -> dict[str, i
             resolved += 1
         else:
             missing += 1
-    payload["verified_at"] = datetime.utcnow().isoformat() + "Z"
+    payload["verified_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     payload["pending"] = sum(1 for item in items if not item.get("flysto_log_id"))
     try:
         processing_queue = flysto.log_files_to_process()
@@ -1000,7 +1000,7 @@ def reconcile_aircraft_from_report(report_path: Path, flysto: FlyStoClient) -> i
             resolved_format=log_format,
         )
         updated += 1
-    payload["aircraft_reconciled_at"] = datetime.utcnow().isoformat() + "Z"
+    payload["aircraft_reconciled_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     payload["aircraft_reconciled"] = updated
     report_path.write_text(json.dumps(payload, indent=2))
     return updated
@@ -1048,7 +1048,7 @@ def reconcile_crew_from_report(
         item["crew"] = crew
         flysto.assign_crew_for_log_id(log_id, crew)
         updated += 1
-    payload["crew_reconciled_at"] = datetime.utcnow().isoformat() + "Z"
+    payload["crew_reconciled_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     payload["crew_reconciled"] = updated
     report_path.write_text(json.dumps(payload, indent=2))
     return updated

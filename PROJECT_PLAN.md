@@ -43,9 +43,7 @@
 - CLI now writes logs to `docker.log` directly for each run.
 - Added run checklist and verification script for consistent post-run validation.
 - Added GitHub Actions CI workflow to run pytest on pushes to main and pull requests.
-- CI now installs pytest in the workflow and runs pytest with PYTHONPATH set to the workspace to resolve src imports.
-- Devcontainer usage standardized: build/run `.devcontainer/Dockerfile` image (`skybridge-dev`) for tests and CLI runs.
-- Plan: add a guided, modern CLI workflow for end-to-end migrations.
+- CI now uses Python 3.12 and `uv sync --frozen --extra dev` before running pytest.
 - Implemented guided CLI flow with preflight checks, prompts, and rich progress output.
 - Added `cloudahoy2flysto` wrapper script as the primary user-facing guided command.
 - Added Makefile install/uninstall targets for the guided wrapper.
@@ -56,38 +54,6 @@
 - Devcontainer now points VS Code to `/opt/venv/bin/python` and enables pytest discovery.
 - Devcontainer mounts a named volume for Codex login persistence at `/home/vscode/.codex`.
 - Devcontainer PATH now includes `/home/vscode/.npm-global/bin` for the Codex CLI.
-
-## Guided CLI (planned)
-Goal: provide a step-by-step, user-friendly CLI that guides through review/import/verify with clear progress, prompts, and summaries.
-
-Planned UX flow
-1) Preflight checks
-   - Validate `.env` presence and required vars.
-   - Test CloudAhoy/FlySto connectivity (API ping/auth).
-   - Offer to continue/abort on partial failures.
-2) Choose run options
-   - Max flights, force reimport, wait-for-processing, run-id.
-   - Mode selection (api/web/hybrid) if needed.
-3) Review step
-   - Generate review manifest and show summary (count, date range, tail distribution).
-   - Prompt to continue with the review ID.
-4) Import step
-   - Live progress per flight (upload, resolve, crew, metadata).
-   - Aggregate progress bar + step durations.
-5) Post-run verification
-   - Verify report, show missing/pending.
-   - Offer optional reconciliation (crew/aircraft).
-6) Final summary + next steps
-   - Artifact paths, verify instructions, and FlySto UI checklist.
-
-Implementation plan
-- Add a `--guided` mode (or `skybridge guided`) entry point.
-- Use `rich` for progress bars, panels, and prompts (or `questionary` for prompts if needed).
-- Reuse existing CLI logic (review/import/verify) behind a small orchestrator.
-- Persist run config and summary in `data/runs/<RUN_ID>/guided.json`.
-- Add unit tests for the orchestrator (no network; mock clients).
-- Add `rich` as a dependency for modern prompts and progress UI.
-- Devcontainer now includes Codex CLI + VS Code extension and a zsh/starship prompt.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).

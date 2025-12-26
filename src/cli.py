@@ -408,23 +408,27 @@ def run(argv: list[str]) -> int:
         ):
             print("Guided mode requires API clients (mode=api).", file=sys.stderr)
             return 2
-        return run_guided(
-            console=console,
-            cloudahoy=cloudahoy_client,
-            flysto=flysto,
-            state=state,
-            run_dir=Path(runs_dir) / run_id if run_id else Path(runs_dir),
-            review_path=Path(args.review_path),
-            report_path=Path(args.import_report),
-            exports_dir=Path(args.exports_dir),
-            summaries=summaries,
-            max_flights=max_flights,
-            force=args.force,
-            processing_interval=args.processing_interval,
-            processing_timeout=args.processing_timeout,
-            run_id=run_id,
-            setup_logging=_setup_logging,
-        )
+        try:
+            return run_guided(
+                console=console,
+                cloudahoy=cloudahoy_client,
+                flysto=flysto,
+                state=state,
+                run_dir=Path(runs_dir) / run_id if run_id else Path(runs_dir),
+                review_path=Path(args.review_path),
+                report_path=Path(args.import_report),
+                exports_dir=Path(args.exports_dir),
+                summaries=summaries,
+                max_flights=max_flights,
+                force=args.force,
+                processing_interval=args.processing_interval,
+                processing_timeout=args.processing_timeout,
+                run_id=run_id,
+                setup_logging=_setup_logging,
+            )
+        except KeyboardInterrupt:
+            print("\nGuided run cancelled.")
+            return 130
 
     if args.verify_import_report:
         if not Path(args.import_report).exists():
