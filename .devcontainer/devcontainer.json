@@ -3,7 +3,7 @@
   "build": {
     "dockerfile": "../Dockerfile",
     "context": "..",
-    "target": "devcontainer"
+    "target": "base"
   },
   "workspaceFolder": "/workspaces/skybridge",
   "mounts": [
@@ -15,6 +15,8 @@
     "ghcr.io/devcontainers/features/node:1": {
       "version": "lts"
     },
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
     "ghcr.io/devcontainers/features/common-utils:2": {
       "installZsh": true,
       "configureZshAsDefaultShell": true,
@@ -80,6 +82,6 @@
     "PATH": "/opt/venv/bin:/home/vscode/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
     "VIRTUAL_ENV_DISABLE_PROMPT": "1"
   },
-  "postCreateCommand": "(grep -qxF 'eval \"$(starship init zsh)\"' ~/.zshrc || echo 'eval \"$(starship init zsh)\"' >> ~/.zshrc)",
-  "postStartCommand": "bash .devcontainer/setup-history.sh && bash .devcontainer/setup-codex.sh && bash .devcontainer/setup-venv.sh && UV_CACHE_DIR=/tmp/uv-cache uv sync --frozen --extra dev && bash .devcontainer/cleanup-shell.sh"
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postStartCommand": "bash .devcontainer/post-start.sh"
 }
