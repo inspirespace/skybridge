@@ -16,9 +16,10 @@ if [[ ! -f "${HIST_FILE}" ]]; then
 fi
 
 ZSHRC="${HOME}/.zshrc"
+ZSHENV="${HOME}/.zshenv"
 HIST_BLOCK_START="# skybridge-history-start"
 HIST_BLOCK_END="# skybridge-history-end"
-HIST_BLOCK="${HIST_BLOCK_START}\nexport HISTFILE=/var/devcontainer/history/.zsh_history\nexport HISTSIZE=10000\nexport SAVEHIST=10000\nsetopt append_history\nsetopt inc_append_history\nsetopt share_history\nsetopt hist_ignore_dups\nsetopt hist_reduce_blanks\n${HIST_BLOCK_END}"
+HIST_BLOCK="${HIST_BLOCK_START}\nexport HISTFILE=/var/devcontainer/history/.zsh_history\nexport HISTSIZE=10000\nexport SAVEHIST=10000\nsetopt append_history\nsetopt inc_append_history\nsetopt share_history\nsetopt hist_ignore_dups\nsetopt hist_reduce_blanks\nif [[ -f \"$HISTFILE\" ]]; then\n  fc -R \"$HISTFILE\"\nfi\n${HIST_BLOCK_END}"
 
 if [[ -f "${ZSHRC}" ]]; then
   if ! grep -q "${HIST_BLOCK_START}" "${ZSHRC}"; then
@@ -29,3 +30,12 @@ else
 fi
 
 chmod 600 "${HIST_FILE}" || true
+
+# Ensure HISTFILE is set early for all shells.
+if [[ -f "${ZSHENV}" ]]; then
+  if ! grep -q "HISTFILE=/var/devcontainer/history/.zsh_history" "${ZSHENV}"; then
+    printf '\nexport HISTFILE=/var/devcontainer/history/.zsh_history\n' >> "${ZSHENV}"
+  fi
+else
+  printf 'export HISTFILE=/var/devcontainer/history/.zsh_history\n' > "${ZSHENV}"
+fi
