@@ -6,7 +6,16 @@ from pathlib import Path
 
 import requests
 
-from src.cloudahoy.points import build_points_schema, write_points_gpx, write_points_csv
+from src.cloudahoy.points import (
+    build_points_schema,
+    write_points_gpx,
+    write_points_csv,
+    write_points_flightradar24_csv,
+    write_points_garmin_g3x_csv,
+    write_points_garmin_g1000_csv,
+    write_points_mvp50_csv,
+    write_points_foreflight_csv,
+)
 from src.models import FlightDetail, FlightSummary
 import json
 import string
@@ -19,6 +28,7 @@ class CloudAhoyClient:
     email: str
     password: str
     exports_dir: Path
+    csv_format: str = "cloudahoy"
 
     def list_flights(self, limit: int | None = None) -> list[FlightSummary]:
         session, auth = _login(self.email, self.password)
@@ -84,6 +94,7 @@ class CloudAhoyClient:
         file_type = None
         metadata_path = None
         csv_path = None
+        metadata = _extract_metadata(flt)
         if isinstance(points, list) and points:
             schema = build_points_schema(flt)
             if schema:
@@ -98,8 +109,56 @@ class CloudAhoyClient:
                     track_name=flight_id,
                 )
                 file_type = "gpx"
-                csv_path = self.exports_dir / f"{flight_id}.csv"
-                write_points_csv(points, schema, csv_path)
+                csv_format = self.csv_format.lower()
+                csv_suffix = _csv_suffix(csv_format)
+                csv_path = self.exports_dir / f"{flight_id}{csv_suffix}.csv"
+                if csv_format == "foreflight":
+                    write_points_foreflight_csv(
+                        points,
+                        schema,
+                        csv_path,
+                        start_time=start_time,
+                        step_seconds=step_seconds,
+                        metadata=metadata,
+                    )
+                elif csv_format in {"flightradar24", "fr24"}:
+                    write_points_flightradar24_csv(
+                        points,
+                        schema,
+                        csv_path,
+                        start_time=start_time,
+                        step_seconds=step_seconds,
+                        metadata=metadata,
+                    )
+                elif csv_format in {"mvp50", "mvp-50", "mvp50t", "mvp50p"}:
+                    write_points_mvp50_csv(
+                        points,
+                        schema,
+                        csv_path,
+                        start_time=start_time,
+                        step_seconds=step_seconds,
+                        metadata=metadata,
+                    )
+                elif csv_format in {"garmin_g3x", "g3x", "garmin-g3x"}:
+                    write_points_garmin_g3x_csv(
+                        points,
+                        schema,
+                        csv_path,
+                        start_time=start_time,
+                        step_seconds=step_seconds,
+                        metadata=metadata,
+                    )
+                elif csv_format in {"garmin_g1000", "g1000", "garmin-g1000"}:
+                    write_points_garmin_g1000_csv(
+                        points,
+                        schema,
+                        csv_path,
+                        start_time=start_time,
+                        step_seconds=step_seconds,
+                        metadata=metadata,
+                    )
+                else:
+                    write_points_csv(points, schema, csv_path)
         if not file_path:
             kml_text = _extract_kml(data)
             if kml_text:
@@ -107,7 +166,6 @@ class CloudAhoyClient:
                 file_path = self.exports_dir / f"{flight_id}.kml"
                 file_path.write_text(kml_text)
                 file_type = "kml"
-        metadata = _extract_metadata(flt)
         if metadata:
             self.exports_dir.mkdir(parents=True, exist_ok=True)
             metadata_path = self.exports_dir / f"{flight_id}.meta.json"
@@ -138,6 +196,13 @@ class CloudAhoyClient:
         )
         response.raise_for_status()
         return response.json()
+
+
+def _csv_suffix(csv_format: str) -> str:
+    if not csv_format or csv_format == "cloudahoy":
+        return ".cloudahoy"
+    safe = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in csv_format)
+    return f".{safe}"
 
 
 def _login(email: str, password: str) -> tuple[requests.Session, dict]:

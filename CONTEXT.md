@@ -23,6 +23,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Devcontainer post-start removes Copilot/Copilot Chat to avoid invalid-extension warnings and keep the container extension set minimal.
 - Devcontainer adds the GitHub CLI feature for authenticated GitHub actions from the container.
 - CLI now prompts for missing API credentials in-memory when `.env` is absent.
+- CloudAhoy exports can now produce ForeFlight-style CSVs via `CLOUD_AHOY_CSV_FORMAT=foreflight`, FlightRadar24 CSV via `CLOUD_AHOY_CSV_FORMAT=flightradar24`, MVP-50 CSV via `CLOUD_AHOY_CSV_FORMAT=mvp50`, or Garmin G3X/G1000 CSV via `CLOUD_AHOY_CSV_FORMAT=g3x` / `g1000`.
 
 ## Required API Details
 These are needed to complete the adapters:

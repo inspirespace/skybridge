@@ -33,6 +33,7 @@ def _fake_config() -> Config:
         flysto_api_version=None,
         flysto_min_request_interval=0.1,
         flysto_max_request_retries=2,
+        cloudahoy_csv_format="cloudahoy",
         mode="api",
         headless=True,
         dry_run=False,

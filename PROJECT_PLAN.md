@@ -54,6 +54,10 @@
 - Devcontainer now points VS Code to `/opt/venv/bin/python` and enables pytest discovery.
 - Devcontainer mounts a named volume for Codex login persistence at `/home/vscode/.codex`.
 - Devcontainer PATH now includes `/home/vscode/.npm-global/bin` for the Codex CLI.
+- Added optional ForeFlight-style CSV export for CloudAhoy (`CLOUD_AHOY_CSV_FORMAT=foreflight`).
+- Added optional FlightRadar24 CSV export for CloudAhoy (`CLOUD_AHOY_CSV_FORMAT=flightradar24`).
+- Added optional MVP-50 CSV export for CloudAhoy (`CLOUD_AHOY_CSV_FORMAT=mvp50`).
+- Added optional Garmin G3X/G1000 CSV exports for CloudAhoy (`CLOUD_AHOY_CSV_FORMAT=g3x` / `g1000`).
 - CLI now prompts for missing API credentials in-memory when `.env` is absent.
 
 ## Next Implementation Steps

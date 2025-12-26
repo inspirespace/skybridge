@@ -23,6 +23,7 @@ class Config:
     flysto_api_version: str | None
     flysto_min_request_interval: float
     flysto_max_request_retries: int
+    cloudahoy_csv_format: str
     mode: str
     headless: bool
     dry_run: bool
@@ -54,6 +55,7 @@ def load_config() -> Config:
     flysto_api_version = _get_env("FLYSTO_API_VERSION")
     flysto_min_request_interval = _get_env("FLYSTO_MIN_REQUEST_INTERVAL")
     flysto_max_request_retries = _get_env("FLYSTO_MAX_REQUEST_RETRIES")
+    cloudahoy_csv_format = _get_env("CLOUD_AHOY_CSV_FORMAT") or "cloudahoy"
 
     if mode in {"api", "hybrid", "auto"}:
         missing = [
@@ -117,6 +119,7 @@ def load_config() -> Config:
         flysto_api_version=flysto_api_version,
         flysto_min_request_interval=min_request_interval,
         flysto_max_request_retries=max_request_retries,
+        cloudahoy_csv_format=cloudahoy_csv_format,
         mode=mode,
         headless=headless,
         dry_run=dry_run,
