@@ -21,6 +21,9 @@ touch "${CODEX_DIR}/.touch" 2>/dev/null || true
 
 CODEX_BIN="/home/vscode/.npm-global/bin/codex"
 if [[ ! -x "${CODEX_BIN}" ]]; then
+  # Node is provided by the devcontainer feature; ensure its bin dir is on PATH.
+  export PATH="/usr/local/share/nvm/current/bin:${PATH}"
+
   if command -v npm >/dev/null 2>&1; then
     mkdir -p /home/vscode/.npm-global
     npm config set prefix /home/vscode/.npm-global
