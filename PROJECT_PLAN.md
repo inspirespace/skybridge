@@ -54,6 +54,7 @@
 - Devcontainer now points VS Code to `/opt/venv/bin/python` and enables pytest discovery.
 - Devcontainer mounts a named volume for Codex login persistence at `/home/vscode/.codex`.
 - Devcontainer PATH now includes `/home/vscode/.npm-global/bin` for the Codex CLI.
+- CLI now prompts for missing API credentials in-memory when `.env` is absent.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).

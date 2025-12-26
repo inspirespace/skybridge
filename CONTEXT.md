@@ -18,6 +18,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Guided CLI exits cleanly on Ctrl+C without a traceback.
 - CI now uses Python 3.12 and `uv sync --frozen --extra dev` to run pytest.
 - Devcontainer Node feature targets the latest LTS release.
+- CLI now prompts for missing API credentials in-memory when `.env` is absent.
 
 ## Required API Details
 These are needed to complete the adapters:

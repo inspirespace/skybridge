@@ -1,4 +1,5 @@
 import argparse
+import getpass
 import json
 import os
 import sys
@@ -254,6 +255,34 @@ def _setup_logging(log_path: str) -> None:
     sys.stderr = _Tee(sys.stderr, log_handle)
 
 
+def _parse_missing_env_vars(error: ConfigError) -> list[str]:
+    prefix = "Missing required env vars: "
+    message = str(error)
+    if not message.startswith(prefix):
+        return []
+    missing = message[len(prefix):]
+    return [name.strip() for name in missing.split(",") if name.strip()]
+
+
+def _prompt_env_var(name: str) -> str:
+    if "PASSWORD" in name:
+        value = getpass.getpass(f"{name}: ")
+    else:
+        value = input(f"{name}: ").strip()
+    return value
+
+
+def _prompt_for_missing_env_vars(missing: list[str]) -> bool:
+    if not missing:
+        return False
+    print("Missing required credentials. Enter them to continue.")
+    for name in missing:
+        value = _prompt_env_var(name)
+        if value:
+            os.environ[name] = value
+    return True
+
+
 def run(argv: list[str]) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -270,8 +299,16 @@ def run(argv: list[str]) -> int:
     try:
         config = load_config()
     except ConfigError as exc:
-        print(f"Config error: {exc}", file=sys.stderr)
-        return 2
+        missing = _parse_missing_env_vars(exc)
+        if missing and _prompt_for_missing_env_vars(missing):
+            try:
+                config = load_config()
+            except ConfigError as exc_retry:
+                print(f"Config error: {exc_retry}", file=sys.stderr)
+                return 2
+        else:
+            print(f"Config error: {exc}", file=sys.stderr)
+            return 2
 
     dry_run = args.dry_run or config.dry_run
     max_flights = args.max_flights or config.max_flights
@@ -285,6 +322,19 @@ def run(argv: list[str]) -> int:
 
     if mode == "auto":
         mode = "api"
+
+    if mode in {"api", "hybrid"} and not config.flysto_session_cookie:
+        missing = []
+        if not config.flysto_email:
+            missing.append("FLYSTO_EMAIL")
+        if not config.flysto_password:
+            missing.append("FLYSTO_PASSWORD")
+        if missing and _prompt_for_missing_env_vars(missing):
+            try:
+                config = load_config()
+            except ConfigError as exc_retry:
+                print(f"Config error: {exc_retry}", file=sys.stderr)
+                return 2
 
     if mode in {"web", "hybrid"}:
         cloudahoy = CloudAhoyWebClient(

@@ -99,7 +99,7 @@ Approved imports require a review ID; `./scripts/run-import.sh` reads it from `d
 See `docs/run-checklist.md` for the step-by-step run procedure and verification steps.
 
 
-Discovery mode will attempt to log in and collect endpoint hints; it writes a sanitized JSON summary to `data/discovery/discovery.json`.
+Discovery mode is only needed when the web apps change or an endpoint breaks; it logs in and records endpoint hints to `data/discovery/discovery.json`.
 
 ## SaaS Roadmap (draft)
 

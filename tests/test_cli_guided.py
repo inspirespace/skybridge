@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from src.config import Config
+from src.config import Config, ConfigError
 from src.cli import run
 
 
@@ -58,3 +58,31 @@ def test_guided_ctrl_c_is_clean(monkeypatch, tmp_path, capsys):
     assert exit_code == 130
     out = capsys.readouterr().out
     assert "Guided run cancelled." in out
+
+
+def test_guided_prompts_for_missing_env(monkeypatch, tmp_path):
+    monkeypatch.setenv("RUNS_DIR", str(tmp_path))
+    monkeypatch.delenv("RUN_ID", raising=False)
+    calls = {"count": 0}
+
+    def _load_config():
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise ConfigError(
+                "Missing required env vars: CLOUD_AHOY_EMAIL, CLOUD_AHOY_PASSWORD"
+            )
+        return _fake_config()
+
+    monkeypatch.setattr("src.cli.load_config", _load_config)
+    monkeypatch.setattr("src.cli.CloudAhoyClient", DummyClient)
+    monkeypatch.setattr("src.cli.FlyStoClient", DummyClient)
+    monkeypatch.setattr("builtins.input", lambda prompt="": "user@example.com")
+    monkeypatch.setattr("src.cli.getpass.getpass", lambda prompt="": "secret")
+
+    import src.guided as guided_module
+
+    monkeypatch.setattr(guided_module, "run_guided", lambda **kwargs: 0)
+
+    exit_code = run(["--guided"])
+    assert exit_code == 0
+    assert calls["count"] >= 2
