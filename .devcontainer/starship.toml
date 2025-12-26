@@ -1,4 +1,41 @@
+format = """
+$directory\
+$git_branch\
+$git_status\
+$python\
+$time\
+$line_break\
+$character"""
+
+add_newline = true
 scan_timeout = 200
 
+[directory]
+style = "fg:#c0caf5 bg:#24283b"
+format = "[ $path ]($style)"
+truncation_length = 3
+truncation_symbol = "…/"
+
+[git_branch]
+symbol = ""
+style = "fg:#bb9af7 bg:#1f2335"
+format = "[ git:$branch ]($style)"
+
+[git_status]
+style = "fg:#f7768e bg:#1f2335"
+format = "[$all_status$ahead_behind ]($style)"
+
 [python]
-format = "via 🐍 [$version]($style) "
+symbol = ""
+style = "fg:#7aa2f7 bg:#1f2335"
+format = "[ py:$version ]($style)"
+
+[time]
+disabled = false
+time_format = "%H:%M"
+style = "fg:#a9b1d6 bg:#1f2335"
+format = "[ $time ]($style)"
+
+[character]
+success_symbol = "[>](fg:#7aa2f7)"
+error_symbol = "[>](fg:#f7768e)"
