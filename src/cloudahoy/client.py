@@ -272,6 +272,25 @@ def _infer_point_timing(flt: dict, points_count: int) -> tuple[datetime | None, 
     if not isinstance(meta, dict):
         return None, None
     start_time = None
+    start = meta.get("GMT_start")
+    try:
+        if start is not None:
+            start_time = datetime.fromtimestamp(float(start), tz=timezone.utc)
+    except (TypeError, ValueError):
+        start_time = None
+
+    air_hours = meta.get("air")
+    gnd_hours = meta.get("gnd")
+    if start_time and (air_hours is not None or gnd_hours is not None):
+        try:
+            total_hours = float(air_hours or 0) + float(gnd_hours or 0)
+            if total_hours > 0 and points_count > 1:
+                step = (total_hours * 3600) / (points_count - 1)
+                if step > 0 and step <= 30:
+                    return start_time, step
+        except (TypeError, ValueError):
+            pass
+
     summary = meta.get("summary") if isinstance(meta.get("summary"), dict) else None
     air = summary.get("air") if isinstance(summary, dict) else None
     air_start = air.get("start") if isinstance(air, dict) else None
@@ -289,13 +308,6 @@ def _infer_point_timing(flt: dict, points_count: int) -> tuple[datetime | None, 
                         return start_time, step
         except (TypeError, ValueError):
             start_time = None
-
-    start = meta.get("GMT_start")
-    try:
-        if start is not None:
-            start_time = datetime.fromtimestamp(float(start), tz=timezone.utc)
-    except (TypeError, ValueError):
-        start_time = None
     duration_hours = None
     air = meta.get("air")
     gnd = meta.get("gnd")

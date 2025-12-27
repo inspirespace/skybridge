@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from src.cloudahoy.client import _infer_point_timing
 
 
-def test_infer_point_timing_prefers_summary_air_window() -> None:
+def test_infer_point_timing_prefers_meta_durations() -> None:
     flt = {
         "Meta": {
             "GMT_start": 1_000_000,
@@ -20,5 +20,5 @@ def test_infer_point_timing_prefers_summary_air_window() -> None:
         }
     }
     start_time, step = _infer_point_timing(flt, points_count=4)
-    assert start_time == datetime.fromtimestamp(1_000_100, tz=timezone.utc)
-    assert step == 2.0
+    assert start_time == datetime.fromtimestamp(1_000_000, tz=timezone.utc)
+    assert step == 1200.0
