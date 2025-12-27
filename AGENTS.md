@@ -18,6 +18,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `./scripts/run.sh --verify-import-report --import-report data/runs/<RUN_ID>/import_report.json` — verify report entries against FlySto.
 - `python -m src.cli --review` — run locally (requires Python deps).
 - CLI supports `--start-date` / `--end-date` for targeted imports (YYYY-MM-DD or ISO8601).
+- Set `CLOUD_AHOY_G3X_INCLUDE_HDG=1` to include heading/track in G3X exports (default omits HDG/TRK to preserve block-time detection).
 - `pytest` — run tests (if installed).
 - Devcontainer post-start uninstalls GitHub Copilot/Copilot Chat to avoid invalid-extension warnings.
 - Devcontainer installs GitHub CLI via the `github-cli` feature for authenticated GH access.

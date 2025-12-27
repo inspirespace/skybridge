@@ -25,6 +25,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Devcontainer exports the nvm Node bin path and installs Codex zsh completions automatically.
 - CLI now prompts for missing API credentials in-memory when `.env` is absent.
 - CloudAhoy exports can now produce ForeFlight-style CSVs via `CLOUD_AHOY_EXPORT_FORMAT=foreflight`, FlightRadar24 CSV via `CLOUD_AHOY_EXPORT_FORMAT=flightradar24`, MVP-50 CSV via `CLOUD_AHOY_EXPORT_FORMAT=mvp50`, or Garmin G3X/G1000 CSV via `CLOUD_AHOY_EXPORT_FORMAT=g3x` / `g1000`. Multiple formats can be exported via `CLOUD_AHOY_EXPORT_FORMATS` (comma-separated, defaults to `g3x,gpx`) with G3X prioritized for upload when available.
+- Experimental: `CLOUD_AHOY_G3X_INCLUDE_HDG=1` opt-in to include heading/track in G3X exports; default omits HDG/TRK for block-time compatibility.
 
 ## Required API Details
 These are needed to complete the adapters:

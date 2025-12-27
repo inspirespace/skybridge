@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import math
+import os
 from datetime import datetime, timezone, timedelta
 import re
 from pathlib import Path
@@ -324,6 +325,11 @@ def write_points_garmin_g3x_csv(
     step_seconds: float | None,
     metadata: dict[str, Any],
 ) -> None:
+    include_hdg = os.getenv("CLOUD_AHOY_G3X_INCLUDE_HDG", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+    }
     path.parent.mkdir(parents=True, exist_ok=True)
     schema_index = {column["name"]: column["index"] for column in schema}
     lat_idx = _index_for(schema, "latitude_deg", fallback=1)
@@ -430,6 +436,9 @@ def write_points_garmin_g3x_csv(
                 if wind_dir_idx is not None and wind_dir_idx < len(point)
                 else ""
             )
+            if not include_hdg:
+                hdg = ""
+                trk = ""
 
             utc_offset = "+00:00"
             row = [""] * len(header_lines[-1].split(","))
