@@ -45,6 +45,7 @@ class GuidedOptions:
     verify_after_import: bool
     reconcile_after_import: bool
     run_id: str
+    export_formats: str
     start_date: str | None = None
     end_date: str | None = None
 
@@ -172,6 +173,7 @@ def _write_guided_summary(
         "max_flights": options.max_flights,
         "start_date": options.start_date,
         "end_date": options.end_date,
+        "export_formats": options.export_formats,
         "force": options.force,
         "wait_for_processing": options.wait_for_processing,
         "verify_after_import": options.verify_after_import,
@@ -198,6 +200,10 @@ def _prompt_guided_options(
     wait_for_processing = True
     verify_after_import = True
     reconcile_after_import = True
+    export_formats = os.getenv("CLOUD_AHOY_EXPORT_FORMATS") or os.getenv(
+        "CLOUD_AHOY_EXPORT_FORMAT"
+    ) or "g3x,gpx"
+    export_formats = Prompt.ask("Export formats (comma-separated)", default=export_formats)
     return GuidedOptions(
         max_flights=max_flights,
         force=force,
@@ -205,6 +211,7 @@ def _prompt_guided_options(
         verify_after_import=verify_after_import,
         reconcile_after_import=reconcile_after_import,
         run_id=run_id,
+        export_formats=export_formats,
         start_date=start_date,
         end_date=end_date,
     )
@@ -325,6 +332,16 @@ def run_guided(
     if hasattr(cloudahoy, "exports_dir"):
         try:
             cloudahoy = replace(cloudahoy, exports_dir=exports_dir)
+        except Exception:
+            pass
+    if hasattr(cloudahoy, "export_formats"):
+        try:
+            export_formats = [
+                fmt.strip()
+                for fmt in options.export_formats.replace(";", ",").split(",")
+                if fmt.strip()
+            ]
+            cloudahoy = replace(cloudahoy, export_formats=export_formats)
         except Exception:
             pass
 

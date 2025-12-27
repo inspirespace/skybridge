@@ -28,7 +28,7 @@ class CloudAhoyClient:
     email: str
     password: str
     exports_dir: Path
-    csv_format: str = "cloudahoy"
+    export_format: str = "gpx"
 
     def list_flights(self, limit: int | None = None) -> list[FlightSummary]:
         session, auth = _login(self.email, self.password)
@@ -112,61 +112,103 @@ class CloudAhoyClient:
                     step_seconds=step_seconds,
                     track_name=flight_id,
                 )
-                csv_format = self.csv_format.lower()
-                csv_suffix = _csv_suffix(csv_format)
-                csv_path = self.exports_dir / f"{flight_id}{csv_suffix}.csv"
-                if csv_format == "foreflight":
-                    write_points_foreflight_csv(
-                        points,
-                        schema,
-                        csv_path,
-                        start_time=start_time,
-                        step_seconds=step_seconds,
-                        metadata=metadata,
-                    )
-                elif csv_format in {"flightradar24", "fr24"}:
-                    write_points_flightradar24_csv(
-                        points,
-                        schema,
-                        csv_path,
-                        start_time=start_time,
-                        step_seconds=step_seconds,
-                        metadata=metadata,
-                    )
-                elif csv_format in {"mvp50", "mvp-50", "mvp50t", "mvp50p"}:
-                    write_points_mvp50_csv(
-                        points,
-                        schema,
-                        csv_path,
-                        start_time=start_time,
-                        step_seconds=step_seconds,
-                        metadata=metadata,
-                    )
-                elif csv_format in {"garmin_g3x", "g3x", "garmin-g3x"}:
-                    write_points_garmin_g3x_csv(
-                        points,
-                        schema,
-                        csv_path,
-                        start_time=start_time,
-                        step_seconds=step_seconds,
-                        metadata=metadata,
-                    )
-                elif csv_format in {"garmin_g1000", "g1000", "garmin-g1000"}:
-                    write_points_garmin_g1000_csv(
-                        points,
-                        schema,
-                        csv_path,
-                        start_time=start_time,
-                        step_seconds=step_seconds,
-                        metadata=metadata,
-                    )
+                export_formats = (
+                    [fmt.lower() for fmt in self.export_formats]
+                    if self.export_formats
+                    else [self.export_format.lower()]
+                )
+                export_formats = [fmt if fmt != "cloudahoy" else "gpx" for fmt in export_formats]
+                if "gpx" not in export_formats:
+                    export_formats.append("gpx")
+                export_paths: dict[str, Path] = {"gpx": file_path}
+
+                for fmt in export_formats:
+                    if fmt == "gpx":
+                        continue
+                    csv_suffix = _csv_suffix(fmt)
+                    csv_path = self.exports_dir / f"{flight_id}{csv_suffix}.csv"
+                    if fmt == "foreflight":
+                        write_points_foreflight_csv(
+                            points,
+                            schema,
+                            csv_path,
+                            start_time=start_time,
+                            step_seconds=step_seconds,
+                            metadata=metadata,
+                        )
+                    elif fmt in {"flightradar24", "fr24"}:
+                        write_points_flightradar24_csv(
+                            points,
+                            schema,
+                            csv_path,
+                            start_time=start_time,
+                            step_seconds=step_seconds,
+                            metadata=metadata,
+                        )
+                    elif fmt in {"mvp50", "mvp-50", "mvp50t", "mvp50p"}:
+                        write_points_mvp50_csv(
+                            points,
+                            schema,
+                            csv_path,
+                            start_time=start_time,
+                            step_seconds=step_seconds,
+                            metadata=metadata,
+                        )
+                    elif fmt in {"garmin_g3x", "g3x", "garmin-g3x"}:
+                        write_points_garmin_g3x_csv(
+                            points,
+                            schema,
+                            csv_path,
+                            start_time=start_time,
+                            step_seconds=step_seconds,
+                            metadata=metadata,
+                        )
+                    elif fmt in {"garmin_g1000", "g1000", "garmin-g1000"}:
+                        write_points_garmin_g1000_csv(
+                            points,
+                            schema,
+                            csv_path,
+                            start_time=start_time,
+                            step_seconds=step_seconds,
+                            metadata=metadata,
+                        )
+                    else:
+                        write_points_csv(points, schema, csv_path)
+                    export_paths[fmt] = csv_path
+
+                def fmt_rank(name: str) -> int:
+                    order = [
+                        "g3x",
+                        "garmin-g3x",
+                        "garmin_g3x",
+                        "g1000",
+                        "garmin-g1000",
+                        "garmin_g1000",
+                        "foreflight",
+                        "flightradar24",
+                        "fr24",
+                        "mvp50",
+                        "mvp-50",
+                        "mvp50t",
+                        "mvp50p",
+                        "gpx",
+                    ]
+                    try:
+                        return order.index(name)
+                    except ValueError:
+                        return len(order) + 1
+
+                preferred = None
+                for key in sorted(export_paths.keys(), key=fmt_rank):
+                    preferred = key
+                    break
+                export_format = preferred or "gpx"
 
                 file_type = "gpx"
-                if csv_format and csv_format != "cloudahoy":
-                    file_path = csv_path
-                    file_type = csv_format
-                else:
-                    write_points_csv(points, schema, csv_path)
+                if export_format and export_format != "gpx":
+                    file_path = export_paths.get(export_format, file_path)
+                    file_type = export_format
+                    csv_path = export_paths.get(export_format)
         if not file_path:
             kml_text = _extract_kml(data)
             if kml_text:
@@ -185,6 +227,9 @@ class CloudAhoyClient:
             file_type=file_type,
             metadata_path=str(metadata_path) if metadata_path else None,
             csv_path=str(csv_path) if csv_path else None,
+            export_paths={key: str(value) for key, value in export_paths.items()}
+            if "export_paths" in locals()
+            else None,
         )
 
     def fetch_metadata(self, flight_id: str) -> dict:
@@ -205,10 +250,10 @@ class CloudAhoyClient:
         return response.json()
 
 
-def _csv_suffix(csv_format: str) -> str:
-    if not csv_format or csv_format == "cloudahoy":
-        return ".cloudahoy"
-    safe = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in csv_format)
+def _csv_suffix(export_format: str) -> str:
+    if not export_format or export_format == "gpx":
+        return ""
+    safe = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in export_format)
     return f".{safe}"
 
 

@@ -417,7 +417,8 @@ def run(argv: list[str]) -> int:
                 email=config.cloudahoy_email or "",
                 password=config.cloudahoy_password or "",
                 exports_dir=Path(args.exports_dir),
-                csv_format=config.cloudahoy_csv_format,
+                export_format=config.cloudahoy_export_format,
+                export_formats=config.cloudahoy_export_formats,
             )
 
         flysto = FlyStoWebClient(
@@ -461,7 +462,8 @@ def run(argv: list[str]) -> int:
             email=config.cloudahoy_email or "",
             password=config.cloudahoy_password or "",
             exports_dir=Path(args.exports_dir),
-            csv_format=config.cloudahoy_csv_format,
+            export_format=config.cloudahoy_export_format,
+            export_formats=config.cloudahoy_export_formats,
         )
         flysto = FlyStoClient(
             api_key=config.flysto_api_key or "",

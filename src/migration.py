@@ -37,6 +37,7 @@ class ReviewItem:
     csv_path: str | None
     csv_hash: str | None
     raw_path: str | None
+    export_paths: dict[str, str] | None
     points_count: int | None
     points_schema: list[dict]
     points_preview: list[dict]
@@ -61,6 +62,7 @@ class ReviewItem:
             "csv_path": self.csv_path,
             "csv_hash": self.csv_hash,
             "raw_path": self.raw_path,
+            "export_paths": self.export_paths,
             "points_count": self.points_count,
             "points_schema": self.points_schema,
             "points_preview": self.points_preview,
@@ -139,6 +141,7 @@ def prepare_review(
                 csv_path=detail.csv_path,
                 csv_hash=csv_hash,
                 raw_path=detail.raw_path,
+                export_paths=detail.export_paths,
                 points_count=points_count,
                 points_schema=schema,
                 points_preview=preview,
@@ -177,6 +180,7 @@ def _review_item(
     csv_path: str | None,
     csv_hash: str | None,
     raw_path: str | None,
+    export_paths: dict[str, str] | None,
     points_count: int | None,
     points_schema: list[dict],
     points_preview: list[dict],
@@ -200,6 +204,7 @@ def _review_item(
         csv_path=csv_path,
         csv_hash=csv_hash,
         raw_path=raw_path,
+        export_paths=export_paths,
         points_count=points_count,
         points_schema=points_schema,
         points_preview=points_preview,
@@ -301,6 +306,13 @@ def _cleanup_exports_dir(cloudahoy: CloudAhoyClient, items: list[ReviewItem]) ->
             Path(item.raw_path).resolve()
             for item in items
             if item.raw_path
+        }
+    )
+    keep.update(
+        {
+            Path(path).resolve()
+            for item in items
+            for path in (item.export_paths or {}).values()
         }
     )
     for entry in exports_dir.iterdir():

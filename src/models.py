@@ -20,6 +20,7 @@ class FlightDetail:
     file_type: str | None = None
     metadata_path: str | None = None
     csv_path: str | None = None
+    export_paths: dict[str, str] | None = None
 
 
 @dataclass(frozen=True)
