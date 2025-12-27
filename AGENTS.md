@@ -23,6 +23,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Devcontainer post-start uninstalls GitHub Copilot/Copilot Chat to avoid invalid-extension warnings.
 - Devcontainer installs GitHub CLI via the `github-cli` feature for authenticated GH access.
 - Devcontainer ensures Node is on PATH for Codex and installs Codex zsh completions automatically.
+- Devcontainer installs the Oh My Zsh `zsh-autosuggestions` plugin for inline shell suggestions.
 Note: default `MODE=auto` uses API only and does not fall back to web automation.
 
 ## Coding Style & Naming Conventions

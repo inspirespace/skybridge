@@ -126,6 +126,7 @@ Devcontainer notes:
 - Shell history is persisted in a named Docker volume (`/var/devcontainer/history`).
 - Codex login is persisted via a named volume at `/home/vscode/.codex` and port 1455 is forwarded for the callback.
 - Python deps are managed via `uv` (`pyproject.toml` + `uv.lock`), dev deps via `--extra dev`.
+- Oh My Zsh includes `zsh-autosuggestions` by default for shell hinting.
 
 Install the guided command globally (default `/usr/local/bin`):
 
