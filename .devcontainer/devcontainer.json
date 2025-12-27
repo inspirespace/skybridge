@@ -81,7 +81,7 @@
     "HISTFILE": "/var/devcontainer/history/.zsh_history",
     "STARSHIP_CONFIG": "/workspaces/skybridge/.devcontainer/starship.toml",
     "VIRTUAL_ENV": "/opt/venv",
-    "PATH": "/opt/venv/bin:/home/vscode/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "PATH": "/usr/local/share/nvm/current/bin:/opt/venv/bin:/home/vscode/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
     "VIRTUAL_ENV_DISABLE_PROMPT": "1"
   },
   "postCreateCommand": "bash .devcontainer/post-create.sh",

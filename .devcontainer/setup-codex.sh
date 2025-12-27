@@ -4,6 +4,9 @@ set -euo pipefail
 CODEX_DIR="/home/vscode/.codex"
 mkdir -p "${CODEX_DIR}"
 
+# Ensure the devcontainer's Node toolchain is available for the Codex CLI.
+export PATH="/usr/local/share/nvm/current/bin:${PATH}"
+
 if command -v id >/dev/null 2>&1; then
   chown -R "$(id -u):$(id -g)" "${CODEX_DIR}" || true
   chmod -R u+rwX "${CODEX_DIR}" || true
@@ -39,6 +42,23 @@ if [[ -f "${HOME}/.npmrc" ]]; then
       mv "${tmpfile}" "${HOME}/.npmrc"
     else
       rm -f "${HOME}/.npmrc"
+    fi
+  fi
+fi
+
+# Install Codex zsh completions for the devcontainer shell.
+if command -v codex >/dev/null 2>&1; then
+  completion_dir="${HOME}/.config/codex"
+  completion_file="${completion_dir}/completion.zsh"
+  mkdir -p "${completion_dir}"
+  if codex completion zsh > "${completion_file}" 2>/dev/null; then
+    zshrc="${HOME}/.zshrc"
+    if [[ -f "${zshrc}" ]] && ! grep -q "codex/completion.zsh" "${zshrc}"; then
+      {
+        echo ""
+        echo "# Codex CLI completions"
+        echo "[[ -f \"${completion_file}\" ]] && source \"${completion_file}\""
+      } >> "${zshrc}"
     fi
   fi
 fi
