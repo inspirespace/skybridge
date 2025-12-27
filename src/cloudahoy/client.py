@@ -94,7 +94,11 @@ class CloudAhoyClient:
         file_type = None
         metadata_path = None
         csv_path = None
+        raw_path = None
         metadata = _extract_metadata(flt)
+        self.exports_dir.mkdir(parents=True, exist_ok=True)
+        raw_path = self.exports_dir / f"{flight_id}.cloudahoy.json"
+        raw_path.write_text(json.dumps(data, indent=2))
         if isinstance(points, list) and points:
             schema = build_points_schema(flt)
             if schema:
@@ -108,7 +112,6 @@ class CloudAhoyClient:
                     step_seconds=step_seconds,
                     track_name=flight_id,
                 )
-                file_type = "gpx"
                 csv_format = self.csv_format.lower()
                 csv_suffix = _csv_suffix(csv_format)
                 csv_path = self.exports_dir / f"{flight_id}{csv_suffix}.csv"
@@ -157,23 +160,27 @@ class CloudAhoyClient:
                         step_seconds=step_seconds,
                         metadata=metadata,
                     )
+
+                file_type = "gpx"
+                if csv_format and csv_format != "cloudahoy":
+                    file_path = csv_path
+                    file_type = csv_format
                 else:
                     write_points_csv(points, schema, csv_path)
         if not file_path:
             kml_text = _extract_kml(data)
             if kml_text:
-                self.exports_dir.mkdir(parents=True, exist_ok=True)
                 file_path = self.exports_dir / f"{flight_id}.kml"
                 file_path.write_text(kml_text)
                 file_type = "kml"
         if metadata:
-            self.exports_dir.mkdir(parents=True, exist_ok=True)
             metadata_path = self.exports_dir / f"{flight_id}.meta.json"
             metadata_path.write_text(json.dumps(metadata, indent=2))
 
         return FlightDetail(
             id=flight_id,
             raw_payload=data,
+            raw_path=str(raw_path) if raw_path else None,
             file_path=str(file_path) if file_path else None,
             file_type=file_type,
             metadata_path=str(metadata_path) if metadata_path else None,

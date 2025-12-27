@@ -25,6 +25,10 @@ INFERRED_COLUMNS: dict[int, dict[str, Any]] = {
 }
 
 
+_MPS_TO_KTS = 1.94384
+_KPH_TO_KTS = 0.539957
+
+
 def build_points_schema(flt: dict) -> list[dict[str, Any]]:
     points = flt.get("points") if isinstance(flt, dict) else None
     if not isinstance(points, list) or not points:
@@ -359,6 +363,10 @@ def write_points_garmin_g3x_csv(
     airframe = metadata.get("aircraft_type") or "Unknown"
     tail = metadata.get("tail_number") or ""
 
+    track_gs = _median(_track_gs_knots(points, lat_idx, lon_idx, step, stride))
+    ias_factor = _infer_speed_factor(_median(_column_values(points, ias_idx, stride)), track_gs)
+    tas_factor = _infer_speed_factor(_median(_column_values(points, tas_idx, stride)), track_gs)
+
     header_lines = [
         f"#airframe_info,1,{airframe},G3X,{tail}",
         "Lcl Date (yyyy-mm-dd),Lcl Time (hh:mm:ss),UTC Offset (hh:mm),Latitude (deg),Longitude (deg),"
@@ -390,6 +398,7 @@ def write_points_garmin_g3x_csv(
                 if alt_raw_idx is not None and alt_raw_idx < len(point) and point[alt_raw_idx] is not None
                 else alt
             )
+            alt_primary = alt_b if alt_b != "" else alt
             ias = point[ias_idx] if ias_idx is not None and ias_idx < len(point) else ""
             tas = point[tas_idx] if tas_idx is not None and tas_idx < len(point) else ""
             gs = point[gs_idx] if gs_idx is not None and gs_idx < len(point) else ""
@@ -410,8 +419,14 @@ def write_points_garmin_g3x_csv(
             row[2] = utc_offset
             row[3] = lat
             row[4] = lon
-            row[5] = alt
-            row[6] = alt_b
+            row[5] = alt_primary
+            row[6] = ""
+            if ias != "" and ias_factor != 1.0:
+                ias_val = _to_float(ias)
+                ias = ias_val * ias_factor if ias_val is not None else ias
+            if tas != "" and tas_factor != 1.0:
+                tas_val = _to_float(tas)
+                tas = tas_val * tas_factor if tas_val is not None else tas
             row[7] = ias
             row[8] = tas
             row[9] = gs
@@ -470,6 +485,10 @@ def write_points_garmin_g1000_csv(
     airframe = metadata.get("aircraft_type") or "Unknown"
     tail = metadata.get("tail_number") or ""
 
+    track_gs = _median(_track_gs_knots(points, lat_idx, lon_idx, step, stride))
+    ias_factor = _infer_speed_factor(_median(_column_values(points, ias_idx, stride)), track_gs)
+    tas_factor = _infer_speed_factor(_median(_column_values(points, tas_idx, stride)), track_gs)
+
     header_lines = [
         f"#airframe_info,1,{airframe},G1000,{tail}",
         "Lcl Date (yyyy-mm-dd),Lcl Time (hh:mm:ss),UTC Offset (hh:mm),Latitude (deg),Longitude (deg),"
@@ -501,6 +520,7 @@ def write_points_garmin_g1000_csv(
                 if alt_raw_idx is not None and alt_raw_idx < len(point) and point[alt_raw_idx] is not None
                 else alt_gps
             )
+            alt_primary = alt_b if alt_b != "" else alt_gps
             ias = point[ias_idx] if ias_idx is not None and ias_idx < len(point) else ""
             tas = point[tas_idx] if tas_idx is not None and tas_idx < len(point) else ""
             gs = point[gs_idx] if gs_idx is not None and gs_idx < len(point) else ""
@@ -521,10 +541,16 @@ def write_points_garmin_g1000_csv(
             row[2] = utc_offset
             row[3] = lat
             row[4] = lon
-            row[5] = alt_b
-            row[6] = alt_b
-            row[7] = alt_b
+            row[5] = alt_primary
+            row[6] = ""
+            row[7] = alt_primary
             row[8] = oat
+            if ias != "" and ias_factor != 1.0:
+                ias_val = _to_float(ias)
+                ias = ias_val * ias_factor if ias_val is not None else ias
+            if tas != "" and tas_factor != 1.0:
+                tas_val = _to_float(tas)
+                tas = tas_val * tas_factor if tas_val is not None else tas
             row[9] = ias
             row[10] = gs
             row[11] = vs
@@ -532,7 +558,7 @@ def write_points_garmin_g1000_csv(
             row[13] = roll
             row[14] = hdg
             row[15] = trk
-            row[16] = alt_gps
+            row[16] = alt_primary
             row[17] = tas
             writer.writerow(row)
 
@@ -822,6 +848,95 @@ def _extract_profiles(profiles: Any) -> dict[int, dict[str, Any]]:
                 "id": p_id,
             }
     return mapping
+
+
+def _median(values: list[float]) -> float | None:
+    if not values:
+        return None
+    values_sorted = sorted(values)
+    mid = len(values_sorted) // 2
+    if len(values_sorted) % 2 == 1:
+        return values_sorted[mid]
+    return (values_sorted[mid - 1] + values_sorted[mid]) / 2
+
+
+def _to_float(value: Any) -> float | None:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _track_gs_knots(
+    points: list,
+    lat_idx: int | None,
+    lon_idx: int | None,
+    step_seconds: float,
+    stride: int,
+) -> list[float]:
+    if lat_idx is None or lon_idx is None:
+        return []
+    if step_seconds <= 0:
+        return []
+    results: list[float] = []
+    for idx in range(0, len(points) - stride, stride):
+        p1 = points[idx]
+        p2 = points[idx + stride]
+        if not isinstance(p1, list) or not isinstance(p2, list):
+            continue
+        lat1 = _to_float(p1[lat_idx]) if lat_idx < len(p1) else None
+        lon1 = _to_float(p1[lon_idx]) if lon_idx < len(p1) else None
+        lat2 = _to_float(p2[lat_idx]) if lat_idx < len(p2) else None
+        lon2 = _to_float(p2[lon_idx]) if lon_idx < len(p2) else None
+        if None in (lat1, lon1, lat2, lon2):
+            continue
+        distance_nm = _haversine_nm(lat1, lon1, lat2, lon2)
+        hours = (step_seconds * stride) / 3600.0
+        if hours <= 0:
+            continue
+        results.append(distance_nm / hours)
+    return results
+
+
+def _haversine_nm(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    r_nm = 3440.065
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    return 2 * r_nm * math.asin(math.sqrt(a))
+
+
+def _infer_speed_factor(observed: float | None, reference: float | None) -> float:
+    if not observed or not reference:
+        return 1.0
+    if observed <= 0 or reference <= 0:
+        return 1.0
+    ratio = observed / reference
+    if ratio < 0.65 and observed < 90 and reference > 90:
+        return _MPS_TO_KTS
+    if ratio > 1.5 and observed > 150 and reference < 130:
+        return _KPH_TO_KTS
+    return 1.0
+
+
+def _column_values(points: list, idx: int | None, stride: int) -> list[float]:
+    if idx is None:
+        return []
+    values: list[float] = []
+    for row_idx, point in enumerate(points):
+        if row_idx % stride != 0:
+            continue
+        if not isinstance(point, list) or idx >= len(point):
+            continue
+        value = _to_float(point[idx])
+        if value is None:
+            continue
+        values.append(value)
+    return values
 
 
 def _slug(value: str) -> str:

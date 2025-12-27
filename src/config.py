@@ -55,7 +55,7 @@ def load_config() -> Config:
     flysto_api_version = _get_env("FLYSTO_API_VERSION")
     flysto_min_request_interval = _get_env("FLYSTO_MIN_REQUEST_INTERVAL")
     flysto_max_request_retries = _get_env("FLYSTO_MAX_REQUEST_RETRIES")
-    cloudahoy_csv_format = _get_env("CLOUD_AHOY_CSV_FORMAT") or "cloudahoy"
+    cloudahoy_csv_format = _get_env("CLOUD_AHOY_CSV_FORMAT") or "g3x"
 
     if mode in {"api", "hybrid", "auto"}:
         missing = [

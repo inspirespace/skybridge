@@ -15,6 +15,7 @@ class FlightSummary:
 class FlightDetail:
     id: str
     raw_payload: dict
+    raw_path: str | None = None
     file_path: str | None = None
     file_type: str | None = None
     metadata_path: str | None = None
