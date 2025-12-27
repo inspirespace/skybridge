@@ -29,6 +29,7 @@ class CloudAhoyClient:
     password: str
     exports_dir: Path
     export_format: str = "gpx"
+    export_formats: list[str] | None = None
 
     def list_flights(self, limit: int | None = None) -> list[FlightSummary]:
         session, auth = _login(self.email, self.password)
