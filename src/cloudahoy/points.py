@@ -340,6 +340,9 @@ def write_points_garmin_g3x_csv(
     roll_idx = schema_index.get("roll_deg")
     pitch_idx = schema_index.get("pitch_deg")
     oat_idx = schema_index.get("oat_c")
+    agl_idx = schema_index.get("agl_meters")
+    wind_spd_idx = schema_index.get("wind_speed_knots")
+    wind_dir_idx = schema_index.get("wind_dir_deg")
 
     gmt_epoch = _infer_gmt_epoch(start_time, metadata)
     base_time = datetime.fromtimestamp(gmt_epoch, tz=timezone.utc)
@@ -371,9 +374,10 @@ def write_points_garmin_g3x_csv(
         f"#airframe_info,1,{airframe},G3X,{tail}",
         "Lcl Date (yyyy-mm-dd),Lcl Time (hh:mm:ss),UTC Offset (hh:mm),Latitude (deg),Longitude (deg),"
         "GPS Alt (ft),Pressure Alt (ft),IAS (kt),TAS (kt),GS (kt),Heading (deg),Pitch (deg),Roll (deg),"
-        "VS (ft/min),OAT (C),Fuel Flow (GPH),RPM,Manifold Pressure (inHg),CHT1 (F),EGT1 (F)",
+        "VS (ft/min),OAT (C),Height Above Ground (ft),Wind Speed (kt),Wind Direction (deg),Fuel Flow (GPH),"
+        "RPM,Manifold Pressure (inHg),CHT1 (F),EGT1 (F)",
         "Lcl Date,Lcl Time,UTCOfst,Latitude,Longitude,AltGPS,AltB,IAS,TAS,GndSpd,HDG,Pitch,Roll,VSpd,OAT,"
-        "FF,RPM,ManP,CHT1,EGT1",
+        "AGL,WndSpd,WndDr,FF,RPM,ManP,CHT1,EGT1",
     ]
 
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -411,6 +415,21 @@ def write_points_garmin_g3x_csv(
                 vs_raw = point[vs_knots_idx]
                 vs = knots_to_fpm(vs_raw) if vs_raw is not None else ""
             oat = point[oat_idx] if oat_idx is not None and oat_idx < len(point) else ""
+            agl = (
+                meters_to_feet(point[agl_idx])
+                if agl_idx is not None and agl_idx < len(point) and point[agl_idx] is not None
+                else ""
+            )
+            wind_spd = (
+                point[wind_spd_idx]
+                if wind_spd_idx is not None and wind_spd_idx < len(point)
+                else ""
+            )
+            wind_dir = (
+                point[wind_dir_idx]
+                if wind_dir_idx is not None and wind_dir_idx < len(point)
+                else ""
+            )
 
             utc_offset = "+00:00"
             row = [""] * len(header_lines[-1].split(","))
@@ -435,6 +454,9 @@ def write_points_garmin_g3x_csv(
             row[12] = roll
             row[13] = vs
             row[14] = oat
+            row[15] = agl
+            row[16] = wind_spd
+            row[17] = wind_dir
             writer.writerow(row)
 
 
