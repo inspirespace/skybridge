@@ -372,6 +372,7 @@ def write_points_garmin_g3x_csv(
 
     airframe = metadata.get("aircraft_type") or "Unknown"
     tail = metadata.get("tail_number") or ""
+    system_id = tail or "UNKNOWN"
 
     track_gs = _median(_track_gs_knots(points, lat_idx, lon_idx, step, stride))
     ias_factor = _speed_factor_from_unit(
@@ -386,12 +387,16 @@ def write_points_garmin_g3x_csv(
     )
 
     header_lines = [
-        f"#airframe_info,1,{airframe},G3X,{tail}",
+        (
+            '#airframe_info,log_version="1.00",log_content_version="1.02",'
+            f'product="G3X",aircraft_ident="{tail}",unit_software_part_number="",'
+            'software_version="",'
+            f'system_id="{system_id}",unit="PFD1",airframe_hours="",engine_hours="",engine_cycles=""'
+        ),
         "Lcl Date (yyyy-mm-dd),Lcl Time (hh:mm:ss),UTC Offset (hh:mm),Latitude (deg),Longitude (deg),"
         "GPS Alt (ft),Pressure Alt (ft),IAS (kt),TAS (kt),GS (kt),Heading (deg),GPS Ground Track (deg),"
-        "Pitch (deg),Roll (deg),"
-        "VS (ft/min),OAT (C),Height Above Ground (ft),Wind Speed (kt),Wind Direction (deg),Fuel Flow (GPH),"
-        "RPM,Manifold Pressure (inHg),CHT1 (F),EGT1 (F)",
+        "Pitch (deg),Roll (deg),VS (ft/min),OAT (C),Height Above Ground (ft),Wind Speed (kt),"
+        "Wind Direction (deg),Fuel Flow (GPH),RPM,Manifold Pressure (inHg),CHT1 (F),EGT1 (F)",
         "Lcl Date,Lcl Time,UTCOfst,Latitude,Longitude,AltGPS,AltB,IAS,TAS,GndSpd,HDG,TRK,Pitch,Roll,VSpd,"
         "OAT,AGL,WndSpd,WndDr,FF,RPM,ManP,CHT1,EGT1",
     ]

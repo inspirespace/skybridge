@@ -31,6 +31,7 @@ from src.migration import (
     prepare_review,
     reconcile_aircraft_from_report,
     reconcile_crew_from_report,
+    reconcile_metadata_from_report,
     verify_import_report,
 )
 from src.models import FlightSummary
@@ -430,15 +431,20 @@ def run_guided(
 
     if options.reconcile_after_import:
         console.print("Reconciling crew/aircraft...")
+        reconciled_aircraft = reconcile_aircraft_from_report(report_path, flysto)
         reconciled_crew = reconcile_crew_from_report(
             report_path,
             flysto,
             review_path,
             cloudahoy,
         )
-        reconciled_aircraft = reconcile_aircraft_from_report(report_path, flysto)
+        reconciled_metadata = reconcile_metadata_from_report(report_path, flysto)
         console.print(
-            f"Reconciled crew={reconciled_crew} aircraft={reconciled_aircraft}"
+            "Reconciled aircraft={aircraft} crew={crew} metadata={metadata}".format(
+                aircraft=reconciled_aircraft,
+                crew=reconciled_crew,
+                metadata=reconciled_metadata,
+            )
         )
 
     console.print(
