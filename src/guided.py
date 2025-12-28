@@ -446,8 +446,15 @@ def run_guided(
                 metadata=reconciled_metadata,
             )
         )
-        # Crew can be cleared by late FlySto post-processing; reapply after a short delay.
-        time.sleep(5)
+        # Crew can be cleared by late FlySto post-processing; reapply after processing drains.
+        start_wait = time.monotonic()
+        while True:
+            n_files = flysto.log_files_to_process()
+            if n_files is None or n_files <= 0:
+                break
+            if time.monotonic() - start_wait > processing_timeout:
+                break
+            time.sleep(processing_interval)
         reconciled_crew = reconcile_crew_from_report(
             report_path,
             flysto,
