@@ -446,6 +446,15 @@ def run_guided(
                 metadata=reconciled_metadata,
             )
         )
+        # Crew can be cleared by late FlySto post-processing; reapply after a short delay.
+        time.sleep(5)
+        reconciled_crew = reconcile_crew_from_report(
+            report_path,
+            flysto,
+            review_path,
+            cloudahoy,
+        )
+        console.print(f"Reconciled crew (post-processing)={reconciled_crew}")
 
     console.print(
         Panel.fit(

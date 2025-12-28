@@ -38,6 +38,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - FlySto crew assignment now mirrors the web UI payload format (text/plain JSON) with numeric role IDs and falls back to `/api/crew?type=all` if `/api/user-crew` is empty.
 - Crew reconciliation now re-resolves the current FlySto log id from the exported filename before assigning, so late log-id swaps after processing don’t drop crew.
 - Crew reconciliation now verifies log metadata after assignment and retries once (with a short delay) if FlySto doesn’t persist crew immediately.
+- Guided imports now reapply crew after reconciliation with a short delay to defend against late FlySto post-processing clearing crew.
 
 ## Required API Details
 These are needed to complete the adapters:

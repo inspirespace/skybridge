@@ -72,6 +72,7 @@
 - Align FlySto crew assignment payloads to the web UI (text/plain JSON + numeric role IDs) and fall back to `/api/crew?type=all` when `/api/user-crew` returns empty.
 - Re-resolve FlySto log ids by filename during crew reconciliation to handle post-processing log id swaps.
 - Verify crew annotations after reconciliation and retry once if FlySto doesn’t persist crew immediately.
+- Reapply crew after guided reconciliation with a short delay to avoid late FlySto processing clearing crew.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).
