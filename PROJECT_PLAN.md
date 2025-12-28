@@ -69,6 +69,9 @@
 - Fall back to `/api/log-metadata` to capture the UnknownGarmin `systemId` for aircraft assignment when log summaries don’t expose it.
 - Add a metadata reconciliation pass (tags/remarks) and run reconciliation in aircraft → crew → metadata order.
 - Ensure FlySto API requests include the `X-Version` header (parsed from the JS bundle) so crew assignments don’t 404.
+- Align FlySto crew assignment payloads to the web UI (text/plain JSON + numeric role IDs) and fall back to `/api/crew?type=all` when `/api/user-crew` returns empty.
+- Re-resolve FlySto log ids by filename during crew reconciliation to handle post-processing log id swaps.
+- Verify crew annotations after reconciliation and retry once if FlySto doesn’t persist crew immediately.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).

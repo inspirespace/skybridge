@@ -35,6 +35,9 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Aircraft assignment now falls back to FlySto log-metadata to resolve the log source systemId (used for UnknownGarmin grouping) when per-file signatures don't map.
 - Reconcile flows now apply aircraft first, then crew, then metadata tags/remarks from the import report.
 - FlySto client now auto-applies the `X-Version` header (parsed from the web bundle when needed) to avoid 404s on crew assignment endpoints.
+- FlySto crew assignment now mirrors the web UI payload format (text/plain JSON) with numeric role IDs and falls back to `/api/crew?type=all` if `/api/user-crew` is empty.
+- Crew reconciliation now re-resolves the current FlySto log id from the exported filename before assigning, so late log-id swaps after processing don’t drop crew.
+- Crew reconciliation now verifies log metadata after assignment and retries once (with a short delay) if FlySto doesn’t persist crew immediately.
 
 ## Required API Details
 These are needed to complete the adapters:

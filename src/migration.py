@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
 import json
+import time
 from pathlib import Path
 import string
 from typing import Callable
@@ -1134,6 +1135,17 @@ def reconcile_crew_from_report(
         if not isinstance(item, dict):
             continue
         log_id = item.get("flysto_log_id")
+        file_path = item.get("file_path")
+        if file_path:
+            try:
+                resolved_log_id, _signature, _format = flysto.resolve_log_for_file(
+                    Path(file_path).name
+                )
+            except Exception:
+                resolved_log_id = None
+            if resolved_log_id:
+                log_id = resolved_log_id
+                item["flysto_log_id"] = resolved_log_id
         if not log_id:
             continue
         crew = item.get("crew")
@@ -1152,11 +1164,39 @@ def reconcile_crew_from_report(
             continue
         item["crew"] = crew
         flysto.assign_crew_for_log_id(log_id, crew)
+        if not _log_metadata_has_crew(flysto.fetch_log_metadata(log_id), log_id):
+            time.sleep(2)
+            if file_path:
+                try:
+                    refreshed_log_id, _signature, _format = flysto.resolve_log_for_file(
+                        Path(file_path).name
+                    )
+                except Exception:
+                    refreshed_log_id = None
+                if refreshed_log_id:
+                    log_id = refreshed_log_id
+                    item["flysto_log_id"] = refreshed_log_id
+            flysto.assign_crew_for_log_id(log_id, crew)
         updated += 1
     payload["crew_reconciled_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     payload["crew_reconciled"] = updated
     report_path.write_text(json.dumps(payload, indent=2))
     return updated
+
+
+def _log_metadata_has_crew(metadata: dict[str, Any] | None, log_id: str | None) -> bool:
+    if not metadata or not log_id:
+        return False
+    items = metadata.get("items")
+    if not isinstance(items, list):
+        return False
+    for item in items:
+        if not isinstance(item, dict) or item.get("id") != log_id:
+            continue
+        annotations = item.get("annotations")
+        if isinstance(annotations, dict) and annotations.get("crew"):
+            return True
+    return False
 
 
 def reconcile_metadata_from_report(

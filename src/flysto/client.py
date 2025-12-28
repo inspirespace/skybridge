@@ -460,7 +460,7 @@ class FlyStoClient:
         if not log_id:
             return
         names: list[str] = []
-        roles: list[str] = []
+        roles: list[int | str] = []
         crew_names = [entry.get("name") for entry in crew if entry.get("name")]
         self._ensure_crew_members([name for name in crew_names if isinstance(name, str)])
         default_role_id = self._default_role_id()
@@ -475,7 +475,7 @@ class FlyStoClient:
             if not role_id:
                 continue
             names.append(name.strip())
-            roles.append(role_id)
+            roles.append(_coerce_role_id(role_id))
         if not names or not roles:
             return
         self._assign_crew([log_id], names, roles)
@@ -505,6 +505,30 @@ class FlyStoClient:
             return
         self._update_log_annotations(log_id, remarks=final_remarks, tags=merged_tags)
 
+    def fetch_log_metadata(
+        self,
+        log_id: str,
+        annotations: str = "crew,tags,remarks",
+    ) -> dict[str, Any] | None:
+        session = requests.Session()
+        self._ensure_session(session)
+        response = self._request(
+            session,
+            "get",
+            self.base_url.rstrip("/") + "/api/log-metadata",
+            params={"log": log_id, "annotations": annotations},
+            timeout=60,
+        )
+        decoded = _decode_flysto_payload(response.text)
+        if isinstance(decoded, str):
+            try:
+                decoded = json.loads(decoded)
+            except json.JSONDecodeError:
+                return None
+        if isinstance(decoded, dict):
+            return decoded
+        return None
+
     def _update_log_annotations(
         self,
         log_id: str,
@@ -530,7 +554,12 @@ class FlyStoClient:
                 f"FlySto log-annotations failed: {response.status_code} {response.text[:200]}"
             )
 
-    def _assign_crew(self, log_ids: list[str], names: list[str], roles: list[str]) -> None:
+    def _assign_crew(
+        self,
+        log_ids: list[str],
+        names: list[str],
+        roles: list[int | str],
+    ) -> None:
         if not log_ids or not names or not roles:
             return
         if len(names) != len(roles):
@@ -542,7 +571,8 @@ class FlyStoClient:
             session,
             "post",
             self.base_url.rstrip("/") + "/api/assign-crew",
-            json=payload,
+            data=json.dumps(payload),
+            headers={"content-type": "text/plain;charset=UTF-8"},
             timeout=60,
         )
         if response.status_code == 404:
@@ -607,6 +637,24 @@ class FlyStoClient:
             data = decoded
         else:
             data = decoded.get("items", []) if isinstance(decoded, dict) else []
+        if not data:
+            response = self._request(
+                session,
+                "get",
+                self.base_url.rstrip("/") + "/api/crew",
+                params={"type": "all"},
+                timeout=60,
+            )
+            decoded = _decode_flysto_payload(response.text)
+            if isinstance(decoded, str):
+                try:
+                    data = json.loads(decoded)
+                except json.JSONDecodeError:
+                    data = []
+            elif isinstance(decoded, list):
+                data = decoded
+            else:
+                data = decoded.get("items", []) if isinstance(decoded, dict) else []
         self.crew_cache = data if isinstance(data, list) else []
         return self.crew_cache
 
@@ -779,6 +827,13 @@ class FlyStoClient:
     def _retry_delay(self, attempt: int) -> float:
         base = 0.5 * (2 ** attempt)
         return min(8.0, base)
+
+
+def _coerce_role_id(value: str) -> int | str:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return value
 
 
 
