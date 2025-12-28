@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 
 from src.flysto.client import FlyStoClient
 
@@ -180,3 +181,60 @@ def test_assign_crew_for_log_id_skips_resolution():
 
     assert client.resolve_calls == 0
     assert client.assigned == [(["log-9"], ["Alex"], ["role-1"])]
+
+
+def test_assign_crew_payload_matches_ui_format():
+    class DummyFlyStoPayload(FlyStoClient):
+        def __init__(self):
+            super().__init__(api_key="", base_url="https://example.test")
+            self.request_calls: list[tuple[str, str, dict]] = []
+
+        def _ensure_session(self, session):
+            return None
+
+        def _request(self, session, method: str, url: str, **kwargs):
+            self.request_calls.append((method.lower(), url, kwargs))
+            return DummyResponse()
+
+        def _ensure_crew_members(self, names):
+            return None
+
+        def _list_crew_roles(self):
+            return [{"id": "-6", "name": "Student"}]
+
+    client = DummyFlyStoPayload()
+    client.assign_crew_for_log_id(
+        "log-1",
+        [{"name": "Alex", "role": "Student", "is_pic": False}],
+    )
+
+    method, url, kwargs = client.request_calls[-1]
+    assert method == "post"
+    assert url.endswith("/api/assign-crew")
+    assert kwargs.get("headers", {}).get("content-type") == "text/plain;charset=UTF-8"
+    payload = json.loads(kwargs.get("data", "{}"))
+    assert payload["logIds"] == ["log-1"]
+    assert payload["names"] == ["Alex"]
+    assert payload["roles"] == [-6]
+
+
+def test_list_crew_falls_back_to_all():
+    class DummyFlyStoCrewFallback(FlyStoClient):
+        def __init__(self):
+            super().__init__(api_key="", base_url="https://example.test")
+            self.calls: list[tuple[str, str, dict]] = []
+
+        def _ensure_session(self, session):
+            return None
+
+        def _request(self, session, method: str, url: str, **kwargs):
+            self.calls.append((method.lower(), url, kwargs))
+            if url.endswith("/api/user-crew"):
+                return DummyResponse(text="[]")
+            if "/api/crew" in url:
+                return DummyResponse(text='[{"id":1,"name":"Alex"}]')
+            return DummyResponse()
+
+    client = DummyFlyStoCrewFallback()
+    crew = client._list_crew()
+    assert crew == [{"id": 1, "name": "Alex"}]

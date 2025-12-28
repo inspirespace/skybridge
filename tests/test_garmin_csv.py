@@ -71,6 +71,41 @@ def test_garmin_g3x_csv_header_and_row(tmp_path: Path) -> None:
     assert float(data[4]) == 14.0
 
 
+def test_garmin_g3x_hdg_optional_trk_always(tmp_path: Path, monkeypatch) -> None:
+    out_path = tmp_path / "g3x.csv"
+    start = datetime(2024, 9, 4, 12, 0, tzinfo=timezone.utc)
+    metadata = {"tail_number": "D-KBUH", "aircraft_type": "WT9"}
+    monkeypatch.delenv("CLOUD_AHOY_G3X_INCLUDE_HDG", raising=False)
+    write_points_garmin_g3x_csv(
+        [_point_row()],
+        _schema(),
+        out_path,
+        start_time=start,
+        step_seconds=1.0,
+        metadata=metadata,
+    )
+    with out_path.open() as handle:
+        rows = list(csv.reader(handle))
+    data = rows[3]
+    assert data[10] == ""
+    assert data[11] == "180.0"
+
+    monkeypatch.setenv("CLOUD_AHOY_G3X_INCLUDE_HDG", "1")
+    write_points_garmin_g3x_csv(
+        [_point_row()],
+        _schema(),
+        out_path,
+        start_time=start,
+        step_seconds=1.0,
+        metadata=metadata,
+    )
+    with out_path.open() as handle:
+        rows = list(csv.reader(handle))
+    data = rows[3]
+    assert data[10] == "175.0"
+    assert data[11] == "180.0"
+
+
 def test_garmin_g1000_csv_header_and_row(tmp_path: Path) -> None:
     out_path = tmp_path / "g1000.csv"
     start = datetime(2024, 9, 4, 12, 0, tzinfo=timezone.utc)

@@ -73,6 +73,7 @@
 - Re-resolve FlySto log ids by filename during crew reconciliation to handle post-processing log id swaps.
 - Verify crew annotations after reconciliation and retry once if FlySto doesn’t persist crew immediately.
 - Reapply crew after guided reconciliation once FlySto processing drains to avoid late FlySto processing clearing crew.
+- Added tests for crew payload formatting/fallback, G3X HDG/TRK behavior, and reconciliation retry with log-id refresh.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).
