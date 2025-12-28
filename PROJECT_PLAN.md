@@ -75,6 +75,7 @@
 - Reapply crew after guided reconciliation once FlySto processing drains to avoid late FlySto processing clearing crew.
 - Added tests for crew payload formatting/fallback, G3X HDG/TRK behavior, and reconciliation retry with log-id refresh.
 - Added tests for FlySto signature parsing/decoding, log-list resolution, log-metadata source extraction, and migration flow signature/system-id assignment.
+- Added tests for FlySto resolve update flows, log-source cache reuse, and import-report verify/reconcile paths.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).

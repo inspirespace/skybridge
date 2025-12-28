@@ -41,6 +41,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Guided imports now reapply crew after reconciliation once the FlySto processing queue drains to defend against late post-processing clearing crew.
 - Added unit tests covering G3X HDG/TRK behavior, FlySto crew payload formatting/fallback, and crew reconciliation retry with log-id refresh.
 - Added tests for FlySto upload signature parsing/decoding, log-list resolution, log-metadata source extraction, and migration flow signature/system-id assignment.
+- Added tests for FlySto resolve update flows, log-source cache reuse, and import-report verify/reconcile paths.
 
 ## Required API Details
 These are needed to complete the adapters:
