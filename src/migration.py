@@ -756,17 +756,30 @@ def _migrate_single(
                 crew = _extract_crew_assignments(metadata)
         if progress:
             progress("flysto_upload_start", {"flight_id": detail.id})
-        flysto.upload_flight(detail, dry_run=dry_run)
+        upload_result = flysto.upload_flight(detail, dry_run=dry_run)
         if progress:
             progress("flysto_upload_done", {"flight_id": detail.id})
         resolved_log_id = None
         resolved_signature = None
         resolved_format = None
+        if upload_result:
+            resolved_log_id = upload_result.log_id
+            resolved_signature = upload_result.signature
+            resolved_format = upload_result.log_format
         if not dry_run and detail.file_path:
-            filename = Path(detail.file_path).name
-            resolved_log_id, resolved_signature, resolved_format = flysto.resolve_log_for_file(
-                filename
-            )
+            if not resolved_log_id or not resolved_signature or not resolved_format:
+                filename = Path(detail.file_path).name
+                log_id, signature, log_format = flysto.resolve_log_for_file(filename)
+                if not resolved_log_id:
+                    resolved_log_id = log_id
+                if not resolved_signature:
+                    resolved_signature = signature
+                if not resolved_format:
+                    resolved_format = log_format
+            if not resolved_format:
+                suffix = Path(detail.file_path).name.lower()
+                if suffix.endswith(".g3x.csv") or suffix.endswith(".g1000.csv"):
+                    resolved_format = "UnknownGarmin"
         if not dry_run and aircraft and aircraft.get("id"):
             if progress:
                 progress(

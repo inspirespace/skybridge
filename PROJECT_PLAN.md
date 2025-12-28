@@ -60,7 +60,10 @@
 - Added optional Garmin G3X/G1000 CSV exports for CloudAhoy (`CLOUD_AHOY_EXPORT_FORMAT=g3x` / `g1000`).
 - Added multi-export support via `CLOUD_AHOY_EXPORT_FORMATS` (comma-separated, default `g3x,gpx`), with G3X preferred for upload.
 - CLI now prompts for missing API credentials in-memory when `.env` is absent.
-- Experiment: `CLOUD_AHOY_G3X_INCLUDE_HDG=1` opt-in to include heading/track in G3X exports; default omits HDG/TRK for block-time compatibility.
+- Experiment: `CLOUD_AHOY_G3X_INCLUDE_HDG=1` opt-in to include heading in G3X exports; TRK is always included and HDG defaults off for block-time compatibility.
+- Use FlySto log-upload response signature/log id for aircraft assignment (and cache it) before falling back to log-list resolution (helps G3X UnknownGarmin cases).
+- Default G3X/G1000 assignment to `UnknownGarmin` when FlySto does not report a format, keeping signature grouping consistent for aircraft assignment.
+- Add a dedicated TRK column to G3X exports while keeping HDG optional.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).

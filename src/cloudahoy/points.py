@@ -379,11 +379,12 @@ def write_points_garmin_g3x_csv(
     header_lines = [
         f"#airframe_info,1,{airframe},G3X,{tail}",
         "Lcl Date (yyyy-mm-dd),Lcl Time (hh:mm:ss),UTC Offset (hh:mm),Latitude (deg),Longitude (deg),"
-        "GPS Alt (ft),Pressure Alt (ft),IAS (kt),TAS (kt),GS (kt),Heading (deg),Pitch (deg),Roll (deg),"
+        "GPS Alt (ft),Pressure Alt (ft),IAS (kt),TAS (kt),GS (kt),Heading (deg),GPS Ground Track (deg),"
+        "Pitch (deg),Roll (deg),"
         "VS (ft/min),OAT (C),Height Above Ground (ft),Wind Speed (kt),Wind Direction (deg),Fuel Flow (GPH),"
         "RPM,Manifold Pressure (inHg),CHT1 (F),EGT1 (F)",
-        "Lcl Date,Lcl Time,UTCOfst,Latitude,Longitude,AltGPS,AltB,IAS,TAS,GndSpd,HDG,Pitch,Roll,VSpd,OAT,"
-        "AGL,WndSpd,WndDr,FF,RPM,ManP,CHT1,EGT1",
+        "Lcl Date,Lcl Time,UTCOfst,Latitude,Longitude,AltGPS,AltB,IAS,TAS,GndSpd,HDG,TRK,Pitch,Roll,VSpd,"
+        "OAT,AGL,WndSpd,WndDr,FF,RPM,ManP,CHT1,EGT1",
     ]
 
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -438,7 +439,6 @@ def write_points_garmin_g3x_csv(
             )
             if not include_hdg:
                 hdg = ""
-                trk = ""
 
             utc_offset = "+00:00"
             row = [""] * len(header_lines[-1].split(","))
@@ -458,14 +458,15 @@ def write_points_garmin_g3x_csv(
             row[7] = ias
             row[8] = tas
             row[9] = gs
-            row[10] = hdg if hdg != "" else trk
-            row[11] = pitch
-            row[12] = roll
-            row[13] = vs
-            row[14] = oat
-            row[15] = agl
-            row[16] = wind_spd
-            row[17] = wind_dir
+            row[10] = hdg
+            row[11] = trk
+            row[12] = pitch
+            row[13] = roll
+            row[14] = vs
+            row[15] = oat
+            row[16] = agl
+            row[17] = wind_spd
+            row[18] = wind_dir
             writer.writerow(row)
 
 

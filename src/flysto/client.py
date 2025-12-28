@@ -14,6 +14,13 @@ import requests
 from src.models import FlightDetail
 
 
+@dataclass(frozen=True)
+class UploadResult:
+    signature: str | None
+    log_id: str | None
+    log_format: str | None
+
+
 @dataclass
 class FlyStoClient:
     api_key: str
@@ -50,10 +57,10 @@ class FlyStoClient:
             self.api_version = _infer_api_version(self.base_url)
         return True
 
-    def upload_flight(self, flight: FlightDetail, dry_run: bool = False) -> None:
+    def upload_flight(self, flight: FlightDetail, dry_run: bool = False) -> "UploadResult | None":
         if dry_run:
             _validate_flight_for_upload(flight)
-            return
+            return None
         _validate_flight_for_upload(flight)
         session = requests.Session()
         self._ensure_session(session)
@@ -78,6 +85,14 @@ class FlyStoClient:
             raise RuntimeError(
                 f"FlySto upload failed: {response.status_code} {response.text[:300]}"
             )
+        result = _parse_upload_response(response.text, file_path.name)
+        if result and (result.log_id or result.signature or result.log_format):
+            self.log_cache[file_path.name] = (
+                result.log_id,
+                result.signature,
+                result.log_format,
+            )
+        return result
 
 
     def ensure_aircraft(self, tail_number: str | None, aircraft_type: str | None = None) -> dict[str, Any] | None:
@@ -763,6 +778,62 @@ def _build_upload_payload(path: Path) -> bytes:
         archive.writestr(path.name, data)
     return buffer.getvalue()
 
+
+def _parse_upload_response(text: str, filename: str) -> UploadResult | None:
+    raw = text.strip()
+    if not raw:
+        return None
+    data: Any = None
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        decoded = _decode_flysto_payload(raw)
+        if isinstance(decoded, str):
+            try:
+                data = json.loads(decoded)
+            except json.JSONDecodeError:
+                data = decoded
+        else:
+            data = decoded
+
+    if isinstance(data, dict):
+        sig_value = data.get("signature") or data.get("sig") or data.get("logSignature")
+        log_format = data.get("format") or data.get("logFormatId") or data.get("logFormat")
+        log_id = data.get("logId") or data.get("logIdString")
+    else:
+        sig_value = data if isinstance(data, str) else None
+        log_format = None
+        log_id = None
+
+    if not sig_value:
+        match = re.search(r"\"signature\"\\s*:\\s*\"([^\"]+)\"", raw)
+        if match:
+            sig_value = match.group(1)
+
+    signature = None
+    if isinstance(sig_value, str) and sig_value:
+        signature, parsed_log_id = _parse_signature_field(sig_value, filename)
+        if not log_id:
+            log_id = parsed_log_id
+
+    if not signature and not log_id and not log_format:
+        return None
+    return UploadResult(signature=signature, log_id=str(log_id) if log_id else None, log_format=log_format)
+
+
+def _parse_signature_field(value: str, filename: str) -> tuple[str | None, str | None]:
+    cleaned = value.strip()
+    if not cleaned:
+        return None, None
+    if "/" not in cleaned:
+        return cleaned, None
+    parts = [part for part in cleaned.split("/") if part]
+    if len(parts) >= 3:
+        # expected: <filename>/<signature>/<log_id>
+        return parts[-2], parts[-1]
+    if len(parts) == 2:
+        return parts[-1], None
+    return cleaned, None
 def _metadata_payload(flight: FlightDetail) -> dict:
     payload = flight.raw_payload.get("flt", {}).get("Meta", {})
     if not isinstance(payload, dict):
