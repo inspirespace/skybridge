@@ -9,7 +9,8 @@
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
     "source=skybridge-shell-history,target=/var/devcontainer/history,type=volume",
-    "source=skybridge-codex,target=/home/vscode/.codex,type=volume"
+    "source=skybridge-codex,target=/home/vscode/.codex,type=volume",
+    "source=skybridge-gh-cli,target=/home/vscode/.config/gh,type=volume"
   ],
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
