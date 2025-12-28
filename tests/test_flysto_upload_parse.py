@@ -31,3 +31,25 @@ def test_parse_signature_field_with_raw_value():
     assert signature == sig
     assert log_id == "371885"
     assert sig_hash == "dbb6797c"
+
+
+def test_parse_upload_response_with_log_fields():
+    payload = {
+        "signature": "flight.gpx/hash999/log555",
+        "logId": "log555",
+        "format": "GenericGpx",
+    }
+    parsed = _parse_upload_response(json.dumps(payload), "flight.gpx")
+    assert parsed is not None
+    assert parsed.signature == payload["signature"]
+    assert parsed.log_id == "log555"
+    assert parsed.log_format == "GenericGpx"
+    assert parsed.signature_hash == "hash999"
+
+
+def test_parse_signature_field_two_parts():
+    sig = "flight.g3x.csv/dbb6797c"
+    signature, log_id, sig_hash = _parse_signature_field(sig, "flight.g3x.csv")
+    assert signature == sig
+    assert log_id is None
+    assert sig_hash == "dbb6797c"

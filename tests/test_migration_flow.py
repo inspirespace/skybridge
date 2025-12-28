@@ -58,6 +58,14 @@ class DummyFlySto:
     ) -> None:
         self.assigned.append((signature, resolved_format))
 
+    def assign_aircraft(
+        self,
+        aircraft_id: str,
+        log_format_id: str = "GenericGpx",
+        system_id: str | None = None,
+    ) -> None:
+        return None
+
     def assign_crew_for_log_id(self, log_id: str | None, crew):
         if log_id:
             self.assigned_crews.append(log_id)
