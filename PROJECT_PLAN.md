@@ -68,6 +68,7 @@
 - Align G3X `#airframe_info` header with Garmin format and set `system_id` from tail to help FlySto avoid UnknownGarmin grouping.
 - Fall back to `/api/log-metadata` to capture the UnknownGarmin `systemId` for aircraft assignment when log summaries don’t expose it.
 - Add a metadata reconciliation pass (tags/remarks) and run reconciliation in aircraft → crew → metadata order.
+- Ensure FlySto API requests include the `X-Version` header (parsed from the JS bundle) so crew assignments don’t 404.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).

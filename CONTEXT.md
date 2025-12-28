@@ -34,6 +34,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - G3X exports now emit a Garmin-style `#airframe_info` header and set `system_id` to the tail number to help FlySto treat each tail as a distinct log source.
 - Aircraft assignment now falls back to FlySto log-metadata to resolve the log source systemId (used for UnknownGarmin grouping) when per-file signatures don't map.
 - Reconcile flows now apply aircraft first, then crew, then metadata tags/remarks from the import report.
+- FlySto client now auto-applies the `X-Version` header (parsed from the web bundle when needed) to avoid 404s on crew assignment endpoints.
 
 ## Required API Details
 These are needed to complete the adapters:

@@ -742,6 +742,11 @@ class FlyStoClient:
 
     def _request(self, session: requests.Session, method: str, url: str, **kwargs) -> requests.Response:
         method = method.lower()
+        if self.api_version:
+            headers = dict(kwargs.get("headers") or {})
+            if not any(key.lower() == "x-version" for key in headers):
+                headers["x-version"] = self.api_version
+            kwargs["headers"] = headers
         last_error = None
         for attempt in range(self.max_request_retries):
             self._respect_rate_limit()
@@ -947,7 +952,7 @@ def _infer_api_version(base_url: str) -> str | None:
         try:
             login = requests.get(login_url, timeout=30)
             login.raise_for_status()
-            match = re.search(r"/static/(flysto\\.[^\\\"']+\\.js)", login.text)
+            match = re.search(r"/static/(flysto\.[^\"']+\.js)", login.text)
             if not match:
                 continue
             base_root = "{uri.scheme}://{uri.netloc}/".format(
@@ -956,7 +961,9 @@ def _infer_api_version(base_url: str) -> str | None:
             bundle_url = urljoin(base_root, f"static/{match.group(1)}")
             bundle = requests.get(bundle_url, timeout=30)
             bundle.raise_for_status()
-            match = re.search(r"x-version\"\\s*[:,]\\s*\"?(\\d+)\"?", bundle.text)
+            match = re.search(r'x-version"\s*[:,]\s*"?(\d+)"?', bundle.text)
+            if not match:
+                match = re.search(r'X-Version`\s*,\s*`(\d+)`', bundle.text)
             if match:
                 return match.group(1)
         except Exception:
