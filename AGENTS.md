@@ -20,6 +20,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - CLI supports `--start-date` / `--end-date` for targeted imports (YYYY-MM-DD or ISO8601).
 - Set `CLOUD_AHOY_G3X_INCLUDE_HDG=1` to include heading in G3X exports (TRK is always included; default omits HDG to preserve block-time detection).
 - `pytest` — run tests (if installed).
+- Run all CLI workflows through the devcontainer scripts (`./scripts/run*.sh`) so required dependencies and browser tooling are available.
 - Devcontainer post-start uninstalls GitHub Copilot/Copilot Chat to avoid invalid-extension warnings.
 - Devcontainer installs GitHub CLI via the `github-cli` feature for authenticated GH access.
 - Devcontainer ensures Node is on PATH for Codex and installs Codex zsh completions automatically.

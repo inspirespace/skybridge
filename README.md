@@ -31,7 +31,6 @@ Or use the wrapper scripts:
 ./scripts/run.sh --approve-import --review-id <id> --wait-for-processing
 ./scripts/run.sh --reconcile-import-report --wait-for-processing
 ./scripts/verify-run.sh <RUN_ID>
-python -m src.cli --guided
 ./cloudahoy2flysto
 ```
 
@@ -150,4 +149,4 @@ python -m src.cli --approve-import --review-id <id> --wait-for-processing
 python -m src.cli --reconcile-import-report --wait-for-processing
 ```
 
-Install dependencies with `uv sync --extra dev` for local runs, or use the devcontainer for a prebuilt environment.
+Development runs should use the devcontainer scripts (`./scripts/run*.sh`) to guarantee required dependencies (like `rich`) and browser tooling. Local execution is best reserved for one-off debugging.
