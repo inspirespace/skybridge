@@ -1,0 +1,62 @@
+from __future__ import annotations
+
+import csv
+from datetime import datetime, timezone
+from pathlib import Path
+
+from src.cloudahoy.points import write_points_flightradar24_csv
+
+
+def _schema() -> list[dict]:
+    return [
+        {"index": 0, "name": "longitude_deg"},
+        {"index": 1, "name": "latitude_deg"},
+        {"index": 2, "name": "alt_meters"},
+        {"index": 3, "name": "gs_knots"},
+        {"index": 5, "name": "crs_degrees"},
+    ]
+
+
+def _point_row() -> list:
+    row = [None] * 6
+    row[0] = 14.0
+    row[1] = 48.0
+    row[2] = 1000.0
+    row[3] = 90.0
+    row[5] = 180.0
+    return row
+
+
+def test_flightradar24_csv_header_and_row(tmp_path: Path) -> None:
+    out_path = tmp_path / "flight.csv"
+    start = datetime(2024, 9, 4, 12, 0, tzinfo=timezone.utc)
+    metadata = {"tail_number": "D-KBUH"}
+    write_points_flightradar24_csv(
+        [_point_row()],
+        _schema(),
+        out_path,
+        start_time=start,
+        step_seconds=1.0,
+        metadata=metadata,
+    )
+
+    with out_path.open() as handle:
+        rows = list(csv.reader(handle))
+
+    assert rows[0] == [
+        "timestamp",
+        "callsign",
+        "latitude",
+        "longitude",
+        "altitude",
+        "speed",
+        "heading",
+    ]
+
+    data = rows[1]
+    assert data[1] == "D-KBUH"
+    assert float(data[2]) == 48.0
+    assert float(data[3]) == 14.0
+    assert float(data[4]) == 3280.84
+    assert float(data[5]) == 90.0
+    assert float(data[6]) == 180.0

@@ -14,6 +14,14 @@ import requests
 from src.models import FlightDetail
 
 
+@dataclass(frozen=True)
+class UploadResult:
+    signature: str | None
+    log_id: str | None
+    log_format: str | None
+    signature_hash: str | None = None
+
+
 @dataclass
 class FlyStoClient:
     api_key: str
@@ -35,6 +43,8 @@ class FlyStoClient:
     log_cache: dict[str, tuple[str | None, str | None, str | None]] = field(
         default_factory=dict
     )
+    upload_cache: dict[str, UploadResult] = field(default_factory=dict)
+    log_source_cache: dict[str, tuple[str | None, str | None]] = field(default_factory=dict)
 
     def prepare(self) -> bool:
         session = requests.Session()
@@ -50,10 +60,10 @@ class FlyStoClient:
             self.api_version = _infer_api_version(self.base_url)
         return True
 
-    def upload_flight(self, flight: FlightDetail, dry_run: bool = False) -> None:
+    def upload_flight(self, flight: FlightDetail, dry_run: bool = False) -> "UploadResult | None":
         if dry_run:
             _validate_flight_for_upload(flight)
-            return
+            return None
         _validate_flight_for_upload(flight)
         session = requests.Session()
         self._ensure_session(session)
@@ -78,6 +88,11 @@ class FlyStoClient:
             raise RuntimeError(
                 f"FlySto upload failed: {response.status_code} {response.text[:300]}"
             )
+        result = _parse_upload_response(response.text, file_path.name)
+        # Keep upload metadata for later reporting without poisoning resolve_log_for_file.
+        if result:
+            self.upload_cache[file_path.name] = result
+        return result
 
 
     def ensure_aircraft(self, tail_number: str | None, aircraft_type: str | None = None) -> dict[str, Any] | None:
@@ -372,6 +387,69 @@ class FlyStoClient:
         effective_format = resolved_format or log_format_id
         self.assign_aircraft(aircraft_id, log_format_id=effective_format, system_id=signature)
 
+    def resolve_log_source_for_log_id(
+        self,
+        log_id: str,
+        include_annotations: bool = True,
+    ) -> tuple[str | None, str | None]:
+        cached = self.log_source_cache.get(log_id)
+        if cached is not None:
+            return cached
+        session = requests.Session()
+        self._ensure_session(session)
+        params = {"logIdString": log_id}
+        if include_annotations:
+            params["annotations"] = "true"
+        response = self._request(
+            session,
+            "get",
+            self.base_url.rstrip("/") + "/api/log-metadata",
+            params=params,
+            timeout=60,
+        )
+        decoded = _decode_flysto_payload(response.text)
+        if isinstance(decoded, str):
+            try:
+                decoded = json.loads(decoded)
+            except json.JSONDecodeError:
+                decoded = None
+        if not isinstance(decoded, dict):
+            return None, None
+        items = decoded.get("items", [])
+        aircraft_list = decoded.get("aircraft", [])
+        entry = None
+        if isinstance(items, list):
+            for item in items:
+                if isinstance(item, dict) and item.get("id") == log_id:
+                    idx = item.get("aircraft")
+                    if isinstance(idx, int) and 0 <= idx < len(aircraft_list):
+                        entry = aircraft_list[idx]
+                    break
+        if entry is None and aircraft_list:
+            entry = aircraft_list[0]
+        log_format_id = None
+        system_id = None
+        if isinstance(entry, dict):
+            unknown = (
+                entry.get("unknown-id")
+                or entry.get("unknown_id")
+                or entry.get("unknownId")
+            )
+            avionics = None
+            if isinstance(unknown, dict):
+                avionics = unknown.get("avionics")
+            if not avionics and isinstance(entry.get("avionics"), dict):
+                avionics = entry.get("avionics")
+            if isinstance(avionics, dict):
+                log_format_id = (
+                    avionics.get("logFormatId")
+                    or avionics.get("logFormat")
+                    or avionics.get("log_format_id")
+                )
+                system_id = avionics.get("systemId") or avionics.get("system_id")
+        self.log_source_cache[log_id] = (log_format_id, system_id)
+        return log_format_id, system_id
+
     def assign_crew_for_file(self, filename: str, crew: list[dict[str, Any]]) -> None:
         if not crew:
             return
@@ -382,7 +460,7 @@ class FlyStoClient:
         if not log_id:
             return
         names: list[str] = []
-        roles: list[str] = []
+        roles: list[int | str] = []
         crew_names = [entry.get("name") for entry in crew if entry.get("name")]
         self._ensure_crew_members([name for name in crew_names if isinstance(name, str)])
         default_role_id = self._default_role_id()
@@ -397,7 +475,7 @@ class FlyStoClient:
             if not role_id:
                 continue
             names.append(name.strip())
-            roles.append(role_id)
+            roles.append(_coerce_role_id(role_id))
         if not names or not roles:
             return
         self._assign_crew([log_id], names, roles)
@@ -427,6 +505,30 @@ class FlyStoClient:
             return
         self._update_log_annotations(log_id, remarks=final_remarks, tags=merged_tags)
 
+    def fetch_log_metadata(
+        self,
+        log_id: str,
+        annotations: str = "crew,tags,remarks",
+    ) -> dict[str, Any] | None:
+        session = requests.Session()
+        self._ensure_session(session)
+        response = self._request(
+            session,
+            "get",
+            self.base_url.rstrip("/") + "/api/log-metadata",
+            params={"log": log_id, "annotations": annotations},
+            timeout=60,
+        )
+        decoded = _decode_flysto_payload(response.text)
+        if isinstance(decoded, str):
+            try:
+                decoded = json.loads(decoded)
+            except json.JSONDecodeError:
+                return None
+        if isinstance(decoded, dict):
+            return decoded
+        return None
+
     def _update_log_annotations(
         self,
         log_id: str,
@@ -452,7 +554,12 @@ class FlyStoClient:
                 f"FlySto log-annotations failed: {response.status_code} {response.text[:200]}"
             )
 
-    def _assign_crew(self, log_ids: list[str], names: list[str], roles: list[str]) -> None:
+    def _assign_crew(
+        self,
+        log_ids: list[str],
+        names: list[str],
+        roles: list[int | str],
+    ) -> None:
         if not log_ids or not names or not roles:
             return
         if len(names) != len(roles):
@@ -464,7 +571,8 @@ class FlyStoClient:
             session,
             "post",
             self.base_url.rstrip("/") + "/api/assign-crew",
-            json=payload,
+            data=json.dumps(payload),
+            headers={"content-type": "text/plain;charset=UTF-8"},
             timeout=60,
         )
         if response.status_code == 404:
@@ -529,6 +637,24 @@ class FlyStoClient:
             data = decoded
         else:
             data = decoded.get("items", []) if isinstance(decoded, dict) else []
+        if not data:
+            response = self._request(
+                session,
+                "get",
+                self.base_url.rstrip("/") + "/api/crew",
+                params={"type": "all"},
+                timeout=60,
+            )
+            decoded = _decode_flysto_payload(response.text)
+            if isinstance(decoded, str):
+                try:
+                    data = json.loads(decoded)
+                except json.JSONDecodeError:
+                    data = []
+            elif isinstance(decoded, list):
+                data = decoded
+            else:
+                data = decoded.get("items", []) if isinstance(decoded, dict) else []
         self.crew_cache = data if isinstance(data, list) else []
         return self.crew_cache
 
@@ -664,6 +790,11 @@ class FlyStoClient:
 
     def _request(self, session: requests.Session, method: str, url: str, **kwargs) -> requests.Response:
         method = method.lower()
+        if self.api_version:
+            headers = dict(kwargs.get("headers") or {})
+            if not any(key.lower() == "x-version" for key in headers):
+                headers["x-version"] = self.api_version
+            kwargs["headers"] = headers
         last_error = None
         for attempt in range(self.max_request_retries):
             self._respect_rate_limit()
@@ -696,6 +827,13 @@ class FlyStoClient:
     def _retry_delay(self, attempt: int) -> float:
         base = 0.5 * (2 ** attempt)
         return min(8.0, base)
+
+
+def _coerce_role_id(value: str) -> int | str:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return value
 
 
 
@@ -763,6 +901,68 @@ def _build_upload_payload(path: Path) -> bytes:
         archive.writestr(path.name, data)
     return buffer.getvalue()
 
+
+def _parse_upload_response(text: str, filename: str) -> UploadResult | None:
+    raw = text.strip()
+    if not raw:
+        return None
+    data: Any = None
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        decoded = _decode_flysto_payload(raw)
+        if isinstance(decoded, str):
+            try:
+                data = json.loads(decoded)
+            except json.JSONDecodeError:
+                data = decoded
+        else:
+            data = decoded
+
+    if isinstance(data, dict):
+        sig_value = data.get("signature") or data.get("sig") or data.get("logSignature")
+        log_format = data.get("format") or data.get("logFormatId") or data.get("logFormat")
+        log_id = data.get("logId") or data.get("logIdString")
+    else:
+        sig_value = data if isinstance(data, str) else None
+        log_format = None
+        log_id = None
+
+    if not sig_value:
+        match = re.search(r"\"signature\"\\s*:\\s*\"([^\"]+)\"", raw)
+        if match:
+            sig_value = match.group(1)
+
+    signature = None
+    signature_hash = None
+    if isinstance(sig_value, str) and sig_value:
+        signature, parsed_log_id, signature_hash = _parse_signature_field(sig_value, filename)
+        if not log_id:
+            log_id = parsed_log_id
+
+    if not signature and not log_id and not log_format:
+        return None
+    return UploadResult(
+        signature=signature,
+        log_id=str(log_id) if log_id else None,
+        log_format=log_format,
+        signature_hash=signature_hash,
+    )
+
+
+def _parse_signature_field(value: str, filename: str) -> tuple[str | None, str | None, str | None]:
+    cleaned = value.strip()
+    if not cleaned:
+        return None, None, None
+    if "/" not in cleaned:
+        return cleaned, None, None
+    parts = [part for part in cleaned.split("/") if part]
+    if len(parts) >= 3:
+        # expected: <filename>/<signature>/<log_id>
+        return cleaned, parts[-1], parts[-2]
+    if len(parts) == 2:
+        return cleaned, None, parts[-1]
+    return cleaned, None, None
 def _metadata_payload(flight: FlightDetail) -> dict:
     payload = flight.raw_payload.get("flt", {}).get("Meta", {})
     if not isinstance(payload, dict):
@@ -807,7 +1007,7 @@ def _infer_api_version(base_url: str) -> str | None:
         try:
             login = requests.get(login_url, timeout=30)
             login.raise_for_status()
-            match = re.search(r"/static/(flysto\\.[^\\\"']+\\.js)", login.text)
+            match = re.search(r"/static/(flysto\.[^\"']+\.js)", login.text)
             if not match:
                 continue
             base_root = "{uri.scheme}://{uri.netloc}/".format(
@@ -816,7 +1016,9 @@ def _infer_api_version(base_url: str) -> str | None:
             bundle_url = urljoin(base_root, f"static/{match.group(1)}")
             bundle = requests.get(bundle_url, timeout=30)
             bundle.raise_for_status()
-            match = re.search(r"x-version\"\\s*[:,]\\s*\"?(\\d+)\"?", bundle.text)
+            match = re.search(r'x-version"\s*[:,]\s*"?(\d+)"?', bundle.text)
+            if not match:
+                match = re.search(r'X-Version`\s*,\s*`(\d+)`', bundle.text)
             if match:
                 return match.group(1)
         except Exception:

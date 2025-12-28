@@ -54,7 +54,28 @@
 - Devcontainer now points VS Code to `/opt/venv/bin/python` and enables pytest discovery.
 - Devcontainer mounts a named volume for Codex login persistence at `/home/vscode/.codex`.
 - Devcontainer PATH now includes `/home/vscode/.npm-global/bin` for the Codex CLI.
+- Added optional ForeFlight-style CSV export for CloudAhoy (`CLOUD_AHOY_EXPORT_FORMAT=foreflight`).
+- Added optional FlightRadar24 CSV export for CloudAhoy (`CLOUD_AHOY_EXPORT_FORMAT=flightradar24`).
+- Added optional MVP-50 CSV export for CloudAhoy (`CLOUD_AHOY_EXPORT_FORMAT=mvp50`).
+- Added optional Garmin G3X/G1000 CSV exports for CloudAhoy (`CLOUD_AHOY_EXPORT_FORMAT=g3x` / `g1000`).
+- Added multi-export support via `CLOUD_AHOY_EXPORT_FORMATS` (comma-separated, default `g3x,gpx`), with G3X preferred for upload.
 - CLI now prompts for missing API credentials in-memory when `.env` is absent.
+- Experiment: `CLOUD_AHOY_G3X_INCLUDE_HDG=1` opt-in to include heading in G3X exports; TRK is always included and HDG defaults off for block-time compatibility.
+- Use FlySto log-upload response signature hash/log id for aircraft assignment (stored in a dedicated upload cache and reported separately) before falling back to log-list resolution (helps G3X UnknownGarmin cases without poisoning resolution).
+- Default G3X/G1000 assignment to `UnknownGarmin` when FlySto does not report a format, keeping signature grouping consistent for aircraft assignment.
+- Reconcile aircraft using filename-based resolution when report signatures/formats are missing.
+- Add a dedicated TRK column to G3X exports while keeping HDG optional.
+- Align G3X `#airframe_info` header with Garmin format and set `system_id` from tail to help FlySto avoid UnknownGarmin grouping.
+- Fall back to `/api/log-metadata` to capture the UnknownGarmin `systemId` for aircraft assignment when log summaries don’t expose it.
+- Add a metadata reconciliation pass (tags/remarks) and run reconciliation in aircraft → crew → metadata order.
+- Ensure FlySto API requests include the `X-Version` header (parsed from the JS bundle) so crew assignments don’t 404.
+- Align FlySto crew assignment payloads to the web UI (text/plain JSON + numeric role IDs) and fall back to `/api/crew?type=all` when `/api/user-crew` returns empty.
+- Re-resolve FlySto log ids by filename during crew reconciliation to handle post-processing log id swaps.
+- Verify crew annotations after reconciliation and retry once if FlySto doesn’t persist crew immediately.
+- Reapply crew after guided reconciliation once FlySto processing drains to avoid late FlySto processing clearing crew.
+- Added tests for crew payload formatting/fallback, G3X HDG/TRK behavior, and reconciliation retry with log-id refresh.
+- Added tests for FlySto signature parsing/decoding, log-list resolution, log-metadata source extraction, and migration flow signature/system-id assignment.
+- Added tests for FlySto resolve update flows, log-source cache reuse, and import-report verify/reconcile paths.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).

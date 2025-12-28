@@ -31,6 +31,7 @@ from src.migration import (
     prepare_review,
     reconcile_aircraft_from_report,
     reconcile_crew_from_report,
+    reconcile_metadata_from_report,
     verify_import_report,
 )
 from src.models import FlightSummary
@@ -45,6 +46,7 @@ class GuidedOptions:
     verify_after_import: bool
     reconcile_after_import: bool
     run_id: str
+    export_formats: str
     start_date: str | None = None
     end_date: str | None = None
 
@@ -172,6 +174,7 @@ def _write_guided_summary(
         "max_flights": options.max_flights,
         "start_date": options.start_date,
         "end_date": options.end_date,
+        "export_formats": options.export_formats,
         "force": options.force,
         "wait_for_processing": options.wait_for_processing,
         "verify_after_import": options.verify_after_import,
@@ -198,6 +201,10 @@ def _prompt_guided_options(
     wait_for_processing = True
     verify_after_import = True
     reconcile_after_import = True
+    export_formats = os.getenv("CLOUD_AHOY_EXPORT_FORMATS") or os.getenv(
+        "CLOUD_AHOY_EXPORT_FORMAT"
+    ) or "g3x,gpx"
+    export_formats = Prompt.ask("Export formats (comma-separated)", default=export_formats)
     return GuidedOptions(
         max_flights=max_flights,
         force=force,
@@ -205,6 +212,7 @@ def _prompt_guided_options(
         verify_after_import=verify_after_import,
         reconcile_after_import=reconcile_after_import,
         run_id=run_id,
+        export_formats=export_formats,
         start_date=start_date,
         end_date=end_date,
     )
@@ -327,6 +335,16 @@ def run_guided(
             cloudahoy = replace(cloudahoy, exports_dir=exports_dir)
         except Exception:
             pass
+    if hasattr(cloudahoy, "export_formats"):
+        try:
+            export_formats = [
+                fmt.strip()
+                for fmt in options.export_formats.replace(";", ",").split(",")
+                if fmt.strip()
+            ]
+            cloudahoy = replace(cloudahoy, export_formats=export_formats)
+        except Exception:
+            pass
 
     console.print(f"Using run dir: {run_dir}")
     console.print("Running review...")
@@ -413,16 +431,37 @@ def run_guided(
 
     if options.reconcile_after_import:
         console.print("Reconciling crew/aircraft...")
+        reconciled_aircraft = reconcile_aircraft_from_report(report_path, flysto)
         reconciled_crew = reconcile_crew_from_report(
             report_path,
             flysto,
             review_path,
             cloudahoy,
         )
-        reconciled_aircraft = reconcile_aircraft_from_report(report_path, flysto)
+        reconciled_metadata = reconcile_metadata_from_report(report_path, flysto)
         console.print(
-            f"Reconciled crew={reconciled_crew} aircraft={reconciled_aircraft}"
+            "Reconciled aircraft={aircraft} crew={crew} metadata={metadata}".format(
+                aircraft=reconciled_aircraft,
+                crew=reconciled_crew,
+                metadata=reconciled_metadata,
+            )
         )
+        # Crew can be cleared by late FlySto post-processing; reapply after processing drains.
+        start_wait = time.monotonic()
+        while True:
+            n_files = flysto.log_files_to_process()
+            if n_files is None or n_files <= 0:
+                break
+            if time.monotonic() - start_wait > processing_timeout:
+                break
+            time.sleep(processing_interval)
+        reconciled_crew = reconcile_crew_from_report(
+            report_path,
+            flysto,
+            review_path,
+            cloudahoy,
+        )
+        console.print(f"Reconciled crew (post-processing)={reconciled_crew}")
 
     console.print(
         Panel.fit(

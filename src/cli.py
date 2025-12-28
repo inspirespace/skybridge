@@ -17,6 +17,7 @@ from src.migration import (
     prepare_review,
     reconcile_aircraft_from_report,
     reconcile_crew_from_report,
+    reconcile_metadata_from_report,
     verify_import_report,
 )
 from src.state import MigrationState
@@ -417,6 +418,8 @@ def run(argv: list[str]) -> int:
                 email=config.cloudahoy_email or "",
                 password=config.cloudahoy_password or "",
                 exports_dir=Path(args.exports_dir),
+                export_format=config.cloudahoy_export_format,
+                export_formats=config.cloudahoy_export_formats,
             )
 
         flysto = FlyStoWebClient(
@@ -460,6 +463,8 @@ def run(argv: list[str]) -> int:
             email=config.cloudahoy_email or "",
             password=config.cloudahoy_password or "",
             exports_dir=Path(args.exports_dir),
+            export_format=config.cloudahoy_export_format,
+            export_formats=config.cloudahoy_export_formats,
         )
         flysto = FlyStoClient(
             api_key=config.flysto_api_key or "",
@@ -619,6 +624,11 @@ def run(argv: list[str]) -> int:
         cloudahoy_for_reconcile = (
             cloudahoy_client if isinstance(cloudahoy_client, CloudAhoyClient) else None
         )
+        reconciled = reconcile_aircraft_from_report(report_path, flysto)
+        print(
+            f"{_stamp()} FlySto aircraft reconciled {reconciled}",
+            flush=True,
+        )
         reconciled_crew = reconcile_crew_from_report(
             report_path,
             flysto,
@@ -629,9 +639,9 @@ def run(argv: list[str]) -> int:
             f"{_stamp()} FlySto crew reconciled {reconciled_crew}",
             flush=True,
         )
-        reconciled = reconcile_aircraft_from_report(report_path, flysto)
+        reconciled_metadata = reconcile_metadata_from_report(report_path, flysto)
         print(
-            f"{_stamp()} FlySto aircraft reconciled {reconciled}",
+            f"{_stamp()} FlySto metadata reconciled {reconciled_metadata}",
             flush=True,
         )
         return 0 if summary.get("missing", 0) == 0 else 1
@@ -854,6 +864,11 @@ def run(argv: list[str]) -> int:
         cloudahoy_for_reconcile = (
             cloudahoy_client if isinstance(cloudahoy_client, CloudAhoyClient) else None
         )
+        reconciled = reconcile_aircraft_from_report(report_path, flysto)
+        print(
+            f"{_stamp()} FlySto aircraft reconciled {reconciled}",
+            flush=True,
+        )
         reconciled_crew = reconcile_crew_from_report(
             report_path,
             flysto,
@@ -864,9 +879,9 @@ def run(argv: list[str]) -> int:
             f"{_stamp()} FlySto crew reconciled {reconciled_crew}",
             flush=True,
         )
-        reconciled = reconcile_aircraft_from_report(report_path, flysto)
+        reconciled_metadata = reconcile_metadata_from_report(report_path, flysto)
         print(
-            f"{_stamp()} FlySto aircraft reconciled {reconciled}",
+            f"{_stamp()} FlySto metadata reconciled {reconciled_metadata}",
             flush=True,
         )
     return 0 if stats.failed == 0 else 1

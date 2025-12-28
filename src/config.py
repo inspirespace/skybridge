@@ -23,6 +23,8 @@ class Config:
     flysto_api_version: str | None
     flysto_min_request_interval: float
     flysto_max_request_retries: int
+    cloudahoy_export_format: str
+    cloudahoy_export_formats: list[str]
     mode: str
     headless: bool
     dry_run: bool
@@ -40,6 +42,24 @@ def _get_env(name: str) -> str | None:
     return value.strip()
 
 
+def _parse_export_formats(value: str | None) -> list[str]:
+    if not value:
+        return ["g3x", "gpx"]
+    raw = [part.strip().lower() for part in value.replace(";", ",").split(",")]
+    raw = [part for part in raw if part]
+    mapped = ["gpx" if part == "cloudahoy" else part for part in raw]
+    seen: set[str] = set()
+    formats: list[str] = []
+    for part in mapped:
+        if part in seen:
+            continue
+        seen.add(part)
+        formats.append(part)
+    if "gpx" not in formats:
+        formats.append("gpx")
+    return formats
+
+
 def load_config() -> Config:
     mode = (_get_env("MODE") or "auto").lower()
 
@@ -54,6 +74,10 @@ def load_config() -> Config:
     flysto_api_version = _get_env("FLYSTO_API_VERSION")
     flysto_min_request_interval = _get_env("FLYSTO_MIN_REQUEST_INTERVAL")
     flysto_max_request_retries = _get_env("FLYSTO_MAX_REQUEST_RETRIES")
+    cloudahoy_export_format = _get_env("CLOUD_AHOY_EXPORT_FORMAT") or "g3x"
+    cloudahoy_export_formats = _parse_export_formats(
+        _get_env("CLOUD_AHOY_EXPORT_FORMATS") or cloudahoy_export_format
+    )
 
     if mode in {"api", "hybrid", "auto"}:
         missing = [
@@ -117,6 +141,8 @@ def load_config() -> Config:
         flysto_api_version=flysto_api_version,
         flysto_min_request_interval=min_request_interval,
         flysto_max_request_retries=max_request_retries,
+        cloudahoy_export_format=cloudahoy_export_format,
+        cloudahoy_export_formats=cloudahoy_export_formats,
         mode=mode,
         headless=headless,
         dry_run=dry_run,

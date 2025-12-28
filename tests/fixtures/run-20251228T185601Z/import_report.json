@@ -1,0 +1,1578 @@
+{
+  "aircraft_reconciled": 46,
+  "aircraft_reconciled_at": "2025-12-28T19:04:19.647526Z",
+  "attempted": 46,
+  "crew_reconciled": 46,
+  "crew_reconciled_at": "2025-12-28T19:06:16.565869Z",
+  "failed": 0,
+  "flysto_processing_queue": 0,
+  "generated_at": "2025-12-28T19:04:18.724614Z",
+  "items": [
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX19g2DKTrj130PBiCN39esuy4mmUfxLCBp4e66A1hd-YSmv9lGpqPvxiZZSzGzoj0K4.g3x.csv",
+      "flight_id": "f12U2FsaGVkX19g2DKTrj130PBiCN39esuy4mmUfxLCBp4e66A1hd-YSmv9lGpqPvxiZZSzGzoj0K4",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "04tacs8v",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "368303",
+      "flysto_upload_signature": "f12U2FsaGVkX19g2DKTrj130PBiCN39esuy4mmUfxLCBp4e66A1hd-YSmv9lGpqPvxiZZSzGzoj0K4.g3x.csv/ebb4b61/368303",
+      "flysto_upload_signature_hash": "ebb4b61",
+      "message": null,
+      "remarks": "Note 1",
+      "started_at": "2024-10-18T13:11:44+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_216yl_qhmOznVCei5MgKGMOllwGbnDPEtzjnMvvHUVXMJpH2j5Rgu26z7dtKpRHs.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_216yl_qhmOznVCei5MgKGMOllwGbnDPEtzjnMvvHUVXMJpH2j5Rgu26z7dtKpRHs",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "0yxhs9tq",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "658561",
+      "flysto_upload_signature": "f12U2FsaGVkX1_216yl_qhmOznVCei5MgKGMOllwGbnDPEtzjnMvvHUVXMJpH2j5Rgu26z7dtKpRHs.g3x.csv/f5e6f828/658561",
+      "flysto_upload_signature_hash": "f5e6f828",
+      "message": null,
+      "remarks": "Note 2",
+      "started_at": "2024-09-24T15:11:41+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_MJZ3l5rwH-bX-OC5szBTWoVWVb_kwmUT7H8Q2XRTnrE84-YrEiGjHfqb_G7mLvPb.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_MJZ3l5rwH-bX-OC5szBTWoVWVb_kwmUT7H8Q2XRTnrE84-YrEiGjHfqb_G7mLvPb",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "qek6cus8",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "327948",
+      "flysto_upload_signature": "f12U2FsaGVkX1_MJZ3l5rwH-bX-OC5szBTWoVWVb_kwmUT7H8Q2XRTnrE84-YrEiGjHfqb_G7mLvPb.g3x.csv/e56ee870/327948",
+      "flysto_upload_signature_hash": "e56ee870",
+      "message": null,
+      "remarks": "Note 3",
+      "started_at": "2024-09-24T14:30:24+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX182sYUjfCnj48QYQHyJyStJkwC3Fyafi_HYIiR5VvKU_voB289_KyOt4UKJ_Fw3pVQ.g3x.csv",
+      "flight_id": "f12U2FsaGVkX182sYUjfCnj48QYQHyJyStJkwC3Fyafi_HYIiR5VvKU_voB289_KyOt4UKJ_Fw3pVQ",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "b1ncng3d",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "485979",
+      "flysto_upload_signature": "f12U2FsaGVkX182sYUjfCnj48QYQHyJyStJkwC3Fyafi_HYIiR5VvKU_voB289_KyOt4UKJ_Fw3pVQ.g3x.csv/2b37e70b/485979",
+      "flysto_upload_signature_hash": "2b37e70b",
+      "message": null,
+      "remarks": "Note 4",
+      "started_at": "2024-09-04T16:30:13+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_yysiYVuWpfjVyVz6FUrn7nO8QxcCOoRF1pg-IpR2QY3q36xu3eGKws3eRsrMfR0I.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_yysiYVuWpfjVyVz6FUrn7nO8QxcCOoRF1pg-IpR2QY3q36xu3eGKws3eRsrMfR0I",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "be7ogmpu",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "170913",
+      "flysto_upload_signature": "f12U2FsaGVkX1_yysiYVuWpfjVyVz6FUrn7nO8QxcCOoRF1pg-IpR2QY3q36xu3eGKws3eRsrMfR0I.g3x.csv/ab193fe/170913",
+      "flysto_upload_signature_hash": "ab193fe",
+      "message": null,
+      "remarks": "Note 5",
+      "started_at": "2024-09-04T16:05:07+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1-Ct9BTAVeG0aOiSvLVLxoqGWhvCHZ_xNoXaH8q8Ybyvg8MrQ2koRm3Do5_q_e6W9b.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1-Ct9BTAVeG0aOiSvLVLxoqGWhvCHZ_xNoXaH8q8Ybyvg8MrQ2koRm3Do5_q_e6W9b",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "vjuk4g2i",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "557516",
+      "flysto_upload_signature": "f12U2FsaGVkX1-Ct9BTAVeG0aOiSvLVLxoqGWhvCHZ_xNoXaH8q8Ybyvg8MrQ2koRm3Do5_q_e6W9b.g3x.csv/fae925d/557516",
+      "flysto_upload_signature_hash": "fae925d",
+      "message": null,
+      "remarks": "Note 6",
+      "started_at": "2024-08-01T15:52:40+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_WFk0REliSjg-TAmN_-lomhlo7o_aIXGBxw27pidjNHM7roy49C_twfqJcuZgckEb.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_WFk0REliSjg-TAmN_-lomhlo7o_aIXGBxw27pidjNHM7roy49C_twfqJcuZgckEb",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "1pno8yzl",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "341984",
+      "flysto_upload_signature": "f12U2FsaGVkX1_WFk0REliSjg-TAmN_-lomhlo7o_aIXGBxw27pidjNHM7roy49C_twfqJcuZgckEb.g3x.csv/8cb2712/341984",
+      "flysto_upload_signature_hash": "8cb2712",
+      "message": null,
+      "remarks": "Note 7",
+      "started_at": "2024-07-25T15:45:18+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1-BJSEDawM0VOnSDOTMLuGhn_zTaU_L1-ZFRu3qJqhqRxGVvZpALF4sb1sAOuvg984.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1-BJSEDawM0VOnSDOTMLuGhn_zTaU_L1-ZFRu3qJqhqRxGVvZpALF4sb1sAOuvg984",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "gz74ar79",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "319077",
+      "flysto_upload_signature": "f12U2FsaGVkX1-BJSEDawM0VOnSDOTMLuGhn_zTaU_L1-ZFRu3qJqhqRxGVvZpALF4sb1sAOuvg984.g3x.csv/36c001b8/319077",
+      "flysto_upload_signature_hash": "36c001b8",
+      "message": null,
+      "remarks": "Note 8",
+      "started_at": "2024-07-25T15:00:08+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_pvwiLHsQUHX4MzgeZsxIniGwo6XtUIkxwrWJGWkPqJPiqzMK7ANq4lg-qqFhO7VY.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_pvwiLHsQUHX4MzgeZsxIniGwo6XtUIkxwrWJGWkPqJPiqzMK7ANq4lg-qqFhO7VY",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "o51gj7jx",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "323933",
+      "flysto_upload_signature": "f12U2FsaGVkX1_pvwiLHsQUHX4MzgeZsxIniGwo6XtUIkxwrWJGWkPqJPiqzMK7ANq4lg-qqFhO7VY.g3x.csv/4929e525/323933",
+      "flysto_upload_signature_hash": "4929e525",
+      "message": null,
+      "remarks": "Note 9",
+      "started_at": "2024-07-25T14:15:42+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX181-fJkIMB9UEFTCJ7AtkcwrB3NO5T6gvqmR58VuN3utYgD5j_9GGIwImsHRM8KuJY.g3x.csv",
+      "flight_id": "f12U2FsaGVkX181-fJkIMB9UEFTCJ7AtkcwrB3NO5T6gvqmR58VuN3utYgD5j_9GGIwImsHRM8KuJY",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "7kqlvzzf",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "298278",
+      "flysto_upload_signature": "f12U2FsaGVkX181-fJkIMB9UEFTCJ7AtkcwrB3NO5T6gvqmR58VuN3utYgD5j_9GGIwImsHRM8KuJY.g3x.csv/8a4e5a1e/298278",
+      "flysto_upload_signature_hash": "8a4e5a1e",
+      "message": null,
+      "remarks": "Note 10",
+      "started_at": "2024-07-17T15:00:36+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1-HN-_b9HqxPc2rrdp2FhhQlp2qOtQoWE2k3GCyrSPAn6Y3tkRkl6cOyUtWoPPyFeA.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1-HN-_b9HqxPc2rrdp2FhhQlp2qOtQoWE2k3GCyrSPAn6Y3tkRkl6cOyUtWoPPyFeA",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "uz6a84ja",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "510567",
+      "flysto_upload_signature": "f12U2FsaGVkX1-HN-_b9HqxPc2rrdp2FhhQlp2qOtQoWE2k3GCyrSPAn6Y3tkRkl6cOyUtWoPPyFeA.g3x.csv/cf542944/510567",
+      "flysto_upload_signature_hash": "cf542944",
+      "message": null,
+      "remarks": "Note 11",
+      "started_at": "2024-07-17T13:53:56+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_EUoTEofm2RNj8n-0BOvLkmRmdbudcyoStR2Gmq7eeRdMScTBI6ZIKJWEsw-DhIUs.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_EUoTEofm2RNj8n-0BOvLkmRmdbudcyoStR2Gmq7eeRdMScTBI6ZIKJWEsw-DhIUs",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "kqlk5iwt",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "536659",
+      "flysto_upload_signature": "f12U2FsaGVkX1_EUoTEofm2RNj8n-0BOvLkmRmdbudcyoStR2Gmq7eeRdMScTBI6ZIKJWEsw-DhIUs.g3x.csv/5e634a29/536659",
+      "flysto_upload_signature_hash": "5e634a29",
+      "message": null,
+      "remarks": "Note 12",
+      "started_at": "2024-07-09T15:20:57+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX19EhLCp8DelvBp8rTV8UreS3b3z6JgZZhAzvBrHtovTM6zjfNQszBYoMhfA31dAFq4.g3x.csv",
+      "flight_id": "f12U2FsaGVkX19EhLCp8DelvBp8rTV8UreS3b3z6JgZZhAzvBrHtovTM6zjfNQszBYoMhfA31dAFq4",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "fuqgwb0f",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "468635",
+      "flysto_upload_signature": "f12U2FsaGVkX19EhLCp8DelvBp8rTV8UreS3b3z6JgZZhAzvBrHtovTM6zjfNQszBYoMhfA31dAFq4.g3x.csv/dcd60883/468635",
+      "flysto_upload_signature_hash": "dcd60883",
+      "message": null,
+      "remarks": "Note 13",
+      "started_at": "2024-07-09T14:28:53+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_w1AwHwnJszkBG4dlEIjc6ayp6pHJ7jo6Fwmu73pVc9xbdPVYBPoOXa2-YUBmQ5Jg.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_w1AwHwnJszkBG4dlEIjc6ayp6pHJ7jo6Fwmu73pVc9xbdPVYBPoOXa2-YUBmQ5Jg",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "fq8dm3cm",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "470978",
+      "flysto_upload_signature": "f12U2FsaGVkX1_w1AwHwnJszkBG4dlEIjc6ayp6pHJ7jo6Fwmu73pVc9xbdPVYBPoOXa2-YUBmQ5Jg.g3x.csv/edef624b/470978",
+      "flysto_upload_signature_hash": "edef624b",
+      "message": null,
+      "remarks": "Note 14",
+      "started_at": "2024-07-02T15:42:17+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX19Y64XQDA4FfpTUgA4q8beQJViphHHPVVcurgsJ8-mTHk2_XyoCQ8ScD1YAnLjBzd4.g3x.csv",
+      "flight_id": "f12U2FsaGVkX19Y64XQDA4FfpTUgA4q8beQJViphHHPVVcurgsJ8-mTHk2_XyoCQ8ScD1YAnLjBzd4",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "629z9jlr",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "592498",
+      "flysto_upload_signature": "f12U2FsaGVkX19Y64XQDA4FfpTUgA4q8beQJViphHHPVVcurgsJ8-mTHk2_XyoCQ8ScD1YAnLjBzd4.g3x.csv/c8e74cd9/592498",
+      "flysto_upload_signature_hash": "c8e74cd9",
+      "message": null,
+      "remarks": "Note 15",
+      "started_at": "2024-07-02T14:35:19+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 3",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1-_zVcNqbdO39KlWldmjVTvakO8nlafsn0vo8tAMOMb0b0WwV0_0Eo1s68rYILHuog.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1-_zVcNqbdO39KlWldmjVTvakO8nlafsn0vo8tAMOMb0b0WwV0_0Eo1s68rYILHuog",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "n03e97nm",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "756573",
+      "flysto_upload_signature": "f12U2FsaGVkX1-_zVcNqbdO39KlWldmjVTvakO8nlafsn0vo8tAMOMb0b0WwV0_0Eo1s68rYILHuog.g3x.csv/b161cf80/756573",
+      "flysto_upload_signature_hash": "b161cf80",
+      "message": null,
+      "remarks": "Note 16",
+      "started_at": "2024-06-17T15:49:33+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX19E7wKYhegyCL8A26z02YcIEiak-851LNMatWjLUnuOhbyutVBKWUj5edMd9cm55V0.g3x.csv",
+      "flight_id": "f12U2FsaGVkX19E7wKYhegyCL8A26z02YcIEiak-851LNMatWjLUnuOhbyutVBKWUj5edMd9cm55V0",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "z2ojob2t",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "236606",
+      "flysto_upload_signature": "f12U2FsaGVkX19E7wKYhegyCL8A26z02YcIEiak-851LNMatWjLUnuOhbyutVBKWUj5edMd9cm55V0.g3x.csv/1656ad57/236606",
+      "flysto_upload_signature_hash": "1656ad57",
+      "message": null,
+      "remarks": "Note 17",
+      "started_at": "2024-06-13T15:17:21+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_VWn9fTWDEAi0P-5ZkF2BQNoPSC_ZoCX7UzT6AoY8bzctWjJCNum-nDVR3ImMl4l0.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_VWn9fTWDEAi0P-5ZkF2BQNoPSC_ZoCX7UzT6AoY8bzctWjJCNum-nDVR3ImMl4l0",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "194db44f",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "318345",
+      "flysto_upload_signature": "f12U2FsaGVkX1_VWn9fTWDEAi0P-5ZkF2BQNoPSC_ZoCX7UzT6AoY8bzctWjJCNum-nDVR3ImMl4l0.g3x.csv/c9f4600f/318345",
+      "flysto_upload_signature_hash": "c9f4600f",
+      "message": null,
+      "remarks": "Note 18",
+      "started_at": "2024-06-13T14:35:21+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 3",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1-A3FR4fyleLPZUHsgnMqy4oUbMrPAs8ZDPjrQ5BqMMOqiCBtCsocdfgeBvWYaBWtI.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1-A3FR4fyleLPZUHsgnMqy4oUbMrPAs8ZDPjrQ5BqMMOqiCBtCsocdfgeBvWYaBWtI",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "3z4jjxor",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "164598",
+      "flysto_upload_signature": "f12U2FsaGVkX1-A3FR4fyleLPZUHsgnMqy4oUbMrPAs8ZDPjrQ5BqMMOqiCBtCsocdfgeBvWYaBWtI.g3x.csv/a2aed6ba/164598",
+      "flysto_upload_signature_hash": "a2aed6ba",
+      "message": null,
+      "remarks": "Note 19",
+      "started_at": "2024-06-13T14:16:58+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1-PNIe4_TOQ10AypY-s3JDX7IRq9qzTGYrnCTZAq4SoCSp6qWGSiLuug5r83_zIAWI.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1-PNIe4_TOQ10AypY-s3JDX7IRq9qzTGYrnCTZAq4SoCSp6qWGSiLuug5r83_zIAWI",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "4bupqsf5",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "311578",
+      "flysto_upload_signature": "f12U2FsaGVkX1-PNIe4_TOQ10AypY-s3JDX7IRq9qzTGYrnCTZAq4SoCSp6qWGSiLuug5r83_zIAWI.g3x.csv/afe652e/311578",
+      "flysto_upload_signature_hash": "afe652e",
+      "message": null,
+      "remarks": "Note 20",
+      "started_at": "2024-06-05T15:00:50+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_4thw-0csHP7Ka1WccY-p2I9qdXfUjetE6Oe5C-BqOg0WZQsIQIItFpubffq8l97g.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_4thw-0csHP7Ka1WccY-p2I9qdXfUjetE6Oe5C-BqOg0WZQsIQIItFpubffq8l97g",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "qad4wb9a",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "518561",
+      "flysto_upload_signature": "f12U2FsaGVkX1_4thw-0csHP7Ka1WccY-p2I9qdXfUjetE6Oe5C-BqOg0WZQsIQIItFpubffq8l97g.g3x.csv/b37c5691/518561",
+      "flysto_upload_signature_hash": "b37c5691",
+      "message": null,
+      "remarks": "Note 21",
+      "started_at": "2024-05-29T16:14:15+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 3",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX19Lzgs5kpPqk5ulPbC2OruRzYzyUso9D32lTZYYO1o0rpPMCqHNqJgtLmL3nhlHI-M.g3x.csv",
+      "flight_id": "f12U2FsaGVkX19Lzgs5kpPqk5ulPbC2OruRzYzyUso9D32lTZYYO1o0rpPMCqHNqJgtLmL3nhlHI-M",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "tub03zhr",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "256502",
+      "flysto_upload_signature": "f12U2FsaGVkX19Lzgs5kpPqk5ulPbC2OruRzYzyUso9D32lTZYYO1o0rpPMCqHNqJgtLmL3nhlHI-M.g3x.csv/e8e4eb8c/256502",
+      "flysto_upload_signature_hash": "e8e4eb8c",
+      "message": null,
+      "remarks": "Note 22",
+      "started_at": "2024-05-29T15:44:58+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_pukxVGC86XTf1TG9s2fRr0b4CU0Z0rXdekB1Mi_f6CHarddxgDGa-aTHjPMHp_EU.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_pukxVGC86XTf1TG9s2fRr0b4CU0Z0rXdekB1Mi_f6CHarddxgDGa-aTHjPMHp_EU",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "ncp32n5d",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "340520",
+      "flysto_upload_signature": "f12U2FsaGVkX1_pukxVGC86XTf1TG9s2fRr0b4CU0Z0rXdekB1Mi_f6CHarddxgDGa-aTHjPMHp_EU.g3x.csv/9767a385/340520",
+      "flysto_upload_signature_hash": "9767a385",
+      "message": null,
+      "remarks": "Note 23",
+      "started_at": "2024-05-24T12:05:09+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Passenger"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX182SQ_8cfgYwuzIeXFlrBTEuk_jZMZ-9e7yIlTECgWc2_NykKwL_LhcpTvv4JckHjA.g3x.csv",
+      "flight_id": "f12U2FsaGVkX182SQ_8cfgYwuzIeXFlrBTEuk_jZMZ-9e7yIlTECgWc2_NykKwL_LhcpTvv4JckHjA",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "qkdvzozj",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "417586",
+      "flysto_upload_signature": "f12U2FsaGVkX182SQ_8cfgYwuzIeXFlrBTEuk_jZMZ-9e7yIlTECgWc2_NykKwL_LhcpTvv4JckHjA.g3x.csv/4cfd7462/417586",
+      "flysto_upload_signature_hash": "4cfd7462",
+      "message": null,
+      "remarks": "Note 24",
+      "started_at": "2024-05-24T11:12:35+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_a_pkQVT5E-lSxFxM-6VncSDKiipayr4VYb8GmC4x9Oh3b8UFsIonzUojyXpW4Uab.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_a_pkQVT5E-lSxFxM-6VncSDKiipayr4VYb8GmC4x9Oh3b8UFsIonzUojyXpW4Uab",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "agojlrfh",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "321628",
+      "flysto_upload_signature": "f12U2FsaGVkX1_a_pkQVT5E-lSxFxM-6VncSDKiipayr4VYb8GmC4x9Oh3b8UFsIonzUojyXpW4Uab.g3x.csv/e8dbaa88/321628",
+      "flysto_upload_signature_hash": "e8dbaa88",
+      "message": null,
+      "remarks": "Note 25",
+      "started_at": "2024-05-14T15:17:35+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_ZdSXzvI3kzBEdYrItjN44SeskNdfPSt3_UEs8JBNOFSjWhgPy6lJ3grQ6Zg_jLhb.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_ZdSXzvI3kzBEdYrItjN44SeskNdfPSt3_UEs8JBNOFSjWhgPy6lJ3grQ6Zg_jLhb",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "ud9hqyul",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "599466",
+      "flysto_upload_signature": "f12U2FsaGVkX1_ZdSXzvI3kzBEdYrItjN44SeskNdfPSt3_UEs8JBNOFSjWhgPy6lJ3grQ6Zg_jLhb.g3x.csv/a8189e06/599466",
+      "flysto_upload_signature_hash": "a8189e06",
+      "message": null,
+      "remarks": "Note 26",
+      "started_at": "2024-05-08T15:16:17+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_soWSsgz7TMQfIG1yjpvlJywuKQliWBS0CqNOoH3e0itD056aakCdc5EEAzkDpBt0.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_soWSsgz7TMQfIG1yjpvlJywuKQliWBS0CqNOoH3e0itD056aakCdc5EEAzkDpBt0",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "m7v2zv10",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "693229",
+      "flysto_upload_signature": "f12U2FsaGVkX1_soWSsgz7TMQfIG1yjpvlJywuKQliWBS0CqNOoH3e0itD056aakCdc5EEAzkDpBt0.g3x.csv/1811079b/693229",
+      "flysto_upload_signature_hash": "1811079b",
+      "message": null,
+      "remarks": "Note 27",
+      "started_at": "2024-05-06T14:36:55+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_NfvOBVi8DVe1IidPRkB112xxACNjb6envilKEF9BsOBzf2VuNpiHanp8PHL9g2c8.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_NfvOBVi8DVe1IidPRkB112xxACNjb6envilKEF9BsOBzf2VuNpiHanp8PHL9g2c8",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "wmvjtl1r",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "439173",
+      "flysto_upload_signature": "f12U2FsaGVkX1_NfvOBVi8DVe1IidPRkB112xxACNjb6envilKEF9BsOBzf2VuNpiHanp8PHL9g2c8.g3x.csv/53840270/439173",
+      "flysto_upload_signature_hash": "53840270",
+      "message": null,
+      "remarks": "Note 28",
+      "started_at": "2024-04-30T14:55:09+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_c1_fMCNb2ebMYvT36Ujgnpp6fACB5SbO63cvQ-xqzTLg_Ox6g0eV_4lDGm9vOyRM.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_c1_fMCNb2ebMYvT36Ujgnpp6fACB5SbO63cvQ-xqzTLg_Ox6g0eV_4lDGm9vOyRM",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "y2joldvn",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "204949",
+      "flysto_upload_signature": "f12U2FsaGVkX1_c1_fMCNb2ebMYvT36Ujgnpp6fACB5SbO63cvQ-xqzTLg_Ox6g0eV_4lDGm9vOyRM.g3x.csv/f6669ab2/204949",
+      "flysto_upload_signature_hash": "f6669ab2",
+      "message": null,
+      "remarks": "Note 29",
+      "started_at": "2024-04-30T14:29:22+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Co-Pilot"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX19bovhFtz_KVUn4bT1vY3lOWFdGfV_MDXj0OQPzSAVHF3s8sXlXwrmHzGrpjIT29kI.g3x.csv",
+      "flight_id": "f12U2FsaGVkX19bovhFtz_KVUn4bT1vY3lOWFdGfV_MDXj0OQPzSAVHF3s8sXlXwrmHzGrpjIT29kI",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "xn0zaq5y",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "684606",
+      "flysto_upload_signature": "f12U2FsaGVkX19bovhFtz_KVUn4bT1vY3lOWFdGfV_MDXj0OQPzSAVHF3s8sXlXwrmHzGrpjIT29kI.g3x.csv/33497610/684606",
+      "flysto_upload_signature_hash": "33497610",
+      "message": null,
+      "remarks": "Note 30",
+      "started_at": "2024-04-25T15:00:21+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 4",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_OJ1s1cAQiIpGfAbbSxBnfApJo7yihnC-E9F0TMYdPUXQ62n-mu1nR_b7tbeU0VAU.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_OJ1s1cAQiIpGfAbbSxBnfApJo7yihnC-E9F0TMYdPUXQ62n-mu1nR_b7tbeU0VAU",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "353zllnq",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "474574",
+      "flysto_upload_signature": "f12U2FsaGVkX1_OJ1s1cAQiIpGfAbbSxBnfApJo7yihnC-E9F0TMYdPUXQ62n-mu1nR_b7tbeU0VAU.g3x.csv/5088ca19/474574",
+      "flysto_upload_signature_hash": "5088ca19",
+      "message": null,
+      "remarks": "Note 31",
+      "started_at": "2024-04-07T16:28:00+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 4",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX18-au1KQ8ETmc-ReWcAR6qWhyKmqyp2ksCQX2bgOoBWefT4ESoWru-VLpj4_M_EwdM.g3x.csv",
+      "flight_id": "f12U2FsaGVkX18-au1KQ8ETmc-ReWcAR6qWhyKmqyp2ksCQX2bgOoBWefT4ESoWru-VLpj4_M_EwdM",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "uwe6c0ki",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "249238",
+      "flysto_upload_signature": "f12U2FsaGVkX18-au1KQ8ETmc-ReWcAR6qWhyKmqyp2ksCQX2bgOoBWefT4ESoWru-VLpj4_M_EwdM.g3x.csv/a37e2bd2/249238",
+      "flysto_upload_signature_hash": "a37e2bd2",
+      "message": null,
+      "remarks": "Note 32",
+      "started_at": "2024-04-07T15:57:51+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 5",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1947ihUiCimSzxR-muZs48KG4O4Os0PHs4ab4aViypGrkERGPipJRo5-vUZLIprhs0.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1947ihUiCimSzxR-muZs48KG4O4Os0PHs4ab4aViypGrkERGPipJRo5-vUZLIprhs0",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "g7yktoqi",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "493945",
+      "flysto_upload_signature": "f12U2FsaGVkX1947ihUiCimSzxR-muZs48KG4O4Os0PHs4ab4aViypGrkERGPipJRo5-vUZLIprhs0.g3x.csv/cc01ac4d/493945",
+      "flysto_upload_signature_hash": "cc01ac4d",
+      "message": null,
+      "remarks": "Note 33",
+      "started_at": "2024-03-25T15:12:12+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-1"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": true,
+          "name": "Crew 1",
+          "role": "PIC"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 6",
+          "role": "Examiner"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_eNd4D0XnfK7NplylgLS87yk_19J62Xn_rRlp-bYVSAPyGSxvHJv0B-my5ezlueob.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_eNd4D0XnfK7NplylgLS87yk_19J62Xn_rRlp-bYVSAPyGSxvHJv0B-my5ezlueob",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "uqziuwiv",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "588327",
+      "flysto_upload_signature": "f12U2FsaGVkX1_eNd4D0XnfK7NplylgLS87yk_19J62Xn_rRlp-bYVSAPyGSxvHJv0B-my5ezlueob.g3x.csv/d816380d/588327",
+      "flysto_upload_signature_hash": "d816380d",
+      "message": null,
+      "remarks": "Note 34",
+      "started_at": "2024-11-04T13:12:18+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-2"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": true,
+          "name": "Crew 1",
+          "role": "PIC"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX18xRk06bzjOHCHzBQpsv7WsXzT6rlqUKyYgAnQf5fPMXMzhY_f01DTinUjIKt47ulA.g3x.csv",
+      "flight_id": "f12U2FsaGVkX18xRk06bzjOHCHzBQpsv7WsXzT6rlqUKyYgAnQf5fPMXMzhY_f01DTinUjIKt47ulA",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "wjwtmuex",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "395759",
+      "flysto_upload_signature": "f12U2FsaGVkX18xRk06bzjOHCHzBQpsv7WsXzT6rlqUKyYgAnQf5fPMXMzhY_f01DTinUjIKt47ulA.g3x.csv/9803861f/395759",
+      "flysto_upload_signature_hash": "9803861f",
+      "message": null,
+      "remarks": "Note 35",
+      "started_at": "2025-09-04T15:17:57+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-3"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": true,
+          "name": "Crew 1",
+          "role": "PIC"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 3",
+          "role": "Copilot"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX18V5kNEt0wFs8gWhk6kxhv0oHLzdWG6X7Ui8Bq90_dJGDx1YmjilzhDW98Fd25R6JM.g3x.csv",
+      "flight_id": "f12U2FsaGVkX18V5kNEt0wFs8gWhk6kxhv0oHLzdWG6X7Ui8Bq90_dJGDx1YmjilzhDW98Fd25R6JM",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "yo11o83n",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "644906",
+      "flysto_upload_signature": "f12U2FsaGVkX18V5kNEt0wFs8gWhk6kxhv0oHLzdWG6X7Ui8Bq90_dJGDx1YmjilzhDW98Fd25R6JM.g3x.csv/c5dd9758/644906",
+      "flysto_upload_signature_hash": "c5dd9758",
+      "message": null,
+      "remarks": "Note 36",
+      "started_at": "2025-07-23T16:25:48+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-3"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": true,
+          "name": "Crew 1",
+          "role": "PIC"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 3",
+          "role": "Copilot"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1-X3cA5bJDzh9MG-c1JIZkAsfs_x0WSFlIVdV_6NS2a9oe1GtSIFqDc_U0DMhib1NA.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1-X3cA5bJDzh9MG-c1JIZkAsfs_x0WSFlIVdV_6NS2a9oe1GtSIFqDc_U0DMhib1NA",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "l8eko3k9",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "748890",
+      "flysto_upload_signature": "f12U2FsaGVkX1-X3cA5bJDzh9MG-c1JIZkAsfs_x0WSFlIVdV_6NS2a9oe1GtSIFqDc_U0DMhib1NA.g3x.csv/968334aa/748890",
+      "flysto_upload_signature_hash": "968334aa",
+      "message": null,
+      "remarks": "Note 37",
+      "started_at": "2025-07-18T14:39:07+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-3"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": true,
+          "name": "Crew 7",
+          "role": "PIC"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Passenger"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_YjqIwLNA2TaE4yWqj367NVCvFvLp8U0sawH30bm0exP77i_B3bFpyL6mZcr40KW0.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_YjqIwLNA2TaE4yWqj367NVCvFvLp8U0sawH30bm0exP77i_B3bFpyL6mZcr40KW0",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "avxjh4k5",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "399682",
+      "flysto_upload_signature": "f12U2FsaGVkX1_YjqIwLNA2TaE4yWqj367NVCvFvLp8U0sawH30bm0exP77i_B3bFpyL6mZcr40KW0.g3x.csv/ed95a700/399682",
+      "flysto_upload_signature_hash": "ed95a700",
+      "message": null,
+      "remarks": "Note 38",
+      "started_at": "2024-12-15T13:43:45+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-3"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX187-9HS7KQxvxUEJfosSJ2B5OH7A7mk8D79ORloZnAv_DkHdyYZyp0Yn-_VXXkYEGw.g3x.csv",
+      "flight_id": "f12U2FsaGVkX187-9HS7KQxvxUEJfosSJ2B5OH7A7mk8D79ORloZnAv_DkHdyYZyp0Yn-_VXXkYEGw",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "qalo7n32",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "668872",
+      "flysto_upload_signature": "f12U2FsaGVkX187-9HS7KQxvxUEJfosSJ2B5OH7A7mk8D79ORloZnAv_DkHdyYZyp0Yn-_VXXkYEGw.g3x.csv/26c0d953/668872",
+      "flysto_upload_signature_hash": "26c0d953",
+      "message": null,
+      "remarks": "Note 39",
+      "started_at": "2024-09-10T15:01:34+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-4"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1-RrPhqMDjXDWbbUPSZ2WWK26fujSBn6y_VEX_S0zrp0ahG2BgRmHUg8Aaq5qam9zI.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1-RrPhqMDjXDWbbUPSZ2WWK26fujSBn6y_VEX_S0zrp0ahG2BgRmHUg8Aaq5qam9zI",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "8aqlkur3",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "565598",
+      "flysto_upload_signature": "f12U2FsaGVkX1-RrPhqMDjXDWbbUPSZ2WWK26fujSBn6y_VEX_S0zrp0ahG2BgRmHUg8Aaq5qam9zI.g3x.csv/48825f45/565598",
+      "flysto_upload_signature_hash": "48825f45",
+      "message": null,
+      "remarks": "Note 40",
+      "started_at": "2024-07-30T15:37:24+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-4"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1-7RPyjyFwoup3CJKntkIMJbtI5LUgkY6A94n6ZH6YRao7Im1o16pto9E2Y8rp0u6A.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1-7RPyjyFwoup3CJKntkIMJbtI5LUgkY6A94n6ZH6YRao7Im1o16pto9E2Y8rp0u6A",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "v0w4fltf",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "625958",
+      "flysto_upload_signature": "f12U2FsaGVkX1-7RPyjyFwoup3CJKntkIMJbtI5LUgkY6A94n6ZH6YRao7Im1o16pto9E2Y8rp0u6A.g3x.csv/3a2d2a3d/625958",
+      "flysto_upload_signature_hash": "3a2d2a3d",
+      "message": null,
+      "remarks": "Note 41",
+      "started_at": "2024-07-30T14:25:10+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-4"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_5NtFYefc1oNO0FtSKFakF6HhQkI54jtuzoIgo9TTCGseXRSUggtJSeiVlGrdTZWQ.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_5NtFYefc1oNO0FtSKFakF6HhQkI54jtuzoIgo9TTCGseXRSUggtJSeiVlGrdTZWQ",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "yt1s8jv6",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "179460",
+      "flysto_upload_signature": "f12U2FsaGVkX1_5NtFYefc1oNO0FtSKFakF6HhQkI54jtuzoIgo9TTCGseXRSUggtJSeiVlGrdTZWQ.g3x.csv/c809352b/179460",
+      "flysto_upload_signature_hash": "c809352b",
+      "message": null,
+      "remarks": "Note 42",
+      "started_at": "2024-06-26T15:27:54+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-4"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_E2pgkO2e2d7Vfp20vMQzxhP-GiA86KyMtEldBBHjChafPxJYipV0-Jm40zaDBFX0.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_E2pgkO2e2d7Vfp20vMQzxhP-GiA86KyMtEldBBHjChafPxJYipV0-Jm40zaDBFX0",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "i6hbkkdv",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "500708",
+      "flysto_upload_signature": "f12U2FsaGVkX1_E2pgkO2e2d7Vfp20vMQzxhP-GiA86KyMtEldBBHjChafPxJYipV0-Jm40zaDBFX0.g3x.csv/46b6c0d6/500708",
+      "flysto_upload_signature_hash": "46b6c0d6",
+      "message": null,
+      "remarks": "Note 43",
+      "started_at": "2024-06-26T14:23:07+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-4"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": false,
+          "name": "Crew 1",
+          "role": "Student"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Instructor"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX1_yq5GM0VXYavsFkeeKsW9l1f9aazs-Q_8Y61rGtFwElXNrnCkgiQ-2mPWd1p869ZE.g3x.csv",
+      "flight_id": "f12U2FsaGVkX1_yq5GM0VXYavsFkeeKsW9l1f9aazs-Q_8Y61rGtFwElXNrnCkgiQ-2mPWd1p869ZE",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "7ko49581",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "547857",
+      "flysto_upload_signature": "f12U2FsaGVkX1_yq5GM0VXYavsFkeeKsW9l1f9aazs-Q_8Y61rGtFwElXNrnCkgiQ-2mPWd1p869ZE.g3x.csv/e15adc2a/547857",
+      "flysto_upload_signature_hash": "e15adc2a",
+      "message": null,
+      "remarks": "Note 44",
+      "started_at": "2024-05-02T15:15:38+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-4"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": true,
+          "name": "Crew 1",
+          "role": "PIC"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Copilot"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX18YcBHrG7zHSdz4PCCQNWjETr-JNinFzw9Ah9yWPyEEgJvAVU7PKPTfB9Mw0o87Ih8.g3x.csv",
+      "flight_id": "f12U2FsaGVkX18YcBHrG7zHSdz4PCCQNWjETr-JNinFzw9Ah9yWPyEEgJvAVU7PKPTfB9Mw0o87Ih8",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "jhe5c7f3",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "711860",
+      "flysto_upload_signature": "f12U2FsaGVkX18YcBHrG7zHSdz4PCCQNWjETr-JNinFzw9Ah9yWPyEEgJvAVU7PKPTfB9Mw0o87Ih8.g3x.csv/107ccb12/711860",
+      "flysto_upload_signature_hash": "107ccb12",
+      "message": null,
+      "remarks": "Note 45",
+      "started_at": "2025-03-20T15:28:55+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-5"
+    },
+    {
+      "aircraft_type": null,
+      "crew": [
+        {
+          "is_pic": true,
+          "name": "Crew 1",
+          "role": "PIC"
+        },
+        {
+          "is_pic": false,
+          "name": "Crew 2",
+          "role": "Copilot"
+        }
+      ],
+      "file_path": "data/runs/20251228T185601Z/cloudahoy_exports/f12U2FsaGVkX18bVX81F2WonzsOZZgcX9gcwDkwbjkmb3WjHeJwlAmaWHOEkeU5XQH-n8F6DmRR7kM.g3x.csv",
+      "flight_id": "f12U2FsaGVkX18bVX81F2WonzsOZZgcX9gcwDkwbjkmb3WjHeJwlAmaWHOEkeU5XQH-n8F6DmRR7kM",
+      "flysto_format": "UnknownGarmin",
+      "flysto_log_id": "od76bfj2",
+      "flysto_signature": "X4U57QIIRLU2DGWEH63ZTGH5MG6DNSJXHYZPCIH65FK4NL2VK5HA",
+      "flysto_source_format": null,
+      "flysto_source_system_id": null,
+      "flysto_upload_format": null,
+      "flysto_upload_log_id": "867682",
+      "flysto_upload_signature": "f12U2FsaGVkX18bVX81F2WonzsOZZgcX9gcwDkwbjkmb3WjHeJwlAmaWHOEkeU5XQH-n8F6DmRR7kM.g3x.csv/a10034d3/867682",
+      "flysto_upload_signature_hash": "a10034d3",
+      "message": null,
+      "remarks": "Note 46",
+      "started_at": "2025-03-11T15:36:16+00:00",
+      "status": "ok",
+      "tags": [
+        "cloudahoy",
+        "cloudahoy:2025-12-28T18:58Z"
+      ],
+      "tail_number": "TAIL-5"
+    }
+  ],
+  "metadata_reconciled": 46,
+  "metadata_reconciled_at": "2025-12-28T19:05:30.080805Z",
+  "pending": 0,
+  "review_id": "a9b2e28a801700db19df6d14262993326a218b78362535303f589474b5c48f24",
+  "succeeded": 46,
+  "verification": {
+    "attempted": 46,
+    "missing": 0,
+    "resolved": 46
+  },
+  "verified_at": "2025-12-28T19:04:19.207367Z"
+}

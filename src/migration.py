@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
 import json
+import time
 from pathlib import Path
 import string
 from typing import Callable
@@ -36,6 +37,8 @@ class ReviewItem:
     file_hash: str | None
     csv_path: str | None
     csv_hash: str | None
+    raw_path: str | None
+    export_paths: dict[str, str] | None
     points_count: int | None
     points_schema: list[dict]
     points_preview: list[dict]
@@ -59,6 +62,8 @@ class ReviewItem:
             "file_hash": self.file_hash,
             "csv_path": self.csv_path,
             "csv_hash": self.csv_hash,
+            "raw_path": self.raw_path,
+            "export_paths": self.export_paths,
             "points_count": self.points_count,
             "points_schema": self.points_schema,
             "points_preview": self.points_preview,
@@ -136,6 +141,8 @@ def prepare_review(
                 file_hash=file_hash,
                 csv_path=detail.csv_path,
                 csv_hash=csv_hash,
+                raw_path=detail.raw_path,
+                export_paths=detail.export_paths,
                 points_count=points_count,
                 points_schema=schema,
                 points_preview=preview,
@@ -173,6 +180,8 @@ def _review_item(
     file_hash: str | None,
     csv_path: str | None,
     csv_hash: str | None,
+    raw_path: str | None,
+    export_paths: dict[str, str] | None,
     points_count: int | None,
     points_schema: list[dict],
     points_preview: list[dict],
@@ -195,6 +204,8 @@ def _review_item(
         file_hash=file_hash,
         csv_path=csv_path,
         csv_hash=csv_hash,
+        raw_path=raw_path,
+        export_paths=export_paths,
         points_count=points_count,
         points_schema=points_schema,
         points_preview=points_preview,
@@ -289,6 +300,20 @@ def _cleanup_exports_dir(cloudahoy: CloudAhoyClient, items: list[ReviewItem]) ->
             Path(item.csv_path).resolve()
             for item in items
             if item.csv_path
+        }
+    )
+    keep.update(
+        {
+            Path(item.raw_path).resolve()
+            for item in items
+            if item.raw_path
+        }
+    )
+    keep.update(
+        {
+            Path(path).resolve()
+            for item in items
+            for path in (item.export_paths or {}).values()
         }
     )
     for entry in exports_dir.iterdir():
@@ -732,17 +757,47 @@ def _migrate_single(
                 crew = _extract_crew_assignments(metadata)
         if progress:
             progress("flysto_upload_start", {"flight_id": detail.id})
-        flysto.upload_flight(detail, dry_run=dry_run)
+        upload_result = flysto.upload_flight(detail, dry_run=dry_run)
         if progress:
             progress("flysto_upload_done", {"flight_id": detail.id})
         resolved_log_id = None
         resolved_signature = None
         resolved_format = None
+        assign_signature = None
+        assign_format = None
+        resolved_system_id = None
+        resolved_system_format = None
+        if upload_result:
+            assign_signature = upload_result.signature_hash or upload_result.signature
+            assign_format = upload_result.log_format
         if not dry_run and detail.file_path:
-            filename = Path(detail.file_path).name
-            resolved_log_id, resolved_signature, resolved_format = flysto.resolve_log_for_file(
-                filename
-            )
+            if not resolved_log_id or not resolved_signature or not resolved_format:
+                filename = Path(detail.file_path).name
+                log_id, signature, log_format = flysto.resolve_log_for_file(filename)
+                if not resolved_log_id:
+                    resolved_log_id = log_id
+                if not resolved_signature:
+                    resolved_signature = signature
+                if not resolved_format:
+                    resolved_format = log_format
+            if resolved_log_id and (
+                resolved_format == "UnknownGarmin" or assign_format == "UnknownGarmin"
+            ):
+                resolved_system_format, resolved_system_id = flysto.resolve_log_source_for_log_id(
+                    resolved_log_id
+                )
+            if not assign_signature:
+                assign_signature = resolved_signature
+            if not assign_format:
+                assign_format = resolved_format
+            if resolved_system_id:
+                assign_signature = resolved_system_id
+            if resolved_system_format:
+                assign_format = resolved_system_format
+            if not assign_format:
+                suffix = Path(detail.file_path).name.lower()
+                if suffix.endswith(".g3x.csv") or suffix.endswith(".g1000.csv"):
+                    assign_format = "UnknownGarmin"
         if not dry_run and aircraft and aircraft.get("id"):
             if progress:
                 progress(
@@ -751,9 +806,9 @@ def _migrate_single(
                 )
             flysto.assign_aircraft_for_signature(
                 aircraft_id=str(aircraft.get("id")),
-                signature=resolved_signature,
+                signature=assign_signature,
                 log_format_id="GenericGpx",
-                resolved_format=resolved_format,
+                resolved_format=assign_format,
             )
             if progress:
                 progress(
@@ -864,12 +919,26 @@ def _build_report_item(
     log_id = None
     signature = None
     log_format = None
+    upload_signature = None
+    upload_signature_hash = None
+    upload_log_id = None
+    upload_format = None
+    source_format = None
+    source_system_id = None
     if flysto and detail.file_path:
         try:
             filename = Path(detail.file_path).name
+            upload_result = flysto.upload_cache.get(filename)
+            if upload_result:
+                upload_signature = upload_result.signature
+                upload_signature_hash = upload_result.signature_hash
+                upload_log_id = upload_result.log_id
+                upload_format = upload_result.log_format
             log_id, signature, log_format = flysto.resolve_log_for_file(
                 filename, retries=3, delay_seconds=1.5
             )
+            if log_id:
+                source_format, source_system_id = flysto.log_source_cache.get(log_id, (None, None))
         except Exception:
             pass
     return {
@@ -886,6 +955,12 @@ def _build_report_item(
         "flysto_log_id": log_id,
         "flysto_signature": signature,
         "flysto_format": log_format,
+        "flysto_upload_signature": upload_signature,
+        "flysto_upload_signature_hash": upload_signature_hash,
+        "flysto_upload_log_id": upload_log_id,
+        "flysto_upload_format": upload_format,
+        "flysto_source_format": source_format,
+        "flysto_source_system_id": source_system_id,
     }
 
 
@@ -986,10 +1061,41 @@ def reconcile_aircraft_from_report(report_path: Path, flysto: FlyStoClient) -> i
         if not isinstance(item, dict):
             continue
         tail_number = item.get("tail_number")
-        signature = item.get("flysto_signature")
-        log_format = item.get("flysto_format") or "GenericGpx"
+        signature = item.get("flysto_source_system_id") or (
+            item.get("flysto_upload_signature_hash")
+            or item.get("flysto_upload_signature")
+            or item.get("flysto_signature")
+        )
+        log_format = item.get("flysto_upload_format") or item.get("flysto_format")
+        if not tail_number or not signature:
+            file_path = item.get("file_path")
+            if file_path:
+                filename = Path(file_path).name
+                try:
+                    _log_id, signature, log_format = flysto.resolve_log_for_file(
+                        filename, retries=3, delay_seconds=1.5
+                    )
+                except Exception:
+                    signature = signature or None
+                    log_format = log_format or None
+        if item.get("flysto_log_id"):
+            try:
+                source_format, source_system_id = flysto.resolve_log_source_for_log_id(
+                    item["flysto_log_id"]
+                )
+                if source_system_id:
+                    signature = source_system_id
+                if source_format:
+                    log_format = source_format
+            except Exception:
+                pass
         if not tail_number or not signature:
             continue
+        if not log_format:
+            if Path(item.get("file_path", "")).name.lower().endswith(".g3x.csv"):
+                log_format = "UnknownGarmin"
+            else:
+                log_format = "GenericGpx"
         aircraft = flysto.ensure_aircraft(tail_number, item.get("aircraft_type"))
         if not aircraft or not aircraft.get("id"):
             continue
@@ -1029,6 +1135,17 @@ def reconcile_crew_from_report(
         if not isinstance(item, dict):
             continue
         log_id = item.get("flysto_log_id")
+        file_path = item.get("file_path")
+        if file_path:
+            try:
+                resolved_log_id, _signature, _format = flysto.resolve_log_for_file(
+                    Path(file_path).name
+                )
+            except Exception:
+                resolved_log_id = None
+            if resolved_log_id:
+                log_id = resolved_log_id
+                item["flysto_log_id"] = resolved_log_id
         if not log_id:
             continue
         crew = item.get("crew")
@@ -1047,8 +1164,61 @@ def reconcile_crew_from_report(
             continue
         item["crew"] = crew
         flysto.assign_crew_for_log_id(log_id, crew)
+        if not _log_metadata_has_crew(flysto.fetch_log_metadata(log_id), log_id):
+            time.sleep(2)
+            if file_path:
+                try:
+                    refreshed_log_id, _signature, _format = flysto.resolve_log_for_file(
+                        Path(file_path).name
+                    )
+                except Exception:
+                    refreshed_log_id = None
+                if refreshed_log_id:
+                    log_id = refreshed_log_id
+                    item["flysto_log_id"] = refreshed_log_id
+            flysto.assign_crew_for_log_id(log_id, crew)
         updated += 1
     payload["crew_reconciled_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     payload["crew_reconciled"] = updated
+    report_path.write_text(json.dumps(payload, indent=2))
+    return updated
+
+
+def _log_metadata_has_crew(metadata: dict[str, Any] | None, log_id: str | None) -> bool:
+    if not metadata or not log_id:
+        return False
+    items = metadata.get("items")
+    if not isinstance(items, list):
+        return False
+    for item in items:
+        if not isinstance(item, dict) or item.get("id") != log_id:
+            continue
+        annotations = item.get("annotations")
+        if isinstance(annotations, dict) and annotations.get("crew"):
+            return True
+    return False
+
+
+def reconcile_metadata_from_report(
+    report_path: Path,
+    flysto: FlyStoClient,
+) -> int:
+    payload = json.loads(report_path.read_text())
+    items = payload.get("items", [])
+    updated = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        log_id = item.get("flysto_log_id")
+        if not log_id:
+            continue
+        remarks = item.get("remarks")
+        tags = item.get("tags")
+        if not remarks and not tags:
+            continue
+        flysto.assign_metadata_for_log_id(log_id, remarks=remarks, tags=tags)
+        updated += 1
+    payload["metadata_reconciled_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    payload["metadata_reconciled"] = updated
     report_path.write_text(json.dumps(payload, indent=2))
     return updated

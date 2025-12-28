@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from src.cloudahoy.client import _infer_point_timing
 
 
-def test_infer_point_timing_prefers_summary_air_window() -> None:
+def test_infer_point_timing_prefers_summary_when_meta_duration_too_long() -> None:
     flt = {
         "Meta": {
             "GMT_start": 1_000_000,

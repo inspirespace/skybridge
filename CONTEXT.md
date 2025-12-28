@@ -22,7 +22,27 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Devcontainer setup now scrubs `~/.npmrc` `prefix` entries to avoid nvm prefix warnings on shell startup.
 - Devcontainer post-start removes Copilot/Copilot Chat to avoid invalid-extension warnings and keep the container extension set minimal.
 - Devcontainer adds the GitHub CLI feature for authenticated GitHub actions from the container.
+- Devcontainer exports the nvm Node bin path and installs Codex zsh completions automatically.
+- Devcontainer installs the Oh My Zsh `zsh-autosuggestions` plugin for inline shell suggestions.
+- Devcontainer mounts `/home/vscode/.config/gh` to a named volume so GitHub CLI auth persists across container restarts.
 - CLI now prompts for missing API credentials in-memory when `.env` is absent.
+- CloudAhoy exports can now produce ForeFlight-style CSVs via `CLOUD_AHOY_EXPORT_FORMAT=foreflight`, FlightRadar24 CSV via `CLOUD_AHOY_EXPORT_FORMAT=flightradar24`, MVP-50 CSV via `CLOUD_AHOY_EXPORT_FORMAT=mvp50`, or Garmin G3X/G1000 CSV via `CLOUD_AHOY_EXPORT_FORMAT=g3x` / `g1000`. Multiple formats can be exported via `CLOUD_AHOY_EXPORT_FORMATS` (comma-separated, defaults to `g3x,gpx`) with G3X prioritized for upload when available.
+- Experimental: `CLOUD_AHOY_G3X_INCLUDE_HDG=1` opt-in to include heading in G3X exports; TRK is always included and HDG defaults off for block-time compatibility.
+- FlySto uploads now capture the log-upload response (including the per-file signature hash) in a dedicated upload cache, use the hash for aircraft assignment, and keep log-list resolution separate to avoid mixing upload signatures with resolved log summaries.
+- When FlySto format is missing for G3X/G1000 uploads, the assignment step now defaults the log format to `UnknownGarmin` to avoid signature-group mismatches.
+- Aircraft reconciliation now prefers upload signatures (when present) and re-resolves missing signatures/formats from filenames in the import report before assigning.
+- G3X exports now include a dedicated GPS ground track (TRK) column in the header while keeping HDG optional.
+- G3X exports now emit a Garmin-style `#airframe_info` header and set `system_id` to the tail number to help FlySto treat each tail as a distinct log source.
+- Aircraft assignment now falls back to FlySto log-metadata to resolve the log source systemId (used for UnknownGarmin grouping) when per-file signatures don't map.
+- Reconcile flows now apply aircraft first, then crew, then metadata tags/remarks from the import report.
+- FlySto client now auto-applies the `X-Version` header (parsed from the web bundle when needed) to avoid 404s on crew assignment endpoints.
+- FlySto crew assignment now mirrors the web UI payload format (text/plain JSON) with numeric role IDs and falls back to `/api/crew?type=all` if `/api/user-crew` is empty.
+- Crew reconciliation now re-resolves the current FlySto log id from the exported filename before assigning, so late log-id swaps after processing don’t drop crew.
+- Crew reconciliation now verifies log metadata after assignment and retries once (with a short delay) if FlySto doesn’t persist crew immediately.
+- Guided imports now reapply crew after reconciliation once the FlySto processing queue drains to defend against late post-processing clearing crew.
+- Added unit tests covering G3X HDG/TRK behavior, FlySto crew payload formatting/fallback, and crew reconciliation retry with log-id refresh.
+- Added tests for FlySto upload signature parsing/decoding, log-list resolution, log-metadata source extraction, and migration flow signature/system-id assignment.
+- Added tests for FlySto resolve update flows, log-source cache reuse, and import-report verify/reconcile paths.
 
 ## Required API Details
 These are needed to complete the adapters:

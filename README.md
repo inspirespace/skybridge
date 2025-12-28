@@ -31,7 +31,6 @@ Or use the wrapper scripts:
 ./scripts/run.sh --approve-import --review-id <id> --wait-for-processing
 ./scripts/run.sh --reconcile-import-report --wait-for-processing
 ./scripts/verify-run.sh <RUN_ID>
-python -m src.cli --guided
 ./cloudahoy2flysto
 ```
 
@@ -45,6 +44,8 @@ Optional:
 - `CLOUD_AHOY_EMAIL` / `CLOUD_AHOY_PASSWORD` (web mode login)
 - `CLOUD_AHOY_FLIGHTS_URL` (direct flights page URL if auto-detect fails)
 - `CLOUD_AHOY_EXPORT_URL_TEMPLATE` (example: `https://www.cloudahoy.com/api/export.cgi?id={flight_id}`)
+- `CLOUD_AHOY_EXPORT_FORMAT` (`gpx`, `foreflight`, `flightradar24`, `mvp50`, `g3x`, or `g1000`, default `g3x`)
+- `CLOUD_AHOY_EXPORT_FORMATS` (comma-separated list, default `g3x,gpx`; first supported format is used for upload)
 - `FLYSTO_BASE_URL` (default `https://www.flysto.net`)
 - `FLYSTO_WEB_BASE_URL` (default `https://www.flysto.net`)
 - `FLYSTO_EMAIL` / `FLYSTO_PASSWORD` (web mode login)
@@ -124,6 +125,7 @@ Devcontainer notes:
 - Shell history is persisted in a named Docker volume (`/var/devcontainer/history`).
 - Codex login is persisted via a named volume at `/home/vscode/.codex` and port 1455 is forwarded for the callback.
 - Python deps are managed via `uv` (`pyproject.toml` + `uv.lock`), dev deps via `--extra dev`.
+- Oh My Zsh includes `zsh-autosuggestions` by default for shell hinting.
 
 Install the guided command globally (default `/usr/local/bin`):
 
@@ -147,4 +149,4 @@ python -m src.cli --approve-import --review-id <id> --wait-for-processing
 python -m src.cli --reconcile-import-report --wait-for-processing
 ```
 
-Install dependencies with `uv sync --extra dev` for local runs, or use the devcontainer for a prebuilt environment.
+Development runs should use the devcontainer scripts (`./scripts/run*.sh`) to guarantee required dependencies (like `rich`) and browser tooling. Local execution is best reserved for one-off debugging.
