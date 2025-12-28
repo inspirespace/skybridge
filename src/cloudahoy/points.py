@@ -332,6 +332,7 @@ def write_points_garmin_g3x_csv(
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     schema_index = {column["name"]: column["index"] for column in schema}
+    schema_unit = {column["index"]: column.get("unit") for column in schema}
     lat_idx = _index_for(schema, "latitude_deg", fallback=1)
     lon_idx = _index_for(schema, "longitude_deg", fallback=0)
     alt_idx = _index_for(schema, "alt_meters", fallback=2)
@@ -373,8 +374,16 @@ def write_points_garmin_g3x_csv(
     tail = metadata.get("tail_number") or ""
 
     track_gs = _median(_track_gs_knots(points, lat_idx, lon_idx, step, stride))
-    ias_factor = _infer_speed_factor(_median(_column_values(points, ias_idx, stride)), track_gs)
-    tas_factor = _infer_speed_factor(_median(_column_values(points, tas_idx, stride)), track_gs)
+    ias_factor = _speed_factor_from_unit(
+        schema_unit.get(ias_idx),
+        _median(_column_values(points, ias_idx, stride)),
+        track_gs,
+    )
+    tas_factor = _speed_factor_from_unit(
+        schema_unit.get(tas_idx),
+        _median(_column_values(points, tas_idx, stride)),
+        track_gs,
+    )
 
     header_lines = [
         f"#airframe_info,1,{airframe},G3X,{tail}",
@@ -480,6 +489,7 @@ def write_points_garmin_g1000_csv(
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     schema_index = {column["name"]: column["index"] for column in schema}
+    schema_unit = {column["index"]: column.get("unit") for column in schema}
     lat_idx = _index_for(schema, "latitude_deg", fallback=1)
     lon_idx = _index_for(schema, "longitude_deg", fallback=0)
     alt_idx = _index_for(schema, "alt_meters", fallback=2)
@@ -518,8 +528,16 @@ def write_points_garmin_g1000_csv(
     tail = metadata.get("tail_number") or ""
 
     track_gs = _median(_track_gs_knots(points, lat_idx, lon_idx, step, stride))
-    ias_factor = _infer_speed_factor(_median(_column_values(points, ias_idx, stride)), track_gs)
-    tas_factor = _infer_speed_factor(_median(_column_values(points, tas_idx, stride)), track_gs)
+    ias_factor = _speed_factor_from_unit(
+        schema_unit.get(ias_idx),
+        _median(_column_values(points, ias_idx, stride)),
+        track_gs,
+    )
+    tas_factor = _speed_factor_from_unit(
+        schema_unit.get(tas_idx),
+        _median(_column_values(points, tas_idx, stride)),
+        track_gs,
+    )
 
     header_lines = [
         f"#airframe_info,1,{airframe},G1000,{tail}",
@@ -953,6 +971,23 @@ def _infer_speed_factor(observed: float | None, reference: float | None) -> floa
     if ratio > 1.5 and observed > 150 and reference < 130:
         return _KPH_TO_KTS
     return 1.0
+
+
+def _speed_factor_from_unit(
+    unit: str | None,
+    observed: float | None,
+    reference: float | None,
+) -> float:
+    if not unit:
+        return _infer_speed_factor(observed, reference)
+    normalized = unit.strip().lower().replace(" ", "")
+    if normalized in {"knots", "knot", "kt", "kts"}:
+        return 1.0
+    if normalized in {"m/s", "mps"}:
+        return _MPS_TO_KTS
+    if normalized in {"km/h", "kph", "kmh"}:
+        return _KPH_TO_KTS
+    return _infer_speed_factor(observed, reference)
 
 
 def _column_values(points: list, idx: int | None, stride: int) -> list[float]:
