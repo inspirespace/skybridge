@@ -26,7 +26,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Devcontainer installs GitHub CLI via the `github-cli` feature for authenticated GH access.
 - Devcontainer ensures Node is on PATH for Codex and installs Codex zsh completions automatically.
 - Devcontainer persists GitHub CLI auth under a mounted volume at `/home/vscode/.config/gh`.
-- Devcontainer installs the Oh My Zsh `zsh-autosuggestions` plugin for inline shell suggestions.
+- Devcontainer disables zsh-autosuggestions to avoid duplicated paste input in the terminal.
 Note: default `MODE=auto` uses API only and does not fall back to web automation.
 
 ## Coding Style & Naming Conventions
