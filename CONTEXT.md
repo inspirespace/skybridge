@@ -14,6 +14,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Imported logs receive compact tags: `cloudahoy` and `cloudahoy:<timestamp>` (UTC ISO minute of the import run).
 - Imports write an `import_report.json`, support a verify-only pass, and can wait for FlySto processing.
 - `./scripts/run.sh` streams logs to `docker.log` per run to avoid truncation.
+- Added `./scripts/run-discovery.sh`/`src.discovery_cli` to keep endpoint discovery separate from the main CLI.
 - Guided CLI (`--guided`) orchestrates review → import → verify/reconcile and stores a `guided.json` summary.
 - Guided CLI exits cleanly on Ctrl+C without a traceback.
 - CI now uses Python 3.12 and `uv sync --frozen --extra dev` to run pytest.
