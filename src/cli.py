@@ -10,7 +10,6 @@ from pathlib import Path
 from src.cloudahoy.client import CloudAhoyClient
 from src.models import FlightSummary
 from src.config import ConfigError, load_config
-from src.discovery import DiscoveryConfig, run_discovery
 from src.flysto.client import FlyStoClient
 from src.migration import (
     migrate_flights,
@@ -21,8 +20,6 @@ from src.migration import (
     verify_import_report,
 )
 from src.state import MigrationState
-from src.web.cloudahoy import CloudAhoyWebClient, CloudAhoyWebConfig
-from src.web.flysto import FlyStoWebClient, FlyStoWebConfig
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -92,44 +89,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Re-upload flights even if they were already migrated",
     )
     parser.add_argument(
-        "--mode",
-        choices=["auto", "api", "web", "hybrid"],
-        help="Select API or web automation mode (default: auto)",
-    )
-    parser.add_argument(
-        "--headful",
-        action="store_true",
-        help="Run browser in headful mode for web automation",
-    )
-    parser.add_argument(
-        "--cloudahoy-state-path",
-        default="data/cloudahoy_state.json",
-        help="Storage state path for CloudAhoy browser session",
-    )
-    parser.add_argument(
-        "--flysto-state-path",
-        default="data/flysto_state.json",
-        help="Storage state path for FlySto browser session",
-    )
-    parser.add_argument(
         "--exports-dir",
         default=None,
         help="Download directory for CloudAhoy exports (default: data/cloudahoy_exports or RUN_ID-based path)",
-    )
-    parser.add_argument(
-        "--discover",
-        action="store_true",
-        help="Run endpoint discovery using web automation and write data/discovery/discovery.json",
-    )
-    parser.add_argument(
-        "--discovery-dir",
-        default="data/discovery",
-        help="Directory for discovery output",
-    )
-    parser.add_argument(
-        "--discovery-upload-file",
-        default=None,
-        help="Optional path to a file to upload during FlySto discovery",
     )
     parser.add_argument(
         "--verbose",
@@ -363,15 +325,6 @@ def run(argv: list[str]) -> int:
     max_flights = args.max_flights or config.max_flights
     state = MigrationState(Path(args.state_path))
 
-    mode = (args.mode or config.mode).lower()
-    if mode not in {"auto", "api", "web", "hybrid"}:
-        print(f"Unsupported mode: {mode}", file=sys.stderr)
-        return 2
-    headless = config.headless and not args.headful
-
-    if mode == "auto":
-        mode = "api"
-
     start_date = (
         _parse_date_bound(args.start_date, is_end=False)
         if args.start_date
@@ -383,7 +336,7 @@ def run(argv: list[str]) -> int:
         else None
     )
 
-    if mode in {"api", "hybrid"} and not config.flysto_session_cookie:
+    if not config.flysto_session_cookie:
         missing = []
         if not config.flysto_email:
             missing.append("FLYSTO_EMAIL")
@@ -395,110 +348,38 @@ def run(argv: list[str]) -> int:
             except ConfigError as exc_retry:
                 print(f"Config error: {exc_retry}", file=sys.stderr)
                 return 2
-
-    if mode in {"web", "hybrid"}:
-        cloudahoy = CloudAhoyWebClient(
-            CloudAhoyWebConfig(
-                base_url=config.cloudahoy_web_base_url,
-                email=config.cloudahoy_email,
-                password=config.cloudahoy_password,
-                flights_url=config.cloudahoy_flights_url,
-                export_url_template=config.cloudahoy_export_url_template,
-                storage_state_path=Path(args.cloudahoy_state_path),
-                downloads_dir=Path(args.exports_dir),
-                headless=headless,
-            )
+    cloudahoy_client = CloudAhoyClient(
+        api_key=config.cloudahoy_api_key,
+        base_url=config.cloudahoy_base_url,
+        email=config.cloudahoy_email or "",
+        password=config.cloudahoy_password or "",
+        exports_dir=Path(args.exports_dir),
+        export_format=config.cloudahoy_export_format,
+        export_formats=config.cloudahoy_export_formats,
+    )
+    flysto = FlyStoClient(
+        api_key=config.flysto_api_key or "",
+        base_url=config.flysto_base_url,
+        upload_url=config.flysto_log_upload_url,
+        session_cookie=config.flysto_session_cookie,
+        include_metadata=config.flysto_include_metadata,
+        api_version=config.flysto_api_version,
+        email=config.flysto_email,
+        password=config.flysto_password,
+        min_request_interval=config.flysto_min_request_interval,
+        max_request_retries=config.flysto_max_request_retries,
+    )
+    needs_flysto = not (args.review or dry_run)
+    if needs_flysto and not flysto.prepare():
+        print(
+            "FlySto API not available. Verify credentials or set "
+            "FLYSTO_BASE_URL/FLYSTO_SESSION_COOKIE.",
+            file=sys.stderr,
         )
-        if mode == "web":
-            cloudahoy_client = cloudahoy
-        else:
-            cloudahoy_client = CloudAhoyClient(
-                api_key=config.cloudahoy_api_key,
-                base_url=config.cloudahoy_base_url,
-                email=config.cloudahoy_email or "",
-                password=config.cloudahoy_password or "",
-                exports_dir=Path(args.exports_dir),
-                export_format=config.cloudahoy_export_format,
-                export_formats=config.cloudahoy_export_formats,
-            )
-
-        flysto = FlyStoWebClient(
-            FlyStoWebConfig(
-                base_url=config.flysto_web_base_url,
-                email=config.flysto_email,
-                password=config.flysto_password,
-                upload_url=config.flysto_upload_url,
-                storage_state_path=Path(args.flysto_state_path),
-                headless=headless,
-            )
-        )
-
-        if args.discover:
-            discovery_path = run_discovery(
-                DiscoveryConfig(
-                    cloudahoy_base_url=config.cloudahoy_web_base_url,
-                    cloudahoy_email=config.cloudahoy_email,
-                    cloudahoy_password=config.cloudahoy_password,
-                    flysto_base_url=config.flysto_web_base_url,
-                    flysto_email=config.flysto_email,
-                    flysto_password=config.flysto_password,
-                    headless=headless,
-                    output_dir=Path(args.discovery_dir),
-                    cloudahoy_flights_url=config.cloudahoy_flights_url,
-                    cloudahoy_export_url_template=config.cloudahoy_export_url_template,
-                    flysto_upload_url=config.flysto_upload_url,
-                    upload_file=(
-                        Path(args.discovery_upload_file)
-                        if args.discovery_upload_file
-                        else None
-                    ),
-                )
-            )
-            print(f"Discovery results written to {discovery_path}")
-            return 0
-    else:
-        cloudahoy_client = CloudAhoyClient(
-            api_key=config.cloudahoy_api_key,
-            base_url=config.cloudahoy_base_url,
-            email=config.cloudahoy_email or "",
-            password=config.cloudahoy_password or "",
-            exports_dir=Path(args.exports_dir),
-            export_format=config.cloudahoy_export_format,
-            export_formats=config.cloudahoy_export_formats,
-        )
-        flysto = FlyStoClient(
-            api_key=config.flysto_api_key or "",
-            base_url=config.flysto_base_url,
-            upload_url=config.flysto_log_upload_url,
-            session_cookie=config.flysto_session_cookie,
-            include_metadata=config.flysto_include_metadata,
-            api_version=config.flysto_api_version,
-            email=config.flysto_email,
-            password=config.flysto_password,
-            min_request_interval=config.flysto_min_request_interval,
-            max_request_retries=config.flysto_max_request_retries,
-        )
-        needs_flysto = not (args.review or dry_run)
-        if needs_flysto and not flysto.prepare():
-            print(
-                "FlySto API not available. Verify credentials or set "
-                "FLYSTO_BASE_URL/FLYSTO_SESSION_COOKIE.",
-                file=sys.stderr,
-            )
-            return 2
+        return 2
 
     summaries = None
-    if mode == "hybrid":
-        try:
-            summaries = cloudahoy.list_flights(limit=max_flights)
-        except Exception as exc:
-            print(
-                f"Warning: web flight listing failed, falling back to API: {exc}",
-                file=sys.stderr,
-            )
-    if (start_date or end_date) and summaries is None and isinstance(
-        cloudahoy_client, CloudAhoyClient
-    ):
+    if start_date or end_date:
         summaries = cloudahoy_client.list_flights(limit=max_flights)
 
     if summaries is not None:

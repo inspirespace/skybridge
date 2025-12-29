@@ -34,6 +34,7 @@
 - Add wait-for-processing option to block until FlySto ingestion finishes, then verify and reconcile aircraft.
 - Reconcile crew assignments after ingestion using stored report data or review metadata.
 - Run Docker detached in `scripts/run.sh` and stream logs to avoid truncated output for long runs.
+- Added `scripts/run-discovery.sh`/`src.discovery_cli` to keep discovery separate from the main CLI.
 - Added a VS Code devcontainer with Playwright + Python deps and Docker socket access for local development/testing.
 - Avoid duplicate exports during crew reconciliation by fetching CloudAhoy metadata only.
 - Use review manifests as the source of truth for import flight lists to keep runs deterministic.

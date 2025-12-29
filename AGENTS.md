@@ -13,6 +13,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `docker build -t skybridge .` — build the image.
 - `./scripts/run-review.sh` — run review mode via Docker (default `MAX_FLIGHTS=5`).
 - `./scripts/run-import.sh` — run approved import using the latest `data/review.json`.
+- `./scripts/run-discovery.sh` — run endpoint discovery via the dedicated discovery CLI (outputs to `data/discovery`).
 - `./scripts/run.sh --approve-import --max-flights 5` — run the CLI with explicit options (container named `skybridge`).
 - `./scripts/run.sh --approve-import` — writes artifacts under `data/runs/<RUN_ID>/` (review, report, exports, logs, state).
 - `./scripts/run.sh --verify-import-report --import-report data/runs/<RUN_ID>/import_report.json` — verify report entries against FlySto.
