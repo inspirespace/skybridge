@@ -1,4 +1,15 @@
 services:
+  caddy:
+    image: caddy:2.8.4
+    ports:
+      - "443:443"
+    volumes:
+      - ./docker/https/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./docker/https/certs:/etc/caddy/certs:ro
+    depends_on:
+      - api
+      - keycloak
+
   api:
     build:
       context: .
@@ -11,9 +22,18 @@ services:
       - backend_data:/app/data/backend
     environment:
       - BACKEND_DATA_DIR=/app/data/backend/jobs
+      - AUTH_MODE=oidc
+      - AUTH_ISSUER_URL=https://auth.skybridge.localhost/realms/skybridge-dev
+      - AUTH_JWKS_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/certs
+      - AUTH_BROWSER_ISSUER_URL=https://auth.skybridge.localhost/realms/skybridge-dev
+      - AUTH_CLIENT_ID=skybridge-dev
+      - AUTH_SCOPE=openid profile email
+      - AUTH_TOKEN_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/token
+      - AUTH_TOKEN_PROXY=true
     depends_on:
       - dynamodb
       - minio
+      - keycloak
 
   worker:
     build:
@@ -25,9 +45,18 @@ services:
       - backend_data:/app/data/backend
     environment:
       - BACKEND_DATA_DIR=/app/data/backend/jobs
+      - AUTH_MODE=oidc
+      - AUTH_ISSUER_URL=https://auth.skybridge.localhost/realms/skybridge-dev
+      - AUTH_JWKS_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/certs
+      - AUTH_BROWSER_ISSUER_URL=https://auth.skybridge.localhost/realms/skybridge-dev
+      - AUTH_CLIENT_ID=skybridge-dev
+      - AUTH_SCOPE=openid profile email
+      - AUTH_TOKEN_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/token
+      - AUTH_TOKEN_PROXY=true
     depends_on:
       - dynamodb
       - minio
+      - keycloak
 
   dynamodb:
     image: amazon/dynamodb-local:2.5.0
@@ -45,5 +74,17 @@ services:
       MINIO_ROOT_PASSWORD: minioadmin
     command: ["server", "/data", "--console-address", ":9001"]
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.6
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_PROXY: edge
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - ./docker/keycloak:/opt/keycloak/data/import
+    command: ["start-dev", "--import-realm"]
+
 volumes:
   backend_data:
+  keycloak_data:

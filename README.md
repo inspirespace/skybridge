@@ -161,6 +161,31 @@ Run the dev web locally (API + UI):
 
 Then open http://localhost:8000 to use the dev web UI.
 
+Local auth uses OIDC (Keycloak). Start Keycloak with Docker Compose or a separate container and sign in with the dev credentials:
+- user: `demo`
+- password: `demo-password`
+
+For a standalone Keycloak instance:
+
+```sh
+docker compose up --build keycloak
+```
+
+### HTTPS dev setup (recommended on macOS)
+
+This uses Caddy + mkcert for trusted local HTTPS.
+
+```sh
+brew install mkcert
+./scripts/setup-dev-https.sh
+docker compose up --build
+```
+
+Open:
+- https://skybridge.localhost (UI + API)
+- https://auth.skybridge.localhost (Keycloak)
+
+
 ### Docker Compose (API + worker + local data stores)
 
 ```sh
@@ -172,11 +197,14 @@ Services:
 - `worker` (dev worker loop)
 - `dynamodb` (local) on http://localhost:8001
 - `minio` (S3-compatible) on http://localhost:9000, console on http://localhost:9001
+- `keycloak` (OIDC dev auth) on http://localhost:8080
+- `caddy` (HTTPS proxy) on https://skybridge.localhost and https://auth.skybridge.localhost
 
 Test the API:
 
 ```sh
-curl -H "X-User-Id: demo-user" -H "Content-Type: application/json" \
+TOKEN="<paste access_token from Keycloak>"
+curl -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"credentials":{"cloudahoy_username":"user","cloudahoy_password":"pass","flysto_username":"user","flysto_password":"pass"}}' \
   http://localhost:8000/jobs
 ```
@@ -187,14 +215,17 @@ Stop the stack:
 docker compose down -v
 ```
 
-Create a job and accept the review (requires an `X-User-Id` header):
+Create a job and accept the review (requires an `Authorization` bearer token):
 
 ```sh
-curl -H "X-User-Id: demo-user" -H "Content-Type: application/json" \\
+TOKEN="<paste access_token from Keycloak>"
+curl -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \\
   -d '{"credentials":{"cloudahoy_username":"user","cloudahoy_password":"pass","flysto_username":"user","flysto_password":"pass"}}' \\
   http://localhost:8000/jobs
 
-curl -H "X-User-Id: demo-user" -X POST http://localhost:8000/jobs/<job_id>/review/accept
+curl -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \\
+  -d '{"credentials":{"cloudahoy_username":"user","cloudahoy_password":"pass","flysto_username":"user","flysto_password":"pass"}}' \\
+  http://localhost:8000/jobs/<job_id>/review/accept
 ```
 
 Artifacts are stored under `data/backend/jobs/<job_id>/` while the dev web uses local storage.

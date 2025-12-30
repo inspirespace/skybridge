@@ -6,6 +6,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Place application/source code under `src/`.
 - Put tests under `tests/` or `test/` (match your framework).
 - Keep scripts in `scripts/`, assets in `assets/`, and config files at the repo root.
+- Keycloak dev realm import lives in `docker/keycloak/`.
 - Infrastructure-as-code lives under `infra/terraform/`.
 - If you adopt a different layout, document it here with concrete paths (example: `cmd/`, `internal/`, `pkg/` for Go).
 
@@ -19,7 +20,9 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `./scripts/run.sh --approve-import` — writes artifacts under `data/runs/<RUN_ID>/` (review, report, exports, logs, state).
 - `./scripts/run.sh --verify-import-report --import-report data/runs/<RUN_ID>/import_report.json` — verify report entries against FlySto.
 - `./scripts/run-backend-dev.sh` — run the backend dev web (FastAPI API + UI) locally.
+- `./scripts/setup-dev-https.sh` — install mkcert CA and generate trusted dev certs for HTTPS (Caddy).
 - `docker compose up --build` — run the backend dev stack (API, worker, DynamoDB Local, MinIO).
+- Backend dev auth uses Keycloak OIDC in Docker Compose (login with `demo` / `demo-password`); local runs should set `AUTH_MODE=oidc`, `AUTH_ISSUER_URL`, `AUTH_BROWSER_ISSUER_URL`, and `AUTH_CLIENT_ID`.
 - `./scripts/build-lambda.sh` — package the Lambda handlers to `infra/terraform/lambda/backend-handlers.zip`.
 - `python -m src.cli --review` — run locally (requires Python deps).
 - CLI supports `--start-date` / `--end-date` for targeted imports (YYYY-MM-DD or ISO8601).

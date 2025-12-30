@@ -32,7 +32,9 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Added Terraform scaffolding under `infra/terraform/` with a CI `terraform fmt` check; Milestone 2 in progress.
 - Added dev backend API scaffold under `src/backend/` with local job storage in `data/backend/jobs` for Milestone 3.
 - Added backend runbook, maintenance, and release readiness checklists under `docs/` for Milestone 4.
-- Added a minimal dev web UI served at `/` to drive job creation, review, and approval locally.
+- Added a minimal dev web UI served at `/` to drive job creation, review, and approval locally with OIDC auth.
+- Added optional HTTPS dev proxy via Caddy + mkcert for trusted local TLS on `https://skybridge.localhost`.
+- Dev backend now executes real review/import flows using API clients (no credential storage), writes `review.json` and `import-report.json` under `data/backend/jobs/<job_id>/`, and the UI polls job status while background tasks run.
 - Added Docker Compose stack for the backend dev web (API + worker + DynamoDB Local + MinIO).
 - Added Lambda handler scaffolding in `src/backend/lambda_handlers.py` with build script output under `infra/terraform/lambda/backend-handlers.zip`.
 - CloudAhoy exports can now produce ForeFlight-style CSVs via `CLOUD_AHOY_EXPORT_FORMAT=foreflight`, FlightRadar24 CSV via `CLOUD_AHOY_EXPORT_FORMAT=flightradar24`, MVP-50 CSV via `CLOUD_AHOY_EXPORT_FORMAT=mvp50`, or Garmin G3X/G1000 CSV via `CLOUD_AHOY_EXPORT_FORMAT=g3x` / `g1000`. Multiple formats can be exported via `CLOUD_AHOY_EXPORT_FORMATS` (comma-separated, defaults to `g3x,gpx`) with G3X prioritized for upload when available.

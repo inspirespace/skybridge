@@ -26,6 +26,9 @@ class JobStore:
     def _job_file(self, job_id: UUID) -> Path:
         return self._job_dir(job_id) / "job.json"
 
+    def job_dir(self, job_id: UUID) -> Path:
+        return self._job_dir(job_id)
+
     def list_jobs(self, user_id: str) -> list[JobRecord]:
         jobs: list[JobRecord] = []
         for job_dir in self._base_path.iterdir():

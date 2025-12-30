@@ -77,6 +77,9 @@
 - Added tests for crew payload formatting/fallback, G3X HDG/TRK behavior, and reconciliation retry with log-id refresh.
 - Added tests for FlySto signature parsing/decoding, log-list resolution, log-metadata source extraction, and migration flow signature/system-id assignment.
 - Added tests for FlySto resolve update flows, log-source cache reuse, and import-report verify/reconcile paths.
+- Backend dev API now runs real review/import flows using API clients; web UI submits credentials per request, stores review/import artifacts under `data/backend/jobs/<job_id>/`, and updates job status via background tasks.
+- Dev web now uses OIDC (Keycloak) auth instead of `X-User-Id` headers, mirroring production JWT validation.
+- Added Caddy + mkcert HTTPS dev proxy for trusted local TLS on `https://skybridge.localhost`.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).
@@ -145,7 +148,7 @@ Reference doc: `docs/backend-architecture.md` (authoritative architecture + mile
   - Review/feedback: to be scheduled once scaffolding exists.
 - Milestone 3: Dev workflow (in progress).
   - Deliverables: basic auth, job orchestration, review → import flow, artifacts downloadable.
-  - Status: Dev FastAPI scaffold in `src/backend/` with local job storage in `data/backend/jobs`, minimal web UI, and Docker Compose stack.
+  - Status: Dev FastAPI now executes real review/import flows using API clients, writes artifacts under `data/backend/jobs`, and the dev web UI polls job status while the background tasks run.
 - Milestone 4: Public beta readiness (in progress).
   - Deliverables: runbook, maintenance checklist, readiness checklist, guardrails validated.
   - Status: added `docs/backend-runbook.md`, `docs/backend-maintenance.md`, `docs/backend-release-readiness.md`.

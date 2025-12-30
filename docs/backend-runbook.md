@@ -5,20 +5,25 @@ Provide the minimal operational steps to run a migration job and validate outcom
 
 ## Workflow
 1. Confirm API and worker health checks pass.
-2. Create a job with CloudAhoy and FlySto credentials.
+2. Sign in via the dev OIDC provider (Keycloak) to obtain a JWT (default dev user: `demo` / `demo-password`).
+3. Create a job with CloudAhoy credentials (and optional date range/max flights).
 3. Monitor job state transitions:
    - `review_running` → `review_ready` → `import_running` → `completed` (or `failed`).
-4. Review artifacts:
+5. Approve review by posting FlySto credentials to trigger import.
+6. Review artifacts:
+   - `review.json` (full manifest)
    - `review-summary.json`
    - `import-report.json`
    - export artifacts (GPX/CSV)
-5. Validate job completion and artifact availability.
-6. Confirm job artifacts are retained and then expire per TTL policy.
+7. Validate job completion and artifact availability.
+8. Confirm job artifacts are retained and then expire per TTL policy.
 
 ## Troubleshooting
 - **Job stuck in review:** verify CloudAhoy access, check worker logs for export failures.
 - **Job stuck in import:** verify FlySto access and upload queue, check retry counters.
 - **Artifacts missing:** confirm S3/local storage permissions and artifact writer output.
+- **HTTPS login fails:** ensure `./scripts/setup-dev-https.sh` was run and Caddy is up (https://auth.skybridge.localhost).
+- **Safari login fails:** enable the `/auth/token` proxy (`AUTH_TOKEN_PROXY=true`) to avoid CORS/ITP issues.
 
 ## Escalation
 - Capture job id, user id, and correlation id.

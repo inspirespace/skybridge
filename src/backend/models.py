@@ -27,6 +27,11 @@ class JobCreateRequest(BaseModel):
     credentials: CredentialPayload
     start_date: Optional[str] = None
     end_date: Optional[str] = None
+    max_flights: Optional[int] = None
+
+
+class JobAcceptRequest(BaseModel):
+    credentials: CredentialPayload
 
 
 class FlightSummary(BaseModel):
@@ -36,6 +41,8 @@ class FlightSummary(BaseModel):
     origin: Optional[str] = None
     destination: Optional[str] = None
     flight_time_minutes: Optional[int] = None
+    status: Optional[str] = None
+    message: Optional[str] = None
 
 
 class ReviewSummary(BaseModel):
@@ -59,8 +66,10 @@ class JobRecord(BaseModel):
     status: JobStatus
     created_at: datetime
     updated_at: datetime
+    review_id: Optional[str] = None
     review_summary: Optional[ReviewSummary] = None
     import_report: Optional[ImportReport] = None
+    error_message: Optional[str] = None
 
 
 class JobListResponse(BaseModel):

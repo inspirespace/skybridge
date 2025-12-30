@@ -117,15 +117,16 @@ See `docs/backend-runbook.md` for the operational steps and troubleshooting guid
 ## Local Development Experience (Docker Compose)
 Goal: enable contributors to run the full stack locally with minimal setup.
 - **Compose stack:** web UI + API (local runtime) + worker emulator + local DynamoDB/S3 (e.g., DynamoDB Local + MinIO).
-- **Local auth:** Cognito emulator or dev-only JWT bypass (documented, non-production only).
-- **Workflow:** `docker compose up` starts UI, API, worker, and storage; sample data can be seeded for review flows.
+- **Local auth:** Keycloak (OIDC) dev realm with static credentials; mirrors production JWT validation.
+- **Workflow:** `docker compose up` starts UI, API, worker, storage, and Keycloak; sample data can be seeded for review flows.
+- **HTTPS dev:** optional Caddy + mkcert proxy for trusted local TLS on `https://skybridge.localhost`.
 - **Parity:** local job flow mirrors production states so the UI can show real progress.
 
 ### Current Dev Local Stub
 - **Web:** lightweight HTML UI served at `/` for job creation, review display, and import approval.
-- **API:** `src/backend/` FastAPI server using an `X-User-Id` header for local auth.
+- **API:** `src/backend/` FastAPI server validating OIDC JWTs (Keycloak in dev) and extracting the user id from token claims.
 - **Storage:** JSON artifacts written to `data/backend/jobs/<job_id>/`.
-- **Compose:** `docker-compose.yml` runs API + worker + DynamoDB Local + MinIO.
+- **Compose:** `docker-compose.yml` runs API + worker + DynamoDB Local + MinIO + Keycloak.
 - **Lambda wiring:** handlers in `src/backend/lambda_handlers.py` packaged via `scripts/build-lambda.sh`.
 
 ## Maintenance Checklist

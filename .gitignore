@@ -34,6 +34,7 @@ dist/
 
 # Local data
 data/
+docker/https/certs/
 /data/
 
 # Lambda packages
