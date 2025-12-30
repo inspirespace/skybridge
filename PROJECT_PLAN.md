@@ -84,6 +84,7 @@
 - Dev backend now queues review/import jobs for the worker, using one-time credential claims instead of storing credentials at rest.
 - Dev backend reconcile flow now mirrors the guided import: wait for FlySto processing, verify/report, reconcile aircraft/crew/metadata, then reapply crew after post-processing drains.
 - Dev web UI now clears stale saved job state automatically and exposes a manual clear action to unblock new runs.
+- Lambda build now bundles the full backend package and a handler shim so API Gateway handlers can import backend modules in Lambda.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).
