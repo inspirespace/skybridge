@@ -267,8 +267,8 @@ def _build_review_summary(items: list) -> ReviewSummary:
                 flight_id=item.flight_id,
                 date=date_value,
                 tail_number=item.tail_number,
-                origin=item.metadata.get("origin") if isinstance(item.metadata, dict) else None,
-                destination=item.metadata.get("destination") if isinstance(item.metadata, dict) else None,
+                origin=_flight_origin(item.metadata),
+                destination=_flight_destination(item.metadata),
                 flight_time_minutes=(int(item.duration_seconds) // 60) if item.duration_seconds else None,
                 status=item.status,
                 message=item.message,
@@ -286,6 +286,28 @@ def _build_review_summary(items: list) -> ReviewSummary:
         latest_date=latest_str,
         missing_tail_numbers=missing_tail,
         flights=flights,
+    )
+
+
+def _flight_origin(metadata: dict | None) -> str | None:
+    if not isinstance(metadata, dict):
+        return None
+    return (
+        metadata.get("origin")
+        or metadata.get("aircraft_from")
+        or metadata.get("event_from")
+        or metadata.get("from")
+    )
+
+
+def _flight_destination(metadata: dict | None) -> str | None:
+    if not isinstance(metadata, dict):
+        return None
+    return (
+        metadata.get("destination")
+        or metadata.get("aircraft_to")
+        or metadata.get("event_to")
+        or metadata.get("to")
     )
 
 
