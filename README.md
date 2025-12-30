@@ -103,11 +103,11 @@ See `docs/run-checklist.md` for the step-by-step run procedure and verification 
 
 Discovery mode is only needed when the web apps change or an endpoint breaks; it logs in and records endpoint hints to `data/discovery/discovery.json`.
 
-## SaaS Roadmap (draft)
+## Backend Roadmap (draft)
 
 - MVP: single-user CLI + Docker
 - Phase 2: hosted worker that runs scheduled migrations per account
-- Phase 3: multi-tenant SaaS with billing (per-flight + bundles), admin dashboard, and audit logs
+- Phase 3: multi-tenant backend with billing (per-flight + bundles), admin dashboard, and audit logs
 
 ## Development
 
@@ -150,3 +150,51 @@ python -m src.cli --reconcile-import-report --wait-for-processing
 ```
 
 Development runs should use the devcontainer scripts (`./scripts/run*.sh`) to guarantee required dependencies (like `rich`) and browser tooling. Local execution is best reserved for one-off debugging.
+
+## Backend dev web (local dev)
+
+Run the dev web locally (API + UI):
+
+```sh
+./scripts/run-backend-dev.sh
+```
+
+Then open http://localhost:8000 to use the dev web UI.
+
+### Docker Compose (API + worker + local data stores)
+
+```sh
+docker compose up --build
+```
+
+Services:
+- `api` (FastAPI + UI) on http://localhost:8000
+- `worker` (dev worker loop)
+- `dynamodb` (local) on http://localhost:8001
+- `minio` (S3-compatible) on http://localhost:9000, console on http://localhost:9001
+
+Test the API:
+
+```sh
+curl -H "X-User-Id: demo-user" -H "Content-Type: application/json" \
+  -d '{"credentials":{"cloudahoy_username":"user","cloudahoy_password":"pass","flysto_username":"user","flysto_password":"pass"}}' \
+  http://localhost:8000/jobs
+```
+
+Stop the stack:
+
+```sh
+docker compose down -v
+```
+
+Create a job and accept the review (requires an `X-User-Id` header):
+
+```sh
+curl -H "X-User-Id: demo-user" -H "Content-Type: application/json" \\
+  -d '{"credentials":{"cloudahoy_username":"user","cloudahoy_password":"pass","flysto_username":"user","flysto_password":"pass"}}' \\
+  http://localhost:8000/jobs
+
+curl -H "X-User-Id: demo-user" -X POST http://localhost:8000/jobs/<job_id>/review/accept
+```
+
+Artifacts are stored under `data/backend/jobs/<job_id>/` while the dev web uses local storage.
