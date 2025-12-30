@@ -16,6 +16,19 @@ def landing_page() -> HTMLResponse:
     scope = os.getenv("AUTH_SCOPE") or "openid profile email"
     redirect_path = os.getenv("AUTH_REDIRECT_PATH") or "/auth/callback"
 
+    prefill_enabled = (os.getenv("DEV_PREFILL_CREDENTIALS") or "false").lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    prefill = {
+        "cloudahoy_username": os.getenv("CLOUD_AHOY_EMAIL") or "",
+        "cloudahoy_password": os.getenv("CLOUD_AHOY_PASSWORD") or "",
+        "flysto_username": os.getenv("FLYSTO_EMAIL") or "",
+        "flysto_password": os.getenv("FLYSTO_PASSWORD") or "",
+    }
+
     config = {
         "enabled": auth_enabled,
         "issuer": issuer,
@@ -23,6 +36,8 @@ def landing_page() -> HTMLResponse:
         "scope": scope,
         "redirectPath": redirect_path,
         "tokenProxy": (os.getenv("AUTH_TOKEN_PROXY") or "false").lower() in {"1", "true", "yes", "on"},
+        "prefillEnabled": prefill_enabled,
+        "prefill": prefill if prefill_enabled else {},
     }
 
     html = """
@@ -367,6 +382,12 @@ def landing_page() -> HTMLResponse:
 
           window.addEventListener("load", async () => {
             updateAuthUI();
+            if (authConfig.prefillEnabled) {
+              document.getElementById("cloudahoyUser").value = authConfig.prefill.cloudahoy_username || "";
+              document.getElementById("cloudahoyPass").value = authConfig.prefill.cloudahoy_password || "";
+              document.getElementById("flystoUser").value = authConfig.prefill.flysto_username || "";
+              document.getElementById("flystoPass").value = authConfig.prefill.flysto_password || "";
+            }
             if (!authConfig.enabled) return;
             const params = new URLSearchParams(window.location.search);
             const code = params.get("code");

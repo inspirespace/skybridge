@@ -22,6 +22,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `./scripts/run-backend-dev.sh` — run the backend dev web (FastAPI API + UI) locally.
 - `./scripts/setup-dev-https.sh` — install mkcert CA and generate trusted dev certs for HTTPS (Caddy).
 - `docker compose up --build` — run the backend dev stack (API, worker, DynamoDB Local, MinIO).
+- Set `DEV_PREFILL_CREDENTIALS=1` with `CLOUD_AHOY_EMAIL`/`CLOUD_AHOY_PASSWORD` and `FLYSTO_EMAIL`/`FLYSTO_PASSWORD` to prefill dev web inputs.
 - Backend dev auth uses Keycloak OIDC in Docker Compose (login with `demo` / `demo-password`); local runs should set `AUTH_MODE=oidc`, `AUTH_ISSUER_URL`, `AUTH_BROWSER_ISSUER_URL`, and `AUTH_CLIENT_ID`.
 - `./scripts/build-lambda.sh` — package the Lambda handlers to `infra/terraform/lambda/backend-handlers.zip`.
 - `python -m src.cli --review` — run locally (requires Python deps).
@@ -33,6 +34,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Run all CLI workflows through the devcontainer scripts (`./scripts/run*.sh`) so required dependencies and browser tooling are available.
 - Devcontainer post-start uninstalls GitHub Copilot/Copilot Chat to avoid invalid-extension warnings.
 - Devcontainer installs GitHub CLI via the `github-cli` feature for authenticated GH access.
+- Devcontainer installs Terraform via the `terraform` feature for IaC formatting/tests.
 - Devcontainer ensures Node is on PATH for Codex and installs Codex zsh completions automatically.
 - Devcontainer persists GitHub CLI auth under a mounted volume at `/home/vscode/.config/gh`.
 - Devcontainer disables zsh-autosuggestions to avoid duplicated paste input in the terminal.

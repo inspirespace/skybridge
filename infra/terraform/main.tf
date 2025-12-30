@@ -127,50 +127,50 @@ resource "aws_lambda_function" "read_artifact" {
 }
 
 resource "aws_apigatewayv2_integration" "create_job" {
-  api_id           = aws_apigatewayv2_api.http_api.id
-  integration_type = "AWS_PROXY"
-  integration_uri  = aws_lambda_function.create_job.invoke_arn
-  integration_method = "POST"
+  api_id                 = aws_apigatewayv2_api.http_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.create_job.invoke_arn
+  integration_method     = "POST"
   payload_format_version = "2.0"
 }
 
 resource "aws_apigatewayv2_integration" "list_jobs" {
-  api_id           = aws_apigatewayv2_api.http_api.id
-  integration_type = "AWS_PROXY"
-  integration_uri  = aws_lambda_function.list_jobs.invoke_arn
-  integration_method = "GET"
+  api_id                 = aws_apigatewayv2_api.http_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.list_jobs.invoke_arn
+  integration_method     = "GET"
   payload_format_version = "2.0"
 }
 
 resource "aws_apigatewayv2_integration" "get_job" {
-  api_id           = aws_apigatewayv2_api.http_api.id
-  integration_type = "AWS_PROXY"
-  integration_uri  = aws_lambda_function.get_job.invoke_arn
-  integration_method = "GET"
+  api_id                 = aws_apigatewayv2_api.http_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.get_job.invoke_arn
+  integration_method     = "GET"
   payload_format_version = "2.0"
 }
 
 resource "aws_apigatewayv2_integration" "accept_review" {
-  api_id           = aws_apigatewayv2_api.http_api.id
-  integration_type = "AWS_PROXY"
-  integration_uri  = aws_lambda_function.accept_review.invoke_arn
-  integration_method = "POST"
+  api_id                 = aws_apigatewayv2_api.http_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.accept_review.invoke_arn
+  integration_method     = "POST"
   payload_format_version = "2.0"
 }
 
 resource "aws_apigatewayv2_integration" "list_artifacts" {
-  api_id           = aws_apigatewayv2_api.http_api.id
-  integration_type = "AWS_PROXY"
-  integration_uri  = aws_lambda_function.list_artifacts.invoke_arn
-  integration_method = "GET"
+  api_id                 = aws_apigatewayv2_api.http_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.list_artifacts.invoke_arn
+  integration_method     = "GET"
   payload_format_version = "2.0"
 }
 
 resource "aws_apigatewayv2_integration" "read_artifact" {
-  api_id           = aws_apigatewayv2_api.http_api.id
-  integration_type = "AWS_PROXY"
-  integration_uri  = aws_lambda_function.read_artifact.invoke_arn
-  integration_method = "GET"
+  api_id                 = aws_apigatewayv2_api.http_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.read_artifact.invoke_arn
+  integration_method     = "GET"
   payload_format_version = "2.0"
 }
 
@@ -234,7 +234,7 @@ resource "aws_sfn_state_machine" "migration" {
   definition = jsonencode({
     Comment = "Skybridge migration state machine (placeholder)",
     StartAt = "Review",
-    States  = {
+    States = {
       Review = {
         Type = "Pass",
         End  = true

@@ -23,6 +23,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Devcontainer setup now scrubs `~/.npmrc` `prefix` entries to avoid nvm prefix warnings on shell startup.
 - Devcontainer post-start removes Copilot/Copilot Chat to avoid invalid-extension warnings and keep the container extension set minimal.
 - Devcontainer adds the GitHub CLI feature for authenticated GitHub actions from the container.
+- Devcontainer adds the Terraform feature for local IaC formatting/checks.
 - Devcontainer exports the nvm Node bin path and installs Codex zsh completions automatically.
 - Devcontainer installs the Oh My Zsh `zsh-autosuggestions` plugin for inline shell suggestions.
 - Devcontainer mounts `/home/vscode/.config/gh` to a named volume so GitHub CLI auth persists across container restarts.

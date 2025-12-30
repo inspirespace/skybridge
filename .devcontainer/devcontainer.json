@@ -26,7 +26,10 @@
       "username": "vscode"
     },
     "ghcr.io/devcontainers/features/github-cli:1": {},
-    "ghcr.io/devcontainers-extra/features/starship:1": {}
+    "ghcr.io/devcontainers-extra/features/starship:1": {},
+    "ghcr.io/devcontainers/features/terraform:1": {
+      "version": "latest"
+    }
   },
   "customizations": {
     "vscode": {

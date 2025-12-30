@@ -165,6 +165,10 @@ Local auth uses OIDC (Keycloak). Start Keycloak with Docker Compose or a separat
 - user: `demo`
 - password: `demo-password`
 
+Optional dev convenience: set `DEV_PREFILL_CREDENTIALS=1` and provide
+`CLOUD_AHOY_EMAIL`, `CLOUD_AHOY_PASSWORD`, `FLYSTO_EMAIL`, `FLYSTO_PASSWORD`
+to prefill the web UI inputs.
+
 For a standalone Keycloak instance:
 
 ```sh

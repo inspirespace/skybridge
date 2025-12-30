@@ -80,6 +80,7 @@
 - Backend dev API now runs real review/import flows using API clients; web UI submits credentials per request, stores review/import artifacts under `data/backend/jobs/<job_id>/`, and updates job status via background tasks.
 - Dev web now uses OIDC (Keycloak) auth instead of `X-User-Id` headers, mirroring production JWT validation.
 - Added Caddy + mkcert HTTPS dev proxy for trusted local TLS on `https://skybridge.localhost`.
+- Devcontainer now installs Terraform for local `terraform fmt` checks.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).

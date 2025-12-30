@@ -30,6 +30,11 @@ services:
       - AUTH_SCOPE=openid profile email
       - AUTH_TOKEN_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/token
       - AUTH_TOKEN_PROXY=true
+      - DEV_PREFILL_CREDENTIALS=1
+      - CLOUD_AHOY_EMAIL=${CLOUD_AHOY_EMAIL}
+      - CLOUD_AHOY_PASSWORD=${CLOUD_AHOY_PASSWORD}
+      - FLYSTO_EMAIL=${FLYSTO_EMAIL}
+      - FLYSTO_PASSWORD=${FLYSTO_PASSWORD}
     depends_on:
       - dynamodb
       - minio

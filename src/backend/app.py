@@ -6,8 +6,10 @@ from pathlib import Path
 from typing import Optional
 from uuid import UUID
 
+from concurrent.futures import ThreadPoolExecutor
+
 import requests
-from fastapi import BackgroundTasks, FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from pydantic import ValidationError
 
 from .auth import user_id_from_request
@@ -27,6 +29,7 @@ DATA_DIR = Path(os.environ.get("BACKEND_DATA_DIR", "data/backend/jobs"))
 app = FastAPI(title="Skybridge Backend Dev API")
 store = JobStore(DATA_DIR)
 service = JobService(store)
+executor = ThreadPoolExecutor(max_workers=int(os.getenv("BACKEND_WORKERS") or "2"))
 
 
 def _load_job_or_404(job_id: UUID, user_id: str) -> JobRecord:
@@ -82,13 +85,12 @@ def auth_token(payload: dict) -> dict:
 @app.post("/jobs", response_model=JobRecord)
 def create_job(
     payload: JobCreateRequest,
-    background_tasks: BackgroundTasks,
     x_user_id: Optional[str] = Header(default=None),
     authorization: Optional[str] = Header(default=None),
 ) -> JobRecord:
     user_id = user_id_from_request(authorization, x_user_id)
     job = service.create_job(user_id)
-    background_tasks.add_task(service.generate_review, job.job_id, payload)
+    executor.submit(service.generate_review, job.job_id, payload)
     return job
 
 
@@ -116,7 +118,6 @@ def get_job(
 def accept_review(
     job_id: UUID,
     payload: JobAcceptRequest,
-    background_tasks: BackgroundTasks,
     x_user_id: Optional[str] = Header(default=None),
     authorization: Optional[str] = Header(default=None),
 ) -> JobRecord:
@@ -127,7 +128,7 @@ def accept_review(
     job.status = "import_running"
     job.updated_at = datetime.now(timezone.utc)
     store.save_job(job)
-    background_tasks.add_task(service.accept_review, job_id, payload)
+    executor.submit(service.accept_review, job_id, payload)
     return job
 
 
