@@ -77,6 +77,15 @@
 - Added tests for crew payload formatting/fallback, G3X HDG/TRK behavior, and reconciliation retry with log-id refresh.
 - Added tests for FlySto signature parsing/decoding, log-list resolution, log-metadata source extraction, and migration flow signature/system-id assignment.
 - Added tests for FlySto resolve update flows, log-source cache reuse, and import-report verify/reconcile paths.
+- Backend dev API now runs real review/import flows using API clients; web UI submits credentials per request, stores review/import artifacts under `data/backend/jobs/<job_id>/`, and updates job status via background tasks.
+- Dev web now uses OIDC (Keycloak) auth instead of `X-User-Id` headers, mirroring production JWT validation.
+- Added Caddy + mkcert HTTPS dev proxy for trusted local TLS on `https://skybridge.localhost`.
+- Devcontainer now installs Terraform for local `terraform fmt` checks.
+- Dev backend now queues review/import jobs for the worker, using one-time credential claims instead of storing credentials at rest.
+- Dev backend reconcile flow now mirrors the guided import: wait for FlySto processing, verify/report, reconcile aircraft/crew/metadata, then reapply crew after post-processing drains.
+- Dev web UI now clears stale saved job state automatically and exposes a manual clear action to unblock new runs.
+- Lambda handlers now guard invalid job IDs and missing artifacts, returning 404s instead of 502s.
+- Lambda build now bundles the full backend package and a handler shim so API Gateway handlers can import backend modules in Lambda.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).
@@ -93,43 +102,63 @@
 7) Remarks + import tagging
    - Validate in UI that remarks/tags are visible on logs.
 
-## SaaS Architecture Planning (in progress)
+## Backend Architecture Planning (in progress)
 Goal: Deliver a fully functional web application where any user can migrate CloudAhoy flights into FlySto. The architecture must be single-cloud, secure, maintainable, privacy-focused (no credential storage), and cost-friendly for early free-tier usage. The production path excludes Playwright.
 
-- [ ] 1) Define the target single-cloud baseline (AWS by default)
-  - [ ] Confirm region strategy (single region for early stage).
-  - [ ] Document core managed services (API Gateway, Lambda, Step Functions, DynamoDB, S3, CloudWatch, Cognito).
-  - [ ] Decide if any container runtime is needed for API-only migrations (goal: Lambda-only).
-- [ ] 2) Specify the data privacy model (no credential storage)
-  - [ ] Describe in-memory credential handling (credentials accepted per job, used transiently, never stored).
-  - [ ] Define encrypted-in-transit requirements (TLS, optional client-side encryption).
-  - [ ] Clarify retention windows for job artifacts and logs (TTL policy).
-- [ ] 3) Define job orchestration and data lifecycle
-  - [ ] Document job states and transitions (created → running → completed/failed).
-  - [ ] Define artifact storage paths and metadata schema (S3 keys, DynamoDB tables).
-  - [ ] Add S3 lifecycle/TTL cleanup policy and DynamoDB TTL field usage.
-- [ ] 4) API design and frontend integration
-  - [ ] Draft minimal REST endpoints (create job, list jobs, job status, download artifacts).
-  - [ ] Define authentication flow and session handling (Cognito).
-  - [ ] Sketch the minimal UI pages (sign-in, job creation, job status).
-- [ ] 5) Observability & auditability
-  - [ ] Define structured logging format and correlation IDs.
-  - [ ] List required metrics (job duration, failures, volume).
-  - [ ] Document audit log retention policy.
-- [ ] 6) Security posture & threat model
-  - [ ] Enumerate threats (credential exposure, data leakage, unauthorized access).
-  - [ ] Define mitigations (least privilege IAM, encryption at rest/in transit, short TTL).
-  - [ ] Document incident response basics (revocation, log review).
-- [ ] 7) Cost controls and free-tier strategy
-  - [ ] Set quotas/limits per account (jobs/day, max flights).
-  - [ ] Add guardrails for API usage and storage growth.
-  - [ ] Define alerting thresholds for budget overages.
-- [ ] 8) Implementation milestones (non-code planning)
-  - [ ] Prepare an infra diagram (single-cloud layout).
-  - [ ] Produce a minimal runbook (how to run a job end-to-end).
-  - [ ] Draft a maintenance checklist (dependencies, security updates).
-  - [ ] Define a readiness checklist for a public web release (UX flow, auth, migrations working for any user).
+Reference doc: `docs/backend-architecture.md` (authoritative architecture + milestone definitions).
+
+- [x] 1) Define the target single-cloud baseline (AWS by default)
+  - [x] Confirm region strategy (single region for early stage).
+  - [x] Document core managed services (API Gateway, Lambda, Step Functions, DynamoDB, S3, CloudWatch, Cognito).
+  - [x] Decide if any container runtime is needed for API-only migrations (goal: Lambda-only).
+- [x] 2) Specify the data privacy model (no credential storage)
+  - [x] Describe in-memory credential handling (credentials accepted per job, used transiently, never stored).
+  - [x] Define encrypted-in-transit requirements (TLS, optional client-side encryption).
+  - [x] Clarify retention windows for job artifacts and logs (TTL policy).
+- [x] 3) Define job orchestration and data lifecycle
+  - [x] Document job states and transitions (created → running → completed/failed).
+  - [x] Define artifact storage paths and metadata schema (S3 keys, DynamoDB tables).
+  - [x] Add S3 lifecycle/TTL cleanup policy and DynamoDB TTL field usage.
+- [x] 4) API design and frontend integration
+  - [x] Draft minimal REST endpoints (create job, list jobs, job status, download artifacts).
+  - [x] Define authentication flow and session handling (Cognito).
+  - [x] Sketch the minimal UI pages (sign-in, job creation, job status).
+- [x] 5) Observability & auditability
+  - [x] Define structured logging format and correlation IDs.
+  - [x] List required metrics (job duration, failures, volume).
+  - [x] Document audit log retention policy.
+- [x] 6) Security posture & threat model
+  - [x] Enumerate threats (credential exposure, data leakage, unauthorized access).
+  - [x] Define mitigations (least privilege IAM, encryption at rest/in transit, short TTL).
+  - [x] Document incident response basics (revocation, log review).
+- [x] 7) Cost controls and free-tier strategy
+  - [x] Set quotas/limits per account (jobs/day, max flights).
+  - [x] Add guardrails for API usage and storage growth.
+  - [x] Define alerting thresholds for budget overages.
+- [x] 8) Implementation milestones (non-code planning)
+  - [x] Prepare an infra diagram description (single-cloud layout).
+  - [x] Produce a minimal runbook (how to run a job end-to-end).
+  - [x] Draft a maintenance checklist (dependencies, security updates).
+  - [x] Define a readiness checklist for a public web release (UX flow, auth, migrations working for any user).
+- [x] 9) Local development experience
+  - [x] Define a Docker Compose-based stack for local dev (UI + API + worker + local data stores).
+  - [x] Document local auth approach (Cognito emulator or dev-only JWT bypass).
+
+### Milestones & Review Cadence
+- Milestone 1: Backend architecture baseline documented (complete).
+  - Deliverables: architecture overview, data privacy model, job lifecycle, API + UI shape, observability, security, cost controls, runbook, maintenance, readiness checklist.
+  - Review/feedback: **Approved** — proceeding to Milestone 2.
+- Milestone 2: Infra-as-code baseline (in progress).
+  - Deliverables: CDK/Terraform skeleton with core services, CI hook, environment config.
+  - Status: Terraform baseline under `infra/terraform/` + GitHub Actions fmt check added, API Gateway → Lambda routes wired to handler zip.
+  - Review/feedback: to be scheduled once scaffolding exists.
+- Milestone 3: Dev workflow (in progress).
+  - Deliverables: basic auth, job orchestration, review → import flow, artifacts downloadable.
+  - Status: Dev FastAPI now executes real review/import flows using API clients, writes artifacts under `data/backend/jobs`, and the dev web UI polls job status while the background tasks run.
+- Milestone 4: Public beta readiness (in progress).
+  - Deliverables: runbook, maintenance checklist, readiness checklist, guardrails validated.
+  - Status: added `docs/backend-runbook.md`, `docs/backend-maintenance.md`, `docs/backend-release-readiness.md`.
 
 ## Backlog / Ideas
 - Replace FlySto UI automation with API client.
-- Add pricing/billing scaffolding for SaaS.
+- Add pricing/billing foundation for the backend.

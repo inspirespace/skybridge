@@ -3,13 +3,39 @@
 .zcompdump*
 .zsh/
 .env
-.venv/
-data/
-__pycache__/
 .pytest_cache/
-*.pyc
-*.pyo
-*.pyd
 .DS_Store
 .uv/
 .uv-cache/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.venv/
+
+# Logs and local data
+*.log
+
+# Terraform
+**/.terraform/
+**/.terraform.lock.hcl
+
+# Local data
+data/
+docker/https/certs/
+/data/
+
+# Lambda packages
+infra/terraform/lambda/*.zip

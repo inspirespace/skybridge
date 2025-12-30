@@ -1,0 +1,15 @@
+{
+  auto_https off
+}
+
+https://skybridge.localhost {
+  tls /etc/caddy/certs/skybridge.localhost.pem /etc/caddy/certs/skybridge.localhost-key.pem
+  encode gzip
+  reverse_proxy api:8000
+}
+
+https://auth.skybridge.localhost {
+  tls /etc/caddy/certs/auth.skybridge.localhost.pem /etc/caddy/certs/auth.skybridge.localhost-key.pem
+  encode gzip
+  reverse_proxy keycloak:8080
+}

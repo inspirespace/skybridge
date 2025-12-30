@@ -1,0 +1,25 @@
+name: Terraform
+
+on:
+  pull_request:
+    paths:
+      - "infra/terraform/**"
+      - ".github/workflows/terraform.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "infra/terraform/**"
+      - ".github/workflows/terraform.yml"
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+      - name: Terraform fmt
+        run: terraform fmt -check -recursive
+        working-directory: infra/terraform

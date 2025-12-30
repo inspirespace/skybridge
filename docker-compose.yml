@@ -1,0 +1,120 @@
+services:
+  caddy:
+    image: caddy:2.8.4
+    ports:
+      - "443:443"
+    volumes:
+      - ./docker/https/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./docker/https/certs:/etc/caddy/certs:ro
+    depends_on:
+      - api
+      - keycloak
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/backend-dev/Dockerfile
+    command: ["python", "-m", "uvicorn", "src.backend.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+      - backend_data:/app/data/backend
+    environment:
+      - BACKEND_DATA_DIR=/app/data/backend/jobs
+      - AUTH_MODE=oidc
+      - AUTH_ISSUER_URL=https://auth.skybridge.localhost/realms/skybridge-dev
+      - AUTH_JWKS_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/certs
+      - AUTH_BROWSER_ISSUER_URL=https://auth.skybridge.localhost/realms/skybridge-dev
+      - AUTH_CLIENT_ID=skybridge-dev
+      - AUTH_SCOPE=openid profile email
+      - AUTH_TOKEN_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/token
+      - AUTH_TOKEN_PROXY=true
+      - BACKEND_USE_WORKER=true
+      - BACKEND_WORKER_TOKEN=dev-worker-token
+      - BACKEND_CREDENTIAL_TTL=900
+      - BACKEND_RECONCILE=true
+      - BACKEND_WAIT_FOR_PROCESSING=true
+      - BACKEND_PROCESSING_INTERVAL=20
+      - BACKEND_PROCESSING_TIMEOUT=3600
+      - DEV_PREFILL_CREDENTIALS=1
+      - CLOUD_AHOY_EMAIL=${CLOUD_AHOY_EMAIL}
+      - CLOUD_AHOY_PASSWORD=${CLOUD_AHOY_PASSWORD}
+      - FLYSTO_EMAIL=${FLYSTO_EMAIL}
+      - FLYSTO_PASSWORD=${FLYSTO_PASSWORD}
+    depends_on:
+      dynamodb:
+        condition: service_started
+      minio:
+        condition: service_started
+      keycloak:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/backend-dev/Dockerfile
+    command: ["python", "-m", "src.backend.worker"]
+    volumes:
+      - ./:/app
+      - backend_data:/app/data/backend
+    environment:
+      - BACKEND_DATA_DIR=/app/data/backend/jobs
+      - AUTH_MODE=oidc
+      - AUTH_ISSUER_URL=https://auth.skybridge.localhost/realms/skybridge-dev
+      - AUTH_JWKS_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/certs
+      - AUTH_BROWSER_ISSUER_URL=https://auth.skybridge.localhost/realms/skybridge-dev
+      - AUTH_CLIENT_ID=skybridge-dev
+      - AUTH_SCOPE=openid profile email
+      - AUTH_TOKEN_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/token
+      - AUTH_TOKEN_PROXY=true
+      - BACKEND_USE_WORKER=true
+      - BACKEND_WORKER_TOKEN=dev-worker-token
+      - BACKEND_API_URL=http://api:8000
+      - BACKEND_RECONCILE=true
+      - BACKEND_WAIT_FOR_PROCESSING=true
+      - BACKEND_PROCESSING_INTERVAL=20
+      - BACKEND_PROCESSING_TIMEOUT=3600
+    depends_on:
+      dynamodb:
+        condition: service_started
+      minio:
+        condition: service_started
+      keycloak:
+        condition: service_healthy
+
+  dynamodb:
+    image: amazon/dynamodb-local:2.5.0
+    ports:
+      - "8001:8000"
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: ["server", "/data", "--console-address", ":9001"]
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.6
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_PROXY: edge
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - ./docker/keycloak:/opt/keycloak/data/import
+    command: ["start-dev", "--import-realm"]
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080'"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  backend_data:
+  keycloak_data:
