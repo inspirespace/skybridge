@@ -81,6 +81,7 @@
 - Dev web now uses OIDC (Keycloak) auth instead of `X-User-Id` headers, mirroring production JWT validation.
 - Added Caddy + mkcert HTTPS dev proxy for trusted local TLS on `https://skybridge.localhost`.
 - Devcontainer now installs Terraform for local `terraform fmt` checks.
+- Dev backend now queues review/import jobs for the worker, using one-time credential claims instead of storing credentials at rest.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).

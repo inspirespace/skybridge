@@ -204,6 +204,8 @@ Services:
 - `keycloak` (OIDC dev auth) on http://localhost:8080
 - `caddy` (HTTPS proxy) on https://skybridge.localhost and https://auth.skybridge.localhost
 
+The dev stack runs review/import via the worker (API queues jobs and issues one-time credential claims).
+
 Test the API:
 
 ```sh

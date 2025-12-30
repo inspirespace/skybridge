@@ -35,6 +35,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Added backend runbook, maintenance, and release readiness checklists under `docs/` for Milestone 4.
 - Added a minimal dev web UI served at `/` to drive job creation, review, and approval locally with OIDC auth.
 - Added optional HTTPS dev proxy via Caddy + mkcert for trusted local TLS on `https://skybridge.localhost`.
+- Dev backend now queues review/import jobs and the worker executes them via a one-time credential claim (no credential storage at rest).
 - Dev backend now executes real review/import flows using API clients (no credential storage), writes `review.json` and `import-report.json` under `data/backend/jobs/<job_id>/`, and the UI polls job status while background tasks run.
 - Added Docker Compose stack for the backend dev web (API + worker + DynamoDB Local + MinIO).
 - Added Lambda handler scaffolding in `src/backend/lambda_handlers.py` with build script output under `infra/terraform/lambda/backend-handlers.zip`.

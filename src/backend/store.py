@@ -26,6 +26,19 @@ class JobStore:
     def _job_file(self, job_id: UUID) -> Path:
         return self._job_dir(job_id) / "job.json"
 
+    def _token_file(self, job_id: UUID, purpose: str) -> Path:
+        return self._job_dir(job_id) / f"{purpose}.token"
+
+    def list_all_jobs(self) -> list[JobRecord]:
+        jobs: list[JobRecord] = []
+        for job_dir in self._base_path.iterdir():
+            job_file = job_dir / "job.json"
+            if not job_file.exists():
+                continue
+            job_data = json.loads(job_file.read_text())
+            jobs.append(JobRecord.model_validate(job_data))
+        return sorted(jobs, key=lambda job: job.created_at, reverse=True)
+
     def job_dir(self, job_id: UUID) -> Path:
         return self._job_dir(job_id)
 
@@ -69,6 +82,21 @@ class JobStore:
     def load_artifact(self, job_id: UUID, name: str) -> dict[str, Any]:
         artifact_file = self._job_dir(job_id) / name
         return json.loads(artifact_file.read_text())
+
+    def write_token(self, job_id: UUID, purpose: str, token: str) -> None:
+        token_file = self._token_file(job_id, purpose)
+        token_file.write_text(token)
+
+    def read_token(self, job_id: UUID, purpose: str) -> str | None:
+        token_file = self._token_file(job_id, purpose)
+        if not token_file.exists():
+            return None
+        return token_file.read_text().strip()
+
+    def clear_token(self, job_id: UUID, purpose: str) -> None:
+        token_file = self._token_file(job_id, purpose)
+        if token_file.exists():
+            token_file.unlink()
 
 
 def _serialize(job: JobRecord) -> dict[str, Any]:

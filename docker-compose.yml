@@ -30,6 +30,9 @@ services:
       - AUTH_SCOPE=openid profile email
       - AUTH_TOKEN_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/token
       - AUTH_TOKEN_PROXY=true
+      - BACKEND_USE_WORKER=true
+      - BACKEND_WORKER_TOKEN=dev-worker-token
+      - BACKEND_CREDENTIAL_TTL=900
       - DEV_PREFILL_CREDENTIALS=1
       - CLOUD_AHOY_EMAIL=${CLOUD_AHOY_EMAIL}
       - CLOUD_AHOY_PASSWORD=${CLOUD_AHOY_PASSWORD}
@@ -61,6 +64,9 @@ services:
       - AUTH_SCOPE=openid profile email
       - AUTH_TOKEN_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/token
       - AUTH_TOKEN_PROXY=true
+      - BACKEND_USE_WORKER=true
+      - BACKEND_WORKER_TOKEN=dev-worker-token
+      - BACKEND_API_URL=http://api:8000
     depends_on:
       dynamodb:
         condition: service_started

@@ -13,6 +13,7 @@ from fastapi import FastAPI, Header, HTTPException
 from pydantic import ValidationError
 
 from .auth import user_id_from_request
+from .credential_store import CredentialStore
 from .models import (
     ArtifactListResponse,
     JobAcceptRequest,
@@ -30,6 +31,19 @@ app = FastAPI(title="Skybridge Backend Dev API")
 store = JobStore(DATA_DIR)
 service = JobService(store)
 executor = ThreadPoolExecutor(max_workers=int(os.getenv("BACKEND_WORKERS") or "2"))
+credential_store = CredentialStore()
+
+
+def _use_worker() -> bool:
+    return (os.getenv("BACKEND_USE_WORKER") or "false").lower() in {"1", "true", "yes", "on"}
+
+
+def _credential_ttl() -> int:
+    return int(os.getenv("BACKEND_CREDENTIAL_TTL") or "900")
+
+
+def _worker_token() -> str:
+    return os.getenv("BACKEND_WORKER_TOKEN") or ""
 
 
 def _load_job_or_404(job_id: UUID, user_id: str) -> JobRecord:
@@ -90,7 +104,22 @@ def create_job(
 ) -> JobRecord:
     user_id = user_id_from_request(authorization, x_user_id)
     job = service.create_job(user_id)
-    executor.submit(service.generate_review, job.job_id, payload)
+    job.start_date = payload.start_date
+    job.end_date = payload.end_date
+    job.max_flights = payload.max_flights
+    if _use_worker():
+        token = credential_store.issue(
+            job_id=str(job.job_id),
+            purpose="review",
+            credentials=payload.credentials.model_dump(),
+            ttl_seconds=_credential_ttl(),
+        )
+        job.status = "review_queued"
+        job.updated_at = datetime.now(timezone.utc)
+        store.save_job(job)
+        store.write_token(job.job_id, "review", token)
+    else:
+        executor.submit(service.generate_review, job.job_id, payload)
     return job
 
 
@@ -125,11 +154,43 @@ def accept_review(
     job = _load_job_or_404(job_id, user_id)
     if job.status != "review_ready":
         raise HTTPException(status_code=409, detail="Review not ready")
-    job.status = "import_running"
-    job.updated_at = datetime.now(timezone.utc)
-    store.save_job(job)
-    executor.submit(service.accept_review, job_id, payload)
+    if _use_worker():
+        token = credential_store.issue(
+            job_id=str(job.job_id),
+            purpose="import",
+            credentials=payload.credentials.model_dump(),
+            ttl_seconds=_credential_ttl(),
+        )
+        job.status = "import_queued"
+        job.updated_at = datetime.now(timezone.utc)
+        store.save_job(job)
+        store.write_token(job.job_id, "import", token)
+    else:
+        job.status = "import_running"
+        job.updated_at = datetime.now(timezone.utc)
+        store.save_job(job)
+        executor.submit(service.accept_review, job_id, payload)
     return job
+
+
+@app.post("/jobs/{job_id}/credentials/claim", include_in_schema=False)
+def claim_credentials(
+    job_id: UUID,
+    payload: dict,
+    x_worker_token: Optional[str] = Header(default=None),
+) -> dict:
+    if not _use_worker():
+        raise HTTPException(status_code=409, detail="Worker mode disabled")
+    if not _worker_token() or x_worker_token != _worker_token():
+        raise HTTPException(status_code=401, detail="Missing worker token")
+    purpose = payload.get("purpose")
+    token = payload.get("token")
+    if purpose not in {"review", "import"} or not token:
+        raise HTTPException(status_code=400, detail="Invalid claim payload")
+    creds = credential_store.claim(token, str(job_id), purpose)
+    if not creds:
+        raise HTTPException(status_code=410, detail="Credentials expired")
+    return {"credentials": creds}
 
 
 @app.get("/jobs/{job_id}/artifacts", response_model=ArtifactListResponse)

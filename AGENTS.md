@@ -24,6 +24,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `docker compose up --build` — run the backend dev stack (API, worker, DynamoDB Local, MinIO).
 - Set `DEV_PREFILL_CREDENTIALS=1` with `CLOUD_AHOY_EMAIL`/`CLOUD_AHOY_PASSWORD` and `FLYSTO_EMAIL`/`FLYSTO_PASSWORD` to prefill dev web inputs.
 - Backend dev auth uses Keycloak OIDC in Docker Compose (login with `demo` / `demo-password`); local runs should set `AUTH_MODE=oidc`, `AUTH_ISSUER_URL`, `AUTH_BROWSER_ISSUER_URL`, and `AUTH_CLIENT_ID`.
+- Dev backend queues jobs for the worker when `BACKEND_USE_WORKER=1` (credentials are claimed once via `BACKEND_WORKER_TOKEN`).
 - `./scripts/build-lambda.sh` — package the Lambda handlers to `infra/terraform/lambda/backend-handlers.zip`.
 - `python -m src.cli --review` — run locally (requires Python deps).
 - CLI supports `--start-date` / `--end-date` for targeted imports (YYYY-MM-DD or ISO8601).

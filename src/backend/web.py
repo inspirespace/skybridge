@@ -334,6 +334,10 @@ def landing_page() -> HTMLResponse:
               return;
             }
             const token = localStorage.getItem("access_token");
+            if (token && isTokenExpired(token)) {
+              localStorage.removeItem("access_token");
+              localStorage.removeItem("id_token");
+            }
             if (token) {
               const payload = parseJwt(token) || {};
               const name = payload.preferred_username || payload.email || payload.sub || "signed in";
@@ -399,15 +403,26 @@ def landing_page() -> HTMLResponse:
               hint.textContent = `Review running${elapsed ? ` · elapsed ${elapsed}` : ""}. This can take several minutes.`;
               return;
             }
+            if (job.status === "review_queued") {
+              hint.textContent = "Review queued. Worker will start shortly.";
+              return;
+            }
             if (job.status === "import_running") {
               const elapsed = formatElapsed(job.updated_at || job.created_at);
               hint.textContent = `Import running${elapsed ? ` · elapsed ${elapsed}` : ""}. This can take several minutes.`;
+              return;
+            }
+            if (job.status === "import_queued") {
+              hint.textContent = "Import queued. Worker will start shortly.";
               return;
             }
             hint.textContent = "";
           };
 
           const refreshJob = async (jobId) => {
+            if (!ensureFreshToken() && authConfig.enabled) {
+              return null;
+            }
             const response = await fetch(`/jobs/${jobId}`, { headers: authHeaders() });
             if (!response.ok) {
               const detail = await response.text();
@@ -445,6 +460,7 @@ def landing_page() -> HTMLResponse:
           document.getElementById("logoutBtn").addEventListener("click", logout);
 
           document.getElementById("createJob").addEventListener("click", async () => {
+            if (!ensureFreshToken() && authConfig.enabled) return;
             hide("reviewCard");
             hide("reportCard");
             setText("jobError", "");
@@ -471,6 +487,7 @@ def landing_page() -> HTMLResponse:
           });
 
           document.getElementById("acceptReview").addEventListener("click", async () => {
+            if (!ensureFreshToken() && authConfig.enabled) return;
             const job = JSON.parse(document.getElementById("jobJson").textContent);
             const payload = { credentials: readCredentials() };
             const response = await fetch(`/jobs/${job.job_id}/review/accept`, {
@@ -513,3 +530,19 @@ def landing_page() -> HTMLResponse:
     </html>
     """
     return HTMLResponse(html.replace("__AUTH_CONFIG__", json.dumps(config)))
+          const isTokenExpired = (token) => {
+            const payload = parseJwt(token) || {};
+            const exp = payload.exp;
+            if (!exp) return false;
+            return Date.now() >= exp * 1000;
+          };
+
+          const ensureFreshToken = () => {
+            const token = localStorage.getItem("access_token");
+            if (token && !isTokenExpired(token)) return true;
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("id_token");
+            authError = "Session expired. Please sign in again.";
+            updateAuthUI();
+            return false;
+          };

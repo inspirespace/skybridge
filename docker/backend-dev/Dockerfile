@@ -7,7 +7,10 @@ ENV UV_PROJECT_ENVIRONMENT=/venv
 RUN pip install --no-cache-dir uv
 
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && uv sync --frozen
 
 COPY src ./src
 COPY scripts ./scripts

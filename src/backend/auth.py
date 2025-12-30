@@ -92,9 +92,17 @@ def _load_jwks(issuer: str) -> list[dict[str, Any]]:
         return _JWKS_CACHE.keys or []
 
     jwks_uri = _jwks_uri_for_issuer(issuer)
-    response = requests.get(jwks_uri, timeout=10)
-    response.raise_for_status()
-    payload = response.json()
+    try:
+        response = requests.get(jwks_uri, timeout=10)
+        response.raise_for_status()
+        payload = response.json()
+    except requests.RequestException as exc:
+        # Keycloak may still be booting; surface a retryable error instead of 500.
+        raise HTTPException(
+            status_code=503,
+            detail="Auth provider not ready, retry in a few seconds.",
+            headers={"Retry-After": "5"},
+        ) from exc
     keys = payload.get("keys") or []
 
     _JWKS_CACHE.jwks_uri = jwks_uri

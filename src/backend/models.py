@@ -8,8 +8,10 @@ from pydantic import BaseModel, Field
 
 
 JobStatus = Literal[
+    "review_queued",
     "review_running",
     "review_ready",
+    "import_queued",
     "import_running",
     "completed",
     "failed",
@@ -67,6 +69,9 @@ class JobRecord(BaseModel):
     created_at: datetime
     updated_at: datetime
     review_id: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    max_flights: Optional[int] = None
     review_summary: Optional[ReviewSummary] = None
     import_report: Optional[ImportReport] = None
     error_message: Optional[str] = None
