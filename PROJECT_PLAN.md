@@ -146,9 +146,9 @@ Reference doc: `docs/backend-architecture.md` (authoritative architecture + mile
 - Milestone 1: Backend architecture baseline documented (complete).
   - Deliverables: architecture overview, data privacy model, job lifecycle, API + UI shape, observability, security, cost controls, runbook, maintenance, readiness checklist.
   - Review/feedback: **Approved** — proceeding to Milestone 2.
-- Milestone 2: Infra-as-code scaffolding (in progress).
+- Milestone 2: Infra-as-code baseline (in progress).
   - Deliverables: CDK/Terraform skeleton with core services, CI hook, environment config.
-  - Status: Terraform scaffold under `infra/terraform/` + GitHub Actions fmt check added, API Gateway → Lambda routes wired to handler zip.
+  - Status: Terraform baseline under `infra/terraform/` + GitHub Actions fmt check added, API Gateway → Lambda routes wired to handler zip.
   - Review/feedback: to be scheduled once scaffolding exists.
 - Milestone 3: Dev workflow (in progress).
   - Deliverables: basic auth, job orchestration, review → import flow, artifacts downloadable.
@@ -159,4 +159,4 @@ Reference doc: `docs/backend-architecture.md` (authoritative architecture + mile
 
 ## Backlog / Ideas
 - Replace FlySto UI automation with API client.
-- Add pricing/billing scaffolding for the backend.
+- Add pricing/billing foundation for the backend.

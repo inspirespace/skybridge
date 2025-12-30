@@ -292,7 +292,7 @@ def _build_review_summary(items: list) -> ReviewSummary:
 def _flight_origin(metadata: dict | None) -> str | None:
     if not isinstance(metadata, dict):
         return None
-    return (
+    return _coerce_location(
         metadata.get("origin")
         or metadata.get("aircraft_from")
         or metadata.get("event_from")
@@ -303,12 +303,25 @@ def _flight_origin(metadata: dict | None) -> str | None:
 def _flight_destination(metadata: dict | None) -> str | None:
     if not isinstance(metadata, dict):
         return None
-    return (
+    return _coerce_location(
         metadata.get("destination")
         or metadata.get("aircraft_to")
         or metadata.get("event_to")
         or metadata.get("to")
     )
+
+
+def _coerce_location(value: object) -> str | None:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        code = value.get("c")
+        name = value.get("t")
+        if isinstance(code, str) and code:
+            return code
+        if isinstance(name, str) and name:
+            return name
+    return None
 
 
 def _parse_date_bound(value: str, is_end: bool) -> datetime:

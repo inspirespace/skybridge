@@ -1,1 +1,1 @@
-"""Backend dev API scaffolding."""
+"""Backend dev API."""

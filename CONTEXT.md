@@ -30,8 +30,8 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Devcontainer disables zsh-autosuggestions to avoid duplicated paste input in the terminal.
 - CLI now prompts for missing API credentials in-memory when `.env` is absent.
 - Added a detailed backend architecture planning checklist to `PROJECT_PLAN.md` (Playwright excluded for production).
-- Added Terraform scaffolding under `infra/terraform/` with a CI `terraform fmt` check; Milestone 2 in progress.
-- Added dev backend API scaffold under `src/backend/` with local job storage in `data/backend/jobs` for Milestone 3.
+- Added Terraform baseline under `infra/terraform/` with a CI `terraform fmt` check; Milestone 2 in progress.
+- Added dev backend API under `src/backend/` with local job storage in `data/backend/jobs` for Milestone 3.
 - Added backend runbook, maintenance, and release readiness checklists under `docs/` for Milestone 4.
 - Added a minimal dev web UI served at `/` to drive job creation, review, and approval locally with OIDC auth.
 - Added optional HTTPS dev proxy via Caddy + mkcert for trusted local TLS on `https://skybridge.localhost`.
@@ -40,7 +40,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Dev backend import reconciliation now mirrors the guided flow by waiting for FlySto processing and reapplying crew after post-processing drains.
 - Dev web UI now auto-clears stale job state from localStorage and offers a "Clear saved job" action so new runs can proceed cleanly.
 - Added Docker Compose stack for the backend dev web (API + worker + DynamoDB Local + MinIO).
-- Added Lambda handler scaffolding in `src/backend/lambda_handlers.py` with build script output under `infra/terraform/lambda/backend-handlers.zip`.
+- Added Lambda handler baseline in `src/backend/lambda_handlers.py` with build script output under `infra/terraform/lambda/backend-handlers.zip`.
 - CloudAhoy exports can now produce ForeFlight-style CSVs via `CLOUD_AHOY_EXPORT_FORMAT=foreflight`, FlightRadar24 CSV via `CLOUD_AHOY_EXPORT_FORMAT=flightradar24`, MVP-50 CSV via `CLOUD_AHOY_EXPORT_FORMAT=mvp50`, or Garmin G3X/G1000 CSV via `CLOUD_AHOY_EXPORT_FORMAT=g3x` / `g1000`. Multiple formats can be exported via `CLOUD_AHOY_EXPORT_FORMATS` (comma-separated, defaults to `g3x,gpx`) with G3X prioritized for upload when available.
 - Experimental: `CLOUD_AHOY_G3X_INCLUDE_HDG=1` opt-in to include heading in G3X exports; TRK is always included and HDG defaults off for block-time compatibility.
 - FlySto uploads now capture the log-upload response (including the per-file signature hash) in a dedicated upload cache, use the hash for aircraft assignment, and keep log-list resolution separate to avoid mixing upload signatures with resolved log summaries.

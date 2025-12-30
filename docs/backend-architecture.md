@@ -8,13 +8,13 @@ Deliver a single-cloud (AWS) web application that lets any user migrate CloudAho
 ### Milestone 1: Architecture Baseline (complete)
 **Outcome:** Core architecture, data privacy model, job lifecycle, API/UI shape, observability, security posture, cost controls, and operational checklists defined.
 
-### Milestone 2: Infrastructure Scaffolding (in progress)
+### Milestone 2: Infrastructure Baseline (in progress)
 **Outcome:** IaC skeleton (CDK or Terraform), environment config, CI hooks, and staging environment with non-prod resources.
-**Status:** Terraform scaffold added in `infra/terraform/` with a GitHub Actions fmt check.
+**Status:** Terraform baseline added in `infra/terraform/` with a GitHub Actions fmt check.
 
 ### Milestone 3: Dev Workflow (in progress)
 **Outcome:** Auth + job orchestration wired end-to-end with a limited migration flow; artifacts downloadable; operational logs and metrics available.
-**Status:** Dev API scaffold added in `src/backend/` with local artifact storage under `data/backend/jobs`.
+**Status:** Dev API added in `src/backend/` with local artifact storage under `data/backend/jobs`.
 
 ### Milestone 4: Public Beta Readiness (in progress)
 **Outcome:** Guardrails, quotas, and readiness checklist satisfied; runbook and maintenance checklist validated.
@@ -136,4 +136,4 @@ See `docs/backend-maintenance.md` for the maintenance cadence.
 See `docs/backend-release-readiness.md` for the release checklist.
 
 ## Review & Feedback
-- **Milestone 1 approved.** Proceeding to Milestone 2 (infrastructure scaffolding).
+- **Milestone 1 approved.** Proceeding to Milestone 2 (infrastructure baseline).
