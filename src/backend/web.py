@@ -48,17 +48,81 @@ def landing_page() -> HTMLResponse:
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>Skybridge Dev Web</title>
         <style>
-          body { font-family: sans-serif; margin: 2rem; max-width: 900px; }
-          fieldset { margin-bottom: 1rem; }
-          label { display: block; margin: 0.5rem 0; }
-          input { width: 100%; padding: 0.5rem; }
-          button { padding: 0.6rem 1rem; margin-top: 0.5rem; }
-          .card { border: 1px solid #ddd; padding: 1rem; margin-top: 1rem; }
+          :root {
+            --text: #121212;
+            --muted: #5f6368;
+            --border: #d6d6d6;
+            --panel: #ffffff;
+            --bg: #f6f6f4;
+            --accent: #0f62fe;
+          }
+
+          * { box-sizing: border-box; }
+          body {
+            font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+            margin: 2rem auto;
+            padding: 0 1.25rem 3rem;
+            max-width: 960px;
+            background: var(--bg);
+            color: var(--text);
+          }
+          h1 { margin-bottom: 0.25rem; }
+          p { margin-top: 0; color: var(--muted); }
+          fieldset {
+            margin: 0;
+            border: 1px solid var(--border);
+            padding: 1rem;
+            border-radius: 10px;
+            background: var(--panel);
+          }
+          legend { padding: 0 0.5rem; font-weight: 600; }
+          label { display: block; margin: 0.65rem 0; font-weight: 600; }
+          input {
+            width: 100%;
+            padding: 0.6rem 0.7rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+          }
+          button {
+            padding: 0.65rem 1.1rem;
+            margin-top: 0.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--accent);
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+          }
+          button.secondary {
+            background: #fff;
+            color: var(--text);
+          }
+          .card {
+            border: 1px solid var(--border);
+            padding: 1rem;
+            margin-top: 1rem;
+            border-radius: 12px;
+            background: var(--panel);
+          }
           .hidden { display: none; }
-          table { width: 100%; border-collapse: collapse; }
-          th, td { border: 1px solid #ddd; padding: 0.4rem; text-align: left; }
           .status { font-weight: 600; }
           .error { color: #b00020; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid var(--border); padding: 0.45rem; text-align: left; }
+
+          .layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+          }
+          .actions { margin-top: 1rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+          @media (max-width: 720px) {
+            body { margin-top: 1.5rem; }
+            button { width: 100%; }
+          }
         </style>
       </head>
       <body>
@@ -68,8 +132,10 @@ def landing_page() -> HTMLResponse:
         <div id="authCard" class="card hidden">
           <h2>Authentication</h2>
           <div class="status" id="authStatus"></div>
-          <button id="loginBtn">Sign in</button>
-          <button id="logoutBtn" class="hidden">Sign out</button>
+          <div class="actions">
+            <button id="loginBtn">Sign in</button>
+            <button id="logoutBtn" class="secondary hidden">Sign out</button>
+          </div>
         </div>
 
         <div id="devIdentity" class="card hidden">
@@ -78,38 +144,42 @@ def landing_page() -> HTMLResponse:
             <input id="userId" placeholder="demo-user" />
           </label>
         </div>
+        <div class="layout">
+          <fieldset>
+            <legend>CloudAhoy credentials</legend>
+            <label>Username <input id="cloudahoyUser" /></label>
+            <label>Password <input id="cloudahoyPass" type="password" /></label>
+          </fieldset>
 
-        <fieldset>
-          <legend>CloudAhoy credentials</legend>
-          <label>Username <input id="cloudahoyUser" /></label>
-          <label>Password <input id="cloudahoyPass" type="password" /></label>
-        </fieldset>
+          <fieldset>
+            <legend>FlySto credentials</legend>
+            <label>Username <input id="flystoUser" /></label>
+            <label>Password <input id="flystoPass" type="password" /></label>
+          </fieldset>
 
-        <fieldset>
-          <legend>FlySto credentials</legend>
-          <label>Username <input id="flystoUser" /></label>
-          <label>Password <input id="flystoPass" type="password" /></label>
-        </fieldset>
+          <fieldset>
+            <legend>Filters</legend>
+            <label>Start date (YYYY-MM-DD)
+              <input id="startDate" placeholder="2025-01-01" />
+            </label>
+            <label>End date (YYYY-MM-DD)
+              <input id="endDate" placeholder="2025-12-31" />
+            </label>
+            <label>Max flights
+              <input id="maxFlights" type="number" min="1" placeholder="50" />
+            </label>
+          </fieldset>
+        </div>
 
-        <fieldset>
-          <legend>Filters</legend>
-          <label>Start date (YYYY-MM-DD)
-            <input id="startDate" placeholder="2025-01-01" />
-          </label>
-          <label>End date (YYYY-MM-DD)
-            <input id="endDate" placeholder="2025-12-31" />
-          </label>
-          <label>Max flights
-            <input id="maxFlights" type="number" min="1" placeholder="50" />
-          </label>
-        </fieldset>
-
-        <button id="createJob">Create job + run review</button>
+        <div class="actions">
+          <button id="createJob">Create job + run review</button>
+        </div>
 
         <div id="jobCard" class="card hidden">
           <h2>Job</h2>
           <div class="status" id="jobStatus"></div>
           <div class="error" id="jobError"></div>
+          <div id="jobHint"></div>
           <pre id="jobJson"></pre>
           <button id="acceptReview">Accept review + start import</button>
         </div>
@@ -306,16 +376,50 @@ def landing_page() -> HTMLResponse:
             flysto_password: document.getElementById("flystoPass").value,
           });
 
+          const formatElapsed = (startIso) => {
+            if (!startIso) return "";
+            const started = Date.parse(startIso);
+            if (Number.isNaN(started)) return "";
+            const seconds = Math.max(0, Math.floor((Date.now() - started) / 1000));
+            if (seconds < 60) return `${seconds}s`;
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m`;
+            const hours = Math.floor(minutes / 60);
+            return `${hours}h`;
+          };
+
+          const updateJobHint = (job) => {
+            const hint = document.getElementById("jobHint");
+            if (!job) {
+              hint.textContent = "";
+              return;
+            }
+            if (job.status === "review_running") {
+              const elapsed = formatElapsed(job.created_at);
+              hint.textContent = `Review running${elapsed ? ` · elapsed ${elapsed}` : ""}. This can take several minutes.`;
+              return;
+            }
+            if (job.status === "import_running") {
+              const elapsed = formatElapsed(job.updated_at || job.created_at);
+              hint.textContent = `Import running${elapsed ? ` · elapsed ${elapsed}` : ""}. This can take several minutes.`;
+              return;
+            }
+            hint.textContent = "";
+          };
+
           const refreshJob = async (jobId) => {
             const response = await fetch(`/jobs/${jobId}`, { headers: authHeaders() });
             if (!response.ok) {
+              const detail = await response.text();
               setText("jobStatus", "Failed to load job");
+              setText("jobError", detail || "");
               return null;
             }
             const job = await response.json();
             setText("jobJson", JSON.stringify(job, null, 2));
             setText("jobStatus", `Status: ${job.status}`);
             setText("jobError", job.error_message || "");
+            updateJobHint(job);
             if (job.review_summary) {
               renderReview(job.review_summary);
             }
