@@ -10,6 +10,7 @@ from .auth import user_id_from_event
 from .models import JobAcceptRequest, JobCreateRequest
 from .service import JobService
 from .store import JobStore
+from pydantic import ValidationError
 
 DATA_DIR = Path(os.environ.get("BACKEND_DATA_DIR", "/tmp/backend/jobs"))
 store = JobStore(DATA_DIR)
@@ -29,6 +30,20 @@ def _user_id(event: dict[str, Any]) -> str:
         return user_id_from_event(event)
     except Exception:
         return ""
+
+
+def _load_job(job_id: str, user_id: str):
+    try:
+        job_uuid = UUID(job_id)
+    except ValueError:
+        return None
+    try:
+        job = store.load_job(job_uuid)
+    except (FileNotFoundError, ValueError, ValidationError):
+        return None
+    if job.user_id != user_id:
+        return None
+    return job
 
 
 def create_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
@@ -57,8 +72,8 @@ def get_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     job_id = event.get("pathParameters", {}).get("job_id")
     if not job_id:
         return _response(404, {"detail": "Job not found"})
-    job = store.load_job(UUID(job_id))
-    if job.user_id != user_id:
+    job = _load_job(job_id, user_id)
+    if not job:
         return _response(404, {"detail": "Job not found"})
     return _response(200, job.model_dump())
 
@@ -70,8 +85,8 @@ def accept_review_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
     job_id = event.get("pathParameters", {}).get("job_id")
     if not job_id:
         return _response(404, {"detail": "Job not found"})
-    job = store.load_job(UUID(job_id))
-    if job.user_id != user_id:
+    job = _load_job(job_id, user_id)
+    if not job:
         return _response(404, {"detail": "Job not found"})
     if job.status != "review_ready":
         return _response(409, {"detail": "Review not ready"})
@@ -88,10 +103,10 @@ def list_artifacts_handler(event: dict[str, Any], _context: Any) -> dict[str, An
     job_id = event.get("pathParameters", {}).get("job_id")
     if not job_id:
         return _response(404, {"detail": "Job not found"})
-    job = store.load_job(UUID(job_id))
-    if job.user_id != user_id:
+    job = _load_job(job_id, user_id)
+    if not job:
         return _response(404, {"detail": "Job not found"})
-    artifacts = store.list_artifacts(UUID(job_id))
+    artifacts = store.list_artifacts(job.job_id)
     return _response(200, {"artifacts": artifacts})
 
 
@@ -104,8 +119,8 @@ def read_artifact_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
     artifact_name = params.get("artifact_name")
     if not job_id or not artifact_name:
         return _response(404, {"detail": "Artifact not found"})
-    job = store.load_job(UUID(job_id))
-    if job.user_id != user_id:
+    job = _load_job(job_id, user_id)
+    if not job:
         return _response(404, {"detail": "Job not found"})
-    data = store.load_artifact(UUID(job_id), artifact_name)
+    data = store.load_artifact(job.job_id, artifact_name)
     return _response(200, data)

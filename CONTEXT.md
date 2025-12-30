@@ -39,6 +39,7 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Dev backend now executes real review/import flows using API clients (no credential storage), writes `review.json` and `import-report.json` under `data/backend/jobs/<job_id>/`, and the UI polls job status while background tasks run.
 - Dev backend import reconciliation now mirrors the guided flow by waiting for FlySto processing and reapplying crew after post-processing drains.
 - Dev web UI now auto-clears stale job state from localStorage and offers a "Clear saved job" action so new runs can proceed cleanly.
+- Lambda handlers now safely return 404s for invalid job IDs instead of bubbling 502s from unhandled UUID/load errors.
 - Added Docker Compose stack for the backend dev web (API + worker + DynamoDB Local + MinIO).
 - Added Lambda handler baseline in `src/backend/lambda_handlers.py` with build script output under `infra/terraform/lambda/backend-handlers.zip`.
 - Lambda build now packages the full `src/backend` module and a shim `lambda_handlers.py` so API Gateway handlers can import backend modules in Lambda.
