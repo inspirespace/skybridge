@@ -33,6 +33,10 @@ services:
       - BACKEND_USE_WORKER=true
       - BACKEND_WORKER_TOKEN=dev-worker-token
       - BACKEND_CREDENTIAL_TTL=900
+      - BACKEND_RECONCILE=true
+      - BACKEND_WAIT_FOR_PROCESSING=true
+      - BACKEND_PROCESSING_INTERVAL=20
+      - BACKEND_PROCESSING_TIMEOUT=3600
       - DEV_PREFILL_CREDENTIALS=1
       - CLOUD_AHOY_EMAIL=${CLOUD_AHOY_EMAIL}
       - CLOUD_AHOY_PASSWORD=${CLOUD_AHOY_PASSWORD}
@@ -67,6 +71,10 @@ services:
       - BACKEND_USE_WORKER=true
       - BACKEND_WORKER_TOKEN=dev-worker-token
       - BACKEND_API_URL=http://api:8000
+      - BACKEND_RECONCILE=true
+      - BACKEND_WAIT_FOR_PROCESSING=true
+      - BACKEND_PROCESSING_INTERVAL=20
+      - BACKEND_PROCESSING_TIMEOUT=3600
     depends_on:
       dynamodb:
         condition: service_started

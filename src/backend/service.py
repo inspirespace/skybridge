@@ -2,12 +2,20 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID, uuid4
 
 from src.cloudahoy.client import CloudAhoyClient
-from src.migration import prepare_review, migrate_flights
+from src.migration import (
+    prepare_review,
+    migrate_flights,
+    verify_import_report,
+    reconcile_aircraft_from_report,
+    reconcile_crew_from_report,
+    reconcile_metadata_from_report,
+)
 from src.models import FlightSummary as CoreFlightSummary
 from src.state import MigrationState
 from src.flysto.client import FlyStoClient
@@ -131,6 +139,16 @@ class JobService:
                 skipped_count=skipped_count,
                 failed_count=failed_count,
             )
+
+            if _bool_env("BACKEND_RECONCILE", True) and not _bool_env("DRY_RUN", False):
+                _maybe_wait_for_processing(flysto)
+                verify_import_report(report_path, flysto)
+                reconcile_aircraft_from_report(report_path, flysto)
+                reconcile_crew_from_report(report_path, flysto, review_path, cloudahoy)
+                reconcile_metadata_from_report(report_path, flysto)
+                # Crew can be cleared by FlySto post-processing; reapply after the queue drains.
+                _maybe_wait_for_processing(flysto)
+                reconcile_crew_from_report(report_path, flysto, review_path, cloudahoy)
             job.import_report = report
             job.status = "completed"
             job.updated_at = _now()
@@ -359,6 +377,24 @@ def _int_env(name: str, default: int) -> int:
         return int(value)
     except ValueError:
         return default
+
+
+def _maybe_wait_for_processing(flysto: FlyStoClient) -> None:
+    if not _bool_env("BACKEND_WAIT_FOR_PROCESSING", True):
+        return
+    interval = _float_env("BACKEND_PROCESSING_INTERVAL", 20.0)
+    timeout = _float_env("BACKEND_PROCESSING_TIMEOUT", 3600.0)
+    start = datetime.now(timezone.utc).timestamp()
+    while True:
+        try:
+            pending = flysto.log_files_to_process()
+        except Exception:
+            pending = None
+        if pending is None or pending <= 0:
+            return
+        if datetime.now(timezone.utc).timestamp() - start > timeout:
+            return
+        time.sleep(interval)
 
 
 def _now() -> datetime:

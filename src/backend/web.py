@@ -94,6 +94,10 @@ def landing_page() -> HTMLResponse:
             font-weight: 600;
             cursor: pointer;
           }
+          button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+          }
           button.secondary {
             background: #fff;
             color: var(--text);
@@ -118,6 +122,66 @@ def landing_page() -> HTMLResponse:
             margin-top: 1rem;
           }
           .actions { margin-top: 1rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
+          .flow {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+          }
+          .step {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            background: var(--panel);
+          }
+          .step h3 { margin: 0 0 0.25rem; font-size: 1rem; }
+          .step .meta { color: var(--muted); font-size: 0.9rem; }
+          .step.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(15, 98, 254, 0.12); }
+          .step.done { border-color: #2e7d32; }
+          .pill {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            background: #e8f0fe;
+            color: #174ea6;
+            margin-left: 0.35rem;
+          }
+          .toolbar {
+            position: sticky;
+            top: 0;
+            background: var(--bg);
+            padding: 0.5rem 0;
+            z-index: 2;
+          }
+          .toast {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            background: #1f1f1f;
+            color: #fff;
+            padding: 0.75rem 1rem;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(8px);
+            transition: opacity 0.2s ease, transform 0.2s ease;
+          }
+          .toast.show { opacity: 1; transform: translateY(0); }
+          .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid #cfd8dc;
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            display: inline-block;
+            animation: spin 0.8s linear infinite;
+            margin-right: 0.4rem;
+            vertical-align: -2px;
+          }
+          @keyframes spin { to { transform: rotate(360deg); } }
+          details summary { cursor: pointer; font-weight: 600; }
 
           @media (max-width: 720px) {
             body { margin-top: 1.5rem; }
@@ -144,6 +208,23 @@ def landing_page() -> HTMLResponse:
             <input id="userId" placeholder="demo-user" />
           </label>
         </div>
+        <div class="toolbar">
+          <div class="flow">
+            <div class="step" id="stepAuth">
+              <h3>1) Sign in</h3>
+              <div class="meta">Authenticate to start a migration.</div>
+            </div>
+            <div class="step" id="stepReview">
+              <h3>2) Review</h3>
+              <div class="meta">Generate review summary.</div>
+            </div>
+            <div class="step" id="stepImport">
+              <h3>3) Import</h3>
+              <div class="meta">Upload flights + assign metadata.</div>
+            </div>
+          </div>
+        </div>
+
         <div class="layout">
           <fieldset>
             <legend>CloudAhoy credentials</legend>
@@ -180,8 +261,14 @@ def landing_page() -> HTMLResponse:
           <div class="status" id="jobStatus"></div>
           <div class="error" id="jobError"></div>
           <div id="jobHint"></div>
-          <pre id="jobJson"></pre>
-          <button id="acceptReview">Accept review + start import</button>
+          <details>
+            <summary>Job details</summary>
+            <pre id="jobJson"></pre>
+          </details>
+          <div class="actions">
+            <button id="acceptReview" disabled>Accept review + start import</button>
+            <button id="resetJob" class="secondary">Clear saved job</button>
+          </div>
         </div>
 
         <div id="reviewCard" class="card hidden">
@@ -192,19 +279,39 @@ def landing_page() -> HTMLResponse:
 
         <div id="reportCard" class="card hidden">
           <h2>Import report</h2>
-          <pre id="reportJson"></pre>
+          <details open>
+            <summary>Report details</summary>
+            <pre id="reportJson"></pre>
+          </details>
         </div>
+        <div id="toast" class="toast"></div>
 
         <script>
           const authConfig = __AUTH_CONFIG__;
           let pollHandle = null;
           let authError = null;
+          let currentJob = null;
 
           const show = (id) => document.getElementById(id).classList.remove("hidden");
           const hide = (id) => document.getElementById(id).classList.add("hidden");
 
           const setText = (id, value) => {
             document.getElementById(id).textContent = value;
+          };
+
+          const toast = (message) => {
+            const el = document.getElementById("toast");
+            el.textContent = message;
+            el.classList.add("show");
+            setTimeout(() => el.classList.remove("show"), 2200);
+          };
+
+          const setButtonState = (id, enabled, label, showSpinner) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.disabled = !enabled;
+            const text = label || btn.textContent;
+            btn.innerHTML = showSpinner ? `<span class="spinner"></span>${text}` : text;
           };
 
           const parseJwt = (token) => {
@@ -214,6 +321,60 @@ def landing_page() -> HTMLResponse:
               return JSON.parse(decodeURIComponent(escape(json)));
             } catch (err) {
               return null;
+            }
+          };
+
+          const isTokenExpired = (token) => {
+            const payload = parseJwt(token) || {};
+            const exp = payload.exp;
+            if (!exp) return false;
+            return Date.now() >= exp * 1000;
+          };
+
+          const ensureFreshToken = () => {
+            const token = localStorage.getItem("access_token");
+            if (token && !isTokenExpired(token)) return true;
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("id_token");
+            authError = "Session expired. Please sign in again.";
+            updateAuthUI();
+            return false;
+          };
+
+          const resetJobState = (message) => {
+            localStorage.removeItem("lastJobId");
+            currentJob = null;
+            if (pollHandle) {
+              clearInterval(pollHandle);
+              pollHandle = null;
+            }
+            setText("jobJson", "");
+            setText("jobStatus", message || "No active job.");
+            setText("jobError", "");
+            hide("reviewCard");
+            hide("reportCard");
+            updateFlowButtons();
+          };
+
+          const updateFlowButtons = () => {
+            const signedIn = !!localStorage.getItem("access_token") || !authConfig.enabled;
+            const status = currentJob ? currentJob.status : null;
+            if (!signedIn) {
+              setButtonState("createJob", false, "Create job + run review", false);
+              setButtonState("acceptReview", false, "Accept review + start import", false);
+              return;
+            }
+            if (status === "review_running" || status === "review_queued") {
+              setButtonState("createJob", false, "Review running...", true);
+            } else if (status === "import_running" || status === "import_queued") {
+              setButtonState("createJob", false, "Import running...", true);
+            } else {
+              setButtonState("createJob", true, "Create job + run review", false);
+            }
+            if (status === "import_running" || status === "import_queued") {
+              setButtonState("acceptReview", false, "Import running...", true);
+            } else {
+              setButtonState("acceptReview", status === "review_ready", "Accept review + start import", false);
             }
           };
 
@@ -229,7 +390,7 @@ def landing_page() -> HTMLResponse:
           };
 
           const authEndpoints = () => {
-            const issuer = authConfig.issuer.replace(/\/$/, "");
+            const issuer = authConfig.issuer.replace(/\\/$/, "");
             return {
               authorize: `${issuer}/protocol/openid-connect/auth`,
               token: `${issuer}/protocol/openid-connect/token`,
@@ -241,7 +402,7 @@ def landing_page() -> HTMLResponse:
             const bytes = new Uint8Array(buffer);
             let binary = "";
             for (const byte of bytes) binary += String.fromCharCode(byte);
-            return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+            return btoa(binary).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/, "");
           };
 
           const sha256 = async (value) => {
@@ -318,12 +479,14 @@ def landing_page() -> HTMLResponse:
           const logout = () => {
             localStorage.removeItem("access_token");
             localStorage.removeItem("id_token");
+            localStorage.removeItem("lastJobId");
             window.location.href = window.location.origin + "/";
           };
 
           const updateAuthUI = () => {
             if (!authConfig.enabled) {
               show("devIdentity");
+              updateFlowButtons();
               return;
             }
             show("authCard");
@@ -331,6 +494,7 @@ def landing_page() -> HTMLResponse:
               setText("authStatus", authError);
               show("loginBtn");
               hide("logoutBtn");
+              updateFlowButtons();
               return;
             }
             const token = localStorage.getItem("access_token");
@@ -339,16 +503,19 @@ def landing_page() -> HTMLResponse:
               localStorage.removeItem("id_token");
             }
             if (token) {
+              document.getElementById("stepAuth").classList.add("done");
               const payload = parseJwt(token) || {};
               const name = payload.preferred_username || payload.email || payload.sub || "signed in";
               setText("authStatus", `Signed in as ${name}`);
               show("logoutBtn");
               hide("loginBtn");
             } else {
+              document.getElementById("stepAuth").classList.remove("done");
               setText("authStatus", "Not signed in");
               show("loginBtn");
               hide("logoutBtn");
             }
+            updateFlowButtons();
           };
 
           const renderReview = (summary) => {
@@ -396,24 +563,47 @@ def landing_page() -> HTMLResponse:
             const hint = document.getElementById("jobHint");
             if (!job) {
               hint.textContent = "";
+              currentJob = null;
+              updateFlowButtons();
               return;
             }
+            currentJob = job;
+            updateFlowButtons();
             if (job.status === "review_running") {
               const elapsed = formatElapsed(job.created_at);
               hint.textContent = `Review running${elapsed ? ` · elapsed ${elapsed}` : ""}. This can take several minutes.`;
+              document.getElementById("stepReview").classList.add("active");
+              document.getElementById("stepImport").classList.remove("active");
               return;
             }
             if (job.status === "review_queued") {
               hint.textContent = "Review queued. Worker will start shortly.";
+              document.getElementById("stepReview").classList.add("active");
+              document.getElementById("stepImport").classList.remove("active");
               return;
             }
             if (job.status === "import_running") {
               const elapsed = formatElapsed(job.updated_at || job.created_at);
               hint.textContent = `Import running${elapsed ? ` · elapsed ${elapsed}` : ""}. This can take several minutes.`;
+              document.getElementById("stepReview").classList.add("done");
+              document.getElementById("stepImport").classList.add("active");
               return;
             }
             if (job.status === "import_queued") {
               hint.textContent = "Import queued. Worker will start shortly.";
+              document.getElementById("stepReview").classList.add("done");
+              document.getElementById("stepImport").classList.add("active");
+              return;
+            }
+            if (job.status === "review_ready") {
+              document.getElementById("stepReview").classList.add("done");
+              document.getElementById("stepImport").classList.remove("active");
+              hint.textContent = "Review ready. Approve to start import.";
+              return;
+            }
+            if (job.status === "completed") {
+              document.getElementById("stepImport").classList.add("done");
+              hint.textContent = "Import completed.";
               return;
             }
             hint.textContent = "";
@@ -423,17 +613,31 @@ def landing_page() -> HTMLResponse:
             if (!ensureFreshToken() && authConfig.enabled) {
               return null;
             }
+            if (!jobId || jobId === "undefined") {
+              setText("jobStatus", "Waiting for job id...");
+              setText("jobError", "");
+              return null;
+            }
             const response = await fetch(`/jobs/${jobId}`, { headers: authHeaders() });
             if (!response.ok) {
               const detail = await response.text();
+              if (response.status === 404 || response.status === 422) {
+                resetJobState("Saved job no longer exists. Create a new job.");
+                return null;
+              }
               setText("jobStatus", "Failed to load job");
               setText("jobError", detail || "");
+              updateFlowButtons();
               return null;
             }
             const job = await response.json();
             setText("jobJson", JSON.stringify(job, null, 2));
             setText("jobStatus", `Status: ${job.status}`);
             setText("jobError", job.error_message || "");
+            currentJob = job;
+            if (job.job_id) {
+              localStorage.setItem("lastJobId", job.job_id);
+            }
             updateJobHint(job);
             if (job.review_summary) {
               renderReview(job.review_summary);
@@ -447,6 +651,12 @@ def landing_page() -> HTMLResponse:
 
           const startPolling = (jobId) => {
             if (pollHandle) clearInterval(pollHandle);
+            if (!jobId || jobId === "undefined") {
+              setText("jobStatus", "Waiting for job id...");
+              setText("jobError", "");
+              updateFlowButtons();
+              return;
+            }
             pollHandle = setInterval(async () => {
               const job = await refreshJob(jobId);
               if (!job) return;
@@ -461,6 +671,7 @@ def landing_page() -> HTMLResponse:
 
           document.getElementById("createJob").addEventListener("click", async () => {
             if (!ensureFreshToken() && authConfig.enabled) return;
+            setButtonState("createJob", false, "Running review...", true);
             hide("reviewCard");
             hide("reportCard");
             setText("jobError", "");
@@ -483,22 +694,53 @@ def landing_page() -> HTMLResponse:
             setText("jobJson", JSON.stringify(job, null, 2));
             setText("jobStatus", `Status: ${job.status}`);
             show("jobCard");
-            startPolling(job.job_id);
+            document.getElementById("jobCard").scrollIntoView({ behavior: "smooth", block: "start" });
+            toast("Review started");
+            if (job && job.job_id) {
+              localStorage.setItem("lastJobId", job.job_id);
+              startPolling(job.job_id);
+            }
+            currentJob = job;
+            updateFlowButtons();
           });
 
           document.getElementById("acceptReview").addEventListener("click", async () => {
             if (!ensureFreshToken() && authConfig.enabled) return;
-            const job = JSON.parse(document.getElementById("jobJson").textContent);
+            const raw = document.getElementById("jobJson").textContent || "";
+            let job = null;
+            try {
+              job = JSON.parse(raw);
+            } catch (err) {
+              setText("jobError", "Invalid job details. Try reloading.");
+              return;
+            }
+            if (!job || !job.job_id) {
+              setText("jobError", "Job id missing. Create a job first.");
+              return;
+            }
+            setButtonState("acceptReview", false, "Starting import...", true);
             const payload = { credentials: readCredentials() };
             const response = await fetch(`/jobs/${job.job_id}/review/accept`, {
               method: "POST",
               headers: authHeaders(),
               body: JSON.stringify(payload),
             });
+            if (!response.ok) {
+              const detail = await response.text();
+              setText("jobError", detail || "Failed to start import.");
+              updateFlowButtons();
+              return;
+            }
             const updated = await response.json();
             setText("jobJson", JSON.stringify(updated, null, 2));
             setText("jobStatus", `Status: ${updated.status}`);
-            startPolling(updated.job_id);
+            if (updated && updated.job_id) {
+              localStorage.setItem("lastJobId", updated.job_id);
+              startPolling(updated.job_id);
+            }
+            toast("Import started");
+            currentJob = updated;
+            updateFlowButtons();
           });
 
           window.addEventListener("load", async () => {
@@ -509,6 +751,14 @@ def landing_page() -> HTMLResponse:
               document.getElementById("flystoUser").value = authConfig.prefill.flysto_username || "";
               document.getElementById("flystoPass").value = authConfig.prefill.flysto_password || "";
             }
+            const lastJobId = localStorage.getItem("lastJobId");
+            if (lastJobId) {
+              show("jobCard");
+              startPolling(lastJobId);
+            } else {
+              resetJobState();
+            }
+            updateFlowButtons();
             if (!authConfig.enabled) return;
             const params = new URLSearchParams(window.location.search);
             const code = params.get("code");
@@ -525,24 +775,13 @@ def landing_page() -> HTMLResponse:
             }
             updateAuthUI();
           });
+
+          document.getElementById("resetJob").addEventListener("click", () => {
+            resetJobState("Cleared saved job.");
+            toast("Cleared saved job");
+          });
         </script>
       </body>
     </html>
     """
     return HTMLResponse(html.replace("__AUTH_CONFIG__", json.dumps(config)))
-          const isTokenExpired = (token) => {
-            const payload = parseJwt(token) || {};
-            const exp = payload.exp;
-            if (!exp) return false;
-            return Date.now() >= exp * 1000;
-          };
-
-          const ensureFreshToken = () => {
-            const token = localStorage.getItem("access_token");
-            if (token && !isTokenExpired(token)) return true;
-            localStorage.removeItem("access_token");
-            localStorage.removeItem("id_token");
-            authError = "Session expired. Please sign in again.";
-            updateAuthUI();
-            return false;
-          };
