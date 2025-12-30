@@ -36,9 +36,12 @@ services:
       - FLYSTO_EMAIL=${FLYSTO_EMAIL}
       - FLYSTO_PASSWORD=${FLYSTO_PASSWORD}
     depends_on:
-      - dynamodb
-      - minio
-      - keycloak
+      dynamodb:
+        condition: service_started
+      minio:
+        condition: service_started
+      keycloak:
+        condition: service_healthy
 
   worker:
     build:
@@ -59,9 +62,12 @@ services:
       - AUTH_TOKEN_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/token
       - AUTH_TOKEN_PROXY=true
     depends_on:
-      - dynamodb
-      - minio
-      - keycloak
+      dynamodb:
+        condition: service_started
+      minio:
+        condition: service_started
+      keycloak:
+        condition: service_healthy
 
   dynamodb:
     image: amazon/dynamodb-local:2.5.0
@@ -89,6 +95,11 @@ services:
       - keycloak_data:/opt/keycloak/data
       - ./docker/keycloak:/opt/keycloak/data/import
     command: ["start-dev", "--import-realm"]
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080'"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
 volumes:
   backend_data:
