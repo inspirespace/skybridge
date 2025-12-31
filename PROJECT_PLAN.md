@@ -261,6 +261,7 @@ Reference doc: `docs/backend-architecture.md` (authoritative architecture + mile
     - File organization: numbered wireframes moved to `design/iterations/`; latest wireframe in `design/final/skybridge-import-flow-wireframe.html`.
     - Wireframes: PNG exports currently removed; regenerate per-step desktop/mobile captures when requested.
     - Docs: added `design/final/README.md` with step-by-step wireframe specifications; PNG references will be re-added after regeneration.
+    - Visuals: expanded to nine mockup variations under `design/final/mockups/`, including a horizon‑band concept that uses the dusk gradient only in the header area and a dark bottom‑dusk option.
     - UX feedback: CTA renamed to “Accept and start import”; locked steps now show a dashed preview style to reduce confusion.
     - UX clarity: review step includes a CloudAhoy fetch notice; locked pills use dashed borders and headers use regular weight to signal non-interactive sections.
 - Milestone 4: Public beta readiness (in progress).

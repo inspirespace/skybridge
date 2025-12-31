@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Skybridge Mockup 04 — Stratosphere Signal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --ink: #0b1220;
+        --muted: #5a6678;
+        --panel: rgba(255, 255, 255, 0.96);
+        --border: rgba(15, 23, 42, 0.12);
+        --accent: #0f172a;
+        --ok: #1f7a4a;
+        --radius: 16px;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", sans-serif;
+        color: var(--ink);
+        background: #0a1020;
+      }
+      .sky {
+        min-height: 100vh;
+        background:
+          radial-gradient(900px 300px at 15% -10%, rgba(255, 255, 255, 0.3), transparent 60%),
+          radial-gradient(800px 260px at 85% 8%, rgba(255, 255, 255, 0.2), transparent 60%),
+          linear-gradient(180deg, #190b2d 0%, #0b1b36 28%, #1a4673 52%, #4f9dc8 64%, #f0f5f9 72%, #f6b34d 84%, #e35b4a 100%);
+        padding: 34px 24px 60px;
+      }
+      .frame {
+        max-width: 1180px;
+        margin: 0 auto;
+        background: var(--panel);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        box-shadow: 0 45px 90px rgba(8, 14, 35, 0.35);
+        overflow: hidden;
+      }
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 22px 28px;
+        background: rgba(255, 255, 255, 0.8);
+        border-bottom: 1px solid var(--border);
+        backdrop-filter: blur(14px);
+      }
+      .logo {
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        font-size: 0.88rem;
+      }
+      .actions {
+        display: flex;
+        gap: 10px;
+      }
+      .chip {
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        font-size: 0.8rem;
+        color: var(--muted);
+        font-weight: 600;
+        background: #fff;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        gap: 24px;
+        padding: 26px 28px 34px;
+      }
+      .nav {
+        display: grid;
+        gap: 10px;
+        position: sticky;
+        top: 22px;
+      }
+      .nav-item {
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: #f6f7fb;
+        color: var(--muted);
+        font-weight: 500;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+      .nav-item.active {
+        background: #fff;
+        border: 1px solid var(--border);
+        color: var(--ink);
+      }
+      .nav-item .tick {
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        border: 1px solid rgba(31, 122, 74, 0.35);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        color: var(--ok);
+        background: rgba(31, 122, 74, 0.08);
+      }
+      .content { display: grid; gap: 18px; }
+      .card {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 22px;
+        display: grid;
+        gap: 14px;
+      }
+      .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-weight: 600;
+      }
+      .pill {
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(31, 122, 74, 0.25);
+        color: var(--ok);
+        background: rgba(31, 122, 74, 0.08);
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+      .hero {
+        font-size: 1.1rem;
+        font-weight: 600;
+        line-height: 1.6;
+      }
+      .info {
+        background: rgba(45, 85, 132, 0.08);
+        border: 1px solid rgba(45, 85, 132, 0.18);
+        color: #1f3a5f;
+        border-radius: 12px;
+        padding: 12px 14px;
+      }
+      .info ul {
+        margin: 0;
+        padding-left: 18px;
+        display: grid;
+        gap: 6px;
+      }
+      .cta-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        padding: 10px 14px;
+        border-radius: 999px;
+        font-weight: 600;
+        border: 1px solid var(--border);
+        background: #fff;
+        color: var(--muted);
+      }
+      .btn.primary {
+        background: var(--accent);
+        color: #fff;
+        border-color: transparent;
+      }
+      .preview {
+        border: 1px dashed rgba(15, 23, 42, 0.18);
+        border-radius: var(--radius);
+        padding: 14px 18px;
+        background: #f7f8fb;
+        color: var(--muted);
+      }
+      @media (max-width: 960px) {
+        .layout { grid-template-columns: 1fr; }
+        .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
+      @media (max-width: 640px) {
+        .topbar { flex-direction: column; align-items: flex-start; gap: 12px; }
+        .nav { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="sky">
+      <div class="frame">
+        <div class="topbar">
+          <div class="logo">SKYBRIDGE</div>
+          <div class="actions">
+            <span class="chip">Start over</span>
+            <span class="chip">Sign out</span>
+          </div>
+        </div>
+        <div class="layout">
+          <aside class="nav">
+            <div class="nav-item active"><span class="tick">✓</span>1 · Sign in</div>
+            <div class="nav-item"><span class="tick">✓</span>2 · Connect</div>
+            <div class="nav-item"><span class="tick">✓</span>3 · Review</div>
+            <div class="nav-item"><span class="tick">✓</span>4 · Import</div>
+          </aside>
+          <main class="content">
+            <section class="card">
+              <div class="card-header">
+                <div>1 · Sign in</div>
+                <span class="pill">Required</span>
+              </div>
+              <div class="hero">A polished, flight‑deck inspired workflow for importing CloudAhoy flights into FlySto.</div>
+              <div class="info">
+                <ul>
+                  <li>Sign in keeps your job secure and lets you resume imports later.</li>
+                  <li>Credentials are used only for this job and not stored. Results expire after 10 days.</li>
+                  <li>Flights are fetched first so you can review before importing.</li>
+                </ul>
+              </div>
+              <div class="cta-row">
+                <button class="btn primary">Sign in with email</button>
+                <button class="btn">Continue with Google</button>
+                <button class="btn">Continue with Apple</button>
+              </div>
+            </section>
+            <section class="preview">2 · Connect accounts — Sign in required</section>
+            <section class="preview">3 · Review — Connect accounts to continue</section>
+            <section class="preview">4 · Import — Approve review to continue</section>
+          </main>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

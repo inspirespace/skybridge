@@ -249,5 +249,12 @@ See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 - Moved numbered wireframe folders into `design/iterations/` and copied the latest wireframe into `design/final/`.
 - Added `design/final/README.md` with detailed wireframe specs for frontend implementation.
 - Updated `design/final/README.md` to note that PNG exports were removed and should be regenerated later.
+- Added three visual mockup variations under `design/final/mockups/`.
+- Replaced the mockup variations with improved visuals including a dark mode option.
+- Added three additional mockup variations for further visual exploration.
+- Added a bold glass‑cockpit HUD mockup as a full‑bleed alternative.
+- Reworked the glass‑cockpit mockup to remove the centered panel and read as a modern full‑bleed app.
+- Added a new horizon‑band mockup that uses the dusk gradient only in the header area.
+- Added a dark mockup with a thin dusk horizon band at the bottom and a subtle cockpit glow.
 - Renamed the review CTA to “Accept and start import” and added dashed styling for locked preview steps.
 - Added a review-step info notice and dashed pills for locked sections; locked headers use regular weight.

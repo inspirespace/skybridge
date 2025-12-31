@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Skybridge Import Flow Wireframe — Accordion Steps</title>
+    <title>Skybridge Click Dummy 009 — Enterprise Flow (Accordion Steps)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -109,11 +109,9 @@
       .notice.info .trust-copy { color: #294574; }
       .hero-copy { font-size: var(--text-base); font-weight: 600; color: var(--ink); margin: 0 0 16px; line-height: 1.6; }
       .sub-copy { font-size: var(--text-sm); color: var(--muted); margin: 0 0 24px; line-height: 1.7; }
-      .review-helper-line { font-size: var(--text-sm); color: var(--muted); margin: 4px 0 12px; }
-      .progress-helper { font-size: var(--text-xs); color: #1f5139; margin-top: 6px; }
-      .summary-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-      .summary-chip { padding: 4px 10px; border-radius: 999px; border: 1px solid #c7d7f5; background: #f0f5ff; font-size: var(--text-xs); color: #294574; font-weight: 600; }
-      .summary-chip.warn { border-color: rgba(180, 83, 9, 0.3); color: #8a3a06; background: rgba(180, 83, 9, 0.08); }
+      .summary-merge { display: grid; gap: 8px; }
+      .summary-merge .summary-title { font-weight: 600; color: var(--ink); }
+      .summary-merge .summary-line { font-size: var(--text-sm); color: var(--muted); }
       .trust-copy { font-size: var(--text-sm); color: var(--muted); margin: 0; padding-left: 18px; display: grid; gap: 6px; }
       .trust-copy li { margin: 0; }
       .trust-copy li:last-child { margin-bottom: 0; }
@@ -383,19 +381,17 @@
               <div id="reviewPill" class="pill">Connect accounts to continue</div>
             </div>
             <div class="accordion-body">
+              <div class="notice info summary-merge" style="margin-bottom: 12px;">
+                <div class="summary-title">Preview summary</div>
+                <div class="summary-line">Flights are fetched from CloudAhoy first so you can check them before running the actual import.</div>
+                <div class="summary-line" id="reviewSummary">Summary appears after review runs.</div>
+              </div>
               <div class="progress-card" id="reviewProgressCard" style="margin-top: 16px;">
                 <div class="progress-row">
                   <strong id="reviewStatus">Review not started</strong>
                   <span id="reviewMeta">Elapsed: 0m · Last update: --</span>
                 </div>
                 <div class="progress"><div id="reviewProgressBar"></div></div>
-                <div class="progress-helper">Flights are fetched from CloudAhoy first so you can check them before running the actual import.</div>
-              </div>
-
-              <div class="summary-chips hidden" id="reviewSummary">
-                <span class="summary-chip">Flights: 12</span>
-                <span class="summary-chip">Hours: 24.6</span>
-                <span class="summary-chip warn">Registration missing: 2</span>
               </div>
 
               <div class="table review hidden" id="reviewTable">
@@ -660,25 +656,14 @@
         setActionVisible("start-over", state.connected && !state.importComplete);
         setActionVisible("sign-out", state.signedIn);
 
-        const reviewSummary = el("reviewSummary");
         el("reviewTable").classList.toggle("hidden", !state.reviewReady);
-        reviewSummary.classList.toggle("hidden", !state.reviewReady);
-        reviewSummary.classList.toggle("success", false);
-        reviewSummary.classList.toggle("warn", state.reviewReady);
-        if (reviewSummary.classList.contains("summary-chips")) {
-          const chips = reviewSummary.querySelectorAll(".summary-chip");
-          if (chips.length >= 3) {
-            chips[0].textContent = "Flights: 12";
-            chips[1].textContent = "Hours: 24.6";
-            chips[2].textContent = "Registration missing: 2";
-          }
-        } else {
-          reviewSummary.textContent = state.reviewReady
-            ? "Summary: 12 flights · 24.6 hours · Registration missing: 2"
-            : "Summary appears after review runs.";
-        }
+        el("reviewSummary").classList.toggle("success", false);
+        el("reviewSummary").textContent = state.reviewReady
+          ? "Summary: 12 flights · 24.6 hours · Registration missing: 2"
+          : "Summary appears after review runs.";
         el("reviewStatus").textContent = state.reviewReady ? "Review complete" : state.connected ? "Review running…" : "Review not started";
         el("reviewProgressCard").classList.toggle("success", state.reviewReady);
+        el("reviewSummary").classList.toggle("warn", state.reviewReady);
         el("importConclusion").classList.toggle("hidden", !state.importComplete);
 
         renderFlights();

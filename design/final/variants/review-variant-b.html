@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Skybridge Import Flow Wireframe — Accordion Steps</title>
+    <title>Skybridge Click Dummy 009 — Enterprise Flow (Accordion Steps)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -110,9 +110,8 @@
       .hero-copy { font-size: var(--text-base); font-weight: 600; color: var(--ink); margin: 0 0 16px; line-height: 1.6; }
       .sub-copy { font-size: var(--text-sm); color: var(--muted); margin: 0 0 24px; line-height: 1.7; }
       .review-helper-line { font-size: var(--text-sm); color: var(--muted); margin: 4px 0 12px; }
-      .progress-helper { font-size: var(--text-xs); color: #1f5139; margin-top: 6px; }
       .summary-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-      .summary-chip { padding: 4px 10px; border-radius: 999px; border: 1px solid #c7d7f5; background: #f0f5ff; font-size: var(--text-xs); color: #294574; font-weight: 600; }
+      .summary-chip { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); background: #f7f8fb; font-size: var(--text-xs); color: var(--muted); font-weight: 600; }
       .summary-chip.warn { border-color: rgba(180, 83, 9, 0.3); color: #8a3a06; background: rgba(180, 83, 9, 0.08); }
       .trust-copy { font-size: var(--text-sm); color: var(--muted); margin: 0; padding-left: 18px; display: grid; gap: 6px; }
       .trust-copy li { margin: 0; }
@@ -383,13 +382,13 @@
               <div id="reviewPill" class="pill">Connect accounts to continue</div>
             </div>
             <div class="accordion-body">
+              <div class="review-helper-line">Flights are fetched from CloudAhoy first so you can check them before running the actual import.</div>
               <div class="progress-card" id="reviewProgressCard" style="margin-top: 16px;">
                 <div class="progress-row">
                   <strong id="reviewStatus">Review not started</strong>
                   <span id="reviewMeta">Elapsed: 0m · Last update: --</span>
                 </div>
                 <div class="progress"><div id="reviewProgressBar"></div></div>
-                <div class="progress-helper">Flights are fetched from CloudAhoy first so you can check them before running the actual import.</div>
               </div>
 
               <div class="summary-chips hidden" id="reviewSummary">
