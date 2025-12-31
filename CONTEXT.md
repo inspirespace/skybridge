@@ -236,4 +236,5 @@ See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 - Set the left-step navigation items to a medium font weight for better legibility.
 - Converted milestone Status lines in `PROJECT_PLAN.md` into sub-bulleted status blocks.
 - Renamed the final wireframe to `design/final/skybridge-import-flow-wireframe.html`.
+- Split the long Milestone 3 status into short categorized sub-bullets.
 - Moved numbered wireframe folders into `design/iterations/` and copied the latest wireframe into `design/final/`.
