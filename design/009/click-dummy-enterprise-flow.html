@@ -98,6 +98,9 @@
 
       .notice { border: 1px solid var(--border); border-radius: 6px; padding: 14px; font-size: 0.85rem; color: var(--muted); background: #fafafa; }
       .notice.hero { font-size: 1rem; color: var(--ink); font-weight: 600; background: #f4f6f9; border-color: #d7dbe4; }
+      .notice.info { border-color: #c7d7f5; background: #f0f5ff; color: #294574; }
+      .hero-copy { font-size: 1rem; font-weight: 600; color: var(--ink); margin: 0 0 8px; }
+      .sub-copy { font-size: 0.9rem; color: var(--muted); margin: 0 0 14px; }
       .notice.success { border-color: rgba(31, 122, 74, 0.25); background: rgba(31, 122, 74, 0.05); color: #1b6b3f; font-weight: 600; }
       .notice.warn { border-color: rgba(180, 83, 9, 0.3); background: rgba(180, 83, 9, 0.08); color: #8a3a06; font-weight: 600; }
       .report-stack { display: grid; gap: 12px; margin-top: 10px; }
@@ -284,11 +287,11 @@
               <div id="signinPill" class="pill">Required</div>
             </div>
             <div class="accordion-body">
-              <div class="notice hero">
+              <div class="hero-copy">
                 Skybridge imports your CloudAhoy flights into FlySto. You’ll connect both accounts, review the summary,
                 and approve the import. A report is generated at the end so you can verify results.
               </div>
-              <div class="notice" style="margin-top: 10px;">
+              <div class="sub-copy">
                 Sign in is required to identify your job, protect your data, and resume imports later.
                 You can use email or a social login.
               </div>
@@ -306,7 +309,7 @@
               <div id="connectPill" class="pill">Sign in required</div>
             </div>
             <div class="accordion-body">
-              <div class="notice" style="margin-bottom: 12px;">Credentials are used only for this job and not stored.</div>
+              <div class="notice info" style="margin-bottom: 12px;">Credentials are used only for this job and not stored.</div>
               <div class="row" style="margin-bottom: 18px;">
                 <div class="field-group">
                   <strong>CloudAhoy</strong>

@@ -224,3 +224,5 @@ See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 - Made the sign-in intro copy more prominent as the primary onboarding message.
 - Tightened mobile gap between date range inputs.
 - Updated the review table “Load more flights” copy to “Show more flights” and “All flights shown.”
+- Replaced sign-in intro cards with plain hero/subtext copy for a cleaner layout.
+- Restyled the credentials notice as an info (blue) message panel.
