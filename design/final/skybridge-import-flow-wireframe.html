@@ -106,8 +106,13 @@
       .notice { border: 1px solid var(--border); border-radius: 6px; padding: 14px; font-size: var(--text-xs); color: var(--muted); background: #fafafa; }
       .notice.hero { font-size: var(--text-base); color: var(--ink); font-weight: 600; background: #f4f6f9; border-color: #d7dbe4; }
       .notice.info { border-color: #c7d7f5; background: #f0f5ff; color: #294574; }
+      .notice.info .trust-copy { color: #294574; }
       .hero-copy { font-size: var(--text-base); font-weight: 600; color: var(--ink); margin: 0 0 16px; line-height: 1.6; }
       .sub-copy { font-size: var(--text-sm); color: var(--muted); margin: 0 0 24px; line-height: 1.7; }
+      .trust-copy { font-size: var(--text-sm); color: var(--muted); margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+      .trust-copy li { margin: 0; }
+      .trust-copy li:last-child { margin-bottom: 0; }
+      .trust-panel { margin: 0 0 16px; }
       .notice.success { border-color: rgba(31, 122, 74, 0.25); background: rgba(31, 122, 74, 0.05); color: #1b6b3f; font-weight: 600; }
       .notice.warn { border-color: rgba(180, 83, 9, 0.3); background: rgba(180, 83, 9, 0.08); color: #8a3a06; font-weight: 600; }
       .report-stack { display: grid; gap: 12px; margin-top: 10px; }
@@ -302,9 +307,12 @@
                 Skybridge imports your CloudAhoy flights into FlySto. You’ll connect both accounts, review the summary,
                 and approve the import. A report is generated at the end so you can verify results.
               </div>
-              <div class="sub-copy">
-                Sign in is required to identify your job, protect your data, and resume imports later.
-                You can use email or a social login.
+              <div class="notice info trust-panel">
+                <ul class="trust-copy">
+                  <li>Sign in is required to identify your job, protect your data, and resume imports later. You can use email or a social login.</li>
+                  <li>Your data stays private: credentials are used only for this job and not stored. Import results are retained for 10 days, then deleted.</li>
+                  <li>What we import: flights, times, routes, aircraft details, and remarks. You can review everything before importing.</li>
+                </ul>
               </div>
               <div class="cta-row">
                 <button class="cta" id="btnSignin">Sign in with email</button>

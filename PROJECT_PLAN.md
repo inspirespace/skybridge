@@ -257,6 +257,7 @@ Reference doc: `docs/backend-architecture.md` (authoritative architecture + mile
     - Filters & actions: import filters moved to Connect; inputs lock after completion; Edit filters returns to Connect; Approve import enables only after review and disables once import completes.
     - Navigation & header: mobile top menu added; nav action buttons aligned and divider hides when empty; session actions respect state (Sign out hidden when signed out, Start over only when actionable).
     - Typography: IBM Plex Sans enabled; shared type scale; bolder accordion headers and medium-weight left nav; intro copy spacing increased.
+    - Trust copy: consolidated trust messaging into a single bullet list under sign-in, including explicit privacy/retention assurance, wrapped in an info panel with blue text styling and tightened list spacing (no bottom list margin).
     - File organization: numbered wireframes moved to `design/iterations/`; latest wireframe in `design/final/skybridge-import-flow-wireframe.html`.
 - Milestone 4: Public beta readiness (in progress).
   - Deliverables: runbook, maintenance checklist, readiness checklist, guardrails validated.

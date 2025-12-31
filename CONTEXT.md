@@ -237,4 +237,11 @@ See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 - Converted milestone Status lines in `PROJECT_PLAN.md` into sub-bulleted status blocks.
 - Renamed the final wireframe to `design/final/skybridge-import-flow-wireframe.html`.
 - Split the long Milestone 3 status into short categorized sub-bullets.
+- Added trust copy near the sign-in CTAs clarifying what gets imported and that users can review before import.
+- Consolidated the trust messaging into a single bullet list box under sign-in.
+- Added an explicit privacy bullet explaining credentials are not stored and results retention.
+- Moved the trust bullet list into a blue info panel.
+- Removed extra spacing under the last trust list item.
+- Matched trust panel text color to the blue info panel styling.
+- Removed bottom margin from the trust list inside the sign-in info panel.
 - Moved numbered wireframe folders into `design/iterations/` and copied the latest wireframe into `design/final/`.
