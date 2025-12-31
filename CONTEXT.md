@@ -230,3 +230,4 @@ See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 - Increased sign-in hero/subtext line-height and margins for more breathing room.
 - Switched the UI font to IBM Plex Sans via Google Fonts.
 - Added extra padding to the sign-in accordion body for a more spacious intro layout.
+- Further increased intro padding and line-height so the sign-in copy feels more open.
