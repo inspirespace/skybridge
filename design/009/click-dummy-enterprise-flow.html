@@ -63,7 +63,7 @@
       .nav .item .check { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--border); display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; color: var(--ok); background: #eef7f2; }
       .nav .item.pending .check { visibility: hidden; }
       .nav .item.active { border: 1px solid var(--border); background: #ffffff; }
-      .content { display: grid; gap: 6px; }
+      .content { display: grid; gap: 3px; align-content: start; }
 
       .card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 18px; }
       .card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -74,6 +74,7 @@
 
       .row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
       .row.tight { gap: 12px; }
+      .row.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .stack { display: grid; gap: 12px; }
       .field-group { border: 1px solid var(--border); border-radius: 6px; padding: 16px; background: #fbfbfd; display: grid; gap: 12px; }
       label { font-size: 0.85rem; color: var(--muted); }
@@ -91,18 +92,21 @@
       .cta.secondary { background: var(--accent-2); }
       .ghost { padding: 9px 14px; border-radius: 6px; background: transparent; border: 1px solid var(--border); color: var(--muted); cursor: pointer; }
       .ghost.danger { border-color: #f0b4b4; color: #b42318; background: #fff5f5; }
-      .cta:disabled, .ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+      .ghost.link { border: none; padding: 0; color: var(--muted); text-decoration: underline; text-underline-offset: 4px; }
+      .ghost.link:hover { color: var(--ink); }
+      .cta:disabled, .ghost:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(0.3); }
 
       .notice { border: 1px solid var(--border); border-radius: 6px; padding: 14px; font-size: 0.85rem; color: var(--muted); background: #fafafa; }
       .notice.success { border-color: rgba(31, 122, 74, 0.25); background: rgba(31, 122, 74, 0.05); color: #1b6b3f; font-weight: 600; }
       .notice.warn { border-color: rgba(180, 83, 9, 0.3); background: rgba(180, 83, 9, 0.08); color: #8a3a06; font-weight: 600; }
       .report-stack { display: grid; gap: 12px; margin-top: 10px; }
       .summary-card { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: 6px; background: #ffffff; }
-      .summary-row { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: #f8f9fb; }
+      .summary-row { display: grid; grid-template-columns: 132px 1fr auto; gap: 12px; align-items: start; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: #f8f9fb; }
+      .summary-pill { display: flex; align-items: flex-start; justify-content: flex-start; }
       .summary-row .status-pill { align-self: start; }
       .summary-label { font-weight: 600; }
       .summary-meta { color: var(--muted); font-size: 0.85rem; }
-      .summary-total { display: inline-flex; align-items: baseline; gap: 6px; justify-self: end; }
+      .summary-total { display: inline-flex; align-items: center; gap: 6px; justify-self: end; }
       .summary-total span { color: var(--muted); font-size: 0.8rem; }
       .summary-text { justify-self: start; }
       .helper { font-size: 0.82rem; color: #7a8699; margin-top: 0; }
@@ -113,6 +117,9 @@
       .progress-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; color: var(--muted); }
       .progress-row strong { color: var(--ink); font-weight: 600; }
       .progress-card.success { border-color: rgba(31, 122, 74, 0.3); background: rgba(31, 122, 74, 0.08); }
+      .progress-card.success .progress-row { color: #1f5139; }
+      .progress-card.success .progress-row strong { color: #1f5139; }
+      .progress-card.success .progress > div { background: #1f7a4a; }
 
       .table { border: 1px solid var(--border); border-radius: 6px; overflow-x: auto; margin-top: 14px; background: #ffffff; }
       .table.review .thead, .table.review .trow { display: grid; grid-template-columns: 0.7fr 1.6fr 0.8fr 0.8fr 0.7fr 0.7fr; gap: 8px; padding: 8px 10px; font-size: 0.84rem; align-items: center; min-width: 760px; }
@@ -132,11 +139,11 @@
       .tip { border-bottom: 1px dotted #c0c6d4; cursor: help; }
       .metric-link { border-bottom: 1px dashed #b7c0d4; cursor: help; color: inherit; }
 
-      .accordion { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-      .accordion + .accordion { margin-top: 4px; }
-      .accordion-header { padding: 10px 14px; background: #f8f9fb; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-      .accordion-body { padding: 0 14px; max-height: 0; overflow: hidden; }
-      .accordion.open .accordion-body { padding: 14px; max-height: 2000px; }
+      .accordion { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; font-size: 0; line-height: 0; height: auto; }
+      .accordion + .accordion { margin-top: 2px; }
+      .accordion-header { padding: 6px 10px; background: #f8f9fb; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 1rem; line-height: 1.4; }
+      .accordion-body { padding: 0 10px; display: none; font-size: 1rem; line-height: 1.4; }
+      .accordion.open .accordion-body { display: block; padding: 10px; }
       .accordion.readonly { opacity: 0.75; }
 
       .mobile-stepper {
@@ -176,6 +183,18 @@
       .footer-links a:hover { color: var(--ink); }
       .mobile-stepper .bar > div { height: 100%; background: #111827; width: 25%; transition: width 0.2s ease; }
       .hidden { display: none; }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      .label-ghost { opacity: 0; }
       .space-top-3 { margin-top: var(--space-3); }
       .space-top-4 { margin-top: var(--space-4); }
 
@@ -185,8 +204,10 @@
         .nav { display: none; }
         .mobile-stepper { display: block; }
         .row { grid-template-columns: 1fr; }
+        .row.three { grid-template-columns: 1fr; }
         .mobile-topbar { display: block; }
         .mobile-actions { display: none; }
+        footer { margin-bottom: 64px; }
       }
       @media (max-width: 520px) {
         .nav-actions { grid-template-columns: 1fr; }
@@ -282,6 +303,7 @@
               <div id="connectPill" class="pill">Sign in required</div>
             </div>
             <div class="accordion-body">
+              <div class="notice" style="margin-bottom: 12px;">Credentials are used only for this job and not stored.</div>
               <div class="row" style="margin-bottom: 18px;">
                 <div class="field-group">
                   <strong>CloudAhoy</strong>
@@ -298,7 +320,24 @@
                   <input id="flystoPass" placeholder="••••••" />
                 </div>
               </div>
-              <div class="notice" style="margin-top: 4px;">Credentials are used only for this job and not stored.</div>
+              <div class="field-group" style="margin-top: 12px;">
+                <strong>Import filters</strong>
+                <div class="row tight three">
+                  <div class="stack">
+                    <label>Date range</label>
+                    <input id="startDate" placeholder="Start (YYYY-MM-DD)" />
+                  </div>
+                  <div class="stack">
+                    <label class="label-ghost">End date</label>
+                    <input id="endDate" placeholder="End (YYYY-MM-DD)" />
+                  </div>
+                  <div class="stack">
+                    <label>Max flights to import</label>
+                    <input id="maxFlights" class="input-compact" placeholder="Max flights (e.g., 50)" />
+                  </div>
+                </div>
+                <div class="helper" style="margin-top: 8px;">Leave empty to import all available flights. Caps the total number of flights that will be imported.</div>
+              </div>
               <div class="cta-row">
                 <button class="cta" id="btnConnect">Connect and review</button>
               </div>
@@ -311,22 +350,6 @@
               <div id="reviewPill" class="pill">Connect accounts to continue</div>
             </div>
             <div class="accordion-body">
-              <div class="row" style="margin-bottom: 12px;">
-                <div class="stack">
-                  <label>Date range</label>
-                  <div class="row tight">
-                    <input id="startDate" placeholder="Start (YYYY-MM-DD)" />
-                    <input id="endDate" placeholder="End (YYYY-MM-DD)" />
-                  </div>
-                  <div class="helper">Leave empty to import all available flights.</div>
-                </div>
-                <div class="stack">
-                  <label>Max flights to import</label>
-                  <input id="maxFlights" class="input-compact" placeholder="50" />
-                  <div class="helper">Caps the total number of flights that will be imported.</div>
-                </div>
-              </div>
-
               <div class="progress-card" id="reviewProgressCard" style="margin-top: 16px;">
                 <div class="progress-row">
                   <strong id="reviewStatus">Review not started</strong>
@@ -342,10 +365,11 @@
                 <div id="reviewRows"></div>
               </div>
               <div class="cta-row">
-                <button class="ghost hidden" id="btnLoadMore" disabled>Load more flights</button>
+                <button class="ghost link hidden" id="btnLoadMore" disabled>Load more flights</button>
               </div>
               <div class="cta-row">
                 <button class="cta" id="btnApprove" disabled>Approve import</button>
+                <button class="ghost hidden" id="btnEditFilters">Edit import filters</button>
               </div>
             </div>
           </section>
@@ -370,7 +394,7 @@
                       <strong>Import results</strong>
                     </div>
                     <div class="summary-row">
-                      <span class="status-pill ok">OK</span>
+                      <span class="summary-pill"><span class="status-pill ok">OK</span></span>
                       <div class="summary-text">
                         <div class="summary-label">Imported flights</div>
                         <div class="summary-meta">All approved flights created in FlySto.</div>
@@ -378,7 +402,7 @@
                       <div class="summary-total"><span>Total:</span><strong>46</strong></div>
                     </div>
                     <div class="summary-row">
-                      <span class="status-pill ok">OK</span>
+                      <span class="summary-pill"><span class="status-pill ok">OK</span></span>
                       <div class="summary-text">
                         <div class="summary-label">Skipped or pending</div>
                         <div class="summary-meta">Pending: 0 · Failed: 0</div>
@@ -386,7 +410,7 @@
                       <div class="summary-total"><span>Total:</span><strong>0</strong></div>
                     </div>
                     <div class="summary-row">
-                      <span class="status-pill warn">Needs review</span>
+                      <span class="summary-pill"><span class="status-pill warn">Needs review</span></span>
                       <div class="summary-text">
                         <div class="summary-label">Registration missing</div>
                         <div class="summary-meta">Flights without aircraft registration.</div>
@@ -450,6 +474,7 @@
         reviewApproved: false,
         importRunning: false,
         importComplete: false,
+        editingFilters: false,
         currentStep: "signin",
         progressIndex: 0,
         flightsShown: 3,
@@ -513,21 +538,31 @@
         ["signin", "connect", "review", "import"].forEach((name) => {
           const acc = el(`acc${name[0].toUpperCase()}${name.slice(1)}`);
           acc.classList.toggle("open", name === step);
+          acc.style.height = "auto";
         });
       };
 
-      const setReadonly = (step, readonly) => {
+      const setReadonly = (step, readonly, reviewComplete) => {
         const acc = el(`acc${step[0].toUpperCase()}${step.slice(1)}`);
-        acc.classList.toggle("readonly", readonly);
+        acc.classList.toggle("readonly", readonly && !(step === "review" && reviewComplete));
         acc.style.minHeight = "0";
-        acc.querySelectorAll("input, button, select").forEach((node) => {
-          node.disabled = readonly;
-        });
+        if (readonly && step === "review" && reviewComplete) {
+          acc.querySelectorAll("input, select").forEach((node) => {
+            node.disabled = true;
+          });
+          acc.querySelectorAll("button").forEach((node) => {
+            node.disabled = false;
+          });
+        } else {
+          acc.querySelectorAll("input, button, select").forEach((node) => {
+            node.disabled = readonly;
+          });
+        }
         if (step === "review") {
-          el("btnApprove").disabled = readonly || !state.reviewReady;
+          el("btnApprove").disabled = !state.reviewReady || state.importComplete;
           el("btnLoadMore").disabled = readonly || !state.reviewReady || state.flightsShown >= flights.length;
         }
-      };
+        };
 
       const renderFlights = () => {
         const rows = flights.slice(0, state.flightsShown).map((flight) => {
@@ -580,11 +615,11 @@
         el("importProgress").style.width = state.importComplete ? "100%" : state.importRunning ? "55%" : "0%";
         el("importProgressCard").classList.toggle("success", state.importComplete);
 
-        el("btnApprove").disabled = !state.reviewReady;
+        el("btnApprove").disabled = !state.reviewReady || state.importComplete;
         el("btnDownload").classList.toggle("hidden", !state.importComplete);
         el("btnDownload").disabled = !state.importComplete;
         setActionDisabled("start-over", state.importComplete);
-        setActionVisible("start-over", state.signedIn && !state.importComplete);
+        setActionVisible("start-over", state.connected && !state.importComplete);
         setActionVisible("sign-out", state.signedIn);
 
         el("reviewTable").classList.toggle("hidden", !state.reviewReady);
@@ -601,12 +636,17 @@
         renderFlights();
 
         stepOrder.forEach((step, index) => {
-          setReadonly(step, index < state.progressIndex);
+          const pastStep = index < state.progressIndex;
+          const reviewComplete = step === "review" && state.reviewReady;
+          const allowEditFilters = step === "connect" && state.editingFilters;
+          setReadonly(step, (pastStep || reviewComplete) && !allowEditFilters, reviewComplete);
         });
 
         el("btnLoadMore").classList.toggle("hidden", !state.reviewReady);
         el("btnLoadMore").disabled = !state.reviewReady || state.flightsShown >= flights.length;
         el("btnLoadMore").textContent = state.flightsShown >= flights.length ? "All flights loaded" : "Load more flights";
+        el("btnEditFilters").classList.toggle("hidden", !state.reviewReady);
+        openAccordion(state.currentStep);
       };
 
       const simulateReview = () => {
@@ -650,6 +690,11 @@
       el("btnSignin").addEventListener("click", onSignin);
       el("btnSigninGoogle").addEventListener("click", onSignin);
       el("btnSigninApple").addEventListener("click", onSignin);
+      el("btnEditFilters").addEventListener("click", () => {
+        state.editingFilters = true;
+        setStep("connect");
+        updateUI();
+      });
 
       const setActionDisabled = (action, disabled) => {
         document.querySelectorAll(`[data-action="${action}"]`).forEach((button) => {
@@ -676,6 +721,7 @@
         state.reviewApproved = false;
         state.importRunning = false;
         state.importComplete = false;
+        state.editingFilters = false;
         state.flightsShown = 3;
         el("reviewSummary").classList.add("hidden");
         el("reviewTable").classList.add("hidden");
@@ -701,6 +747,7 @@
         state.reviewApproved = false;
         state.importRunning = false;
         state.importComplete = false;
+        state.editingFilters = false;
         state.flightsShown = 3;
         state.progressIndex = 0;
         el("reviewSummary").classList.add("hidden");
@@ -720,6 +767,7 @@
 
       el("btnConnect").addEventListener("click", () => {
         state.connected = true;
+        state.editingFilters = false;
         state.progressIndex = 2;
         setStep("review");
         simulateReview();

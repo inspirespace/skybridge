@@ -189,3 +189,34 @@ See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 - Tuned mobile topbar logo and button line-height for consistent alignment.
 - Fixed mobile top bar height and vertical centering for the logo and icons.
 - Centered mobile topbar action buttons and aligned their content.
+- Switched accordion bodies back to display toggling to remove empty rows in collapsed state.
+- Aligned import results text by fixing the pill column width.
+- Left-aligned import result pills within their column.
+- Increased the import results pill column width to separate the warning pill from text.
+- Added extra spacing between review form and progress panel; lock review inputs after completion.
+- Grouped review form inputs into cards to match the connect accounts layout.
+- Consolidated review filters into a single “Import filters” card.
+- Placed review filter inputs on a single row with a combined helper line.
+- Forced the review filter row to three columns so all inputs sit on one line.
+- Moved import filters to the Connect accounts step (below credentials) and updated the Edit import filters action in Review.
+- Moved the credentials notice above the connect account fields.
+- Added a label above the max flights input in the import filters row.
+- Moved the Edit import filters button next to Approve import and show it only when review completes.
+- Ensured Approve import remains enabled once review finishes, even while inputs are locked.
+- Aligned import filter labels by giving each input its own stacked label (with sr-only for the end date).
+- Centered the Total label/value vertically in import results rows.
+- Fixed import filter helper alignment and spacing under the input row.
+- Prevented the review accordion from dimming after completion while keeping inputs locked.
+- Ensured Approve import only enables after review completes and before import finishes; softened disabled styling.
+- Kept review buttons enabled after completion while locking the inputs.
+- Edit import filters now unlocks the Connect section to adjust filters again.
+- Aligned import filter inputs by using a ghost label to keep column heights consistent.
+- Removed accordion whitespace gap and tightened accordion spacing for denser layout.
+- Forced closed accordions to match header height to eliminate residual blank space.
+- Ensured accordion heights are recalculated during UI updates to remove blank rows on load.
+- Restyled “Load more flights” as a tertiary link-style button.
+- Stacked import filter inputs into a single column on mobile.
+- Added mobile footer spacing so it remains visible above the stepper.
+- Removed forced accordion heights and aligned grid content to prevent stretched whitespace while keeping the footer pinned.
+- Added dark-green text and progress bar tint for completed progress cards.
+- Start over now appears only after Connect and review has been triggered.
