@@ -226,3 +226,6 @@ See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 - Updated the review table “Load more flights” copy to “Show more flights” and “All flights shown.”
 - Replaced sign-in intro cards with plain hero/subtext copy for a cleaner layout.
 - Restyled the credentials notice as an info (blue) message panel.
+- Reduced the mobile date-range spacing by hiding the ghost end-date label and tightening label spacing.
+- Increased sign-in hero/subtext line-height and margins for more breathing room.
+- Linked the Manrope font via Google Fonts so it renders reliably.
