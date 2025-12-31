@@ -244,4 +244,10 @@ See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 - Removed extra spacing under the last trust list item.
 - Matched trust panel text color to the blue info panel styling.
 - Removed bottom margin from the trust list inside the sign-in info panel.
+- Generated desktop and mobile PNG wireframes for each step state under `design/final/exports/`.
+- Renamed exported PNGs to `desktop-01-...` / `mobile-01-...` numbering per group.
 - Moved numbered wireframe folders into `design/iterations/` and copied the latest wireframe into `design/final/`.
+- Added `design/final/README.md` with detailed wireframe specs for frontend implementation.
+- Updated `design/final/README.md` to note that PNG exports were removed and should be regenerated later.
+- Renamed the review CTA to “Accept and start import” and added dashed styling for locked preview steps.
+- Added a review-step info notice and dashed pills for locked sections; locked headers use regular weight.

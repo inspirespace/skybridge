@@ -259,6 +259,10 @@ Reference doc: `docs/backend-architecture.md` (authoritative architecture + mile
     - Typography: IBM Plex Sans enabled; shared type scale; bolder accordion headers and medium-weight left nav; intro copy spacing increased.
     - Trust copy: consolidated trust messaging into a single bullet list under sign-in, including explicit privacy/retention assurance, wrapped in an info panel with blue text styling and tightened list spacing (no bottom list margin).
     - File organization: numbered wireframes moved to `design/iterations/`; latest wireframe in `design/final/skybridge-import-flow-wireframe.html`.
+    - Wireframes: PNG exports currently removed; regenerate per-step desktop/mobile captures when requested.
+    - Docs: added `design/final/README.md` with step-by-step wireframe specifications; PNG references will be re-added after regeneration.
+    - UX feedback: CTA renamed to “Accept and start import”; locked steps now show a dashed preview style to reduce confusion.
+    - UX clarity: review step includes a CloudAhoy fetch notice; locked pills use dashed borders and headers use regular weight to signal non-interactive sections.
 - Milestone 4: Public beta readiness (in progress).
   - Deliverables: runbook, maintenance checklist, readiness checklist, guardrails validated.
   - Status:

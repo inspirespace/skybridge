@@ -163,6 +163,9 @@
       .accordion.open .accordion-body { display: block; padding: 10px; }
       .accordion-body.intro { padding: 24px 20px 20px; }
       .accordion.readonly { opacity: 0.75; }
+      .accordion.locked { border-style: dashed; background: #fafafa; }
+      .accordion.locked .accordion-header { color: var(--muted); background: #f5f6f8; cursor: default; font-weight: 400; }
+      .accordion.locked .pill { opacity: 0.85; border-style: dashed; }
 
       .mobile-stepper {
         display: none;
@@ -375,6 +378,9 @@
               <div id="reviewPill" class="pill">Connect accounts to continue</div>
             </div>
             <div class="accordion-body">
+              <div class="notice info" style="margin-bottom: 12px;">
+                Flights are fetched from CloudAhoy first so you can check them before running the actual import.
+              </div>
               <div class="progress-card" id="reviewProgressCard" style="margin-top: 16px;">
                 <div class="progress-row">
                   <strong id="reviewStatus">Review not started</strong>
@@ -393,7 +399,7 @@
                 <button class="ghost link hidden" id="btnLoadMore" disabled>Load more flights</button>
               </div>
               <div class="cta-row">
-                <button class="cta" id="btnApprove" disabled>Approve import</button>
+                <button class="cta" id="btnApprove" disabled>Accept and start import</button>
                 <button class="ghost hidden" id="btnEditFilters">Edit import filters</button>
               </div>
             </div>
@@ -664,6 +670,8 @@
           const pastStep = index < state.progressIndex;
           const reviewComplete = step === "review" && state.reviewReady;
           const allowEditFilters = step === "connect" && state.editingFilters;
+          const acc = el(`acc${step[0].toUpperCase()}${step.slice(1)}`);
+          if (acc) acc.classList.toggle("locked", index > state.progressIndex);
           setReadonly(step, (pastStep || reviewComplete) && !allowEditFilters, reviewComplete);
         });
 
