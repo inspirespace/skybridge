@@ -223,3 +223,4 @@ See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 - Normalized section header padding so status pills align consistently across steps.
 - Made the sign-in intro copy more prominent as the primary onboarding message.
 - Tightened mobile gap between date range inputs.
+- Updated the review table “Load more flights” copy to “Show more flights” and “All flights shown.”

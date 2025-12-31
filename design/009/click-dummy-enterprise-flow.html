@@ -647,7 +647,7 @@
 
         el("btnLoadMore").classList.toggle("hidden", !state.reviewReady);
         el("btnLoadMore").disabled = !state.reviewReady || state.flightsShown >= flights.length;
-        el("btnLoadMore").textContent = state.flightsShown >= flights.length ? "All flights loaded" : "Load more flights";
+        el("btnLoadMore").textContent = state.flightsShown >= flights.length ? "All flights shown" : "Show more flights";
         el("btnEditFilters").classList.toggle("hidden", !state.reviewReady);
         openAccordion(state.currentStep);
       };

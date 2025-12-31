@@ -106,6 +106,7 @@
 - Normalized accordion header padding to keep status pills aligned consistently.
 - Emphasized the sign-in intro notice as the primary onboarding message.
 - Reduced mobile spacing between date range fields for tighter grouping.
+- Renamed the review table “Load more flights” button copy to “Show more flights” / “All flights shown.”
 - Added a required “Sign in” step to the click-dummy flow so users must authenticate before connecting accounts.
 - Refined the click-dummy with clearer grouping, review filter copy, review progress, action ordering, and a concrete import report summary in `design/009/click-dummy-enterprise-flow.html`.
 - Expanded the sign-in step to explain why authentication is required and added social login options in `design/009/click-dummy-enterprise-flow.html`.
