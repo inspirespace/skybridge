@@ -97,6 +97,7 @@
       .cta:disabled, .ghost:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(0.3); }
 
       .notice { border: 1px solid var(--border); border-radius: 6px; padding: 14px; font-size: 0.85rem; color: var(--muted); background: #fafafa; }
+      .notice.hero { font-size: 1rem; color: var(--ink); font-weight: 600; background: #f4f6f9; border-color: #d7dbe4; }
       .notice.success { border-color: rgba(31, 122, 74, 0.25); background: rgba(31, 122, 74, 0.05); color: #1b6b3f; font-weight: 600; }
       .notice.warn { border-color: rgba(180, 83, 9, 0.3); background: rgba(180, 83, 9, 0.08); color: #8a3a06; font-weight: 600; }
       .report-stack { display: grid; gap: 12px; margin-top: 10px; }
@@ -141,7 +142,8 @@
 
       .accordion { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; font-size: 0; line-height: 0; height: auto; }
       .accordion + .accordion { margin-top: 2px; }
-      .accordion-header { padding: 6px 10px; background: #f8f9fb; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 1rem; line-height: 1.4; }
+      .accordion-header { padding: 8px 12px; background: #f8f9fb; display: flex; justify-content: space-between; align-items: center; gap: 12px; cursor: pointer; font-size: 1rem; line-height: 1.4; }
+      .accordion-header .pill { margin-right: 2px; }
       .accordion-body { padding: 0 10px; display: none; font-size: 1rem; line-height: 1.4; }
       .accordion.open .accordion-body { display: block; padding: 10px; }
       .accordion.readonly { opacity: 0.75; }
@@ -208,6 +210,7 @@
         .mobile-topbar { display: block; }
         .mobile-actions { display: none; }
         footer { margin-bottom: 64px; }
+        .row.tight { gap: 8px; }
       }
       @media (max-width: 520px) {
         .nav-actions { grid-template-columns: 1fr; }
@@ -281,7 +284,7 @@
               <div id="signinPill" class="pill">Required</div>
             </div>
             <div class="accordion-body">
-              <div class="notice">
+              <div class="notice hero">
                 Skybridge imports your CloudAhoy flights into FlySto. You’ll connect both accounts, review the summary,
                 and approve the import. A report is generated at the end so you can verify results.
               </div>

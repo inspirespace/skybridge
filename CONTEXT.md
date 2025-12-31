@@ -220,3 +220,6 @@ See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 - Removed forced accordion heights and aligned grid content to prevent stretched whitespace while keeping the footer pinned.
 - Added dark-green text and progress bar tint for completed progress cards.
 - Start over now appears only after Connect and review has been triggered.
+- Normalized section header padding so status pills align consistently across steps.
+- Made the sign-in intro copy more prominent as the primary onboarding message.
+- Tightened mobile gap between date range inputs.
