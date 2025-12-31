@@ -172,3 +172,20 @@ See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 - Added extra spacing between the download report button and the import conclusion notice.
 - Replaced inline spacing with reusable spacing utilities and CSS vars.
 - Fixed review table status pill rendering by correcting the HTML class string.
+- Prevented status pills from wrapping onto multiple lines.
+- Replaced the report tables with a single import results summary card and clearer IA.
+- Updated nav action buttons to sit on one line with equal widths.
+- Added mobile session actions for Start over / Sign out and synced their disabled state.
+- Refined import results summary card: removed redundant Completed pill, aligned text block, and added muted Total labels.
+- Added a mobile top menu with the Skybridge logo plus Start over / Sign out actions.
+- Rephrased the max flights copy to reflect the import cap instead of review size.
+- Updated the date range helper text to indicate it controls import scope.
+- Tied Start over disable state and Sign out visibility to the current session state.
+- Replaced action button icons with inline SVGs for clearer appearance.
+- Start over now only appears while it is actionable (signed in and import not complete).
+- Aligned import results text blocks to the top next to their status pills.
+- Hid the nav action divider when no session buttons are visible.
+- Standardized the mobile top bar height and tightened icon alignment.
+- Tuned mobile topbar logo and button line-height for consistent alignment.
+- Fixed mobile top bar height and vertical centering for the logo and icons.
+- Centered mobile topbar action buttons and aligned their content.

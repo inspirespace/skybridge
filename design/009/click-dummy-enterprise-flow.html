@@ -44,8 +44,19 @@
         top: 16px;
       }
       .nav-brand { font-weight: 700; letter-spacing: 0.08em; margin-bottom: 12px; }
-      .nav-actions { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; display: grid; gap: 8px; }
-      .nav-actions .ghost { width: 100%; text-align: left; padding: 10px 12px; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+      .nav-actions { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .nav-actions.is-empty { border-top: none; padding-top: 0; }
+      .nav-actions .ghost { width: 100%; text-align: center; padding: 10px 12px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }
+      .mobile-actions { display: none; padding: 0 22px 12px; }
+      .mobile-actions .actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .mobile-actions .ghost { width: 100%; text-align: center; padding: 10px 12px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }
+      .mobile-topbar { display: none; background: var(--panel); border-bottom: 1px solid var(--border); padding: 0 16px; position: sticky; top: 0; z-index: 10; height: 56px; }
+      .mobile-topbar .bar { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 100%; }
+      .mobile-topbar .logo { font-weight: 700; letter-spacing: 0.08em; font-size: 0.95rem; line-height: 1; display: flex; align-items: center; height: 100%; }
+      .mobile-topbar .actions { display: inline-flex; gap: 8px; align-items: center; }
+      .mobile-topbar .ghost { padding: 8px 10px; height: 34px; line-height: 1; display: inline-flex; align-items: center; }
+      .icon { width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; transform: translateY(0.5px); }
+      .icon svg { width: 16px; height: 16px; stroke: currentColor; display: block; vertical-align: middle; }
       .nav-actions .ghost.secondary { background: #f8f9fb; color: var(--muted); }
       .nav-actions .ghost.secondary:hover { color: var(--ink); }
       .nav .item { padding: 9px 10px; border-radius: 4px; margin-bottom: 6px; background: #f8f9fb; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px; }
@@ -86,6 +97,14 @@
       .notice.success { border-color: rgba(31, 122, 74, 0.25); background: rgba(31, 122, 74, 0.05); color: #1b6b3f; font-weight: 600; }
       .notice.warn { border-color: rgba(180, 83, 9, 0.3); background: rgba(180, 83, 9, 0.08); color: #8a3a06; font-weight: 600; }
       .report-stack { display: grid; gap: 12px; margin-top: 10px; }
+      .summary-card { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--border); border-radius: 6px; background: #ffffff; }
+      .summary-row { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: start; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: #f8f9fb; }
+      .summary-row .status-pill { align-self: start; }
+      .summary-label { font-weight: 600; }
+      .summary-meta { color: var(--muted); font-size: 0.85rem; }
+      .summary-total { display: inline-flex; align-items: baseline; gap: 6px; justify-self: end; }
+      .summary-total span { color: var(--muted); font-size: 0.8rem; }
+      .summary-text { justify-self: start; }
       .helper { font-size: 0.82rem; color: #7a8699; margin-top: 0; }
       .input-compact { max-width: 140px; }
       .progress { height: 8px; border-radius: 6px; background: #eef0f4; overflow: hidden; }
@@ -104,7 +123,7 @@
       .tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.78rem; color: var(--muted); }
       .tag.ok { color: var(--ok); border-color: rgba(31, 122, 74, 0.3); background: rgba(31, 122, 74, 0.08); }
       .tag.warn { color: var(--warn); border-color: rgba(180, 83, 9, 0.3); background: rgba(180, 83, 9, 0.08); }
-      .status-pill { display: inline-flex; align-items: center; padding: 3px 12px; border-radius: 999px; border: 1px solid var(--border); font-size: 0.78rem; color: var(--muted); font-weight: 600; letter-spacing: 0.01em; }
+      .status-pill { display: inline-flex; align-items: center; padding: 3px 12px; border-radius: 999px; border: 1px solid var(--border); font-size: 0.78rem; color: var(--muted); font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; }
       .status-pill.ok { color: var(--ok); border-color: rgba(31, 122, 74, 0.3); background: rgba(31, 122, 74, 0.08); }
       .status-pill.warn { color: var(--warn); border-color: rgba(180, 83, 9, 0.3); background: rgba(180, 83, 9, 0.08); }
       .file { font-family: \"SFMono-Regular\", \"Menlo\", \"Consolas\", monospace; font-size: 0.78rem; color: var(--muted); }
@@ -156,8 +175,6 @@
       .footer-links a { color: var(--muted); text-decoration: none; }
       .footer-links a:hover { color: var(--ink); }
       .mobile-stepper .bar > div { height: 100%; background: #111827; width: 25%; transition: width 0.2s ease; }
-      .mobile-actions { display: none; }
-
       .hidden { display: none; }
       .space-top-3 { margin-top: var(--space-3); }
       .space-top-4 { margin-top: var(--space-4); }
@@ -168,11 +185,42 @@
         .nav { display: none; }
         .mobile-stepper { display: block; }
         .row { grid-template-columns: 1fr; }
+        .mobile-topbar { display: block; }
+        .mobile-actions { display: none; }
+      }
+      @media (max-width: 520px) {
+        .nav-actions { grid-template-columns: 1fr; }
       }
     </style>
   </head>
   <body>
     <div class="page">
+    <div class="mobile-topbar" aria-label="Mobile top menu">
+      <div class="bar">
+        <div class="logo">SKYBRIDGE</div>
+        <div class="actions">
+          <button class="ghost secondary" data-action="start-over">
+            <span class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 3-6.7"/>
+                <path d="M3 3v6h6"/>
+              </svg>
+            </span>
+            Start over
+          </button>
+          <button class="ghost" data-action="sign-out">
+            <span class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 17l5-5-5-5"/>
+                <path d="M15 12H3"/>
+                <path d="M21 3v18"/>
+              </svg>
+            </span>
+            Sign out
+          </button>
+        </div>
+      </div>
+    </div>
     <div class="frame">
 
       <div class="layout">
@@ -183,8 +231,25 @@
           <div class="item pending" data-step="review"><span class="check">✓</span>3 · Review</div>
           <div class="item pending" data-step="import"><span class="check">✓</span>4 · Import</div>
           <div class="nav-actions">
-            <button class="ghost secondary" id="btnStartOver"><span aria-hidden="true">↻</span>Start over</button>
-            <button class="ghost" id="btnSignOut"><span aria-hidden="true">↗</span>Sign out</button>
+            <button class="ghost secondary" id="btnStartOver" data-action="start-over">
+              <span class="icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 12a9 9 0 1 0 3-6.7"/>
+                  <path d="M3 3v6h6"/>
+                </svg>
+              </span>
+              Start over
+            </button>
+            <button class="ghost" id="btnSignOut" data-action="sign-out">
+              <span class="icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M10 17l5-5-5-5"/>
+                  <path d="M15 12H3"/>
+                  <path d="M21 3v18"/>
+                </svg>
+              </span>
+              Sign out
+            </button>
           </div>
         </aside>
 
@@ -253,12 +318,12 @@
                     <input id="startDate" placeholder="Start (YYYY-MM-DD)" />
                     <input id="endDate" placeholder="End (YYYY-MM-DD)" />
                   </div>
-                  <div class="helper">Leave empty to review all available flights.</div>
+                  <div class="helper">Leave empty to import all available flights.</div>
                 </div>
                 <div class="stack">
-                  <label>Max flights to review</label>
+                  <label>Max flights to import</label>
                   <input id="maxFlights" class="input-compact" placeholder="50" />
-                  <div class="helper">Limits the review size for faster previews.</div>
+                  <div class="helper">Caps the total number of flights that will be imported.</div>
                 </div>
               </div>
 
@@ -300,50 +365,33 @@
               </div>
 
                 <div class="report-stack hidden" id="reportTable">
-                  <div class="card">
-                    <div class="card-header" style="margin-bottom: 8px;">
-                      <strong>Review summary</strong>
-                    </div>
-                    <div class="table report">
-                      <div class="thead"><div>Status</div><div>Metric</div><div>Value</div></div>
-                      <div class="trow">
-                        <div data-label="Status"><span class="status-pill ok">OK</span></div>
-                        <div data-label="Metric"><span class="metric-link" title="Count derived from the review summary (ready + skipped).">Reviewed flights</span></div>
-                        <div data-label="Value">46</div>
-                      </div>
-                      <div class="trow">
-                        <div data-label="Status"><span class="status-pill ok">OK</span></div>
-                        <div data-label="Metric"><span class="metric-link" title="Flights ready to import based on the review pass.">Ready to import</span></div>
-                        <div data-label="Value">46</div>
-                      </div>
-                      <div class="trow">
-                        <div data-label="Status"><span class="status-pill warn">Needs review</span></div>
-                        <div data-label="Metric"><span class="metric-link" title="Flights missing registration details that need attention.">Registration missing</span></div>
-                        <div data-label="Value">2</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="card">
-                    <div class="card-header" style="margin-bottom: 8px;">
+                  <div class="summary-card">
+                    <div class="card-header">
                       <strong>Import results</strong>
                     </div>
-                    <div class="table report">
-                      <div class="thead"><div>Status</div><div>Metric</div><div>Value</div></div>
-                      <div class="trow">
-                        <div data-label="Status"><span class="status-pill ok">OK</span></div>
-                        <div data-label="Metric"><span class="metric-link" title="Flights sent for import based on the approved review.">Import attempted</span></div>
-                        <div data-label="Value">46</div>
+                    <div class="summary-row">
+                      <span class="status-pill ok">OK</span>
+                      <div class="summary-text">
+                        <div class="summary-label">Imported flights</div>
+                        <div class="summary-meta">All approved flights created in FlySto.</div>
                       </div>
-                      <div class="trow">
-                        <div data-label="Status"><span class="status-pill ok">OK</span></div>
-                        <div data-label="Metric"><span class="metric-link" title="Flights successfully created in FlySto; failures remain in the report.">Import succeeded</span></div>
-                        <div data-label="Value">46</div>
+                      <div class="summary-total"><span>Total:</span><strong>46</strong></div>
+                    </div>
+                    <div class="summary-row">
+                      <span class="status-pill ok">OK</span>
+                      <div class="summary-text">
+                        <div class="summary-label">Skipped or pending</div>
+                        <div class="summary-meta">Pending: 0 · Failed: 0</div>
                       </div>
-                      <div class="trow">
-                        <div data-label="Status"><span class="status-pill ok">Clear</span></div>
-                        <div data-label="Metric"><span class="metric-link" title="Items still processing or failed at the time the report was generated.">Pending or failed</span></div>
-                        <div data-label="Value">0</div>
+                      <div class="summary-total"><span>Total:</span><strong>0</strong></div>
+                    </div>
+                    <div class="summary-row">
+                      <span class="status-pill warn">Needs review</span>
+                      <div class="summary-text">
+                        <div class="summary-label">Registration missing</div>
+                        <div class="summary-meta">Flights without aircraft registration.</div>
                       </div>
+                      <div class="summary-total"><span>Total:</span><strong>2</strong></div>
                     </div>
                   </div>
                 </div>
@@ -535,7 +583,9 @@
         el("btnApprove").disabled = !state.reviewReady;
         el("btnDownload").classList.toggle("hidden", !state.importComplete);
         el("btnDownload").disabled = !state.importComplete;
-        el("btnStartOver").disabled = state.importComplete;
+        setActionDisabled("start-over", state.importComplete);
+        setActionVisible("start-over", state.signedIn && !state.importComplete);
+        setActionVisible("sign-out", state.signedIn);
 
         el("reviewTable").classList.toggle("hidden", !state.reviewReady);
         el("reviewSummary").classList.toggle("hidden", !state.reviewReady);
@@ -601,7 +651,25 @@
       el("btnSigninGoogle").addEventListener("click", onSignin);
       el("btnSigninApple").addEventListener("click", onSignin);
 
-      el("btnStartOver").addEventListener("click", () => {
+      const setActionDisabled = (action, disabled) => {
+        document.querySelectorAll(`[data-action="${action}"]`).forEach((button) => {
+          button.disabled = disabled;
+        });
+      };
+      const setActionVisible = (action, visible) => {
+        document.querySelectorAll(`[data-action="${action}"]`).forEach((button) => {
+          button.style.display = visible ? "" : "none";
+        });
+        document.querySelectorAll(".nav-actions").forEach((container) => {
+          const anyVisible = Array.from(container.querySelectorAll("[data-action]")).some(
+            (button) => button.style.display !== "none"
+          );
+          container.classList.toggle("is-empty", !anyVisible);
+        });
+      };
+
+      document.querySelectorAll('[data-action="start-over"]').forEach((button) => {
+        button.addEventListener("click", () => {
         if (state.importComplete) return;
         state.connected = false;
         state.reviewReady = false;
@@ -622,9 +690,11 @@
         state.progressIndex = state.signedIn ? 1 : 0;
         setStep(state.signedIn ? "connect" : "signin");
         updateUI();
+        });
       });
 
-      el("btnSignOut").addEventListener("click", () => {
+      document.querySelectorAll('[data-action="sign-out"]').forEach((button) => {
+        button.addEventListener("click", () => {
         state.signedIn = false;
         state.connected = false;
         state.reviewReady = false;
@@ -645,6 +715,7 @@
         el("importMeta").textContent = "Elapsed: 0m · Last update: --";
         setStep("signin");
         updateUI();
+        });
       });
 
       el("btnConnect").addEventListener("click", () => {
