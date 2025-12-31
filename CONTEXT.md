@@ -234,3 +234,4 @@ See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 - Harmonized UI font sizes with a shared type scale for consistent typography.
 - Made accordion section header text bolder for clearer hierarchy.
 - Set the left-step navigation items to a medium font weight for better legibility.
+- Moved numbered wireframe folders into `design/iterations/` and copied the latest wireframe into `design/final/`.
