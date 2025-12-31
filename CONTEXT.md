@@ -60,6 +60,32 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Added unit tests covering G3X HDG/TRK behavior, FlySto crew payload formatting/fallback, and crew reconciliation retry with log-id refresh.
 - Added tests for FlySto upload signature parsing/decoding, log-list resolution, log-metadata source extraction, and migration flow signature/system-id assignment.
 - Added tests for FlySto resolve update flows, log-source cache reuse, and import-report verify/reconcile paths.
+- Added numbered design iterations under `design/001`–`design/006`, consolidating earlier wireframes and mockups into per-iteration folders.
+- Added an enterprise-focused flow wireframe with concrete states under `design/007/wireframe-enterprise-flow.html` and shifted the wireframes focus to detailed flow/state.
+- Added a click-dummy enterprise flow wireframe with desktop + mobile stepper behaviors under `design/008/click-dummy-enterprise-flow.html`.
+- Added a click-dummy enterprise flow with collapsible review/import/report sections and a sticky mobile stepper bar under `design/009/click-dummy-enterprise-flow.html`.
+- Made the left stepper sticky on desktop in `design/009/click-dummy-enterprise-flow.html` to keep navigation visible while scrolling.
+- Updated `design/009/click-dummy-enterprise-flow.html` so the main steps are accordions (only active open), previous steps openable but read-only, review auto-runs on connect, import auto-starts on approve, report merged into import, and inline helper section removed.
+- Added an initial “Sign in” step to the click-dummy and expanded the enterprise wireframe flow to four steps (sign in → connect → review → import/report).
+- Refined `design/009/click-dummy-enterprise-flow.html` with a sign-in intro, grouped account inputs, clarified review filters, review progress bar, reordered actions, and a concrete import report summary (download-only).
+- Expanded the sign-in step to explain why authentication is required and added social login options in `design/009/click-dummy-enterprise-flow.html`.
+- Adjusted spacing and padding in `design/009/click-dummy-enterprise-flow.html` to reduce visual crowding (larger gaps, roomier groups).
+- Simplified the Review filters UI in `design/009/click-dummy-enterprise-flow.html` by dropping the incomplete-flights toggle and clarifying date range/max flights helpers.
+- Added spacing around progress bars in `design/009/click-dummy-enterprise-flow.html` to avoid cramped sections.
+- Improved the import report table layout in `design/009/click-dummy-enterprise-flow.html` with fewer columns, status tags, and clearer file styling.
+- Restyled review helper text in `design/009/click-dummy-enterprise-flow.html` to use subtle helper copy instead of notice boxes.
+- Removed the redundant import status panel in `design/009/click-dummy-enterprise-flow.html`, keeping only the elapsed/last update callout.
+- Added zebra striping, tighter table spacing, and tooltip hints to the import report table in `design/009/click-dummy-enterprise-flow.html`.
+- Refined locked-state pill wording in `design/009/click-dummy-enterprise-flow.html` to be more action-oriented.
+- Updated sign-in rationale copy in `design/009/click-dummy-enterprise-flow.html` to remove the FlySto account attachment phrasing.
+- Adjusted Review section spacing in `design/009/click-dummy-enterprise-flow.html` so helper text sits closer to inputs and panels have more breathing room.
+- Added a review elapsed-time panel in `design/009/click-dummy-enterprise-flow.html` alongside the review status.
+- Removed mobile stepper Prev/Next buttons in `design/009/click-dummy-enterprise-flow.html` so progression is driven by primary actions.
+- Emphasized completed step pills in `design/009/click-dummy-enterprise-flow.html` for stronger visual feedback.
+- Updated the Review section pill to show “Approved” in green after approval in `design/009/click-dummy-enterprise-flow.html`.
+- Updated the Import “Completed” pill to use green styling in `design/009/click-dummy-enterprise-flow.html`.
+- Reduced vertical spacing between sections in `design/009/click-dummy-enterprise-flow.html` for a tighter flow.
+- Fixed a null reference in `design/009/click-dummy-enterprise-flow.html` after removing mobile stepper buttons.
 
 ## Required API Details
 These are needed to complete the adapters:

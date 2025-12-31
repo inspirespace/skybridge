@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Skybridge Click Dummy 008 — Enterprise Flow</title>
+    <style>
+      :root {
+        --ink: #101828;
+        --muted: #667085;
+        --border: #e4e7ec;
+        --panel: #ffffff;
+        --bg: #f2f4f7;
+        --accent: #111827;
+        --accent-2: #1f2937;
+        --ok: #1f7a4a;
+        --warn: #b45309;
+        --error: #b42318;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      .frame { max-width: 1200px; margin: 0 auto; padding: 36px 22px 80px; }
+      header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .logo { font-weight: 700; letter-spacing: 0.08em; }
+      .status { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); font-size: 0.85rem; color: var(--muted); }
+
+      .layout { display: grid; grid-template-columns: 260px 1fr; gap: 18px; margin-top: 18px; }
+      .nav { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px; height: fit-content; }
+      .nav .item { padding: 8px 10px; border-radius: 8px; margin-bottom: 6px; background: #f8f9fb; font-size: 0.9rem; cursor: pointer; }
+      .nav .item.active { border: 1px solid var(--border); background: #ffffff; }
+      .content { display: grid; gap: 16px; }
+      .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+      .card-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+      .pill { border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; font-size: 0.8rem; color: var(--muted); }
+      .pill.ok { color: var(--ok); border-color: rgba(31, 122, 74, 0.25); }
+      .pill.warn { color: var(--warn); border-color: rgba(180, 83, 9, 0.3); }
+      .pill.error { color: var(--error); border-color: rgba(180, 35, 24, 0.3); }
+
+      .row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .stack { display: grid; gap: 8px; }
+      label { font-size: 0.85rem; color: var(--muted); }
+      input {
+        height: 36px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0 10px;
+        background: #f8f9fb;
+      }
+      input:disabled { background: #f2f4f7; color: var(--muted); }
+
+      .cta-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+      .cta { padding: 9px 14px; border-radius: 10px; background: var(--accent); color: #fff; border: none; font-weight: 600; cursor: pointer; }
+      .cta.secondary { background: var(--accent-2); }
+      .ghost { padding: 9px 14px; border-radius: 10px; background: transparent; border: 1px solid var(--border); color: var(--muted); cursor: pointer; }
+      .cta:disabled, .ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      .table { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-top: 8px; }
+      .table .thead, .table .trow { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr 1fr 0.7fr; gap: 8px; padding: 8px 10px; font-size: 0.85rem; }
+      .table .thead { background: #f8f9fb; font-weight: 600; }
+      .drawer { border: 1px dashed var(--border); border-radius: 10px; padding: 10px; color: var(--muted); font-size: 0.85rem; margin-top: 8px; }
+      .notice { border: 1px solid var(--border); border-radius: 10px; padding: 10px; font-size: 0.85rem; color: var(--muted); background: #fafafa; }
+      .progress { height: 10px; border-radius: 999px; background: #eef0f4; overflow: hidden; margin-top: 8px; }
+      .progress > div { height: 100%; background: #111827; width: 0%; transition: width 0.2s ease; }
+
+      .mobile-stepper {
+        display: none;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px;
+        background: var(--panel);
+      }
+      .mobile-stepper .row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+      }
+      .mobile-stepper .bar { height: 6px; background: #eef0f4; border-radius: 999px; overflow: hidden; margin-top: 8px; }
+      .mobile-stepper .bar > div { height: 100%; background: #111827; width: 25%; transition: width 0.2s ease; }
+      .mobile-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+
+      .hidden { display: none; }
+
+      @media (max-width: 900px) {
+        .layout { grid-template-columns: 1fr; }
+        header { flex-direction: column; align-items: flex-start; }
+        .nav { display: none; }
+        .mobile-stepper { display: block; }
+        .table .thead, .table .trow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .row { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <header>
+        <div class="logo">SKYBRIDGE</div>
+        <div class="status" id="statusPill">Signed in · Ready</div>
+      </header>
+
+      <section class="mobile-stepper" aria-label="Step navigation">
+        <div class="row">
+          <div id="mobileStepLabel">Step 1 of 4 · Connect</div>
+          <div id="mobileStepState" class="pill">Locked: none</div>
+        </div>
+        <div class="bar"><div id="mobileStepBar"></div></div>
+        <div class="mobile-actions">
+          <button class="ghost" id="mobilePrev">Prev</button>
+          <button class="cta" id="mobileNext">Next</button>
+        </div>
+      </section>
+
+      <div class="layout">
+        <aside class="nav">
+          <div class="item active" data-step="connect">1 · Connect</div>
+          <div class="item" data-step="review">2 · Review</div>
+          <div class="item" data-step="import">3 · Import</div>
+          <div class="item" data-step="report">4 · Report</div>
+        </aside>
+
+        <main class="content">
+          <section class="card" id="cardOverview">
+            <div class="card-header">
+              <h2>Import flights</h2>
+              <span class="pill" id="jobPill">Job: none</span>
+            </div>
+            <div class="notice" id="overviewNotice">Start by connecting accounts, then run a review.</div>
+          </section>
+
+          <section class="card" id="cardConnect">
+            <div class="card-header">
+              <h3>1) Connect accounts</h3>
+              <span class="pill" id="connectPill">Required</span>
+            </div>
+            <div class="row">
+              <div class="stack">
+                <label>CloudAhoy username</label>
+                <input id="cloudUser" placeholder="email" />
+                <label>CloudAhoy password</label>
+                <input id="cloudPass" placeholder="••••••" />
+              </div>
+              <div class="stack">
+                <label>FlySto username</label>
+                <input id="flystoUser" placeholder="email" />
+                <label>FlySto password</label>
+                <input id="flystoPass" placeholder="••••••" />
+              </div>
+            </div>
+            <div class="cta-row">
+              <button class="cta" id="btnConnect">Save connections</button>
+            </div>
+          </section>
+
+          <section class="card" id="cardReview">
+            <div class="card-header">
+              <h3>2) Review</h3>
+              <span class="pill" id="reviewPill">Locked until connected</span>
+            </div>
+            <div class="row">
+              <div class="stack">
+                <label>Start date</label>
+                <input id="startDate" placeholder="YYYY-MM-DD" />
+              </div>
+              <div class="stack">
+                <label>End date</label>
+                <input id="endDate" placeholder="YYYY-MM-DD" />
+              </div>
+            </div>
+            <div class="notice" id="reviewNotice">Review will summarize flights, hours, and missing data.</div>
+            <div class="drawer" id="reviewDrawer">Flight list collapsed · “Show details”</div>
+            <div class="table hidden" id="reviewTable">
+              <div class="thead"><div>ID</div><div>Date</div><div>Tail</div><div>Origin</div><div>Destination</div><div>Status</div></div>
+              <div class="trow"><div>CHA-981</div><div>2025-11-21</div><div>N12SB</div><div>KPAO</div><div>KTVL</div><div>Ready</div></div>
+            </div>
+            <div class="cta-row">
+              <button class="cta" id="btnRunReview" disabled>Run review</button>
+              <button class="ghost" id="btnToggleDetails" disabled>Show details</button>
+              <button class="ghost" id="btnApprove" disabled>Approve import</button>
+            </div>
+          </section>
+
+          <section class="card" id="cardImport">
+            <div class="card-header">
+              <h3>3) Import</h3>
+              <span class="pill" id="importPill">Locked until review approved</span>
+            </div>
+            <div class="row">
+              <div class="notice" id="importStatus">Status: idle</div>
+              <div class="notice" id="importMeta">Elapsed: 0m · Last update: --</div>
+            </div>
+            <div class="progress"><div id="importProgress"></div></div>
+            <div class="cta-row">
+              <button class="cta secondary" id="btnStartImport" disabled>Start import</button>
+              <button class="ghost" id="btnClearJob" disabled>Clear job</button>
+            </div>
+          </section>
+
+          <section class="card" id="cardReport">
+            <div class="card-header">
+              <h3>4) Report</h3>
+              <span class="pill" id="reportPill">Locked until import completes</span>
+            </div>
+            <div class="notice" id="reportNotice">Report summary and downloadable files appear here.</div>
+            <div class="cta-row">
+              <button class="ghost" id="btnDownload" disabled>Download report</button>
+              <button class="ghost" id="btnOpenRun" disabled>Open run folder</button>
+            </div>
+          </section>
+
+          <section class="card" id="cardStates">
+            <div class="card-header">
+              <h3>Inline state helpers</h3>
+              <span class="pill">Simulation</span>
+            </div>
+            <div class="cta-row">
+              <button class="ghost" id="simAuth">Auth expired</button>
+              <button class="ghost" id="simError">Import failed</button>
+              <button class="ghost" id="simReset">Reset</button>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      const state = {
+        connected: false,
+        reviewReady: false,
+        reviewApproved: false,
+        importRunning: false,
+        importComplete: false,
+        detailsOpen: false,
+        currentStep: "connect",
+      };
+
+      const el = (id) => document.getElementById(id);
+      const navItems = Array.from(document.querySelectorAll(".nav .item"));
+
+      const stepOrder = ["connect", "review", "import", "report"];
+
+      const updateNav = () => {
+        navItems.forEach((item) => {
+          item.classList.toggle("active", item.dataset.step === state.currentStep);
+        });
+      };
+
+      const updateMobileStepper = () => {
+        const index = stepOrder.indexOf(state.currentStep);
+        el("mobileStepLabel").textContent = `Step ${index + 1} of 4 · ${titleFor(state.currentStep)}`;
+        el("mobileStepBar").style.width = `${(index + 1) * 25}%`;
+        const lock = lockReason(state.currentStep);
+        el("mobileStepState").textContent = lock ? `Locked: ${lock}` : "Unlocked";
+        el("mobilePrev").disabled = index === 0;
+        el("mobileNext").disabled = index === 3 || !!lock;
+      };
+
+      const titleFor = (step) => ({
+        connect: "Connect",
+        review: "Review",
+        import: "Import",
+        report: "Report",
+      })[step];
+
+      const lockReason = (step) => {
+        if (step === "review" && !state.connected) return "connect";
+        if (step === "import" && !state.reviewApproved) return "approve";
+        if (step === "report" && !state.importComplete) return "complete";
+        return "";
+      };
+
+      const setStep = (step) => {
+        state.currentStep = step;
+        updateNav();
+        updateMobileStepper();
+        scrollToCard(step);
+      };
+
+      const scrollToCard = (step) => {
+        const map = {
+          connect: "cardConnect",
+          review: "cardReview",
+          import: "cardImport",
+          report: "cardReport",
+        };
+        const target = el(map[step]);
+        if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+      };
+
+      const updateUI = () => {
+        el("btnRunReview").disabled = !state.connected || state.importRunning;
+        el("btnApprove").disabled = !state.reviewReady || state.importRunning;
+        el("btnToggleDetails").disabled = !state.reviewReady;
+        el("btnStartImport").disabled = !state.reviewApproved || state.importRunning || state.importComplete;
+        el("btnClearJob").disabled = !state.reviewReady && !state.reviewApproved && !state.importRunning && !state.importComplete;
+        el("btnDownload").disabled = !state.importComplete;
+        el("btnOpenRun").disabled = !state.importComplete;
+
+        el("connectPill").textContent = state.connected ? "Connected" : "Required";
+        el("connectPill").className = `pill ${state.connected ? "ok" : ""}`;
+        el("reviewPill").textContent = state.connected ? (state.reviewReady ? "Review ready" : "Ready to run") : "Locked until connected";
+        el("importPill").textContent = state.reviewApproved ? (state.importRunning ? "Running" : state.importComplete ? "Completed" : "Ready") : "Locked until review approved";
+        el("reportPill").textContent = state.importComplete ? "Available" : "Locked until import completes";
+
+        el("reviewDrawer").classList.toggle("hidden", state.detailsOpen);
+        el("reviewTable").classList.toggle("hidden", !state.detailsOpen);
+
+        el("jobPill").textContent = state.reviewReady || state.reviewApproved ? "Job: active" : "Job: none";
+        el("importProgress").style.width = state.importComplete ? "100%" : state.importRunning ? "55%" : "0%";
+      };
+
+      const simulateImport = () => {
+        state.importRunning = true;
+        el("importStatus").textContent = "Status: running";
+        el("importMeta").textContent = "Elapsed: 1m · Last update: just now";
+        updateUI();
+        setTimeout(() => {
+          state.importRunning = false;
+          state.importComplete = true;
+          el("importStatus").textContent = "Status: completed";
+          el("importMeta").textContent = "Elapsed: 4m · Last update: just now";
+          updateUI();
+        }, 1200);
+      };
+
+      el("btnConnect").addEventListener("click", () => {
+        state.connected = true;
+        updateUI();
+        setStep("review");
+      });
+
+      el("btnRunReview").addEventListener("click", () => {
+        state.reviewReady = true;
+        updateUI();
+      });
+
+      el("btnToggleDetails").addEventListener("click", () => {
+        state.detailsOpen = !state.detailsOpen;
+        el("btnToggleDetails").textContent = state.detailsOpen ? "Hide details" : "Show details";
+        updateUI();
+      });
+
+      el("btnApprove").addEventListener("click", () => {
+        state.reviewApproved = true;
+        updateUI();
+        setStep("import");
+      });
+
+      el("btnStartImport").addEventListener("click", simulateImport);
+
+      el("btnClearJob").addEventListener("click", () => {
+        state.reviewReady = false;
+        state.reviewApproved = false;
+        state.importRunning = false;
+        state.importComplete = false;
+        state.detailsOpen = false;
+        el("importStatus").textContent = "Status: idle";
+        el("importMeta").textContent = "Elapsed: 0m · Last update: --";
+        el("btnToggleDetails").textContent = "Show details";
+        updateUI();
+        setStep("connect");
+      });
+
+      el("simAuth").addEventListener("click", () => {
+        el("statusPill").textContent = "Session expired · Sign in";
+        el("statusPill").style.color = "var(--error)";
+      });
+
+      el("simError").addEventListener("click", () => {
+        el("importStatus").textContent = "Status: failed";
+        el("importMeta").textContent = "Error: network timeout";
+        state.importRunning = false;
+        updateUI();
+      });
+
+      el("simReset").addEventListener("click", () => {
+        el("statusPill").textContent = "Signed in · Ready";
+        el("statusPill").style.color = "var(--muted)";
+      });
+
+      navItems.forEach((item) => {
+        item.addEventListener("click", () => {
+          const step = item.dataset.step;
+          const lock = lockReason(step);
+          if (lock) return;
+          setStep(step);
+        });
+      });
+
+      el("mobilePrev").addEventListener("click", () => {
+        const index = stepOrder.indexOf(state.currentStep);
+        if (index > 0) setStep(stepOrder[index - 1]);
+      });
+
+      el("mobileNext").addEventListener("click", () => {
+        const index = stepOrder.indexOf(state.currentStep);
+        if (index < stepOrder.length - 1 && !lockReason(stepOrder[index + 1])) {
+          setStep(stepOrder[index + 1]);
+        }
+      });
+
+      updateUI();
+      updateNav();
+      updateMobileStepper();
+    </script>
+  </body>
+</html>

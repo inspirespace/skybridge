@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Skybridge Click Dummy 009 — Enterprise Flow (Accordion Steps)</title>
+    <style>
+      :root {
+        --ink: #101828;
+        --muted: #667085;
+        --border: #e4e7ec;
+        --panel: #ffffff;
+        --bg: #f2f4f7;
+        --accent: #111827;
+        --accent-2: #1f2937;
+        --ok: #1f7a4a;
+        --warn: #b45309;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      .frame { max-width: 1200px; margin: 0 auto; padding: 36px 22px 160px; }
+      header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .logo { font-weight: 700; letter-spacing: 0.08em; }
+      .status { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); font-size: 0.85rem; color: var(--muted); }
+
+      .layout { display: grid; grid-template-columns: 260px 1fr; gap: 20px; margin-top: 22px; }
+      .nav {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px;
+        height: fit-content;
+        position: sticky;
+        top: 16px;
+      }
+      .nav .item { padding: 9px 10px; border-radius: 8px; margin-bottom: 6px; background: #f8f9fb; font-size: 0.9rem; cursor: pointer; }
+      .nav .item.active { border: 1px solid var(--border); background: #ffffff; }
+      .content { display: grid; gap: 14px; }
+
+      .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+      .card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .pill { border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; font-size: 0.8rem; color: var(--muted); }
+      .pill.ok { color: var(--ok); border-color: rgba(31, 122, 74, 0.25); }
+      .pill.warn { color: var(--warn); border-color: rgba(180, 83, 9, 0.3); }
+      .pill.strong { background: #f2f5ff; color: #1f3b8f; border-color: #d5dcff; font-weight: 600; }
+
+      .row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+      .row.tight { gap: 12px; }
+      .stack { display: grid; gap: 12px; }
+      .field-group { border: 1px solid var(--border); border-radius: 14px; padding: 16px; background: #fbfbfd; display: grid; gap: 12px; }
+      label { font-size: 0.85rem; color: var(--muted); }
+      input, select {
+        height: 36px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 0 10px;
+        background: #ffffff;
+      }
+      input:disabled, select:disabled { background: #f2f4f7; color: var(--muted); }
+
+      .cta-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+      .cta { padding: 9px 14px; border-radius: 10px; background: var(--accent); color: #fff; border: none; font-weight: 600; cursor: pointer; }
+      .cta.secondary { background: var(--accent-2); }
+      .ghost { padding: 9px 14px; border-radius: 10px; background: transparent; border: 1px solid var(--border); color: var(--muted); cursor: pointer; }
+      .cta:disabled, .ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      .notice { border: 1px solid var(--border); border-radius: 12px; padding: 14px; font-size: 0.85rem; color: var(--muted); background: #fafafa; }
+      .helper { font-size: 0.82rem; color: #7a8699; margin-top: 6px; }
+      .progress { height: 10px; border-radius: 999px; background: #eef0f4; overflow: hidden; margin-top: 14px; margin-bottom: 10px; }
+      .progress > div { height: 100%; background: #111827; width: 0%; transition: width 0.2s ease; }
+
+      .table { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-top: 14px; background: #ffffff; }
+      .table .thead, .table .trow { display: grid; grid-template-columns: 1.3fr 0.6fr 1.1fr 0.9fr 1fr; gap: 8px; padding: 8px 10px; font-size: 0.84rem; align-items: center; }
+      .table .thead { background: #f8f9fb; font-weight: 600; }
+      .table .trow { border-top: 1px solid var(--border); }
+      .table .trow:nth-child(even) { background: #fbfcfe; }
+      .tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); font-size: 0.78rem; color: var(--muted); }
+      .tag.ok { color: var(--ok); border-color: rgba(31, 122, 74, 0.3); background: rgba(31, 122, 74, 0.08); }
+      .tag.warn { color: var(--warn); border-color: rgba(180, 83, 9, 0.3); background: rgba(180, 83, 9, 0.08); }
+      .file { font-family: \"SFMono-Regular\", \"Menlo\", \"Consolas\", monospace; font-size: 0.78rem; color: var(--muted); }
+      .tip { border-bottom: 1px dotted #c0c6d4; cursor: help; }
+
+      .accordion { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+      .accordion + .accordion { margin-top: 12px; }
+      .accordion-header { padding: 14px 16px; background: #f8f9fb; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+      .accordion-body { padding: 22px; display: none; }
+      .accordion.open .accordion-body { display: block; }
+      .accordion.readonly { opacity: 0.75; }
+
+      .mobile-stepper {
+        display: none;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--panel);
+        border-top: 1px solid var(--border);
+        padding: 10px 14px;
+        box-shadow: 0 -10px 20px rgba(16, 24, 40, 0.08);
+      }
+      .mobile-stepper .top { display: grid; grid-template-columns: 1fr auto; align-items: center; }
+      .mobile-stepper .bar { height: 6px; background: #eef0f4; border-radius: 999px; overflow: hidden; margin-top: 8px; }
+      .mobile-stepper .bar > div { height: 100%; background: #111827; width: 25%; transition: width 0.2s ease; }
+      .mobile-actions { display: none; }
+
+      .hidden { display: none; }
+
+      @media (max-width: 900px) {
+        .layout { grid-template-columns: 1fr; }
+        header { flex-direction: column; align-items: flex-start; }
+        .nav { display: none; }
+        .mobile-stepper { display: block; }
+        .table .thead, .table .trow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .file { font-size: 0.75rem; }
+        .row { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <header>
+        <div class="logo">SKYBRIDGE</div>
+        <div class="status" id="statusPill">Signed out</div>
+      </header>
+
+      <div class="layout">
+        <aside class="nav">
+          <div class="item active" data-step="signin">1 · Sign in</div>
+          <div class="item" data-step="connect">2 · Connect</div>
+          <div class="item" data-step="review">3 · Review</div>
+          <div class="item" data-step="import">4 · Import</div>
+        </aside>
+
+        <main class="content">
+          <section class="accordion open" id="accSignin">
+            <div class="accordion-header" data-step="signin">
+              <div>1) Sign in</div>
+              <div id="signinPill" class="pill">Required</div>
+            </div>
+            <div class="accordion-body">
+              <div class="notice">
+                Sign in is required to identify your job, protect your data, and resume imports later.
+                You can use email or a social login.
+              </div>
+              <div class="cta-row">
+                <button class="cta" id="btnSignin">Sign in with email</button>
+                <button class="ghost" id="btnSigninGoogle">Continue with Google</button>
+                <button class="ghost" id="btnSigninApple">Continue with Apple</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="accordion" id="accConnect">
+            <div class="accordion-header" data-step="connect">
+              <div>2) Connect accounts</div>
+              <div id="connectPill" class="pill">Sign in required</div>
+            </div>
+            <div class="accordion-body">
+              <div class="row" style="margin-bottom: 18px;">
+                <div class="field-group">
+                  <strong>CloudAhoy</strong>
+                  <label>Username</label>
+                  <input id="cloudUser" placeholder="email" />
+                  <label>Password</label>
+                  <input id="cloudPass" placeholder="••••••" />
+                </div>
+                <div class="field-group">
+                  <strong>FlySto</strong>
+                  <label>Username</label>
+                  <input id="flystoUser" placeholder="email" />
+                  <label>Password</label>
+                  <input id="flystoPass" placeholder="••••••" />
+                </div>
+              </div>
+              <div class="notice" style="margin-top: 4px;">Credentials are used only for this job and not stored.</div>
+              <div class="cta-row">
+                <button class="cta" id="btnConnect">Connect and review</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="accordion" id="accReview">
+            <div class="accordion-header" data-step="review">
+              <div>3) Review</div>
+              <div id="reviewPill" class="pill">Connect accounts to continue</div>
+            </div>
+            <div class="accordion-body">
+              <div class="row" style="margin-bottom: 12px;">
+                <div class="stack">
+                  <label>Date range</label>
+                  <div class="row tight">
+                    <input id="startDate" placeholder="Start (YYYY-MM-DD)" />
+                    <input id="endDate" placeholder="End (YYYY-MM-DD)" />
+                  </div>
+                  <div class="helper">Leave empty to review all available flights.</div>
+                </div>
+                <div class="stack">
+                  <label>Max flights to review</label>
+                  <input id="maxFlights" placeholder="50" />
+                  <div class="helper">Limits the review size for faster previews.</div>
+                </div>
+              </div>
+
+              <div class="row" style="margin-top: 10px;">
+                <div class="notice" id="reviewNotice">Summary appears after review runs.</div>
+                <div class="notice" id="reviewMeta">Elapsed: 0m · Last update: --</div>
+              </div>
+              <div class="progress hidden" id="reviewProgress" style="margin-top: 12px;"><div id="reviewProgressBar"></div></div>
+
+              <div class="notice hidden" id="reviewSummary" style="margin-top: 10px;">Summary: 12 flights · 24.6 hours · Missing tails: 2</div>
+
+              <div class="table hidden" id="reviewTable">
+                <div class="thead"><div>ID</div><div>Date</div><div>Tail</div><div>Origin</div><div>Destination</div><div>Status</div></div>
+                <div id="reviewRows"></div>
+              </div>
+              <div class="cta-row">
+                <button class="ghost" id="btnLoadMore" disabled>Load more flights</button>
+              </div>
+              <div class="cta-row">
+                <button class="cta" id="btnApprove" disabled>Approve import</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="accordion" id="accImport">
+            <div class="accordion-header" data-step="import">
+              <div>4) Import</div>
+              <div id="importPill" class="pill">Approve review to continue</div>
+            </div>
+            <div class="accordion-body">
+              <div class="row">
+                <div class="notice" id="importMeta">Elapsed: 0m · Last update: --</div>
+              </div>
+              <div class="progress"><div id="importProgress"></div></div>
+
+              <div class="notice" id="reportNotice">Report will appear here when import completes.</div>
+              <div class="table hidden" id="reportTable">
+                <div class="thead"><div>Metric</div><div>Value</div><div>Notes</div><div>Status</div><div>File</div></div>
+                <div class="trow"><div><span class="tip" title="Flights successfully created in FlySto">Imported flights</span></div><div>10</div><div>Complete</div><div><span class="tag ok">OK</span></div><div class="file">import_report.json</div></div>
+                <div class="trow"><div><span class="tip" title="Flights that need manual aircraft assignment">Skipped flights</span></div><div>2</div><div>Missing tail</div><div><span class="tag warn">Needs review</span></div><div class="file">import_report.json</div></div>
+                <div class="trow"><div><span class="tip" title="Total hours derived from the review summary">Total hours</span></div><div>24.6</div><div>From review</div><div><span class="tag ok">OK</span></div><div class="file">review.json</div></div>
+                <div class="trow"><div><span class="tip" title="Oldest flight date in the review range">Earliest flight</span></div><div>2025-01-10</div><div>—</div><div><span class="tag ok">OK</span></div><div class="file">review.json</div></div>
+                <div class="trow"><div><span class="tip" title="Most recent flight date in the review range">Latest flight</span></div><div>2025-11-28</div><div>—</div><div><span class="tag ok">OK</span></div><div class="file">review.json</div></div>
+              </div>
+              <div class="cta-row">
+                <button class="ghost" id="btnDownload" disabled>Download report</button>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <section class="mobile-stepper" aria-label="Mobile step navigation">
+      <div class="top">
+        <div id="mobileStepLabel">Step 1 of 4 · Sign in</div>
+        <div id="mobileStepState" class="pill">Unlocked</div>
+      </div>
+      <div class="bar"><div id="mobileStepBar"></div></div>
+    </section>
+
+    <script>
+      const flights = [
+        { id: "CHA-981", date: "2025-11-21", tail: "N12SB", origin: "KPAO", dest: "KTVL", status: "Ready" },
+        { id: "CHA-992", date: "2025-11-23", tail: "—", origin: "KSJC", dest: "KSNS", status: "Missing tail" },
+        { id: "CHA-1003", date: "2025-11-24", tail: "N12SB", origin: "KPAO", dest: "KSQL", status: "Ready" },
+        { id: "CHA-1010", date: "2025-11-26", tail: "N12SB", origin: "KPAO", dest: "KAPC", status: "Ready" },
+        { id: "CHA-1012", date: "2025-11-27", tail: "N12SB", origin: "KPAO", dest: "KMRY", status: "Ready" },
+        { id: "CHA-1016", date: "2025-11-28", tail: "—", origin: "KPAO", dest: "KSTS", status: "Missing tail" },
+      ];
+
+      const state = {
+        signedIn: false,
+        connected: false,
+        reviewReady: false,
+        reviewApproved: false,
+        importRunning: false,
+        importComplete: false,
+        currentStep: "signin",
+        progressIndex: 0,
+        flightsShown: 3,
+      };
+
+      const el = (id) => document.getElementById(id);
+      const navItems = Array.from(document.querySelectorAll(".nav .item"));
+      const stepOrder = ["signin", "connect", "review", "import"];
+
+      const titleFor = (step) => ({ signin: "Sign in", connect: "Connect", review: "Review", import: "Import" })[step];
+
+      const lockReason = (step) => {
+        const index = stepOrder.indexOf(step);
+        if (index > state.progressIndex) {
+          if (step === "connect") return "sign in";
+          if (step === "review") return "connect";
+          if (step === "import") return "approve";
+        }
+        return "";
+      };
+
+      const updateNav = () => {
+        navItems.forEach((item) => item.classList.toggle("active", item.dataset.step === state.currentStep));
+      };
+
+      const updateMobileStepper = () => {
+        const index = stepOrder.indexOf(state.currentStep);
+        el("mobileStepLabel").textContent = `Step ${index + 1} of 4 · ${titleFor(state.currentStep)}`;
+        el("mobileStepBar").style.width = `${((index + 1) / stepOrder.length) * 100}%`;
+        const lock = lockReason(state.currentStep);
+        el("mobileStepState").textContent = lock ? `Locked: ${lock}` : "Unlocked";
+      };
+
+      const setStep = (step) => {
+        state.currentStep = step;
+        updateNav();
+        updateMobileStepper();
+        openAccordion(step);
+        scrollToCard(step);
+        updateUI();
+      };
+
+      const scrollToCard = (step) => {
+        const map = { signin: "accSignin", connect: "accConnect", review: "accReview", import: "accImport" };
+        const target = el(map[step]);
+        if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+      };
+
+      const openAccordion = (step) => {
+        ["signin", "connect", "review", "import"].forEach((name) => {
+          const acc = el(`acc${name[0].toUpperCase()}${name.slice(1)}`);
+          acc.classList.toggle("open", name === step);
+        });
+      };
+
+      const setReadonly = (step, readonly) => {
+        const acc = el(`acc${step[0].toUpperCase()}${step.slice(1)}`);
+        acc.classList.toggle("readonly", readonly);
+        acc.querySelectorAll("input, button, select").forEach((node) => {
+          node.disabled = readonly;
+        });
+        if (step === "review") {
+          el("btnApprove").disabled = readonly || !state.reviewReady;
+          el("btnLoadMore").disabled = readonly || !state.reviewReady || state.flightsShown >= flights.length;
+        }
+      };
+
+      const renderFlights = () => {
+        const rows = flights.slice(0, state.flightsShown).map((flight) => (
+          `<div class="trow"><div>${flight.id}</div><div>${flight.date}</div><div>${flight.tail}</div><div>${flight.origin}</div><div>${flight.dest}</div><div>${flight.status}</div></div>`
+        ));
+        el("reviewRows").innerHTML = rows.join("");
+      };
+
+      const updateUI = () => {
+        el("signinPill").textContent = state.signedIn ? "Signed in" : "Required";
+        el("signinPill").className = `pill ${state.signedIn ? "ok" : ""}`;
+
+        if (!state.signedIn) {
+          el("connectPill").textContent = "Sign in required";
+        } else {
+          el("connectPill").textContent = state.connected ? "Connected" : "Required";
+        }
+        el("connectPill").className = `pill ${state.connected ? "ok" : ""}`;
+
+        if (!state.connected) {
+          el("reviewPill").textContent = "Connect accounts to continue";
+          el("reviewPill").className = "pill";
+        } else if (!state.reviewReady) {
+          el("reviewPill").textContent = "Running review…";
+          el("reviewPill").className = "pill";
+        } else if (state.reviewApproved) {
+          el("reviewPill").textContent = "Approved";
+          el("reviewPill").className = "pill ok";
+        } else {
+          el("reviewPill").textContent = "Review ready";
+          el("reviewPill").className = "pill strong";
+        }
+        el("importPill").textContent = state.reviewApproved ? (state.importRunning ? "Running" : state.importComplete ? "Completed" : "Ready") : "Approve review to continue";
+        el("importPill").className = state.importComplete ? "pill ok" : "pill";
+
+el("importProgress").style.width = state.importComplete ? "100%" : state.importRunning ? "55%" : "0%";
+
+        el("btnApprove").disabled = !state.reviewReady;
+        el("btnDownload").disabled = !state.importComplete;
+
+        el("reviewTable").classList.toggle("hidden", !state.reviewReady);
+        el("reviewSummary").classList.toggle("hidden", !state.reviewReady);
+        el("reviewNotice").textContent = state.reviewReady ? "Review complete." : "Summary appears after review runs.";
+
+        renderFlights();
+
+        stepOrder.forEach((step, index) => {
+          setReadonly(step, index < state.progressIndex);
+        });
+
+        el("btnLoadMore").disabled = !state.reviewReady || state.flightsShown >= flights.length;
+        el("btnLoadMore").textContent = state.flightsShown >= flights.length ? "All flights loaded" : "Load more flights";
+      };
+
+      const simulateReview = () => {
+        el("reviewNotice").textContent = "Review running…";
+        el("reviewMeta").textContent = "Elapsed: 1m · Last update: just now";
+        el("reviewProgress").classList.remove("hidden");
+        el("reviewProgressBar").style.width = "35%";
+        setTimeout(() => {
+          el("reviewProgressBar").style.width = "100%";
+        }, 300);
+        setTimeout(() => {
+          state.reviewReady = true;
+          el("reviewProgress").classList.add("hidden");
+          el("reviewSummary").classList.remove("hidden");
+          el("reviewMeta").textContent = "Elapsed: 2m · Last update: just now";
+          updateUI();
+        }, 700);
+      };
+
+      const simulateImport = () => {
+        state.importRunning = true;
+        el("importMeta").textContent = "Elapsed: 1m · Last update: just now";
+        updateUI();
+        setTimeout(() => {
+          state.importRunning = false;
+          state.importComplete = true;
+          el("importMeta").textContent = "Elapsed: 4m · Last update: just now";
+          el("reportNotice").textContent = "Import completed. Report ready for download.";
+          el("reportTable").classList.remove("hidden");
+          updateUI();
+        }, 1200);
+      };
+
+      const onSignin = () => {
+        state.signedIn = true;
+        state.progressIndex = 1;
+        el("statusPill").textContent = "Signed in · Ready";
+        setStep("connect");
+      };
+      el("btnSignin").addEventListener("click", onSignin);
+      el("btnSigninGoogle").addEventListener("click", onSignin);
+      el("btnSigninApple").addEventListener("click", onSignin);
+
+      el("btnConnect").addEventListener("click", () => {
+        state.connected = true;
+        state.progressIndex = 2;
+        setStep("review");
+        simulateReview();
+      });
+
+      el("btnApprove").addEventListener("click", () => {
+        state.reviewApproved = true;
+        state.progressIndex = 3;
+        setStep("import");
+        simulateImport();
+      });
+
+      el("btnLoadMore").addEventListener("click", () => {
+        state.flightsShown = Math.min(state.flightsShown + 3, flights.length);
+        updateUI();
+      });
+
+      navItems.forEach((item) => {
+        item.addEventListener("click", () => {
+          const step = item.dataset.step;
+          if (lockReason(step)) return;
+          setStep(step);
+        });
+      });
+
+
+      document.querySelectorAll(".accordion-header").forEach((header) => {
+        header.addEventListener("click", () => {
+          const step = header.dataset.step;
+          if (lockReason(step)) return;
+          setStep(step);
+        });
+      });
+
+      updateUI();
+      updateNav();
+      updateMobileStepper();
+    </script>
+  </body>
+</html>

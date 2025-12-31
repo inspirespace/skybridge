@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Skybridge Mockup A v3 — Calm Modern Aviation</title>
+    <style>
+      :root {
+        --ink: #0d1321;
+        --muted: #5c6b7a;
+        --panel: rgba(255, 255, 255, 0.9);
+        --panel-strong: #ffffff;
+        --border: rgba(13, 19, 33, 0.1);
+        --accent: #1a68ff;
+        --accent-2: #0f172a;
+        --ok: #198754;
+        --warn: #b45309;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Sora", "Avenir Next", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: linear-gradient(180deg, #e9f2fb 0%, #d9e6f2 40%, #e7edf5 100%);
+        min-height: 100vh;
+      }
+      .noise {
+        position: fixed;
+        inset: 0;
+        background-image: radial-gradient(rgba(255,255,255,0.25) 1px, transparent 1px);
+        background-size: 4px 4px;
+        opacity: 0.2;
+        pointer-events: none;
+      }
+      .frame {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 42px 24px 120px;
+        position: relative;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .mark {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #1a68ff, #0f172a);
+        display: grid;
+        place-items: center;
+        color: white;
+        font-weight: 700;
+      }
+      .title { font-weight: 700; letter-spacing: 0.08em; font-size: 0.9rem; }
+      .subtitle { color: var(--muted); font-size: 0.85rem; }
+      .status {
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(26, 104, 255, 0.1);
+        color: #1543a6;
+        font-weight: 600;
+        font-size: 0.85rem;
+      }
+      .hero {
+        margin-top: 28px;
+        padding: 26px 28px;
+        border-radius: 18px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+      }
+      .hero h1 { margin: 0 0 6px; font-size: 2rem; }
+      .hero p { margin: 0; color: var(--muted); }
+      .stepper {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+      }
+      .step {
+        border-radius: 999px;
+        padding: 8px 12px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        font-size: 0.85rem;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 20px;
+      }
+      .section {
+        background: var(--panel);
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        padding: 18px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+      }
+      .section.locked {
+        opacity: 0.6;
+      }
+      .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.06);
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+      .badge.ok { background: rgba(25, 135, 84, 0.12); color: #136f43; }
+      .badge.warn { background: rgba(180, 83, 9, 0.12); color: #8a3a06; }
+      .field {
+        background: rgba(15, 23, 42, 0.06);
+        border-radius: 10px;
+        height: 40px;
+        margin-top: 10px;
+      }
+      .span-6 { grid-column: span 6; }
+      .span-4 { grid-column: span 4; }
+      .span-8 { grid-column: span 8; }
+      .span-12 { grid-column: span 12; }
+      .table {
+        margin-top: 10px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        overflow: hidden;
+        background: rgba(255,255,255,0.85);
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1.1fr 1fr 1fr 1fr 1fr 0.7fr;
+        gap: 10px;
+        padding: 10px 12px;
+        font-size: 0.85rem;
+      }
+      .row.head { background: rgba(15, 23, 42, 0.05); font-weight: 600; }
+      .cta-row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+      .cta { background: var(--accent); color: white; padding: 10px 16px; border-radius: 10px; border: none; font-weight: 600; }
+      .cta.secondary { background: var(--accent-2); }
+      .ghost { background: transparent; border: 1px solid var(--border); padding: 9px 14px; border-radius: 10px; color: var(--muted); }
+      .progress { background: rgba(26, 104, 255, 0.12); border-radius: 999px; height: 10px; overflow: hidden; margin-top: 10px; }
+      .progress > div { width: 45%; height: 100%; background: linear-gradient(90deg, #1a68ff, #70a7ff); }
+      .notice {
+        border-radius: 12px;
+        padding: 10px 12px;
+        background: rgba(26, 104, 255, 0.08);
+        border: 1px solid rgba(26, 104, 255, 0.18);
+        color: #1244a6;
+        font-size: 0.85rem;
+        margin-top: 10px;
+      }
+      @media (max-width: 980px) {
+        .span-6, .span-4, .span-8 { grid-column: span 12; }
+        header { flex-direction: column; align-items: flex-start; }
+        .row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="noise"></div>
+    <div class="frame">
+      <header>
+        <div class="brand">
+          <div class="mark">SB</div>
+          <div>
+            <div class="title">SKYBRIDGE</div>
+            <div class="subtitle">CloudAhoy → FlySto</div>
+          </div>
+        </div>
+        <div class="status">Signed in · Ready</div>
+      </header>
+
+      <section class="hero">
+        <h1>Import flights with confidence</h1>
+        <p>Run a review, verify the summary, then approve the import.</p>
+      </section>
+
+      <section class="stepper">
+        <div class="step">1. Connect</div>
+        <div class="step">2. Review</div>
+        <div class="step">3. Import</div>
+        <div class="step">4. Report</div>
+      </section>
+
+      <section class="layout">
+        <div class="section span-6">
+          <div class="section-header">
+            <h3>CloudAhoy</h3>
+            <span class="badge ok">Connected</span>
+          </div>
+          <div class="field"></div>
+          <div class="field"></div>
+          <div class="badge">Credentials used only for this job</div>
+        </div>
+        <div class="section span-6">
+          <div class="section-header">
+            <h3>FlySto</h3>
+            <span class="badge ok">Connected</span>
+          </div>
+          <div class="field"></div>
+          <div class="field"></div>
+          <div class="badge">Credentials used only for this job</div>
+        </div>
+
+        <div class="section span-4">
+          <div class="section-header">
+            <h3>Filters</h3>
+            <span class="badge">Optional</span>
+          </div>
+          <div class="field"></div>
+          <div class="field"></div>
+          <div class="field"></div>
+        </div>
+
+        <div class="section span-8">
+          <div class="section-header">
+            <h3>Review summary</h3>
+            <span class="badge warn">Missing tails: 2</span>
+          </div>
+          <div class="badge">46 flights · 92.4 hours · Earliest 2025‑01‑10</div>
+          <div class="table">
+            <div class="row head">
+              <div>ID</div>
+              <div>Date</div>
+              <div>Tail</div>
+              <div>Origin</div>
+              <div>Destination</div>
+              <div>Status</div>
+            </div>
+            <div class="row">
+              <div>CHA‑981</div>
+              <div>2025‑11‑21</div>
+              <div>N12SB</div>
+              <div>KPAO</div>
+              <div>KTVL</div>
+              <div>Ready</div>
+            </div>
+          </div>
+          <div class="notice">2 flights are missing tail numbers. You can still import.</div>
+        </div>
+
+        <div class="section span-12">
+          <div class="section-header">
+            <h3>Import</h3>
+            <span class="badge">Locked until review approved</span>
+          </div>
+          <div class="progress"><div></div></div>
+          <div class="cta-row">
+            <button class="cta">Run review</button>
+            <button class="cta secondary">Approve import</button>
+            <button class="ghost">Clear job</button>
+          </div>
+        </div>
+
+        <div class="section span-12 locked">
+          <div class="section-header">
+            <h3>Report</h3>
+            <span class="badge">Locked until import completes</span>
+          </div>
+          <div class="notice">Report unlocks when the import finishes.</div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

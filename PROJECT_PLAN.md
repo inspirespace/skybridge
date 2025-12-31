@@ -86,6 +86,32 @@
 - Dev web UI now clears stale saved job state automatically and exposes a manual clear action to unblock new runs.
 - Lambda handlers now guard invalid job IDs and missing artifacts, returning 404s instead of 502s.
 - Lambda build now bundles the full backend package and a handler shim so API Gateway handlers can import backend modules in Lambda.
+- Consolidated design iterations into numbered folders under `design/001`–`design/006` for easier tracking.
+- Added an enterprise-focused wireframe with explicit flow/states under `design/007/wireframe-enterprise-flow.html`; wireframe iteration now focuses on concrete UI/state details.
+- Added a click-dummy enterprise flow wireframe with desktop + mobile stepper behavior under `design/008/click-dummy-enterprise-flow.html`.
+- Added a click-dummy enterprise flow with collapsible review/import/report sections and a sticky mobile stepper under `design/009/click-dummy-enterprise-flow.html`.
+- Updated the click-dummy to keep the left stepper sticky on desktop in `design/009/click-dummy-enterprise-flow.html`.
+- Updated `design/009/click-dummy-enterprise-flow.html` so main steps are accordions (active open), previous steps are read-only, review auto-runs on connect, import auto-starts on approve, report is merged into import, and the inline helper section is removed.
+- Added a required “Sign in” step to the click-dummy flow so users must authenticate before connecting accounts.
+- Refined the click-dummy with clearer grouping, review filter copy, review progress, action ordering, and a concrete import report summary in `design/009/click-dummy-enterprise-flow.html`.
+- Expanded the sign-in step to explain why authentication is required and added social login options in `design/009/click-dummy-enterprise-flow.html`.
+- Increased spacing and padding in `design/009/click-dummy-enterprise-flow.html` to reduce UI elements feeling crowded.
+- Simplified the Review filters UI in `design/009/click-dummy-enterprise-flow.html` and removed the incomplete-flights toggle to reduce clutter.
+- Added spacing around progress bars in `design/009/click-dummy-enterprise-flow.html` to prevent UI elements from touching.
+- Improved the import report table layout in `design/009/click-dummy-enterprise-flow.html` with fewer columns, status tags, and clearer file styling.
+- Restyled review helper text in `design/009/click-dummy-enterprise-flow.html` to use subtle helper copy instead of notice boxes.
+- Removed the redundant import status panel in `design/009/click-dummy-enterprise-flow.html`, leaving elapsed/last update as the primary status line.
+- Added zebra striping, tighter table spacing, and tooltip hints to the import report table in `design/009/click-dummy-enterprise-flow.html`.
+- Refined locked-state pill wording in `design/009/click-dummy-enterprise-flow.html` to be more action-oriented.
+- Updated sign-in rationale copy in `design/009/click-dummy-enterprise-flow.html` to remove the FlySto account attachment phrasing.
+- Adjusted Review section spacing in `design/009/click-dummy-enterprise-flow.html` so helper text sits closer to inputs and panels have more breathing room.
+- Added a review elapsed-time panel in `design/009/click-dummy-enterprise-flow.html` alongside the review status.
+- Removed mobile stepper Prev/Next buttons in `design/009/click-dummy-enterprise-flow.html` so progression is driven by primary actions.
+- Emphasized completed step pills in `design/009/click-dummy-enterprise-flow.html` for stronger visual feedback.
+- Updated the Review section pill to show “Approved” in green after approval in `design/009/click-dummy-enterprise-flow.html`.
+- Updated the Import “Completed” pill to use green styling in `design/009/click-dummy-enterprise-flow.html`.
+- Reduced vertical spacing between sections in `design/009/click-dummy-enterprise-flow.html` for a tighter flow.
+- Fixed a null reference in `design/009/click-dummy-enterprise-flow.html` after removing mobile stepper buttons.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).
