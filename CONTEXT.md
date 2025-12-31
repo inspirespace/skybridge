@@ -228,4 +228,5 @@ See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 - Restyled the credentials notice as an info (blue) message panel.
 - Reduced the mobile date-range spacing by hiding the ghost end-date label and tightening label spacing.
 - Increased sign-in hero/subtext line-height and margins for more breathing room.
-- Linked the Manrope font via Google Fonts so it renders reliably.
+- Switched the UI font to IBM Plex Sans via Google Fonts.
+- Added extra padding to the sign-in accordion body for a more spacious intro layout.

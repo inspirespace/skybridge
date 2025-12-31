@@ -6,7 +6,7 @@
     <title>Skybridge Click Dummy 009 — Enterprise Flow (Accordion Steps)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
       :root {
         --ink: #101828;
@@ -26,7 +26,7 @@
       body {
         margin: 0;
         min-height: 100vh;
-        font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
+        font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
         background: var(--bg);
         color: var(--ink);
       }
@@ -152,6 +152,7 @@
       .accordion-header .pill { margin-right: 2px; }
       .accordion-body { padding: 0 10px; display: none; font-size: 1rem; line-height: 1.4; }
       .accordion.open .accordion-body { display: block; padding: 10px; }
+      .accordion-body.intro { padding: 18px 16px 16px; }
       .accordion.readonly { opacity: 0.75; }
 
       .mobile-stepper {
@@ -292,7 +293,7 @@
               <div>1 · Sign in</div>
               <div id="signinPill" class="pill">Required</div>
             </div>
-            <div class="accordion-body">
+            <div class="accordion-body intro">
               <div class="hero-copy">
                 Skybridge imports your CloudAhoy flights into FlySto. You’ll connect both accounts, review the summary,
                 and approve the import. A report is generated at the end so you can verify results.
