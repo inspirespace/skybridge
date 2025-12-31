@@ -86,6 +86,43 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Updated the Import “Completed” pill to use green styling in `design/009/click-dummy-enterprise-flow.html`.
 - Reduced vertical spacing between sections in `design/009/click-dummy-enterprise-flow.html` for a tighter flow.
 - Fixed a null reference in `design/009/click-dummy-enterprise-flow.html` after removing mobile stepper buttons.
+- Updated mobile stepper state copy, strengthened completed-state styling, standardized elapsed panels, improved responsive table rendering, and added success-state emphasis in `design/009/click-dummy-enterprise-flow.html`.
+- Tightened helper text spacing under Review inputs in `design/009/click-dummy-enterprise-flow.html`.
+- Merged the review completion and summary into a single success message in `design/009/click-dummy-enterprise-flow.html`.
+- Unified progress + elapsed time into a single component with updated styling in `design/009/click-dummy-enterprise-flow.html`.
+- Improved the review table layout in `design/009/click-dummy-enterprise-flow.html` to keep ID and status on separate columns across breakpoints.
+- Renamed the review table “Tail” column to “Registration” in `design/009/click-dummy-enterprise-flow.html`.
+- Reduced overall border radius in `design/009/click-dummy-enterprise-flow.html` for a subtler, sharper look.
+- Removed the top-right signed-out pill and moved the SKYBRIDGE brand into the sticky left stepper in `design/009/click-dummy-enterprise-flow.html`.
+- Added an onboarding intro and expectations summary to the Sign in step in `design/009/click-dummy-enterprise-flow.html`.
+- Increased simulated review/import durations in `design/009/click-dummy-enterprise-flow.html` for easier inspection of loading states.
+- Added a footer with quick links (Imprint, Privacy, Terms, Support) in `design/009/click-dummy-enterprise-flow.html`.
+- Added copyright text (© 2025 Inspirespace e.U.) to the footer in `design/009/click-dummy-enterprise-flow.html`.
+- Styled the mobile stepper pill to look non-interactive in `design/009/click-dummy-enterprise-flow.html`.
+- Updated the Import section so the report notice only appears on completion and aligned report spacing with the Review section in `design/009/click-dummy-enterprise-flow.html`.
+- Updated the import report table in `design/009/click-dummy-enterprise-flow.html` to show concrete fields from `review.json` and `import_report.json` fixtures.
+- Added a post-import conclusion box with next steps and data retention options in `design/009/click-dummy-enterprise-flow.html`.
+- Reduced border radius further across `design/009/click-dummy-enterprise-flow.html` for a sharper aesthetic.
+- Restored fully rounded pills in `design/009/click-dummy-enterprise-flow.html`.
+- Updated review table flight IDs to realistic CloudAhoy-style identifiers in `design/009/click-dummy-enterprise-flow.html`.
+- Made report table metrics clickable with a detail panel in `design/009/click-dummy-enterprise-flow.html` to clarify the dashed underline behavior.
+- Tightened overall section spacing in `design/009/click-dummy-enterprise-flow.html`.
+- Hid the “Load more flights” button until review completes in `design/009/click-dummy-enterprise-flow.html`.
+- Added Start over and Sign out controls in the left nav of `design/009/click-dummy-enterprise-flow.html`, with reset behavior and disabling after import completion.
+- Rephrased “missing tails” to “missing registration” and added warning status tags in the review table for consistency in `design/009/click-dummy-enterprise-flow.html`.
+- Hid the “Download report” button until import completes in `design/009/click-dummy-enterprise-flow.html`.
+- Moved the report table Status column to the end for consistency in `design/009/click-dummy-enterprise-flow.html`.
+- Removed the dashed border styling from the mobile stepper pill in `design/009/click-dummy-enterprise-flow.html`.
+- Added checkmarks for completed steps in the left navigation of `design/009/click-dummy-enterprise-flow.html`.
+- Tightened footer spacing in `design/009/click-dummy-enterprise-flow.html` to be denser and sit away from the border.
+- Kept the previous completed step expanded alongside the current step in `design/009/click-dummy-enterprise-flow.html`.
+- Added a danger-styled button for “Delete results now” in `design/009/click-dummy-enterprise-flow.html`.
+- Standardized step headings to use dot-separated numbering (e.g., “3 · Review”) in `design/009/click-dummy-enterprise-flow.html`.
+- Tightened review helper spacing and compacted the max-flights input in `design/009/click-dummy-enterprise-flow.html`.
+- Truncated long flight IDs in the review table with a tail-only display and full ID on hover in `design/009/click-dummy-enterprise-flow.html`.
+- Refined left-nav action button layout and styling in `design/009/click-dummy-enterprise-flow.html`.
+- Ensured the Import step shows a checkmark when import completes in the left nav of `design/009/click-dummy-enterprise-flow.html`.
+- Added horizontal padding to the footer in `design/009/click-dummy-enterprise-flow.html`.
 
 ## Required API Details
 These are needed to complete the adapters:
