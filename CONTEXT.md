@@ -120,9 +120,22 @@ Build a Dockerized CLI to migrate flights from CloudAhoy to FlySto with minimal 
 - Standardized step headings to use dot-separated numbering (e.g., “3 · Review”) in `design/009/click-dummy-enterprise-flow.html`.
 - Tightened review helper spacing and compacted the max-flights input in `design/009/click-dummy-enterprise-flow.html`.
 - Truncated long flight IDs in the review table with a tail-only display and full ID on hover in `design/009/click-dummy-enterprise-flow.html`.
+- Rendered review table statuses using pill tags (success/warn) to match the import report styling in `design/009/click-dummy-enterprise-flow.html`.
+- Ensured the left-nav checkmarks update after import completion by refreshing nav state in `design/009/click-dummy-enterprise-flow.html`.
+- Added extra spacing above the review progress card in `design/009/click-dummy-enterprise-flow.html`.
+- Simplified review/import completion notices to neutral wording and added warning styling for missing-registration summaries in `design/009/click-dummy-enterprise-flow.html`.
+- Improved mobile table rendering in `design/009/click-dummy-enterprise-flow.html` to stack labeled fields cleanly and wrap filenames.
+- Reworked the import summary to remove file references and moved details to tooltips in `design/009/click-dummy-enterprise-flow.html`.
+- Collapsed completed steps so only the active step stays expanded and tightened section spacing in `design/009/click-dummy-enterprise-flow.html`.
+- Removed the redundant “Report ready for download” notice from the Import section in `design/009/click-dummy-enterprise-flow.html`.
+- Added inline icons to nav action buttons and kept them on one line in `design/009/click-dummy-enterprise-flow.html`.
+- Standardized the Connect step pill to read “Sign in required” for consistency in `design/009/click-dummy-enterprise-flow.html`.
+- Fixed footer pinning by letting the main layout flex-grow in `design/009/click-dummy-enterprise-flow.html`.
 - Refined left-nav action button layout and styling in `design/009/click-dummy-enterprise-flow.html`.
 - Ensured the Import step shows a checkmark when import completes in the left nav of `design/009/click-dummy-enterprise-flow.html`.
 - Added horizontal padding to the footer in `design/009/click-dummy-enterprise-flow.html`.
+- Aligned the footer with the main layout by nesting it inside the frame in `design/009/click-dummy-enterprise-flow.html`.
+- Pinned the footer to the bottom of the page using a full-height frame layout in `design/009/click-dummy-enterprise-flow.html`.
 
 ## Required API Details
 These are needed to complete the adapters:
@@ -144,3 +157,18 @@ See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 1) Confirm crew role mapping via `/api/user-crew-roles` (PIC/Student/Instructor/etc.) and validate assignments show up on FlySto logs.
 2) Decide whether to persist raw CloudAhoy payloads for audit/replay.
 3) Add backend multi-tenant auth, billing, and per-user job tracking.
+
+## Latest Updates
+- Adjusted click-dummy layout to keep the footer aligned with the main frame and pinned to the bottom via flex layout.
+- Restored green success styling on the review progress card once the review completes.
+- Updated review table status cells to use pill-style badges for clearer scanning.
+- Split the import reporting area into two cards: Review summary and Import results with concise key rows.
+- Made tables horizontally scrollable on smaller screens instead of stacked layouts.
+- Review table status pills now follow the OK / Needs review styling.
+- Tightened accordion spacing and removed extra space when sections collapse.
+- Standardized status pill styling so review and import tables match.
+- Reworked accordion body collapse behavior to eliminate empty rows in collapsed states.
+- Moved Status to the first column in all tables for faster scanning on mobile.
+- Added extra spacing between the download report button and the import conclusion notice.
+- Replaced inline spacing with reusable spacing utilities and CSS vars.
+- Fixed review table status pill rendering by correcting the HTML class string.

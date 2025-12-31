@@ -15,20 +15,25 @@
         --accent-2: #1f2937;
         --ok: #1f7a4a;
         --warn: #b45309;
+        --space-2: 10px;
+        --space-3: 16px;
+        --space-4: 20px;
       }
       * { box-sizing: border-box; }
       body {
         margin: 0;
+        min-height: 100vh;
         font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
         background: var(--bg);
         color: var(--ink);
       }
-      .frame { max-width: 1200px; margin: 0 auto; padding: 36px 22px 160px; }
+      .page { min-height: 100vh; display: flex; flex-direction: column; }
+      .frame { max-width: 1200px; margin: 0 auto; padding: 36px 22px 160px; display: flex; flex-direction: column; flex: 1 0 auto; width: 100%; }
       header { display: none; }
       .logo { font-weight: 700; letter-spacing: 0.08em; }
       .status { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.85rem; color: var(--muted); }
 
-      .layout { display: grid; grid-template-columns: 260px 1fr; gap: 20px; margin-top: 22px; }
+      .layout { display: grid; grid-template-columns: 260px 1fr; gap: 20px; margin-top: 22px; flex: 1 0 auto; }
       .nav {
         background: var(--panel);
         border: 1px solid var(--border);
@@ -40,14 +45,14 @@
       }
       .nav-brand { font-weight: 700; letter-spacing: 0.08em; margin-bottom: 12px; }
       .nav-actions { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px; display: grid; gap: 8px; }
-      .nav-actions .ghost { width: 100%; text-align: left; padding: 10px 12px; }
+      .nav-actions .ghost { width: 100%; text-align: left; padding: 10px 12px; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
       .nav-actions .ghost.secondary { background: #f8f9fb; color: var(--muted); }
       .nav-actions .ghost.secondary:hover { color: var(--ink); }
       .nav .item { padding: 9px 10px; border-radius: 4px; margin-bottom: 6px; background: #f8f9fb; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px; }
       .nav .item .check { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--border); display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; color: var(--ok); background: #eef7f2; }
       .nav .item.pending .check { visibility: hidden; }
       .nav .item.active { border: 1px solid var(--border); background: #ffffff; }
-      .content { display: grid; gap: 10px; }
+      .content { display: grid; gap: 6px; }
 
       .card { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 18px; }
       .card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -78,7 +83,8 @@
       .cta:disabled, .ghost:disabled { opacity: 0.5; cursor: not-allowed; }
 
       .notice { border: 1px solid var(--border); border-radius: 6px; padding: 14px; font-size: 0.85rem; color: var(--muted); background: #fafafa; }
-      .notice.success { border-color: rgba(31, 122, 74, 0.3); background: rgba(31, 122, 74, 0.08); color: #1b6b3f; font-weight: 600; }
+      .notice.success { border-color: rgba(31, 122, 74, 0.25); background: rgba(31, 122, 74, 0.05); color: #1b6b3f; font-weight: 600; }
+      .notice.warn { border-color: rgba(180, 83, 9, 0.3); background: rgba(180, 83, 9, 0.08); color: #8a3a06; font-weight: 600; }
       .report-stack { display: grid; gap: 12px; margin-top: 10px; }
       .helper { font-size: 0.82rem; color: #7a8699; margin-top: 0; }
       .input-compact { max-width: 140px; }
@@ -89,28 +95,29 @@
       .progress-row strong { color: var(--ink); font-weight: 600; }
       .progress-card.success { border-color: rgba(31, 122, 74, 0.3); background: rgba(31, 122, 74, 0.08); }
 
-      .table { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-top: 14px; background: #ffffff; }
-      .table.review .thead, .table.review .trow { display: grid; grid-template-columns: 1.6fr 0.8fr 0.8fr 0.7fr 0.7fr 0.8fr; gap: 8px; padding: 8px 10px; font-size: 0.84rem; align-items: center; }
-      .table.report .thead, .table.report .trow { display: grid; grid-template-columns: 1.3fr 0.6fr 1.1fr 1fr 0.9fr; gap: 8px; padding: 8px 10px; font-size: 0.84rem; align-items: center; }
+      .table { border: 1px solid var(--border); border-radius: 6px; overflow-x: auto; margin-top: 14px; background: #ffffff; }
+      .table.review .thead, .table.review .trow { display: grid; grid-template-columns: 0.7fr 1.6fr 0.8fr 0.8fr 0.7fr 0.7fr; gap: 8px; padding: 8px 10px; font-size: 0.84rem; align-items: center; min-width: 760px; }
+      .table.report .thead, .table.report .trow { display: grid; grid-template-columns: 0.7fr 1.6fr 0.8fr; gap: 8px; padding: 8px 10px; font-size: 0.84rem; align-items: center; min-width: 520px; }
       .table .thead { background: #f8f9fb; font-weight: 600; }
       .table .trow { border-top: 1px solid var(--border); }
       .table .trow:nth-child(even) { background: #fbfcfe; }
       .tag { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border); font-size: 0.78rem; color: var(--muted); }
       .tag.ok { color: var(--ok); border-color: rgba(31, 122, 74, 0.3); background: rgba(31, 122, 74, 0.08); }
       .tag.warn { color: var(--warn); border-color: rgba(180, 83, 9, 0.3); background: rgba(180, 83, 9, 0.08); }
+      .status-pill { display: inline-flex; align-items: center; padding: 3px 12px; border-radius: 999px; border: 1px solid var(--border); font-size: 0.78rem; color: var(--muted); font-weight: 600; letter-spacing: 0.01em; }
+      .status-pill.ok { color: var(--ok); border-color: rgba(31, 122, 74, 0.3); background: rgba(31, 122, 74, 0.08); }
+      .status-pill.warn { color: var(--warn); border-color: rgba(180, 83, 9, 0.3); background: rgba(180, 83, 9, 0.08); }
       .file { font-family: \"SFMono-Regular\", \"Menlo\", \"Consolas\", monospace; font-size: 0.78rem; color: var(--muted); }
       .mono { font-family: \"SFMono-Regular\", \"Menlo\", \"Consolas\", monospace; font-size: 0.8rem; }
       .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
       .tip { border-bottom: 1px dotted #c0c6d4; cursor: help; }
-      .metric-link { border-bottom: 1px dashed #b7c0d4; cursor: pointer; color: inherit; }
-      .metric-link:hover { color: var(--ink); }
-      .metric-link.active { border-bottom-color: var(--ink); color: var(--ink); }
+      .metric-link { border-bottom: 1px dashed #b7c0d4; cursor: help; color: inherit; }
 
       .accordion { border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
-      .accordion + .accordion { margin-top: 8px; }
-      .accordion-header { padding: 14px 16px; background: #f8f9fb; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-      .accordion-body { padding: 22px; display: none; }
-      .accordion.open .accordion-body { display: block; }
+      .accordion + .accordion { margin-top: 4px; }
+      .accordion-header { padding: 10px 14px; background: #f8f9fb; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+      .accordion-body { padding: 0 14px; max-height: 0; overflow: hidden; }
+      .accordion.open .accordion-body { padding: 14px; max-height: 2000px; }
       .accordion.readonly { opacity: 0.75; }
 
       .mobile-stepper {
@@ -129,17 +136,21 @@
       .mobile-stepper .bar { height: 6px; background: #eef0f4; border-radius: 6px; overflow: hidden; margin-top: 8px; }
 
       footer {
-        margin-top: 18px;
+        margin-top: auto;
         border-top: 1px solid var(--border);
-        padding-top: 10px;
-        padding-left: 4px;
-        padding-right: 4px;
+        padding: 14px 0 24px;
         color: var(--muted);
         font-size: 0.85rem;
+      }
+      .footer-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 22px;
         display: flex;
         justify-content: space-between;
         gap: 12px;
         flex-wrap: wrap;
+        align-items: center;
       }
       .footer-links { display: flex; gap: 12px; flex-wrap: wrap; }
       .footer-links a { color: var(--muted); text-decoration: none; }
@@ -148,23 +159,20 @@
       .mobile-actions { display: none; }
 
       .hidden { display: none; }
+      .space-top-3 { margin-top: var(--space-3); }
+      .space-top-4 { margin-top: var(--space-4); }
 
       @media (max-width: 900px) {
         .layout { grid-template-columns: 1fr; }
         header { flex-direction: column; align-items: flex-start; }
         .nav { display: none; }
         .mobile-stepper { display: block; }
-        .table .thead { display: none; }
-        .table .trow { grid-template-columns: 1fr; padding: 10px 12px; }
-        .table .trow > div { display: grid; grid-template-columns: 120px 1fr; gap: 8px; padding: 4px 0; }
-        .table.review .trow > div { grid-template-columns: 90px 1fr; }
-        .table .trow > div::before { content: attr(data-label); color: var(--muted); font-size: 0.8rem; }
-        .file { font-size: 0.75rem; }
         .row { grid-template-columns: 1fr; }
       }
     </style>
   </head>
   <body>
+    <div class="page">
     <div class="frame">
 
       <div class="layout">
@@ -175,8 +183,8 @@
           <div class="item pending" data-step="review"><span class="check">✓</span>3 · Review</div>
           <div class="item pending" data-step="import"><span class="check">✓</span>4 · Import</div>
           <div class="nav-actions">
-            <button class="ghost secondary" id="btnStartOver">Start over</button>
-            <button class="ghost" id="btnSignOut">Sign out</button>
+            <button class="ghost secondary" id="btnStartOver"><span aria-hidden="true">↻</span>Start over</button>
+            <button class="ghost" id="btnSignOut"><span aria-hidden="true">↗</span>Sign out</button>
           </div>
         </aside>
 
@@ -254,7 +262,7 @@
                 </div>
               </div>
 
-              <div class="progress-card" id="reviewProgressCard">
+              <div class="progress-card" id="reviewProgressCard" style="margin-top: 16px;">
                 <div class="progress-row">
                   <strong id="reviewStatus">Review not started</strong>
                   <span id="reviewMeta">Elapsed: 0m · Last update: --</span>
@@ -262,10 +270,10 @@
                 <div class="progress"><div id="reviewProgressBar"></div></div>
               </div>
 
-              <div class="notice hidden" id="reviewSummary" style="margin-top: 10px;">Review complete. Summary: 12 flights · 24.6 hours · Missing registration: 2</div>
+              <div class="notice hidden" id="reviewSummary" style="margin-top: 10px;">Summary: 12 flights · 24.6 hours · Registration missing: 2</div>
 
               <div class="table review hidden" id="reviewTable">
-                <div class="thead"><div>Flight ID</div><div>Date</div><div>Registration</div><div>Origin</div><div>Destination</div><div>Status</div></div>
+                <div class="thead"><div>Status</div><div>Flight ID</div><div>Date</div><div>Registration</div><div>Origin</div><div>Destination</div></div>
                 <div id="reviewRows"></div>
               </div>
               <div class="cta-row">
@@ -291,54 +299,58 @@
                 <div class="progress"><div id="importProgress"></div></div>
               </div>
 
-                <div class="report-stack">
-                  <div class="notice hidden" id="reportNotice">Import completed. Report ready for download.</div>
-                  <div class="table report hidden" id="reportTable">
-                <div class="thead"><div>Metric</div><div>Value</div><div>Notes</div><div>File</div><div>Status</div></div>
-                <div class="trow">
-                  <div data-label="Metric"><span class="metric-link" data-detail="reviewed">Reviewed flights</span></div>
-                  <div data-label="Value">46</div>
-                  <div data-label="Notes">Ready: 46 · Skipped: 0</div>
-                  <div data-label="File" class="file">review.json</div>
-                  <div data-label="Status"><span class="tag ok">OK</span></div>
+                <div class="report-stack hidden" id="reportTable">
+                  <div class="card">
+                    <div class="card-header" style="margin-bottom: 8px;">
+                      <strong>Review summary</strong>
+                    </div>
+                    <div class="table report">
+                      <div class="thead"><div>Status</div><div>Metric</div><div>Value</div></div>
+                      <div class="trow">
+                        <div data-label="Status"><span class="status-pill ok">OK</span></div>
+                        <div data-label="Metric"><span class="metric-link" title="Count derived from the review summary (ready + skipped).">Reviewed flights</span></div>
+                        <div data-label="Value">46</div>
+                      </div>
+                      <div class="trow">
+                        <div data-label="Status"><span class="status-pill ok">OK</span></div>
+                        <div data-label="Metric"><span class="metric-link" title="Flights ready to import based on the review pass.">Ready to import</span></div>
+                        <div data-label="Value">46</div>
+                      </div>
+                      <div class="trow">
+                        <div data-label="Status"><span class="status-pill warn">Needs review</span></div>
+                        <div data-label="Metric"><span class="metric-link" title="Flights missing registration details that need attention.">Registration missing</span></div>
+                        <div data-label="Value">2</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="card-header" style="margin-bottom: 8px;">
+                      <strong>Import results</strong>
+                    </div>
+                    <div class="table report">
+                      <div class="thead"><div>Status</div><div>Metric</div><div>Value</div></div>
+                      <div class="trow">
+                        <div data-label="Status"><span class="status-pill ok">OK</span></div>
+                        <div data-label="Metric"><span class="metric-link" title="Flights sent for import based on the approved review.">Import attempted</span></div>
+                        <div data-label="Value">46</div>
+                      </div>
+                      <div class="trow">
+                        <div data-label="Status"><span class="status-pill ok">OK</span></div>
+                        <div data-label="Metric"><span class="metric-link" title="Flights successfully created in FlySto; failures remain in the report.">Import succeeded</span></div>
+                        <div data-label="Value">46</div>
+                      </div>
+                      <div class="trow">
+                        <div data-label="Status"><span class="status-pill ok">Clear</span></div>
+                        <div data-label="Metric"><span class="metric-link" title="Items still processing or failed at the time the report was generated.">Pending or failed</span></div>
+                        <div data-label="Value">0</div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div class="trow">
-                  <div data-label="Metric"><span class="metric-link" data-detail="attempted">Import attempted</span></div>
-                  <div data-label="Value">46</div>
-                  <div data-label="Notes">From review_id match</div>
-                  <div data-label="File" class="file">import_report.json</div>
-                  <div data-label="Status"><span class="tag ok">OK</span></div>
-                </div>
-                <div class="trow">
-                  <div data-label="Metric"><span class="metric-link" data-detail="succeeded">Import succeeded</span></div>
-                  <div data-label="Value">46</div>
-                  <div data-label="Notes">Failed: 0 · Pending: 0</div>
-                  <div data-label="File" class="file">import_report.json</div>
-                  <div data-label="Status"><span class="tag ok">OK</span></div>
-                </div>
-                <div class="trow">
-                  <div data-label="Metric"><span class="metric-link" data-detail="queue">Processing queue</span></div>
-                  <div data-label="Value">0</div>
-                  <div data-label="Notes">Queue drained</div>
-                  <div data-label="File" class="file">import_report.json</div>
-                  <div data-label="Status"><span class="tag ok">OK</span></div>
-                </div>
-                <div class="trow">
-                  <div data-label="Metric"><span class="metric-link" data-detail="verification">Verification</span></div>
-                  <div data-label="Value">Resolved: 46</div>
-                  <div data-label="Notes">Missing: 0</div>
-                  <div data-label="File" class="file">import_report.json</div>
-                  <div data-label="Status"><span class="tag ok">OK</span></div>
-                </div>
-                </div>
-                <div class="notice hidden" id="reportDetail">
-                  <strong id="reportDetailTitle">Detail</strong>
-                  <div id="reportDetailBody" style="margin-top: 6px;">Select a metric to view details.</div>
-                </div>
-                <div class="cta-row">
+                <div class="cta-row space-top-4">
                   <button class="ghost hidden" id="btnDownload" disabled>Download report</button>
                 </div>
-                <div class="notice success hidden" id="importConclusion">
+                <div class="notice success hidden space-top-3" id="importConclusion">
                   Next steps: review your imported flights in FlySto, download the report for your records, and keep this
                   page bookmarked while results are retained. We keep run results for 10 days. You can delete them now if
                   you prefer.
@@ -352,25 +364,26 @@
           </section>
         </main>
       </div>
+      <footer aria-label="Footer">
+        <div class="footer-inner">
+          <div class="footer-links">
+            <a href="#">Imprint</a>
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
+            <a href="#">Support</a>
+          </div>
+          <div>© 2025 Inspirespace e.U.</div>
+        </div>
+      </footer>
+
+      <section class="mobile-stepper" aria-label="Mobile step navigation">
+        <div class="top">
+          <div id="mobileStepLabel">Step 1 of 4 · Sign in</div>
+          <div id="mobileStepState" class="pill">Next: Connect</div>
+        </div>
+        <div class="bar"><div id="mobileStepBar"></div></div>
+      </section>
     </div>
-
-    <footer aria-label="Footer" style="padding-bottom: 8px;">
-      <div class="footer-links">
-        <a href="#">Imprint</a>
-        <a href="#">Privacy</a>
-        <a href="#">Terms</a>
-        <a href="#">Support</a>
-      </div>
-      <div>© 2025 Inspirespace e.U.</div>
-    </footer>
-
-    <section class="mobile-stepper" aria-label="Mobile step navigation">
-      <div class="top">
-        <div id="mobileStepLabel">Step 1 of 4 · Sign in</div>
-        <div id="mobileStepState" class="pill">Next: Connect</div>
-      </div>
-      <div class="bar"><div id="mobileStepBar"></div></div>
-    </section>
 
     <script>
       const flights = [
@@ -449,18 +462,16 @@
       };
 
       const openAccordion = (step) => {
-        const currentIndex = stepOrder.indexOf(step);
         ["signin", "connect", "review", "import"].forEach((name) => {
           const acc = el(`acc${name[0].toUpperCase()}${name.slice(1)}`);
-          const index = stepOrder.indexOf(name);
-          const shouldOpen = index === currentIndex || (index === currentIndex - 1 && state.progressIndex > index);
-          acc.classList.toggle("open", shouldOpen);
+          acc.classList.toggle("open", name === step);
         });
       };
 
       const setReadonly = (step, readonly) => {
         const acc = el(`acc${step[0].toUpperCase()}${step.slice(1)}`);
         acc.classList.toggle("readonly", readonly);
+        acc.style.minHeight = "0";
         acc.querySelectorAll("input, button, select").forEach((node) => {
           node.disabled = readonly;
         });
@@ -471,50 +482,34 @@
       };
 
       const renderFlights = () => {
-        const rows = flights.slice(0, state.flightsShown).map((flight) => (
-          `<div class="trow">` +
-          `<div data-label="Flight ID" class="mono truncate" title="${flight.id}">…${flight.id.slice(-12)}</div>` +
-          `<div data-label="Date">${flight.date}</div>` +
-          `<div data-label="Registration">${flight.tail}</div>` +
-          `<div data-label="Origin">${flight.origin}</div>` +
-          `<div data-label="Destination">${flight.dest}</div>` +
-          `<div data-label="Status">${flight.status === "Registration missing" ? "<span class=\\\"tag warn\\\">Registration missing</span>" : "<span class=\\\"tag ok\\\">Ready</span>"}</div>` +
-          `</div>`
-        ));
+        const rows = flights.slice(0, state.flightsShown).map((flight) => {
+          const statusLabel = flight.status || "Ready";
+          const statusClass = statusLabel === "Ready" ? "ok" : "warn";
+          const statusText = statusLabel === "Ready" ? "OK" : "Needs review";
+          return (
+            `<div class="trow">` +
+            `<div data-label="Status"><span class="status-pill ${statusClass}">${statusText}</span></div>` +
+            `<div data-label="Flight ID" class="mono truncate" title="${flight.id}">…${flight.id.slice(-12)}</div>` +
+            `<div data-label="Date">${flight.date}</div>` +
+            `<div data-label="Registration">${flight.tail}</div>` +
+            `<div data-label="Origin">${flight.origin}</div>` +
+            `<div data-label="Destination">${flight.dest}</div>` +
+            `</div>`
+          );
+        });
         el("reviewRows").innerHTML = rows.join("");
       };
 
-      const reportDetailCopy = {
-        reviewed: {
-          title: "Reviewed flights",
-          body: "Count from review.json (summary.ready + summary.skipped).",
-        },
-        attempted: {
-          title: "Import attempted",
-          body: "Total flights attempted in import_report.json.",
-        },
-        succeeded: {
-          title: "Import succeeded",
-          body: "Succeeded flights; failed + pending are shown in Notes.",
-        },
-        queue: {
-          title: "Processing queue",
-          body: "FlySto processing queue size at report time.",
-        },
-        verification: {
-          title: "Verification",
-          body: "Resolved vs missing after verification pass.",
-        },
-      };
 
       const updateUI = () => {
+        updateNav();
         el("signinPill").textContent = state.signedIn ? "Signed in" : "Required";
         el("signinPill").className = `pill ${state.signedIn ? "ok" : ""}`;
 
         if (!state.signedIn) {
           el("connectPill").textContent = "Sign in required";
         } else {
-          el("connectPill").textContent = state.connected ? "Connected" : "Required";
+          el("connectPill").textContent = state.connected ? "Connected" : "Sign in required";
         }
         el("connectPill").className = `pill ${state.connected ? "ok" : ""}`;
 
@@ -544,15 +539,13 @@
 
         el("reviewTable").classList.toggle("hidden", !state.reviewReady);
         el("reviewSummary").classList.toggle("hidden", !state.reviewReady);
-        el("reviewSummary").classList.toggle("success", state.reviewReady);
+        el("reviewSummary").classList.toggle("success", false);
         el("reviewSummary").textContent = state.reviewReady
-          ? "Review complete. Summary: 12 flights · 24.6 hours · Missing registration: 2"
+          ? "Summary: 12 flights · 24.6 hours · Registration missing: 2"
           : "Summary appears after review runs.";
         el("reviewStatus").textContent = state.reviewReady ? "Review complete" : state.connected ? "Review running…" : "Review not started";
         el("reviewProgressCard").classList.toggle("success", state.reviewReady);
-        el("reportNotice").classList.toggle("success", state.importComplete);
-        el("reportNotice").classList.toggle("hidden", !state.importComplete);
-        el("reportDetail").classList.toggle("hidden", !state.importComplete);
+        el("reviewSummary").classList.toggle("warn", state.reviewReady);
         el("importConclusion").classList.toggle("hidden", !state.importComplete);
 
         renderFlights();
@@ -592,9 +585,7 @@
           state.importComplete = true;
           el("importStatus").textContent = "Import completed";
           el("importMeta").textContent = "Elapsed: 4m · Last update: just now";
-          el("reportNotice").textContent = "Import completed. Report ready for download.";
           el("reportTable").classList.remove("hidden");
-          el("reportDetail").classList.remove("hidden");
           el("importConclusion").classList.remove("hidden");
           updateUI();
         }, 2500);
@@ -621,9 +612,7 @@
         el("reviewSummary").classList.add("hidden");
         el("reviewTable").classList.add("hidden");
         el("reportTable").classList.add("hidden");
-        el("reportNotice").classList.add("hidden");
         el("importConclusion").classList.add("hidden");
-        el("reportDetail").classList.add("hidden");
         el("importProgress").style.width = "0%";
         el("reviewProgressBar").style.width = "0%";
         el("reviewStatus").textContent = "Review not started";
@@ -647,9 +636,7 @@
         el("reviewSummary").classList.add("hidden");
         el("reviewTable").classList.add("hidden");
         el("reportTable").classList.add("hidden");
-        el("reportNotice").classList.add("hidden");
         el("importConclusion").classList.add("hidden");
-        el("reportDetail").classList.add("hidden");
         el("importProgress").style.width = "0%";
         el("reviewProgressBar").style.width = "0%";
         el("reviewStatus").textContent = "Review not started";
@@ -696,18 +683,7 @@
         });
       });
 
-      document.querySelectorAll(".metric-link").forEach((link) => {
-        link.addEventListener("click", () => {
-          document.querySelectorAll(".metric-link").forEach((el) => el.classList.remove("active"));
-          link.classList.add("active");
-          const key = link.dataset.detail;
-          const detail = reportDetailCopy[key];
-          if (!detail) return;
-          el("reportDetailTitle").textContent = detail.title;
-          el("reportDetailBody").textContent = detail.body;
-          el("reportDetail").classList.remove("hidden");
-        });
-      });
+      // metric tooltips use title attributes (no click handler needed)
 
       updateUI();
       updateNav();

@@ -146,9 +146,22 @@
 - Standardized step headings to use dot-separated numbering (e.g., “3 · Review”) in `design/009/click-dummy-enterprise-flow.html`.
 - Tightened review helper spacing and compacted the max-flights input in `design/009/click-dummy-enterprise-flow.html`.
 - Truncated long flight IDs in the review table with a tail-only display and full ID on hover in `design/009/click-dummy-enterprise-flow.html`.
+- Rendered review table statuses using pill tags (success/warn) to match the import report styling in `design/009/click-dummy-enterprise-flow.html`.
+- Ensured the left-nav checkmarks update after import completion by refreshing nav state in `design/009/click-dummy-enterprise-flow.html`.
+- Added extra spacing above the review progress card in `design/009/click-dummy-enterprise-flow.html`.
+- Simplified review/import completion notices to neutral wording and added warning styling for missing-registration summaries in `design/009/click-dummy-enterprise-flow.html`.
+- Improved mobile table rendering in `design/009/click-dummy-enterprise-flow.html` to stack labeled fields cleanly and wrap filenames.
+- Reworked the import summary to remove file references and moved details to tooltips in `design/009/click-dummy-enterprise-flow.html`.
+- Collapsed completed steps so only the active step stays expanded and tightened section spacing in `design/009/click-dummy-enterprise-flow.html`.
+- Removed the redundant “Report ready for download” notice from the Import section in `design/009/click-dummy-enterprise-flow.html`.
+- Added inline icons to nav action buttons and kept them on one line in `design/009/click-dummy-enterprise-flow.html`.
+- Standardized the Connect step pill to read “Sign in required” for consistency in `design/009/click-dummy-enterprise-flow.html`.
+- Fixed footer pinning by letting the main layout flex-grow in `design/009/click-dummy-enterprise-flow.html`.
 - Refined left-nav action button layout and styling in `design/009/click-dummy-enterprise-flow.html`.
 - Ensured the Import step shows a checkmark when import completes in the left nav of `design/009/click-dummy-enterprise-flow.html`.
 - Added horizontal padding to the footer in `design/009/click-dummy-enterprise-flow.html`.
+- Aligned the footer with the main layout by nesting it inside the frame in `design/009/click-dummy-enterprise-flow.html`.
+- Pinned the footer to the bottom of the page using a full-height frame layout in `design/009/click-dummy-enterprise-flow.html`.
 
 ## Next Implementation Steps
 1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).
@@ -217,7 +230,7 @@ Reference doc: `docs/backend-architecture.md` (authoritative architecture + mile
   - Review/feedback: to be scheduled once scaffolding exists.
 - Milestone 3: Dev workflow (in progress).
   - Deliverables: basic auth, job orchestration, review → import flow, artifacts downloadable.
-  - Status: Dev FastAPI now executes real review/import flows using API clients, writes artifacts under `data/backend/jobs`, and the dev web UI polls job status while the background tasks run.
+  - Status: Dev FastAPI now executes real review/import flows using API clients, writes artifacts under `data/backend/jobs`, and the dev web UI polls job status while the background tasks run. Click-dummy layout updated to align and pin the footer within the flex page layout; review completion state restored green success styling; review table status cells use pill badges with OK/Needs review; import reporting now split into Review summary and Import results cards; tables now use horizontal scroll on small screens; accordion spacing tightened; status pill styling standardized across review/import tables; accordion bodies now collapse without extra empty rows; Status column moved to the first position in all tables for mobile scanning; added spacing between download report and import conclusion; inline spacing refactored into CSS spacing utilities; fixed review status pill class rendering in the click-dummy table.
 - Milestone 4: Public beta readiness (in progress).
   - Deliverables: runbook, maintenance checklist, readiness checklist, guardrails validated.
   - Status: added `docs/backend-runbook.md`, `docs/backend-maintenance.md`, `docs/backend-release-readiness.md`.
