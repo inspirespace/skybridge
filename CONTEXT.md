@@ -231,3 +231,6 @@ See placeholder contracts in `docs/cloudahoy-api.md` and `docs/flysto-api.md`.
 - Switched the UI font to IBM Plex Sans via Google Fonts.
 - Added extra padding to the sign-in accordion body for a more spacious intro layout.
 - Further increased intro padding and line-height so the sign-in copy feels more open.
+- Harmonized UI font sizes with a shared type scale for consistent typography.
+- Made accordion section header text bolder for clearer hierarchy.
+- Set the left-step navigation items to a medium font weight for better legibility.
