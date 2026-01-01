@@ -12,7 +12,7 @@ services:
       - keycloak
 
   web:
-    image: node:20-alpine
+    image: node:24-alpine
     working_dir: /app
     volumes:
       - ./src/frontend:/app
