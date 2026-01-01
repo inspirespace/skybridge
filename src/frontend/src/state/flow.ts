@@ -69,16 +69,11 @@ export function deriveFlowState(signedIn: boolean, job: JobRecord | null): FlowS
 export function getOpenStep(state: FlowState) {
   if (!state.signedIn) return "sign-in";
   if (!state.connected) return "connect";
+  if (state.importStatus === "running" || state.importStatus === "complete") {
+    return "import";
+  }
   if (state.reviewStatus !== "complete") return "review";
-  return "import";
-}
-
-export function canApproveImport(state: FlowState) {
-  return state.reviewStatus === "complete" && state.importStatus === "idle";
-}
-
-export function canEditFilters(state: FlowState) {
-  return state.reviewStatus === "complete" && state.importStatus === "idle";
+  return "review";
 }
 
 export function canStartOver(state: FlowState) {

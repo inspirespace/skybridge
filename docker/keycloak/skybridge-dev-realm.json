@@ -17,6 +17,7 @@
       "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": false,
       "redirectUris": ["https://skybridge.localhost/auth/callback"],
+      "postLogoutRedirectUris": ["https://skybridge.localhost/auth/callback"],
       "webOrigins": ["https://skybridge.localhost"],
       "rootUrl": "https://skybridge.localhost",
       "baseUrl": "https://skybridge.localhost",

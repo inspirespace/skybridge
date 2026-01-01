@@ -14,6 +14,19 @@ export function ImportResults({
   failed,
   registrationMissing,
 }: ImportResultsProps) {
+  const skippedFailedTotal = skipped + failed;
+  const skippedBadge =
+    skippedFailedTotal > 0 ? (
+      <Badge variant="warning">Needs review</Badge>
+    ) : (
+      <Badge variant="success">OK</Badge>
+    );
+  const registrationBadge =
+    registrationMissing > 0 ? (
+      <Badge variant="warning">Needs review</Badge>
+    ) : (
+      <Badge variant="success">OK</Badge>
+    );
   return (
     <Card>
       <CardHeader>
@@ -29,14 +42,14 @@ export function ImportResults({
         <ResultRow
           label="Skipped or failed"
           description={`Skipped: ${skipped} · Failed: ${failed}`}
-          total={skipped + failed}
-          badge={<Badge variant="success">OK</Badge>}
+          total={skippedFailedTotal}
+          badge={skippedBadge}
         />
         <ResultRow
           label="Registration missing"
           description="Flights without aircraft registration."
           total={registrationMissing}
-          badge={<Badge variant="warning">Needs review</Badge>}
+          badge={registrationBadge}
         />
       </CardContent>
     </Card>
@@ -55,11 +68,11 @@ function ResultRow({
   badge: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-md border px-4 py-3">
-      <div className="flex items-start gap-3">
+    <div className="flex items-center justify-between gap-4 rounded-md border px-4 py-3">
+      <div className="flex items-center gap-3">
         {badge}
-        <div>
-          <div className="font-medium">{label}</div>
+        <div className="space-y-1">
+          <div className="font-medium leading-tight">{label}</div>
           <div className="text-sm text-muted-foreground">{description}</div>
         </div>
       </div>

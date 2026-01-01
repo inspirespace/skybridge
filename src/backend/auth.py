@@ -83,6 +83,13 @@ def _resolve_key(token: str, issuer: str) -> Any:
     for entry in keys:
         if entry.get("kid") == kid:
             return jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(entry))
+    # Force JWKS refresh once in case keys rotated.
+    _JWKS_CACHE.jwks_uri = None
+    _JWKS_CACHE.expires_at = 0
+    keys = _load_jwks(issuer)
+    for entry in keys:
+        if entry.get("kid") == kid:
+            return jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(entry))
     raise HTTPException(status_code=401, detail="Unknown token key id")
 
 

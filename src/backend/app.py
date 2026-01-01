@@ -165,7 +165,7 @@ async def job_events(
             if await request.is_disconnected():
                 break
             job = _load_job_or_404(job_id, user_id)
-            payload = jsonlib.dumps(job.model_dump())
+            payload = jsonlib.dumps(job.model_dump(mode="json"))
             if payload != last_payload:
                 yield f"data: {payload}\n\n"
                 last_payload = payload
@@ -211,6 +211,8 @@ def accept_review(
             ttl_seconds=_credential_ttl(),
         )
         job.status = "import_queued"
+        job.progress_percent = 5
+        job.progress_stage = "Queued"
         job.updated_at = datetime.now(timezone.utc)
         store.save_job(job)
         store.write_token(job.job_id, "import", token)
