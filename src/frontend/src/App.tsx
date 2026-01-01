@@ -36,6 +36,10 @@ import {
   initialFlowState,
   type FlowState,
 } from "@/state/flow";
+import {
+  simulateImportProgress,
+  simulateReviewProgress,
+} from "@/state/mock-api";
 
 const mockFlights = [
   {
@@ -66,11 +70,14 @@ const mockFlights = [
 
 export default function App() {
   const [flow, setFlow] = React.useState<FlowState>(initialFlowState);
+  const [reviewProgress, setReviewProgress] = React.useState(0);
+  const [importProgress, setImportProgress] = React.useState(0);
 
   const reviewComplete = flow.reviewStatus === "complete";
   const importComplete = flow.importStatus === "complete";
   const reviewRunning = flow.reviewStatus === "running";
   const importRunning = flow.importStatus === "running";
+  const connectLocked = flow.connected && flow.reviewStatus !== "idle";
 
   const openStep = React.useMemo(() => getOpenStep(flow), [flow]);
 
@@ -85,26 +92,32 @@ export default function App() {
       reviewStatus: "running",
       importStatus: "idle",
     }));
+    setReviewProgress(0);
   };
 
   React.useEffect(() => {
     if (!reviewRunning) return;
-    const timer = window.setTimeout(() => {
-      setFlow((prev) => ({ ...prev, reviewStatus: "complete" }));
-    }, 1400);
-    return () => window.clearTimeout(timer);
+    return simulateReviewProgress((state) => {
+      setReviewProgress(state.progress);
+      if (state.status === "complete") {
+        setFlow((prev) => ({ ...prev, reviewStatus: "complete" }));
+      }
+    });
   }, [reviewRunning]);
 
   const handleApproveImport = () => {
     setFlow((prev) => ({ ...prev, importStatus: "running" }));
+    setImportProgress(0);
   };
 
   React.useEffect(() => {
     if (!importRunning) return;
-    const timer = window.setTimeout(() => {
-      setFlow((prev) => ({ ...prev, importStatus: "complete" }));
-    }, 1800);
-    return () => window.clearTimeout(timer);
+    return simulateImportProgress((state) => {
+      setImportProgress(state.progress);
+      if (state.status === "complete") {
+        setFlow((prev) => ({ ...prev, importStatus: "complete" }));
+      }
+    });
   }, [importRunning]);
 
   const handleEditFilters = () => {
@@ -118,10 +131,14 @@ export default function App() {
 
   const handleStartOver = () => {
     setFlow(initialFlowState);
+    setReviewProgress(0);
+    setImportProgress(0);
   };
 
   const handleSignOut = () => {
     setFlow(initialFlowState);
+    setReviewProgress(0);
+    setImportProgress(0);
   };
 
   return (
@@ -199,9 +216,15 @@ export default function App() {
                         </AlertDescription>
                       </Alert>
                       <div className="flex flex-wrap gap-3">
-                        <Button onClick={handleSignIn}>Sign in with email</Button>
-                        <Button variant="outline">Continue with Google</Button>
-                        <Button variant="outline">Continue with Apple</Button>
+                        <Button onClick={handleSignIn} disabled={flow.signedIn}>
+                          Sign in with email
+                        </Button>
+                        <Button variant="outline" disabled={flow.signedIn}>
+                          Continue with Google
+                        </Button>
+                        <Button variant="outline" disabled={flow.signedIn}>
+                          Continue with Apple
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -236,22 +259,32 @@ export default function App() {
                           <div className="text-sm font-medium">CloudAhoy</div>
                           <div className="space-y-2">
                             <Label htmlFor="cloudahoy-email">Email</Label>
-                            <Input id="cloudahoy-email" placeholder="Email" />
+                          <Input id="cloudahoy-email" placeholder="Email" disabled={connectLocked} />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="cloudahoy-password">Password</Label>
-                            <Input id="cloudahoy-password" type="password" placeholder="Password" />
+                          <Input
+                            id="cloudahoy-password"
+                            type="password"
+                            placeholder="Password"
+                            disabled={connectLocked}
+                          />
                           </div>
                         </div>
                         <div className="space-y-2">
                           <div className="text-sm font-medium">FlySto</div>
                           <div className="space-y-2">
                             <Label htmlFor="flysto-email">Email</Label>
-                            <Input id="flysto-email" placeholder="Email" />
+                          <Input id="flysto-email" placeholder="Email" disabled={connectLocked} />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="flysto-password">Password</Label>
-                            <Input id="flysto-password" type="password" placeholder="Password" />
+                          <Input
+                            id="flysto-password"
+                            type="password"
+                            placeholder="Password"
+                            disabled={connectLocked}
+                          />
                           </div>
                         </div>
                       </div>
@@ -259,15 +292,15 @@ export default function App() {
                       <div className="grid gap-3 md:grid-cols-3">
                         <div className="space-y-2">
                           <Label htmlFor="start-date">Start date</Label>
-                          <Input id="start-date" placeholder="YYYY-MM-DD" />
+                          <Input id="start-date" placeholder="YYYY-MM-DD" disabled={connectLocked} />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="end-date">End date</Label>
-                          <Input id="end-date" placeholder="YYYY-MM-DD" />
+                          <Input id="end-date" placeholder="YYYY-MM-DD" disabled={connectLocked} />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="max-flights">Max flights</Label>
-                          <Input id="max-flights" placeholder="50" />
+                          <Input id="max-flights" placeholder="50" disabled={connectLocked} />
                         </div>
                       </div>
 
@@ -276,7 +309,9 @@ export default function App() {
                         of flights that will be imported.
                       </p>
 
-                      <Button onClick={handleConnectReview}>Connect and review</Button>
+                      <Button onClick={handleConnectReview} disabled={connectLocked}>
+                        Connect and review
+                      </Button>
                     </CardContent>
                   </Card>
                 </AccordionContent>
@@ -286,7 +321,9 @@ export default function App() {
                 <AccordionTrigger>
                   <div className="flex items-center gap-3">
                     <span>3 · Review</span>
-                    <Badge variant="outline">Connect accounts to continue</Badge>
+                    <Badge variant={reviewComplete ? "success" : "outline"}>
+                      {reviewComplete ? "Approved" : "Connect accounts to continue"}
+                    </Badge>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
@@ -309,7 +346,7 @@ export default function App() {
                           </span>
                         </div>
                         <div className="mt-3">
-                          <Progress value={reviewComplete ? 100 : 60} />
+                          <Progress value={reviewComplete ? 100 : reviewProgress} />
                         </div>
                         <div className="mt-3 text-xs text-emerald-700">
                           Flights are fetched from CloudAhoy first so you can check them
@@ -357,6 +394,11 @@ export default function App() {
                           </TableBody>
                         </Table>
                       )}
+                      {reviewComplete && (
+                        <Button variant="link" className="h-auto px-0 text-sm text-muted-foreground">
+                          Show more flights
+                        </Button>
+                      )}
                       <div className="flex flex-wrap gap-3">
                         <Button
                           onClick={handleApproveImport}
@@ -381,7 +423,9 @@ export default function App() {
                 <AccordionTrigger>
                   <div className="flex items-center gap-3">
                     <span>4 · Import</span>
-                    <Badge variant="outline">Approve review to continue</Badge>
+                    <Badge variant={importComplete ? "success" : "outline"}>
+                      {importComplete ? "Completed" : "Approve review to continue"}
+                    </Badge>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
@@ -407,7 +451,9 @@ export default function App() {
                           </span>
                         </div>
                         <div className="mt-3">
-                          <Progress value={importComplete ? 100 : importRunning ? 45 : 10} />
+                          <Progress
+                            value={importComplete ? 100 : importRunning ? importProgress : 5}
+                          />
                         </div>
                       </div>
                       {importComplete && (
