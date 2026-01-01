@@ -137,29 +137,9 @@ Three alternatives to reduce stacked message boxes in the Review step:
 3. `design/final/variants/review-variant-c.html`
    - Combines info + summary into a single info card; progress remains below.
 
-## Visual Mockup Variations
-These are three graphical, realistic mockups based on the wireframe. All use IBM Plex Sans and a dusk‑to‑night aviation gradient.
-
-1. `design/final/mockups/01-orbit-dusk.html`
-   - Warm dusk gradient with polished glass surface and soft depth.
-2. `design/final/mockups/02-midnight-glass.html`
-   - Dark mode variant with cockpit‑like contrast and luminous accents.
-3. `design/final/mockups/03-horizon-minimal.html`
-   - Clean, minimal daylight contrast with restrained chrome elements.
-4. `design/final/mockups/04-stratosphere-signal.html`
-   - Bold dusk gradient with signal‑like depth and refined nav emphasis.
-5. `design/final/mockups/05-nocturne-cockpit.html`
-   - Dark cockpit mode with richer contrast and soft neon cues.
-6. `design/final/mockups/06-daybreak-atlas.html`
-   - Bright, premium feel with airy spacing and gentle light wash.
-7. `design/final/mockups/07-glass-cockpit.html`
-   - Full‑bleed glass cockpit HUD (no centered panel), modern web‑app layout.
-8. `design/final/mockups/08-dusk-horizon.html`
-   - Dusk gradient used only as a horizon header band, keeping the app body clean.
-9. `design/final/mockups/09-dusk-bottom-dark.html`
-   - Dark mode with a thin dusk horizon band at the bottom and subtle cockpit glow.
-
 ## Notes for Implementation
 - Use IBM Plex Sans for body typography.
 - Maintain subtle radius on panels; pills fully rounded.
+- Prefer default component library styling; use the wireframe only for structure and states.
+- Support light/dark mode toggle.
 - Match spacing and layout from the wireframe HTML + PNG exports.

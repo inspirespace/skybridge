@@ -59,7 +59,7 @@ Note: default `MODE=auto` uses API only and does not fall back to web automation
 
 ## Agent Update Policy
 - If you add or change developer workflows, commands, or project structure, update this file in the same change set.
-- Always update `CONTEXT.md` and any project tracker files (e.g., `PROJECT_PLAN.md`) when material progress or blockers occur, without waiting for a reminder.
+- Always update project tracker files (e.g., `project-management/PROJECT_PLAN.md`) when material progress or blockers occur, without waiting for a reminder.
 
 ## Security & Configuration Tips
 - Never commit secrets. Use `.env` files and add an `.env.example` template.
