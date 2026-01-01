@@ -1,5 +1,7 @@
-export type ReviewStatus = "idle" | "running" | "complete";
-export type ImportStatus = "idle" | "running" | "complete";
+import type { JobRecord, JobStatus } from "@/api/client";
+
+export type ReviewStatus = "idle" | "running" | "complete" | "failed";
+export type ImportStatus = "idle" | "running" | "complete" | "failed";
 
 export type FlowState = {
   signedIn: boolean;
@@ -14,6 +16,55 @@ export const initialFlowState: FlowState = {
   reviewStatus: "idle",
   importStatus: "idle",
 };
+
+const REVIEW_COMPLETE_STATUSES: JobStatus[] = [
+  "review_ready",
+  "import_queued",
+  "import_running",
+  "completed",
+  "failed",
+];
+
+const REVIEW_RUNNING_STATUSES: JobStatus[] = ["review_queued", "review_running"];
+const IMPORT_RUNNING_STATUSES: JobStatus[] = ["import_queued", "import_running"];
+
+export function deriveFlowState(signedIn: boolean, job: JobRecord | null): FlowState {
+  if (!signedIn) return initialFlowState;
+  if (!job) {
+    return {
+      signedIn: true,
+      connected: false,
+      reviewStatus: "idle",
+      importStatus: "idle",
+    };
+  }
+
+  const status = job.status;
+  const reviewStatus: ReviewStatus = REVIEW_RUNNING_STATUSES.includes(status)
+    ? "running"
+    : REVIEW_COMPLETE_STATUSES.includes(status)
+      ? "complete"
+      : status === "failed"
+        ? "failed"
+        : "idle";
+
+  const importStatus: ImportStatus = IMPORT_RUNNING_STATUSES.includes(status)
+    ? "running"
+    : status === "completed"
+      ? "complete"
+      : status === "failed"
+        ? job.review_summary
+          ? "failed"
+          : "idle"
+        : "idle";
+
+  return {
+    signedIn: true,
+    connected: true,
+    reviewStatus,
+    importStatus,
+  };
+}
 
 export function getOpenStep(state: FlowState) {
   if (!state.signedIn) return "sign-in";
@@ -31,5 +82,5 @@ export function canEditFilters(state: FlowState) {
 }
 
 export function canStartOver(state: FlowState) {
-  return state.connected && state.reviewStatus !== "running";
+  return state.connected && state.reviewStatus !== "running" && state.importStatus !== "running";
 }

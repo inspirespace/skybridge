@@ -30,101 +30,180 @@ import {
 } from "@/components/ui/table";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
+  acceptReview,
+  createJob,
+  fetchArtifact,
+  listArtifacts,
+  type FlightSummary,
+} from "@/api/client";
+import {
   canApproveImport,
   canEditFilters,
   canStartOver,
+  deriveFlowState,
   getOpenStep,
-  initialFlowState,
-  type FlowState,
 } from "@/state/flow";
-import {
-  simulateImportProgress,
-  simulateReviewProgress,
-} from "@/state/mock-api";
-
 import { useJobSnapshot } from "@/hooks/use-job-snapshot";
 
+const USER_ID_KEY = "skybridge_user_id";
+const JOB_ID_KEY = "skybridge_job_id";
+
 export default function App() {
-  const [flow, setFlow] = React.useState<FlowState>(initialFlowState);
-  const [reviewProgress, setReviewProgress] = React.useState(0);
-  const [importProgress, setImportProgress] = React.useState(0);
+  const [userId, setUserId] = React.useState<string | null>(() =>
+    localStorage.getItem(USER_ID_KEY)
+  );
+  const [jobId, setJobId] = React.useState<string | null>(() =>
+    localStorage.getItem(JOB_ID_KEY)
+  );
   const [showAllFlights, setShowAllFlights] = React.useState(false);
-  const { data: snapshot } = useJobSnapshot();
+  const [actionError, setActionError] = React.useState<string | null>(null);
+  const [actionLoading, setActionLoading] = React.useState(false);
 
-  const flights = snapshot?.flights ?? [];
-  const reviewSummary = snapshot?.reviewSummary;
+  const [cloudahoyEmail, setCloudahoyEmail] = React.useState("");
+  const [cloudahoyPassword, setCloudahoyPassword] = React.useState("");
+  const [flystoEmail, setFlystoEmail] = React.useState("");
+  const [flystoPassword, setFlystoPassword] = React.useState("");
+  const [startDate, setStartDate] = React.useState("");
+  const [endDate, setEndDate] = React.useState("");
+  const [maxFlights, setMaxFlights] = React.useState("");
 
-  const reviewComplete = flow.reviewStatus === "complete";
-  const importComplete = flow.importStatus === "complete";
-  const reviewRunning = flow.reviewStatus === "running";
-  const importRunning = flow.importStatus === "running";
-  const connectLocked = flow.connected && flow.reviewStatus !== "idle";
+  const { data: job, error: jobError, refresh } = useJobSnapshot(jobId, userId);
 
+  const flow = React.useMemo(
+    () => deriveFlowState(Boolean(userId), job ?? null),
+    [userId, job]
+  );
   const openStep = React.useMemo(() => getOpenStep(flow), [flow]);
 
+  const reviewSummary = job?.review_summary ?? null;
+  const flights = reviewSummary?.flights ?? [];
+
+  const reviewComplete = flow.reviewStatus === "complete";
+  const reviewRunning = flow.reviewStatus === "running";
+  const importRunning = flow.importStatus === "running";
+  const importComplete = flow.importStatus === "complete";
+  const reviewApproved = importRunning || importComplete;
+
+  const connectLocked = flow.connected && flow.reviewStatus !== "idle";
+
   const handleSignIn = () => {
-    setFlow((prev) => ({ ...prev, signedIn: true }));
+    const nextUserId = "pilot@skybridge.dev";
+    localStorage.setItem(USER_ID_KEY, nextUserId);
+    setUserId(nextUserId);
+    setActionError(null);
   };
 
-  const handleConnectReview = () => {
-    setFlow((prev) => ({
-      ...prev,
-      connected: true,
-      reviewStatus: "running",
-      importStatus: "idle",
-    }));
-    setReviewProgress(0);
-    setShowAllFlights(false);
+  const handleConnectReview = async () => {
+    if (!userId) return;
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      const payload = {
+        credentials: {
+          cloudahoy_username: cloudahoyEmail,
+          cloudahoy_password: cloudahoyPassword,
+          flysto_username: flystoEmail,
+          flysto_password: flystoPassword,
+        },
+        start_date: startDate || null,
+        end_date: endDate || null,
+        max_flights: maxFlights ? Number(maxFlights) : null,
+      };
+      const createdJob = await createJob(payload, userId);
+      localStorage.setItem(JOB_ID_KEY, createdJob.job_id);
+      setJobId(createdJob.job_id);
+      setShowAllFlights(false);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to start review");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  React.useEffect(() => {
-    if (!reviewRunning) return;
-    return simulateReviewProgress((state) => {
-      setReviewProgress(state.progress);
-      if (state.status === "complete") {
-        setFlow((prev) => ({ ...prev, reviewStatus: "complete" }));
-      }
-    });
-  }, [reviewRunning]);
-
-  const handleApproveImport = () => {
-    setFlow((prev) => ({ ...prev, importStatus: "running" }));
-    setImportProgress(0);
+  const handleApproveImport = async () => {
+    if (!userId || !jobId) return;
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      await acceptReview(
+        jobId,
+        {
+          credentials: {
+            cloudahoy_username: cloudahoyEmail,
+            cloudahoy_password: cloudahoyPassword,
+            flysto_username: flystoEmail,
+            flysto_password: flystoPassword,
+          },
+        },
+        userId
+      );
+      refresh();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to start import");
+    } finally {
+      setActionLoading(false);
+    }
   };
-
-  React.useEffect(() => {
-    if (!importRunning) return;
-    return simulateImportProgress((state) => {
-      setImportProgress(state.progress);
-      if (state.status === "complete") {
-        setFlow((prev) => ({ ...prev, importStatus: "complete" }));
-      }
-    });
-  }, [importRunning]);
 
   const handleEditFilters = () => {
-    setFlow((prev) => ({
-      ...prev,
-      connected: false,
-      reviewStatus: "idle",
-      importStatus: "idle",
-    }));
+    localStorage.removeItem(JOB_ID_KEY);
+    setJobId(null);
     setShowAllFlights(false);
+    setActionError(null);
   };
 
   const handleStartOver = () => {
-    setFlow(initialFlowState);
-    setReviewProgress(0);
-    setImportProgress(0);
+    localStorage.removeItem(JOB_ID_KEY);
+    setJobId(null);
     setShowAllFlights(false);
+    setActionError(null);
   };
 
   const handleSignOut = () => {
-    setFlow(initialFlowState);
-    setReviewProgress(0);
-    setImportProgress(0);
+    localStorage.removeItem(USER_ID_KEY);
+    localStorage.removeItem(JOB_ID_KEY);
+    setUserId(null);
+    setJobId(null);
     setShowAllFlights(false);
+    setActionError(null);
   };
+
+  const handleDownloadReport = async () => {
+    if (!userId || !jobId) return;
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      const artifacts = await listArtifacts(jobId, userId);
+      const reportName = artifacts.artifacts.find((artifact) =>
+        artifact.includes("import-report")
+      );
+      if (!reportName) {
+        throw new Error("Import report not found yet.");
+      }
+      const payload = await fetchArtifact(jobId, reportName, userId);
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = reportName;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to download report");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const canConnect =
+    Boolean(cloudahoyEmail) &&
+    Boolean(cloudahoyPassword) &&
+    Boolean(flystoEmail) &&
+    Boolean(flystoPassword);
+
+  const visibleFlights = showAllFlights ? flights : flights.slice(0, 3);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -132,7 +211,7 @@ export default function App() {
         <div className="container flex h-16 items-center justify-between">
           <div className="text-sm font-semibold tracking-[0.3em]">SKYBRIDGE</div>
           <div className="flex items-center gap-4">
-            {flow.signedIn && (
+            {flow.connected && (
               <Button
                 variant="outline"
                 size="sm"
@@ -162,10 +241,26 @@ export default function App() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <StepStatus label="1 · Sign in" active={!flow.signedIn} done={flow.signedIn} />
-                <StepStatus label="2 · Connect" active={flow.signedIn && !flow.connected} done={flow.connected} />
-                <StepStatus label="3 · Review" active={flow.connected && !reviewComplete} done={reviewComplete} />
-                <StepStatus label="4 · Import" active={reviewComplete && !importComplete} done={importComplete} />
+                <StepStatus
+                  label="1 · Sign in"
+                  active={!flow.signedIn}
+                  done={flow.signedIn}
+                />
+                <StepStatus
+                  label="2 · Connect"
+                  active={flow.signedIn && !flow.connected}
+                  done={flow.connected}
+                />
+                <StepStatus
+                  label="3 · Review"
+                  active={flow.connected && !reviewComplete}
+                  done={reviewComplete}
+                />
+                <StepStatus
+                  label="4 · Import"
+                  active={reviewComplete && !importComplete}
+                  done={importComplete}
+                />
               </CardContent>
             </Card>
           </aside>
@@ -194,9 +289,14 @@ export default function App() {
                         <AlertTitle>What you can expect</AlertTitle>
                         <AlertDescription>
                           <ul className="list-disc space-y-1 pl-5">
-                            <li>We import flights, times, routes, aircraft details, and remarks.</li>
+                            <li>
+                              We import flights, times, routes, aircraft details, and
+                              remarks.
+                            </li>
                             <li>You can review everything before approving the import.</li>
-                            <li>Credentials are used only for this job and never stored.</li>
+                            <li>
+                              Credentials are used only for this job and never stored.
+                            </li>
                           </ul>
                         </AlertDescription>
                       </Alert>
@@ -220,7 +320,9 @@ export default function App() {
                 <AccordionTrigger>
                   <div className="flex items-center gap-3">
                     <span>2 · Connect accounts</span>
-                    <Badge variant="outline">Sign in required</Badge>
+                    <Badge variant="outline">
+                      {flow.signedIn ? "Required" : "Sign in required"}
+                    </Badge>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
@@ -244,32 +346,52 @@ export default function App() {
                           <div className="text-sm font-medium">CloudAhoy</div>
                           <div className="space-y-2">
                             <Label htmlFor="cloudahoy-email">Email</Label>
-                          <Input id="cloudahoy-email" placeholder="Email" disabled={connectLocked} />
+                            <Input
+                              id="cloudahoy-email"
+                              placeholder="Email"
+                              disabled={connectLocked}
+                              value={cloudahoyEmail}
+                              onChange={(event) =>
+                                setCloudahoyEmail(event.target.value)
+                              }
+                            />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="cloudahoy-password">Password</Label>
-                          <Input
-                            id="cloudahoy-password"
-                            type="password"
-                            placeholder="Password"
-                            disabled={connectLocked}
-                          />
+                            <Input
+                              id="cloudahoy-password"
+                              type="password"
+                              placeholder="Password"
+                              disabled={connectLocked}
+                              value={cloudahoyPassword}
+                              onChange={(event) =>
+                                setCloudahoyPassword(event.target.value)
+                              }
+                            />
                           </div>
                         </div>
                         <div className="space-y-2">
                           <div className="text-sm font-medium">FlySto</div>
                           <div className="space-y-2">
                             <Label htmlFor="flysto-email">Email</Label>
-                          <Input id="flysto-email" placeholder="Email" disabled={connectLocked} />
+                            <Input
+                              id="flysto-email"
+                              placeholder="Email"
+                              disabled={connectLocked}
+                              value={flystoEmail}
+                              onChange={(event) => setFlystoEmail(event.target.value)}
+                            />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="flysto-password">Password</Label>
-                          <Input
-                            id="flysto-password"
-                            type="password"
-                            placeholder="Password"
-                            disabled={connectLocked}
-                          />
+                            <Input
+                              id="flysto-password"
+                              type="password"
+                              placeholder="Password"
+                              disabled={connectLocked}
+                              value={flystoPassword}
+                              onChange={(event) => setFlystoPassword(event.target.value)}
+                            />
                           </div>
                         </div>
                       </div>
@@ -277,15 +399,33 @@ export default function App() {
                       <div className="grid gap-3 md:grid-cols-3">
                         <div className="space-y-2">
                           <Label htmlFor="start-date">Start date</Label>
-                          <Input id="start-date" placeholder="YYYY-MM-DD" disabled={connectLocked} />
+                          <Input
+                            id="start-date"
+                            placeholder="YYYY-MM-DD"
+                            disabled={connectLocked}
+                            value={startDate}
+                            onChange={(event) => setStartDate(event.target.value)}
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="end-date">End date</Label>
-                          <Input id="end-date" placeholder="YYYY-MM-DD" disabled={connectLocked} />
+                          <Input
+                            id="end-date"
+                            placeholder="YYYY-MM-DD"
+                            disabled={connectLocked}
+                            value={endDate}
+                            onChange={(event) => setEndDate(event.target.value)}
+                          />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="max-flights">Max flights</Label>
-                          <Input id="max-flights" placeholder="50" disabled={connectLocked} />
+                          <Label htmlFor="max-flights">Max flights to import</Label>
+                          <Input
+                            id="max-flights"
+                            placeholder="50"
+                            disabled={connectLocked}
+                            value={maxFlights}
+                            onChange={(event) => setMaxFlights(event.target.value)}
+                          />
                         </div>
                       </div>
 
@@ -294,7 +434,17 @@ export default function App() {
                         of flights that will be imported.
                       </p>
 
-                      <Button onClick={handleConnectReview} disabled={connectLocked}>
+                      {(actionError || jobError) && (
+                        <Alert variant="destructive">
+                          <AlertTitle>Something went wrong</AlertTitle>
+                          <AlertDescription>{actionError || jobError}</AlertDescription>
+                        </Alert>
+                      )}
+
+                      <Button
+                        onClick={handleConnectReview}
+                        disabled={connectLocked || !canConnect || actionLoading}
+                      >
                         Connect and review
                       </Button>
                     </CardContent>
@@ -306,8 +456,14 @@ export default function App() {
                 <AccordionTrigger>
                   <div className="flex items-center gap-3">
                     <span>3 · Review</span>
-                    <Badge variant={reviewComplete ? "success" : "outline"}>
-                      {reviewComplete ? "Approved" : "Connect accounts to continue"}
+                    <Badge
+                      variant={reviewApproved ? "success" : reviewComplete ? "secondary" : "outline"}
+                    >
+                      {reviewApproved
+                        ? "Approved"
+                        : reviewComplete
+                          ? "Review ready"
+                          : "Connect accounts to continue"}
                     </Badge>
                   </div>
                 </AccordionTrigger>
@@ -324,30 +480,34 @@ export default function App() {
                       <div className="rounded-md border bg-muted/40 p-4 text-sm">
                         <div className="flex items-center justify-between">
                           <span className="font-medium">
-                            {reviewComplete ? "Review complete" : "Review running"}
+                            {reviewComplete
+                              ? "Review complete"
+                              : reviewRunning
+                                ? "Review running"
+                                : "Review idle"}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            Elapsed: 2m · Last update: just now
+                            Last update: just now
                           </span>
                         </div>
                         <div className="mt-3">
-                          <Progress value={reviewComplete ? 100 : reviewProgress} />
+                          <Progress value={reviewComplete ? 100 : reviewRunning ? 60 : 5} />
                         </div>
                         <div className="mt-3 text-xs text-emerald-700">
                           Flights are fetched from CloudAhoy first so you can check them
                           before running the actual import.
                         </div>
                       </div>
-                      {reviewComplete && (
+                      {reviewComplete && reviewSummary && (
                         <div className="flex flex-wrap gap-2">
                           <Badge variant="secondary">
-                            Flights: {reviewSummary?.flights ?? 0}
+                            Flights: {reviewSummary.flight_count}
                           </Badge>
                           <Badge variant="secondary">
-                            Hours: {reviewSummary?.hours ?? 0}
+                            Hours: {reviewSummary.total_hours}
                           </Badge>
                           <Badge variant="warning">
-                            Registration missing: {reviewSummary?.missingRegistration ?? 0}
+                            Registration missing: {reviewSummary.missing_tail_numbers}
                           </Badge>
                         </div>
                       )}
@@ -364,28 +524,28 @@ export default function App() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                          {flights.map((flight) => (
-                              <TableRow key={flight.id}>
+                            {visibleFlights.map((flight) => (
+                              <TableRow key={flight.flight_id}>
                                 <TableCell>
                                   <Badge
                                     variant={
-                                      flight.status === "OK" ? "success" : "warning"
+                                      flight.tail_number ? "success" : "warning"
                                     }
                                   >
-                                    {flight.status}
+                                    {flight.tail_number ? "OK" : "Needs review"}
                                   </Badge>
                                 </TableCell>
-                                <TableCell>{flight.id}</TableCell>
-                                <TableCell>{flight.date}</TableCell>
-                                <TableCell>{flight.registration}</TableCell>
-                                <TableCell>{flight.origin}</TableCell>
-                                <TableCell>{flight.destination}</TableCell>
+                                <TableCell>{formatFlightId(flight)}</TableCell>
+                                <TableCell>{formatDate(flight.date)}</TableCell>
+                                <TableCell>{flight.tail_number ?? "—"}</TableCell>
+                                <TableCell>{flight.origin ?? "—"}</TableCell>
+                                <TableCell>{flight.destination ?? "—"}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
                         </Table>
                       )}
-                      {reviewComplete && !showAllFlights && (
+                      {reviewComplete && flights.length > 3 && !showAllFlights && (
                         <Button
                           variant="link"
                           className="h-auto px-0 text-sm text-muted-foreground"
@@ -394,15 +554,26 @@ export default function App() {
                           Show more flights
                         </Button>
                       )}
-                      {reviewComplete && showAllFlights && (
+                      {reviewComplete && flights.length > 3 && showAllFlights && (
                         <div className="text-sm text-muted-foreground">
                           All flights shown
                         </div>
                       )}
+                      {(actionError || jobError) && (
+                        <Alert variant="destructive">
+                          <AlertTitle>Something went wrong</AlertTitle>
+                          <AlertDescription>{actionError || jobError}</AlertDescription>
+                        </Alert>
+                      )}
                       <div className="flex flex-wrap gap-3">
                         <Button
                           onClick={handleApproveImport}
-                          disabled={!canApproveImport(flow) || importRunning || importComplete}
+                          disabled={
+                            !canApproveImport(flow) ||
+                            importRunning ||
+                            importComplete ||
+                            actionLoading
+                          }
                         >
                           Accept and start import
                         </Button>
@@ -447,21 +618,23 @@ export default function App() {
                                 : "Import idle"}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            Elapsed: 0m · Last update: --
+                            Last update: just now
                           </span>
                         </div>
                         <div className="mt-3">
                           <Progress
-                            value={importComplete ? 100 : importRunning ? importProgress : 5}
+                            value={importComplete ? 100 : importRunning ? 65 : 5}
                           />
                         </div>
                       </div>
-                      {importComplete && snapshot?.importResults && (
+                      {importComplete && job?.import_report && (
                         <ImportResults
-                          imported={snapshot.importResults.imported}
-                          pending={snapshot.importResults.pending}
-                          failed={snapshot.importResults.failed}
-                          registrationMissing={snapshot.importResults.registrationMissing}
+                          imported={job.import_report.imported_count}
+                          skipped={job.import_report.skipped_count}
+                          failed={job.import_report.failed_count}
+                          registrationMissing={
+                            reviewSummary?.missing_tail_numbers ?? 0
+                          }
                         />
                       )}
                       {importComplete && (
@@ -474,10 +647,20 @@ export default function App() {
                           </AlertDescription>
                         </Alert>
                       )}
+                      {(actionError || jobError) && (
+                        <Alert variant="destructive">
+                          <AlertTitle>Something went wrong</AlertTitle>
+                          <AlertDescription>{actionError || jobError}</AlertDescription>
+                        </Alert>
+                      )}
                       {importComplete && (
                         <div className="flex flex-wrap gap-3">
-                          <Button>Download report</Button>
-                          <Button variant="destructive">Delete results now</Button>
+                          <Button onClick={handleDownloadReport} disabled={actionLoading}>
+                            Download report
+                          </Button>
+                          <Button variant="destructive" disabled>
+                            Delete results now
+                          </Button>
                         </div>
                       )}
                     </CardContent>
@@ -493,9 +676,15 @@ export default function App() {
         <div className="container flex flex-wrap items-center justify-between gap-3 py-6 text-sm text-muted-foreground">
           <div>© 2026 Inspirespace e.U.</div>
           <div className="flex flex-wrap gap-4">
-            <a className="hover:text-foreground" href="#">Imprint</a>
-            <a className="hover:text-foreground" href="#">Privacy</a>
-            <a className="hover:text-foreground" href="#">Support</a>
+            <a className="hover:text-foreground" href="#">
+              Imprint
+            </a>
+            <a className="hover:text-foreground" href="#">
+              Privacy
+            </a>
+            <a className="hover:text-foreground" href="#">
+              Support
+            </a>
           </div>
         </div>
       </footer>
@@ -503,11 +692,33 @@ export default function App() {
   );
 }
 
-function StepStatus({ label, active, done }: { label: string; active?: boolean; done?: boolean }) {
+function StepStatus({
+  label,
+  active,
+  done,
+}: {
+  label: string;
+  active?: boolean;
+  done?: boolean;
+}) {
   return (
     <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
       <span className={active ? "font-semibold" : "font-medium"}>{label}</span>
-      <Badge variant={done ? "success" : "outline"}>{done ? "Done" : active ? "Active" : "Locked"}</Badge>
+      <Badge variant={done ? "success" : "outline"}>
+        {done ? "Done" : active ? "Active" : "Locked"}
+      </Badge>
     </div>
   );
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return "—";
+  return value.slice(0, 10);
+}
+
+function formatFlightId(flight: FlightSummary) {
+  const id = flight.flight_id;
+  if (!id) return "—";
+  if (id.length <= 16) return id;
+  return `...${id.slice(-12)}`;
 }

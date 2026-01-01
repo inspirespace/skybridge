@@ -39,8 +39,11 @@ Goal: ship the production web UI for CloudAhoy → FlySto imports, using the wir
 ## 5. API Integration (To Do)
 - [ ] 5.1 Auth integration (OIDC).
 - [ ] 5.2 Review start + progress polling.
+- [x] 5.2.a Frontend wired to `/jobs` create + poll (dev header auth).
 - [ ] 5.3 Import approval + progress polling.
+- [x] 5.3.a Frontend wired to `/jobs/{id}/review/accept` (dev header auth).
 - [ ] 5.4 Report download + retention actions.
+- [x] 5.4.a Frontend wired to `/jobs/{id}/artifacts` download (dev header auth).
 - [ ] 5.5 Error handling + retry UX for each step.
 - [ ] 5.6 Define dual‑issuer auth strategy (Keycloak for local dev, Cognito for prod) with env‑based config.
 - [ ] 5.6.1 Local: configure Keycloak realm + client for SPA (OIDC + PKCE).

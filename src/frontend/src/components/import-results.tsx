@@ -3,14 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export type ImportResultsProps = {
   imported: number;
-  pending: number;
+  skipped: number;
   failed: number;
   registrationMissing: number;
 };
 
 export function ImportResults({
   imported,
-  pending,
+  skipped,
   failed,
   registrationMissing,
 }: ImportResultsProps) {
@@ -27,9 +27,9 @@ export function ImportResults({
           badge={<Badge variant="success">OK</Badge>}
         />
         <ResultRow
-          label="Skipped or pending"
-          description={`Pending: ${pending} · Failed: ${failed}`}
-          total={pending + failed}
+          label="Skipped or failed"
+          description={`Skipped: ${skipped} · Failed: ${failed}`}
+          total={skipped + failed}
           badge={<Badge variant="success">OK</Badge>}
         />
         <ResultRow

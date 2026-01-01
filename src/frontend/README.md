@@ -18,8 +18,12 @@ Production web UI for the CloudAhoy → FlySto import flow. The wireframe is the
 - API: `https://skybridge.localhost/api`
 - Auth (Keycloak): `https://auth.skybridge.localhost`
 
-## State Model (Mocked)
+## State Model
 See `src/state/flow.ts` for flow state, open-step logic, and CTA rules.
+
+## API Wiring (Dev)
+- Uses backend `/jobs` endpoints via `VITE_API_BASE_URL` (defaults to `https://skybridge.localhost/api`).
+- Dev auth uses `X-User-Id` header (set after sign-in stub).
 
 ## Component Inventory (Mapped from Wireframe)
 - Layout: header, sticky left nav, footer
