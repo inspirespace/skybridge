@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { getJob, type JobRecord, type JobStatus } from "@/api/client";
+import { getJob, type AuthContext, type JobRecord, type JobStatus } from "@/api/client";
 
 const POLLABLE_STATUSES: JobStatus[] = [
   "review_queued",
@@ -9,16 +9,16 @@ const POLLABLE_STATUSES: JobStatus[] = [
   "import_running",
 ];
 
-export function useJobSnapshot(jobId: string | null, userId: string | null) {
+export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
   const [data, setData] = React.useState<JobRecord | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const load = React.useCallback(async () => {
-    if (!jobId || !userId) return;
+    if (!jobId) return;
     setLoading(true);
     try {
-      const job = await getJob(jobId, userId);
+      const job = await getJob(jobId, auth);
       setData(job);
       setError(null);
     } catch (err) {
@@ -26,25 +26,25 @@ export function useJobSnapshot(jobId: string | null, userId: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [jobId, userId]);
+  }, [jobId, auth]);
 
   React.useEffect(() => {
-    if (!jobId || !userId) {
+    if (!jobId) {
       setData(null);
       setError(null);
       return;
     }
     load();
-  }, [jobId, userId, load]);
+  }, [jobId, load]);
 
   React.useEffect(() => {
-    if (!jobId || !userId || !data?.status) return;
+    if (!jobId || !data?.status) return;
     if (!POLLABLE_STATUSES.includes(data.status)) return;
     const interval = window.setInterval(() => {
       load();
     }, 4000);
     return () => window.clearInterval(interval);
-  }, [jobId, userId, data?.status, load]);
+  }, [jobId, data?.status, load]);
 
   return { data, loading, error, refresh: load };
 }

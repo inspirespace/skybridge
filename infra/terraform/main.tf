@@ -126,6 +126,15 @@ resource "aws_lambda_function" "read_artifact" {
   timeout       = 30
 }
 
+resource "aws_lambda_function" "delete_job" {
+  function_name = "${local.name_prefix}-delete-job"
+  role          = aws_iam_role.lambda_exec.arn
+  handler       = "lambda_handlers.delete_job_handler"
+  runtime       = "python3.12"
+  filename      = "${path.module}/lambda/backend-handlers.zip"
+  timeout       = 30
+}
+
 resource "aws_apigatewayv2_integration" "create_job" {
   api_id                 = aws_apigatewayv2_api.http_api.id
   integration_type       = "AWS_PROXY"
@@ -174,6 +183,14 @@ resource "aws_apigatewayv2_integration" "read_artifact" {
   payload_format_version = "2.0"
 }
 
+resource "aws_apigatewayv2_integration" "delete_job" {
+  api_id                 = aws_apigatewayv2_api.http_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.delete_job.invoke_arn
+  integration_method     = "DELETE"
+  payload_format_version = "2.0"
+}
+
 resource "aws_apigatewayv2_route" "create_job" {
   api_id    = aws_apigatewayv2_api.http_api.id
   route_key = "POST /jobs"
@@ -208,6 +225,12 @@ resource "aws_apigatewayv2_route" "read_artifact" {
   api_id    = aws_apigatewayv2_api.http_api.id
   route_key = "GET /jobs/{job_id}/artifacts/{artifact_name}"
   target    = "integrations/${aws_apigatewayv2_integration.read_artifact.id}"
+}
+
+resource "aws_apigatewayv2_route" "delete_job" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "DELETE /jobs/{job_id}"
+  target    = "integrations/${aws_apigatewayv2_integration.delete_job.id}"
 }
 
 resource "aws_iam_role" "step_functions" {

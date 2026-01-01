@@ -124,3 +124,17 @@ def read_artifact_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
         return _response(404, {"detail": "Job not found"})
     data = store.load_artifact(job.job_id, artifact_name)
     return _response(200, data)
+
+
+def delete_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
+    user_id = _user_id(event)
+    if not user_id:
+        return _response(401, {"detail": "Missing authentication"})
+    job_id = event.get("pathParameters", {}).get("job_id")
+    if not job_id:
+        return _response(404, {"detail": "Job not found"})
+    job = _load_job(job_id, user_id)
+    if not job:
+        return _response(404, {"detail": "Job not found"})
+    store.delete_job(job.job_id)
+    return _response(200, {"deleted": True})

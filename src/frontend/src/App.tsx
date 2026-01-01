@@ -32,9 +32,12 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import {
   acceptReview,
   createJob,
+  deleteJob,
+  exchangeToken,
   fetchArtifact,
   listArtifacts,
   type FlightSummary,
+  type AuthContext,
 } from "@/api/client";
 import {
   canApproveImport,
@@ -47,6 +50,21 @@ import { useJobSnapshot } from "@/hooks/use-job-snapshot";
 
 const USER_ID_KEY = "skybridge_user_id";
 const JOB_ID_KEY = "skybridge_job_id";
+const TOKEN_KEY = "skybridge_access_token";
+const ID_TOKEN_KEY = "skybridge_id_token";
+const CODE_VERIFIER_KEY = "skybridge_code_verifier";
+const AUTH_STATE_KEY = "skybridge_auth_state";
+
+const AUTH_MODE = import.meta.env.VITE_AUTH_MODE ?? "header";
+const AUTH_ISSUER =
+  import.meta.env.VITE_AUTH_ISSUER_URL ??
+  import.meta.env.VITE_AUTH_BROWSER_ISSUER_URL ??
+  "";
+const AUTH_CLIENT_ID = import.meta.env.VITE_AUTH_CLIENT_ID ?? "skybridge-dev";
+const AUTH_SCOPE = import.meta.env.VITE_AUTH_SCOPE ?? "openid profile email";
+const AUTH_REDIRECT_PATH = import.meta.env.VITE_AUTH_REDIRECT_PATH ?? "/auth/callback";
+const AUTH_PROVIDER_PARAM = import.meta.env.VITE_AUTH_PROVIDER_PARAM ?? "idp_hint";
+const AUTH_LOGOUT_URL = import.meta.env.VITE_AUTH_LOGOUT_URL ?? "";
 
 export default function App() {
   const [userId, setUserId] = React.useState<string | null>(() =>
@@ -54,6 +72,12 @@ export default function App() {
   );
   const [jobId, setJobId] = React.useState<string | null>(() =>
     localStorage.getItem(JOB_ID_KEY)
+  );
+  const [accessToken, setAccessToken] = React.useState<string | null>(() =>
+    localStorage.getItem(TOKEN_KEY)
+  );
+  const [idToken, setIdToken] = React.useState<string | null>(() =>
+    localStorage.getItem(ID_TOKEN_KEY)
   );
   const [showAllFlights, setShowAllFlights] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
@@ -67,11 +91,20 @@ export default function App() {
   const [endDate, setEndDate] = React.useState("");
   const [maxFlights, setMaxFlights] = React.useState("");
 
-  const { data: job, error: jobError, refresh } = useJobSnapshot(jobId, userId);
+  const isSignedIn = AUTH_MODE === "oidc" ? Boolean(accessToken) : Boolean(userId);
+  const auth = React.useMemo<AuthContext>(
+    () => (AUTH_MODE === "oidc" ? { token: accessToken } : { userId }),
+    [accessToken, userId]
+  );
+
+  const { data: job, error: jobError, refresh } = useJobSnapshot(
+    isSignedIn ? jobId : null,
+    auth
+  );
 
   const flow = React.useMemo(
-    () => deriveFlowState(Boolean(userId), job ?? null),
-    [userId, job]
+    () => deriveFlowState(isSignedIn, job ?? null),
+    [isSignedIn, job]
   );
   const openStep = React.useMemo(() => getOpenStep(flow), [flow]);
 
@@ -83,10 +116,85 @@ export default function App() {
   const importRunning = flow.importStatus === "running";
   const importComplete = flow.importStatus === "complete";
   const reviewApproved = importRunning || importComplete;
+  const errorMessage = actionError || jobError;
+
+  React.useEffect(() => {
+    if (AUTH_MODE !== "oidc") return;
+    const url = new URL(window.location.href);
+    if (!url.pathname.endsWith(AUTH_REDIRECT_PATH)) return;
+    const code = url.searchParams.get("code");
+    const state = url.searchParams.get("state");
+    if (!code || !state) return;
+    const expectedState = sessionStorage.getItem(AUTH_STATE_KEY);
+    const verifier = sessionStorage.getItem(CODE_VERIFIER_KEY);
+    if (!verifier || !expectedState || expectedState !== state) {
+      setActionError("Auth session expired. Please sign in again.");
+      return;
+    }
+    const redirectUri = `${window.location.origin}${AUTH_REDIRECT_PATH}`;
+    (async () => {
+      setActionLoading(true);
+      setActionError(null);
+      try {
+        const token = await exchangeToken({
+          code,
+          code_verifier: verifier,
+          redirect_uri: redirectUri,
+        });
+        localStorage.setItem(TOKEN_KEY, token.access_token);
+        setAccessToken(token.access_token);
+        if (token.id_token) {
+          localStorage.setItem(ID_TOKEN_KEY, token.id_token);
+          setIdToken(token.id_token);
+          const claims = parseJwt(token.id_token);
+          if (claims?.email) {
+            localStorage.setItem(USER_ID_KEY, claims.email);
+            setUserId(claims.email);
+          }
+        }
+        sessionStorage.removeItem(CODE_VERIFIER_KEY);
+        sessionStorage.removeItem(AUTH_STATE_KEY);
+        window.history.replaceState({}, document.title, "/");
+      } catch (err) {
+        setActionError(err instanceof Error ? err.message : "Auth failed");
+      } finally {
+        setActionLoading(false);
+      }
+    })();
+  }, []);
 
   const connectLocked = flow.connected && flow.reviewStatus !== "idle";
 
+  const startOidcLogin = async (provider?: string) => {
+    if (!AUTH_ISSUER) {
+      setActionError("Auth issuer is not configured.");
+      return;
+    }
+    const redirectUri = `${window.location.origin}${AUTH_REDIRECT_PATH}`;
+    const verifier = generateCodeVerifier();
+    sessionStorage.setItem(CODE_VERIFIER_KEY, verifier);
+    const challenge = await generateCodeChallenge(verifier);
+    const state = generateState();
+    sessionStorage.setItem(AUTH_STATE_KEY, state);
+    const authUrl = new URL(`${AUTH_ISSUER.replace(/\\/$/, "")}/protocol/openid-connect/auth`);
+    authUrl.searchParams.set("client_id", AUTH_CLIENT_ID);
+    authUrl.searchParams.set("response_type", "code");
+    authUrl.searchParams.set("scope", AUTH_SCOPE);
+    authUrl.searchParams.set("redirect_uri", redirectUri);
+    authUrl.searchParams.set("code_challenge", challenge);
+    authUrl.searchParams.set("code_challenge_method", "S256");
+    authUrl.searchParams.set("state", state);
+    if (provider) {
+      authUrl.searchParams.set(AUTH_PROVIDER_PARAM, provider);
+    }
+    window.location.assign(authUrl.toString());
+  };
+
   const handleSignIn = () => {
+    if (AUTH_MODE === "oidc") {
+      startOidcLogin();
+      return;
+    }
     const nextUserId = "pilot@skybridge.dev";
     localStorage.setItem(USER_ID_KEY, nextUserId);
     setUserId(nextUserId);
@@ -94,7 +202,7 @@ export default function App() {
   };
 
   const handleConnectReview = async () => {
-    if (!userId) return;
+    if (!isSignedIn) return;
     setActionLoading(true);
     setActionError(null);
     try {
@@ -109,7 +217,7 @@ export default function App() {
         end_date: endDate || null,
         max_flights: maxFlights ? Number(maxFlights) : null,
       };
-      const createdJob = await createJob(payload, userId);
+      const createdJob = await createJob(payload, auth);
       localStorage.setItem(JOB_ID_KEY, createdJob.job_id);
       setJobId(createdJob.job_id);
       setShowAllFlights(false);
@@ -121,22 +229,18 @@ export default function App() {
   };
 
   const handleApproveImport = async () => {
-    if (!userId || !jobId) return;
+    if (!isSignedIn || !jobId) return;
     setActionLoading(true);
     setActionError(null);
     try {
-      await acceptReview(
-        jobId,
-        {
-          credentials: {
-            cloudahoy_username: cloudahoyEmail,
-            cloudahoy_password: cloudahoyPassword,
-            flysto_username: flystoEmail,
-            flysto_password: flystoPassword,
-          },
+      await acceptReview(jobId, {
+        credentials: {
+          cloudahoy_username: cloudahoyEmail,
+          cloudahoy_password: cloudahoyPassword,
+          flysto_username: flystoEmail,
+          flysto_password: flystoPassword,
         },
-        userId
-      );
+      }, auth);
       refresh();
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Failed to start import");
@@ -162,25 +266,37 @@ export default function App() {
   const handleSignOut = () => {
     localStorage.removeItem(USER_ID_KEY);
     localStorage.removeItem(JOB_ID_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(ID_TOKEN_KEY);
     setUserId(null);
     setJobId(null);
+    setAccessToken(null);
+    setIdToken(null);
     setShowAllFlights(false);
     setActionError(null);
+    if (AUTH_MODE === "oidc" && AUTH_LOGOUT_URL) {
+      const url = new URL(AUTH_LOGOUT_URL);
+      url.searchParams.set(
+        "post_logout_redirect_uri",
+        window.location.origin + "/"
+      );
+      window.location.assign(url.toString());
+    }
   };
 
   const handleDownloadReport = async () => {
-    if (!userId || !jobId) return;
+    if (!jobId) return;
     setActionLoading(true);
     setActionError(null);
     try {
-      const artifacts = await listArtifacts(jobId, userId);
+      const artifacts = await listArtifacts(jobId, auth);
       const reportName = artifacts.artifacts.find((artifact) =>
         artifact.includes("import-report")
       );
       if (!reportName) {
         throw new Error("Import report not found yet.");
       }
-      const payload = await fetchArtifact(jobId, reportName, userId);
+      const payload = await fetchArtifact(jobId, reportName, auth);
       const blob = new Blob([JSON.stringify(payload, null, 2)], {
         type: "application/json",
       });
@@ -192,6 +308,21 @@ export default function App() {
       window.URL.revokeObjectURL(url);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Failed to download report");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteResults = async () => {
+    if (!jobId) return;
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      await deleteJob(jobId, auth);
+      localStorage.removeItem(JOB_ID_KEY);
+      setJobId(null);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to delete results");
     } finally {
       setActionLoading(false);
     }
@@ -304,10 +435,22 @@ export default function App() {
                         <Button onClick={handleSignIn} disabled={flow.signedIn}>
                           Sign in with email
                         </Button>
-                        <Button variant="outline" disabled={flow.signedIn}>
+                        <Button
+                          variant="outline"
+                          disabled={flow.signedIn}
+                          onClick={() =>
+                            AUTH_MODE === "oidc" ? startOidcLogin("google") : undefined
+                          }
+                        >
                           Continue with Google
                         </Button>
-                        <Button variant="outline" disabled={flow.signedIn}>
+                        <Button
+                          variant="outline"
+                          disabled={flow.signedIn}
+                          onClick={() =>
+                            AUTH_MODE === "oidc" ? startOidcLogin("apple") : undefined
+                          }
+                        >
                           Continue with Apple
                         </Button>
                       </div>
@@ -434,10 +577,15 @@ export default function App() {
                         of flights that will be imported.
                       </p>
 
-                      {(actionError || jobError) && (
+                      {errorMessage && (
                         <Alert variant="destructive">
                           <AlertTitle>Something went wrong</AlertTitle>
-                          <AlertDescription>{actionError || jobError}</AlertDescription>
+                          <AlertDescription>{errorMessage}</AlertDescription>
+                          <div className="mt-3">
+                            <Button size="sm" variant="outline" onClick={refresh}>
+                              Retry
+                            </Button>
+                          </div>
                         </Alert>
                       )}
 
@@ -512,38 +660,40 @@ export default function App() {
                         </div>
                       )}
                       {reviewComplete && (
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Status</TableHead>
-                              <TableHead>Flight ID</TableHead>
-                              <TableHead>Date</TableHead>
-                              <TableHead>Registration</TableHead>
-                              <TableHead>Origin</TableHead>
-                              <TableHead>Destination</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {visibleFlights.map((flight) => (
-                              <TableRow key={flight.flight_id}>
-                                <TableCell>
-                                  <Badge
-                                    variant={
-                                      flight.tail_number ? "success" : "warning"
-                                    }
-                                  >
-                                    {flight.tail_number ? "OK" : "Needs review"}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>{formatFlightId(flight)}</TableCell>
-                                <TableCell>{formatDate(flight.date)}</TableCell>
-                                <TableCell>{flight.tail_number ?? "—"}</TableCell>
-                                <TableCell>{flight.origin ?? "—"}</TableCell>
-                                <TableCell>{flight.destination ?? "—"}</TableCell>
+                        <div className="overflow-x-auto">
+                          <Table className="min-w-[720px]">
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Flight ID</TableHead>
+                                <TableHead>Date</TableHead>
+                                <TableHead>Registration</TableHead>
+                                <TableHead>Origin</TableHead>
+                                <TableHead>Destination</TableHead>
                               </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
+                            </TableHeader>
+                            <TableBody>
+                              {visibleFlights.map((flight) => (
+                                <TableRow key={flight.flight_id}>
+                                  <TableCell>
+                                    <Badge
+                                      variant={
+                                        flight.tail_number ? "success" : "warning"
+                                      }
+                                    >
+                                      {flight.tail_number ? "OK" : "Needs review"}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>{formatFlightId(flight)}</TableCell>
+                                  <TableCell>{formatDate(flight.date)}</TableCell>
+                                  <TableCell>{flight.tail_number ?? "—"}</TableCell>
+                                  <TableCell>{flight.origin ?? "—"}</TableCell>
+                                  <TableCell>{flight.destination ?? "—"}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
                       )}
                       {reviewComplete && flights.length > 3 && !showAllFlights && (
                         <Button
@@ -559,10 +709,15 @@ export default function App() {
                           All flights shown
                         </div>
                       )}
-                      {(actionError || jobError) && (
+                      {errorMessage && (
                         <Alert variant="destructive">
                           <AlertTitle>Something went wrong</AlertTitle>
-                          <AlertDescription>{actionError || jobError}</AlertDescription>
+                          <AlertDescription>{errorMessage}</AlertDescription>
+                          <div className="mt-3">
+                            <Button size="sm" variant="outline" onClick={refresh}>
+                              Retry
+                            </Button>
+                          </div>
                         </Alert>
                       )}
                       <div className="flex flex-wrap gap-3">
@@ -647,10 +802,15 @@ export default function App() {
                           </AlertDescription>
                         </Alert>
                       )}
-                      {(actionError || jobError) && (
+                      {errorMessage && (
                         <Alert variant="destructive">
                           <AlertTitle>Something went wrong</AlertTitle>
-                          <AlertDescription>{actionError || jobError}</AlertDescription>
+                          <AlertDescription>{errorMessage}</AlertDescription>
+                          <div className="mt-3">
+                            <Button size="sm" variant="outline" onClick={refresh}>
+                              Retry
+                            </Button>
+                          </div>
                         </Alert>
                       )}
                       {importComplete && (
@@ -658,7 +818,11 @@ export default function App() {
                           <Button onClick={handleDownloadReport} disabled={actionLoading}>
                             Download report
                           </Button>
-                          <Button variant="destructive" disabled>
+                          <Button
+                            variant="destructive"
+                            onClick={handleDeleteResults}
+                            disabled={actionLoading}
+                          >
                             Delete results now
                           </Button>
                         </div>
@@ -721,4 +885,41 @@ function formatFlightId(flight: FlightSummary) {
   if (!id) return "—";
   if (id.length <= 16) return id;
   return `...${id.slice(-12)}`;
+}
+
+function generateCodeVerifier() {
+  const bytes = new Uint8Array(32);
+  window.crypto.getRandomValues(bytes);
+  return base64UrlEncode(bytes);
+}
+
+async function generateCodeChallenge(verifier: string) {
+  const data = new TextEncoder().encode(verifier);
+  const digest = await window.crypto.subtle.digest("SHA-256", data);
+  return base64UrlEncode(new Uint8Array(digest));
+}
+
+function generateState() {
+  const bytes = new Uint8Array(16);
+  window.crypto.getRandomValues(bytes);
+  return base64UrlEncode(bytes);
+}
+
+function base64UrlEncode(bytes: Uint8Array) {
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function parseJwt(token: string) {
+  try {
+    const payload = token.split(".")[1];
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = atob(normalized);
+    return JSON.parse(decoded) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
 }

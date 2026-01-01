@@ -4,6 +4,7 @@ import json
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
+from shutil import rmtree
 from typing import Any
 from uuid import UUID
 
@@ -58,6 +59,11 @@ class JobStore:
         job_file = self._job_file(job_id)
         job_data = json.loads(job_file.read_text())
         return JobRecord.model_validate(job_data)
+
+    def delete_job(self, job_id: UUID) -> None:
+        job_dir = self._job_dir(job_id)
+        if job_dir.exists():
+            rmtree(job_dir)
 
     def save_job(self, job: JobRecord) -> None:
         job_dir = self._job_dir(job.job_id)

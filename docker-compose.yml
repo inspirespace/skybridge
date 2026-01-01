@@ -19,6 +19,15 @@ services:
     command: ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0 --port 5173"]
     ports:
       - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=https://skybridge.localhost/api
+      - VITE_AUTH_MODE=oidc
+      - VITE_AUTH_ISSUER_URL=https://auth.skybridge.localhost/realms/skybridge-dev
+      - VITE_AUTH_CLIENT_ID=skybridge-dev
+      - VITE_AUTH_SCOPE=openid profile email
+      - VITE_AUTH_REDIRECT_PATH=/auth/callback
+      - VITE_AUTH_PROVIDER_PARAM=idp_hint
+      - VITE_AUTH_LOGOUT_URL=https://auth.skybridge.localhost/realms/skybridge-dev/protocol/openid-connect/logout
 
   api:
     build:

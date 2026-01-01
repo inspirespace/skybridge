@@ -143,6 +143,18 @@ def get_job(
     return _load_job_or_404(job_id, user_id)
 
 
+@app.delete("/jobs/{job_id}")
+def delete_job(
+    job_id: UUID,
+    x_user_id: Optional[str] = Header(default=None),
+    authorization: Optional[str] = Header(default=None),
+) -> dict:
+    user_id = user_id_from_request(authorization, x_user_id)
+    _load_job_or_404(job_id, user_id)
+    store.delete_job(job_id)
+    return {"deleted": True}
+
+
 @app.post("/jobs/{job_id}/review/accept", response_model=JobRecord)
 def accept_review(
     job_id: UUID,
