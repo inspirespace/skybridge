@@ -68,6 +68,8 @@ class JobRecord(BaseModel):
     status: JobStatus
     created_at: datetime
     updated_at: datetime
+    progress_percent: Optional[int] = None
+    progress_stage: Optional[str] = None
     review_id: Optional[str] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None

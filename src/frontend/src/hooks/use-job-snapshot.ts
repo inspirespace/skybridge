@@ -1,6 +1,13 @@
 import * as React from "react";
 
-import { getJob, type AuthContext, type JobRecord, type JobStatus } from "@/api/client";
+import {
+  apiBaseUrl,
+  buildAuthHeaders,
+  getJob,
+  type AuthContext,
+  type JobRecord,
+  type JobStatus,
+} from "@/api/client";
 
 const POLLABLE_STATUSES: JobStatus[] = [
   "review_queued",
@@ -40,11 +47,56 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
   React.useEffect(() => {
     if (!jobId || !data?.status) return;
     if (!POLLABLE_STATUSES.includes(data.status)) return;
-    const interval = window.setInterval(() => {
-      load();
-    }, 4000);
-    return () => window.clearInterval(interval);
-  }, [jobId, data?.status, load]);
+
+    const controller = new AbortController();
+    const startStream = async () => {
+      try {
+        const response = await fetch(`${apiBaseUrl}/jobs/${jobId}/events`, {
+          method: "GET",
+          headers: {
+            Accept: "text/event-stream",
+            ...buildAuthHeaders(auth),
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok || !response.body) {
+          throw new Error("Failed to open progress stream");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() ?? "";
+          for (const part of parts) {
+            const dataLine = part
+              .split("\n")
+              .filter((line) => line.startsWith("data:"))
+              .map((line) => line.replace(/^data:\\s?/, ""))
+              .join("\n")
+              .trim();
+            if (!dataLine) continue;
+            const payload = JSON.parse(dataLine) as JobRecord;
+            setData(payload);
+          }
+        }
+      } catch (err) {
+        if ((err as Error).name === "AbortError") return;
+        setError(
+          err instanceof Error ? err.message : "Failed to stream job updates"
+        );
+      }
+    };
+
+    startStream();
+    return () => controller.abort();
+  }, [jobId, data?.status, auth, load]);
 
   return { data, loading, error, refresh: load };
 }

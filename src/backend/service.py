@@ -35,6 +35,8 @@ class JobService:
             status="review_running",
             created_at=_now(),
             updated_at=_now(),
+            progress_percent=5,
+            progress_stage="Queued",
         )
         self._store.save_job(job)
         return job
@@ -42,6 +44,8 @@ class JobService:
     def generate_review(self, job_id: UUID, payload: JobCreateRequest) -> JobRecord:
         job = self._store.load_job(job_id)
         job.status = "review_running"
+        job.progress_percent = 10
+        job.progress_stage = "Fetching CloudAhoy flights"
         job.updated_at = _now()
         job.error_message = None
         self._store.save_job(job)
@@ -62,6 +66,10 @@ class JobService:
                 payload.end_date,
                 payload.max_flights,
             )
+            job.progress_percent = 45
+            job.progress_stage = "Preparing review"
+            job.updated_at = _now()
+            self._store.save_job(job)
 
             items, review_id = prepare_review(
                 cloudahoy=cloudahoy,
@@ -71,11 +79,17 @@ class JobService:
                 force=False,
                 output_path=review_path,
             )
+            job.progress_percent = 80
+            job.progress_stage = "Building summary"
+            job.updated_at = _now()
+            self._store.save_job(job)
 
             review_summary = _build_review_summary(items)
             job.review_id = review_id
             job.review_summary = review_summary
             job.status = "review_ready"
+            job.progress_percent = 100
+            job.progress_stage = "Review ready"
             job.updated_at = _now()
             job.error_message = None
             self._store.save_job(job)
@@ -83,6 +97,7 @@ class JobService:
             return job
         except Exception as exc:
             job.status = "failed"
+            job.progress_stage = "Review failed"
             job.error_message = f"Review failed: {exc}"
             job.updated_at = _now()
             self._store.save_job(job)
@@ -91,6 +106,8 @@ class JobService:
     def accept_review(self, job_id: UUID, payload: JobAcceptRequest) -> JobRecord:
         job = self._store.load_job(job_id)
         job.status = "import_running"
+        job.progress_percent = 10
+        job.progress_stage = "Uploading flights"
         job.updated_at = _now()
         job.error_message = None
         self._store.save_job(job)
@@ -129,6 +146,10 @@ class JobService:
                 review_id=review_id,
                 progress=None,
             )
+            job.progress_percent = 70
+            job.progress_stage = "Reconciling data"
+            job.updated_at = _now()
+            self._store.save_job(job)
 
             imported_count = sum(1 for result in results if result.status == "ok")
             skipped_count = sum(1 for result in results if result.status == "skipped")
@@ -141,6 +162,10 @@ class JobService:
             )
 
             if _bool_env("BACKEND_RECONCILE", True) and not _bool_env("DRY_RUN", False):
+                job.progress_percent = 85
+                job.progress_stage = "Finalizing import"
+                job.updated_at = _now()
+                self._store.save_job(job)
                 _maybe_wait_for_processing(flysto)
                 verify_import_report(report_path, flysto)
                 reconcile_aircraft_from_report(report_path, flysto)
@@ -151,12 +176,15 @@ class JobService:
                 reconcile_crew_from_report(report_path, flysto, review_path, cloudahoy)
             job.import_report = report
             job.status = "completed"
+            job.progress_percent = 100
+            job.progress_stage = "Import complete"
             job.updated_at = _now()
             job.error_message = None
             self._store.save_job(job)
             return job
         except Exception as exc:
             job.status = "failed"
+            job.progress_stage = "Import failed"
             job.error_message = f"Import failed: {exc}"
             job.updated_at = _now()
             self._store.save_job(job)

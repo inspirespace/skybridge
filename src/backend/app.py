@@ -9,7 +9,11 @@ from uuid import UUID
 from concurrent.futures import ThreadPoolExecutor
 
 import requests
+import asyncio
+import json as jsonlib
 from fastapi import FastAPI, Header, HTTPException
+from fastapi import Request
+from fastapi.responses import StreamingResponse
 from pydantic import ValidationError
 
 from .auth import user_id_from_request
@@ -115,6 +119,8 @@ def create_job(
             ttl_seconds=_credential_ttl(),
         )
         job.status = "review_queued"
+        job.progress_percent = 5
+        job.progress_stage = "Queued"
         job.updated_at = datetime.now(timezone.utc)
         store.save_job(job)
         store.write_token(job.job_id, "review", token)
@@ -141,6 +147,37 @@ def get_job(
 ) -> JobRecord:
     user_id = user_id_from_request(authorization, x_user_id)
     return _load_job_or_404(job_id, user_id)
+
+
+@app.get("/jobs/{job_id}/events")
+async def job_events(
+    job_id: UUID,
+    request: Request,
+    x_user_id: Optional[str] = Header(default=None),
+    authorization: Optional[str] = Header(default=None),
+) -> StreamingResponse:
+    user_id = user_id_from_request(authorization, x_user_id)
+    _load_job_or_404(job_id, user_id)
+
+    async def event_stream():
+        last_payload = None
+        while True:
+            if await request.is_disconnected():
+                break
+            job = _load_job_or_404(job_id, user_id)
+            payload = jsonlib.dumps(job.model_dump())
+            if payload != last_payload:
+                yield f"data: {payload}\n\n"
+                last_payload = payload
+            if job.status in {"review_ready", "completed", "failed"}:
+                break
+            await asyncio.sleep(2)
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.delete("/jobs/{job_id}")

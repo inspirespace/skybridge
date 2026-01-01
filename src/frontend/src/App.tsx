@@ -1,5 +1,9 @@
 import * as React from "react";
 
+import { format } from "date-fns";
+import type { DateRange } from "react-day-picker";
+import { CalendarIcon } from "lucide-react";
+
 import {
   Accordion,
   AccordionContent,
@@ -9,6 +13,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Card,
   CardContent,
@@ -18,6 +23,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Progress } from "@/components/ui/progress";
 import { ImportResults } from "@/components/import-results";
 import {
@@ -65,6 +71,12 @@ const AUTH_SCOPE = import.meta.env.VITE_AUTH_SCOPE ?? "openid profile email";
 const AUTH_REDIRECT_PATH = import.meta.env.VITE_AUTH_REDIRECT_PATH ?? "/auth/callback";
 const AUTH_PROVIDER_PARAM = import.meta.env.VITE_AUTH_PROVIDER_PARAM ?? "idp_hint";
 const AUTH_LOGOUT_URL = import.meta.env.VITE_AUTH_LOGOUT_URL ?? "";
+const DEV_PREFILL =
+  import.meta.env.DEV && (import.meta.env.VITE_DEV_PREFILL_CREDENTIALS ?? "") === "1";
+const DEV_CLOUD_AHOY_EMAIL = import.meta.env.VITE_CLOUD_AHOY_EMAIL ?? "";
+const DEV_CLOUD_AHOY_PASSWORD = import.meta.env.VITE_CLOUD_AHOY_PASSWORD ?? "";
+const DEV_FLYSTO_EMAIL = import.meta.env.VITE_FLYSTO_EMAIL ?? "";
+const DEV_FLYSTO_PASSWORD = import.meta.env.VITE_FLYSTO_PASSWORD ?? "";
 
 export default function App() {
   const [userId, setUserId] = React.useState<string | null>(() =>
@@ -82,13 +94,13 @@ export default function App() {
   const [showAllFlights, setShowAllFlights] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [actionLoading, setActionLoading] = React.useState(false);
+  const didExchangeRef = React.useRef(false);
 
   const [cloudahoyEmail, setCloudahoyEmail] = React.useState("");
   const [cloudahoyPassword, setCloudahoyPassword] = React.useState("");
   const [flystoEmail, setFlystoEmail] = React.useState("");
   const [flystoPassword, setFlystoPassword] = React.useState("");
-  const [startDate, setStartDate] = React.useState("");
-  const [endDate, setEndDate] = React.useState("");
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>();
   const [maxFlights, setMaxFlights] = React.useState("");
 
   const isSignedIn = AUTH_MODE === "oidc" ? Boolean(accessToken) : Boolean(userId);
@@ -118,13 +130,48 @@ export default function App() {
   const reviewApproved = importRunning || importComplete;
   const errorMessage = actionError || jobError;
 
+  const reviewProgress =
+    typeof job?.progress_percent === "number" && job.status.startsWith("review")
+      ? job.progress_percent
+      : reviewComplete
+        ? 100
+        : reviewRunning
+          ? 45
+          : 0;
+  const importProgress =
+    typeof job?.progress_percent === "number" &&
+    (job.status.startsWith("import") || job.status === "completed")
+      ? job.progress_percent
+      : importComplete
+        ? 100
+        : importRunning
+          ? 55
+          : 0;
+  const reviewStage = job?.status?.startsWith("review")
+    ? job?.progress_stage ?? (reviewComplete ? "Review ready" : "Review running")
+    : reviewComplete
+      ? "Review ready"
+      : "Review running";
+  const importStage = job?.status?.startsWith("import") || job?.status === "completed"
+    ? job?.progress_stage ?? (importComplete ? "Import complete" : "Import running")
+    : importComplete
+      ? "Import complete"
+      : "Import running";
+
   React.useEffect(() => {
     if (AUTH_MODE !== "oidc") return;
     const url = new URL(window.location.href);
-    if (!url.pathname.endsWith(AUTH_REDIRECT_PATH)) return;
+    const redirectPath = AUTH_REDIRECT_PATH.endsWith("/")
+      ? AUTH_REDIRECT_PATH.slice(0, -1)
+      : AUTH_REDIRECT_PATH;
+    const currentPath = url.pathname.endsWith("/")
+      ? url.pathname.slice(0, -1)
+      : url.pathname;
+    if (!currentPath.endsWith(redirectPath)) return;
     const code = url.searchParams.get("code");
     const state = url.searchParams.get("state");
     if (!code || !state) return;
+    if (didExchangeRef.current) return;
     const expectedState = sessionStorage.getItem(AUTH_STATE_KEY);
     const verifier = sessionStorage.getItem(CODE_VERIFIER_KEY);
     if (!verifier || !expectedState || expectedState !== state) {
@@ -135,6 +182,7 @@ export default function App() {
     (async () => {
       setActionLoading(true);
       setActionError(null);
+      didExchangeRef.current = true;
       try {
         const token = await exchangeToken({
           code,
@@ -163,6 +211,14 @@ export default function App() {
     })();
   }, []);
 
+  React.useEffect(() => {
+    if (!DEV_PREFILL) return;
+    if (DEV_CLOUD_AHOY_EMAIL) setCloudahoyEmail(DEV_CLOUD_AHOY_EMAIL);
+    if (DEV_CLOUD_AHOY_PASSWORD) setCloudahoyPassword(DEV_CLOUD_AHOY_PASSWORD);
+    if (DEV_FLYSTO_EMAIL) setFlystoEmail(DEV_FLYSTO_EMAIL);
+    if (DEV_FLYSTO_PASSWORD) setFlystoPassword(DEV_FLYSTO_PASSWORD);
+  }, []);
+
   const connectLocked = flow.connected && flow.reviewStatus !== "idle";
 
   const startOidcLogin = async (provider?: string) => {
@@ -176,7 +232,10 @@ export default function App() {
     const challenge = await generateCodeChallenge(verifier);
     const state = generateState();
     sessionStorage.setItem(AUTH_STATE_KEY, state);
-    const authUrl = new URL(`${AUTH_ISSUER.replace(/\\/$/, "")}/protocol/openid-connect/auth`);
+    const issuerBase = AUTH_ISSUER.endsWith("/")
+      ? AUTH_ISSUER.slice(0, -1)
+      : AUTH_ISSUER;
+    const authUrl = new URL(`${issuerBase}/protocol/openid-connect/auth`);
     authUrl.searchParams.set("client_id", AUTH_CLIENT_ID);
     authUrl.searchParams.set("response_type", "code");
     authUrl.searchParams.set("scope", AUTH_SCOPE);
@@ -213,8 +272,8 @@ export default function App() {
           flysto_username: flystoEmail,
           flysto_password: flystoPassword,
         },
-        start_date: startDate || null,
-        end_date: endDate || null,
+        start_date: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : null,
+        end_date: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : null,
         max_flights: maxFlights ? Number(maxFlights) : null,
       };
       const createdJob = await createJob(payload, auth);
@@ -275,10 +334,15 @@ export default function App() {
     setShowAllFlights(false);
     setActionError(null);
     if (AUTH_MODE === "oidc" && AUTH_LOGOUT_URL) {
+      if (!idToken) {
+        return;
+      }
       const url = new URL(AUTH_LOGOUT_URL);
+      url.searchParams.set("id_token_hint", idToken);
+      url.searchParams.set("client_id", AUTH_CLIENT_ID);
       url.searchParams.set(
         "post_logout_redirect_uri",
-        window.location.origin + "/"
+        window.location.origin + AUTH_REDIRECT_PATH
       );
       window.location.assign(url.toString());
     }
@@ -402,7 +466,9 @@ export default function App() {
                 <AccordionTrigger>
                   <div className="flex items-center gap-3">
                     <span>1 · Sign in</span>
-                    <Badge variant="secondary">Required</Badge>
+                    <Badge variant={flow.signedIn ? "success" : "secondary"}>
+                      {flow.signedIn ? "Signed in" : "Required"}
+                    </Badge>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
@@ -432,27 +498,42 @@ export default function App() {
                         </AlertDescription>
                       </Alert>
                       <div className="flex flex-wrap gap-3">
-                        <Button onClick={handleSignIn} disabled={flow.signedIn}>
+                        <Button onClick={handleSignIn} disabled={flow.signedIn || actionLoading}>
                           Sign in with email
                         </Button>
-                        <Button
-                          variant="outline"
-                          disabled={flow.signedIn}
-                          onClick={() =>
-                            AUTH_MODE === "oidc" ? startOidcLogin("google") : undefined
-                          }
-                        >
-                          Continue with Google
-                        </Button>
-                        <Button
-                          variant="outline"
-                          disabled={flow.signedIn}
-                          onClick={() =>
-                            AUTH_MODE === "oidc" ? startOidcLogin("apple") : undefined
-                          }
-                        >
-                          Continue with Apple
-                        </Button>
+                        {AUTH_MODE === "oidc" ? (
+                          <>
+                            <Button
+                              variant="outline"
+                              disabled={flow.signedIn || actionLoading}
+                              onClick={() => startOidcLogin("google")}
+                            >
+                              Continue with Google
+                            </Button>
+                            <Button
+                              variant="outline"
+                              disabled={flow.signedIn || actionLoading}
+                              onClick={() => startOidcLogin("apple")}
+                            >
+                              Continue with Apple
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button variant="outline" disabled>
+                              Continue with Google
+                            </Button>
+                            <Button variant="outline" disabled>
+                              Continue with Apple
+                            </Button>
+                          </>
+                        )}
+                      {errorMessage && (
+                        <Alert variant="destructive">
+                          <AlertTitle>Sign-in failed</AlertTitle>
+                          <AlertDescription>{errorMessage}</AlertDescription>
+                        </Alert>
+                      )}
                       </div>
                     </CardContent>
                   </Card>
@@ -540,34 +621,60 @@ export default function App() {
                       </div>
 
                       <div className="grid gap-3 md:grid-cols-3">
-                        <div className="space-y-2">
-                          <Label htmlFor="start-date">Start date</Label>
-                          <Input
-                            id="start-date"
-                            placeholder="YYYY-MM-DD"
-                            disabled={connectLocked}
-                            value={startDate}
-                            onChange={(event) => setStartDate(event.target.value)}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="end-date">End date</Label>
-                          <Input
-                            id="end-date"
-                            placeholder="YYYY-MM-DD"
-                            disabled={connectLocked}
-                            value={endDate}
-                            onChange={(event) => setEndDate(event.target.value)}
-                          />
+                        <div className="space-y-2 md:col-span-2">
+                          <Label>Date range</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className="w-full justify-start text-left font-normal"
+                                disabled={connectLocked}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {dateRange?.from ? (
+                                  dateRange.to ? (
+                                    <>
+                                      {format(dateRange.from, "LLL dd, y")} -{" "}
+                                      {format(dateRange.to, "LLL dd, y")}
+                                    </>
+                                  ) : (
+                                    format(dateRange.from, "LLL dd, y")
+                                  )
+                                ) : (
+                                  <span className="text-muted-foreground">
+                                    Pick a date range
+                                  </span>
+                                )}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="range"
+                                defaultMonth={dateRange?.from}
+                                selected={dateRange}
+                                onSelect={setDateRange}
+                                numberOfMonths={2}
+                              />
+                            </PopoverContent>
+                          </Popover>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="max-flights">Max flights to import</Label>
                           <Input
                             id="max-flights"
+                            type="number"
+                            min={1}
+                            step={1}
+                            inputMode="numeric"
                             placeholder="50"
                             disabled={connectLocked}
                             value={maxFlights}
-                            onChange={(event) => setMaxFlights(event.target.value)}
+                            onChange={(event) => {
+                              const next = event.target.value;
+                              if (next === "" || /^[0-9]+$/.test(next)) {
+                                setMaxFlights(next);
+                              }
+                            }}
                           />
                         </div>
                       </div>
@@ -627,19 +734,13 @@ export default function App() {
                     <CardContent className="space-y-4">
                       <div className="rounded-md border bg-muted/40 p-4 text-sm">
                         <div className="flex items-center justify-between">
-                          <span className="font-medium">
-                            {reviewComplete
-                              ? "Review complete"
-                              : reviewRunning
-                                ? "Review running"
-                                : "Review idle"}
-                          </span>
+                          <span className="font-medium">{reviewStage}</span>
                           <span className="text-xs text-muted-foreground">
                             Last update: just now
                           </span>
                         </div>
                         <div className="mt-3">
-                          <Progress value={reviewComplete ? 100 : reviewRunning ? 60 : 5} />
+                          <Progress value={reviewProgress} />
                         </div>
                         <div className="mt-3 text-xs text-emerald-700">
                           Flights are fetched from CloudAhoy first so you can check them
@@ -765,21 +866,13 @@ export default function App() {
                     <CardContent className="space-y-4">
                       <div className="rounded-md border bg-muted/40 p-4 text-sm">
                         <div className="flex items-center justify-between">
-                          <span className="font-medium">
-                            {importComplete
-                              ? "Import complete"
-                              : importRunning
-                                ? "Import running"
-                                : "Import idle"}
-                          </span>
+                          <span className="font-medium">{importStage}</span>
                           <span className="text-xs text-muted-foreground">
                             Last update: just now
                           </span>
                         </div>
                         <div className="mt-3">
-                          <Progress
-                            value={importComplete ? 100 : importRunning ? 65 : 5}
-                          />
+                          <Progress value={importProgress} />
                         </div>
                       </div>
                       {importComplete && job?.import_report && (

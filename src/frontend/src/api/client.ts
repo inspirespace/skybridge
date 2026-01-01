@@ -39,6 +39,8 @@ export type JobRecord = {
   status: JobStatus;
   created_at: string;
   updated_at: string;
+  progress_percent?: number | null;
+  progress_stage?: string | null;
   review_id?: string | null;
   start_date?: string | null;
   end_date?: string | null;
@@ -80,6 +82,29 @@ export type AuthContext = {
   token?: string | null;
 };
 
+export function buildAuthHeaders(auth?: AuthContext, skipAuth = false) {
+  const headers: Record<string, string> = {};
+  if (skipAuth) return headers;
+  const userId = auth?.userId ?? undefined;
+  const token = auth?.token ?? undefined;
+
+  if (authMode === "header") {
+    if (!userId) {
+      throw new Error("Missing user session. Please sign in again.");
+    }
+    headers["X-User-Id"] = userId;
+  }
+
+  if (authMode === "oidc") {
+    if (!token) {
+      throw new Error("Missing access token. Please sign in again.");
+    }
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return headers;
+}
+
 async function requestJson<T>(
   path: string,
   {
@@ -96,23 +121,8 @@ async function requestJson<T>(
 ): Promise<T> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    ...buildAuthHeaders(auth, skipAuth),
   };
-  const userId = auth?.userId ?? undefined;
-  const token = auth?.token ?? undefined;
-
-  if (authMode === "header" && !skipAuth) {
-    if (!userId) {
-      throw new Error("Missing user session. Please sign in again.");
-    }
-    headers["X-User-Id"] = userId;
-  }
-
-  if (authMode === "oidc" && !skipAuth) {
-    if (!token) {
-      throw new Error("Missing access token. Please sign in again.");
-    }
-    headers.Authorization = `Bearer ${token}`;
-  }
 
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method,

@@ -36,6 +36,11 @@ Set in docker compose for local dev:
 - `VITE_AUTH_PROVIDER_PARAM` (`idp_hint` for Keycloak)
 - `VITE_AUTH_LOGOUT_URL` (optional end-session endpoint)
 
+### Dev Credential Prefill
+Only in Vite dev mode (`import.meta.env.DEV`) when `VITE_DEV_PREFILL_CREDENTIALS=1`:
+- `VITE_CLOUD_AHOY_EMAIL`, `VITE_CLOUD_AHOY_PASSWORD`
+- `VITE_FLYSTO_EMAIL`, `VITE_FLYSTO_PASSWORD`
+
 ## Component Inventory (Mapped from Wireframe)
 - Layout: header, sticky left nav, footer
 - Steps: accordion sections (sign-in, connect, review, import)

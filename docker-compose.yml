@@ -28,6 +28,11 @@ services:
       - VITE_AUTH_REDIRECT_PATH=/auth/callback
       - VITE_AUTH_PROVIDER_PARAM=idp_hint
       - VITE_AUTH_LOGOUT_URL=https://auth.skybridge.localhost/realms/skybridge-dev/protocol/openid-connect/logout
+      - VITE_DEV_PREFILL_CREDENTIALS=${DEV_PREFILL_CREDENTIALS}
+      - VITE_CLOUD_AHOY_EMAIL=${CLOUD_AHOY_EMAIL}
+      - VITE_CLOUD_AHOY_PASSWORD=${CLOUD_AHOY_PASSWORD}
+      - VITE_FLYSTO_EMAIL=${FLYSTO_EMAIL}
+      - VITE_FLYSTO_PASSWORD=${FLYSTO_PASSWORD}
 
   api:
     build:
