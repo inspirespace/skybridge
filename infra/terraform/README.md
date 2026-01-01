@@ -8,6 +8,12 @@ This directory provides the initial Terraform baseline for the Skybridge backend
 - `outputs.tf`: key resource outputs.
 - `envs/`: environment-specific tfvars.
 
+## Cognito Hosted UI (Prod)
+Configure the SPA client and social IdPs via variables:
+- `cognito_domain`, `cognito_callback_urls`, `cognito_logout_urls`
+- `cognito_identity_providers` (e.g. `["Google","Facebook","SignInWithApple"]`)
+- Provider secrets: `google_*`, `facebook_*`, `apple_*`
+
 ## Usage (local)
 ```bash
 cd infra/terraform

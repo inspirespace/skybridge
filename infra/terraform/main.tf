@@ -50,6 +50,85 @@ resource "aws_cognito_user_pool" "users" {
   name = "${local.name_prefix}-users"
 }
 
+resource "aws_cognito_user_pool_client" "web" {
+  name                                 = "${local.name_prefix}-web"
+  user_pool_id                         = aws_cognito_user_pool.users.id
+  generate_secret                      = false
+  allowed_oauth_flows                  = ["code"]
+  allowed_oauth_scopes                 = ["openid", "email", "profile"]
+  allowed_oauth_flows_user_pool_client = true
+  callback_urls                        = var.cognito_callback_urls
+  logout_urls                          = var.cognito_logout_urls
+  supported_identity_providers         = concat(["COGNITO"], var.cognito_identity_providers)
+  depends_on = [
+    aws_cognito_identity_provider.google,
+    aws_cognito_identity_provider.facebook,
+    aws_cognito_identity_provider.apple
+  ]
+}
+
+resource "aws_cognito_user_pool_domain" "hosted_ui" {
+  count       = var.cognito_domain == "" ? 0 : 1
+  domain      = var.cognito_domain
+  user_pool_id = aws_cognito_user_pool.users.id
+}
+
+resource "aws_cognito_identity_provider" "google" {
+  count        = var.google_client_id == "" ? 0 : 1
+  user_pool_id = aws_cognito_user_pool.users.id
+  provider_name = "Google"
+  provider_type = "Google"
+
+  provider_details = {
+    client_id     = var.google_client_id
+    client_secret = var.google_client_secret
+    authorize_scopes = "openid email profile"
+  }
+
+  attribute_mapping = {
+    email = "email"
+    name  = "name"
+  }
+}
+
+resource "aws_cognito_identity_provider" "facebook" {
+  count        = var.facebook_client_id == "" ? 0 : 1
+  user_pool_id = aws_cognito_user_pool.users.id
+  provider_name = "Facebook"
+  provider_type = "Facebook"
+
+  provider_details = {
+    client_id     = var.facebook_client_id
+    client_secret = var.facebook_client_secret
+    authorize_scopes = "email,public_profile"
+  }
+
+  attribute_mapping = {
+    email = "email"
+    name  = "name"
+  }
+}
+
+resource "aws_cognito_identity_provider" "apple" {
+  count        = var.apple_client_id == "" ? 0 : 1
+  user_pool_id = aws_cognito_user_pool.users.id
+  provider_name = "SignInWithApple"
+  provider_type = "SignInWithApple"
+
+  provider_details = {
+    client_id = var.apple_client_id
+    team_id   = var.apple_team_id
+    key_id    = var.apple_key_id
+    private_key = var.apple_private_key
+    authorize_scopes = "openid email name"
+  }
+
+  attribute_mapping = {
+    email = "email"
+    name  = "name"
+  }
+}
+
 resource "aws_apigatewayv2_api" "http_api" {
   name          = "${local.name_prefix}-api"
   protocol_type = "HTTP"

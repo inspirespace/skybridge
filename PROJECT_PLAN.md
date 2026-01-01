@@ -47,15 +47,15 @@ Goal: ship the production web UI for CloudAhoy → FlySto imports, using the wir
 - [x] 5.4.b Frontend wired to `/jobs/{id}` delete (retention action).
 - [x] 5.5 Error handling + retry UX for each step.
 - [ ] 5.6 Define dual‑issuer auth strategy (Keycloak for local dev, Cognito for prod) with env‑based config.
-- [ ] 5.6.1 Local: configure Keycloak realm + client for SPA (OIDC + PKCE).
-- [ ] 5.6.2 Local: configure Keycloak IdP brokers (Google, Apple, Facebook) with dev/test credentials.
-- [ ] 5.6.3 Prod: create Cognito User Pool + App Client (SPA) with Hosted UI.
-- [ ] 5.6.4 Prod: configure social IdPs (Google, Apple, Facebook) in Cognito.
+- [x] 5.6.1 Local: configure Keycloak realm + client for SPA (OIDC + PKCE).
+- [x] 5.6.2 Local: configure Keycloak IdP brokers (Google, Apple, Facebook) with dev/test credentials.
+- [x] 5.6.3 Prod: create Cognito User Pool + App Client (SPA) with Hosted UI.
+- [x] 5.6.4 Prod: configure social IdPs (Google, Apple, Facebook) in Cognito.
 - [ ] 5.6.5 Optional: configure enterprise SSO (OIDC/SAML) in both Keycloak and Cognito.
-- [ ] 5.6.6 Set callback/logout URLs for dev + prod environments.
+- [x] 5.6.6 Set callback/logout URLs for dev + prod environments.
 - [x] 5.6.7 Frontend: implement provider buttons using `idp_hint` (Keycloak) and Cognito IdP routing.
 - [x] 5.6.8 Backend: validate JWTs against env‑selected issuer/JWKS (Keycloak vs Cognito).
-- [ ] 5.6.9 Document env vars, secrets, and setup steps for dev + prod.
+- [x] 5.6.9 Document env vars, secrets, and setup steps for dev + prod.
 
 ## 6. QA + Release (To Do)
 - [x] 6.1 Accessibility pass (focus order, ARIA, keyboard nav).

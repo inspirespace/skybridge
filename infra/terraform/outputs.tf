@@ -13,6 +13,16 @@ output "user_pool_id" {
   value       = aws_cognito_user_pool.users.id
 }
 
+output "user_pool_client_id" {
+  description = "Cognito user pool app client ID."
+  value       = aws_cognito_user_pool_client.web.id
+}
+
+output "user_pool_domain" {
+  description = "Cognito hosted UI domain (if configured)."
+  value       = try(aws_cognito_user_pool_domain.hosted_ui[0].domain, null)
+}
+
 output "api_id" {
   description = "API Gateway HTTP API ID."
   value       = aws_apigatewayv2_api.http_api.id

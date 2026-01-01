@@ -86,10 +86,12 @@ async function requestJson<T>(
     method = "GET",
     body,
     auth,
+    skipAuth = false,
   }: {
     method?: string;
     body?: unknown;
     auth?: AuthContext;
+    skipAuth?: boolean;
   } = {}
 ): Promise<T> {
   const headers: Record<string, string> = {
@@ -98,14 +100,14 @@ async function requestJson<T>(
   const userId = auth?.userId ?? undefined;
   const token = auth?.token ?? undefined;
 
-  if (authMode === "header") {
+  if (authMode === "header" && !skipAuth) {
     if (!userId) {
       throw new Error("Missing user session. Please sign in again.");
     }
     headers["X-User-Id"] = userId;
   }
 
-  if (authMode === "oidc") {
+  if (authMode === "oidc" && !skipAuth) {
     if (!token) {
       throw new Error("Missing access token. Please sign in again.");
     }
@@ -184,5 +186,6 @@ export async function exchangeToken(payload: {
   return requestJson<TokenExchangeResponse>("/auth/token", {
     method: "POST",
     body: payload,
+    skipAuth: true,
   });
 }

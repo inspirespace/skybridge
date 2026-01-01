@@ -41,5 +41,45 @@
         }
       ]
     }
+  ],
+  "identityProviders": [
+    {
+      "alias": "google",
+      "providerId": "google",
+      "enabled": false,
+      "storeToken": true,
+      "trustEmail": true,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "",
+        "clientSecret": ""
+      }
+    },
+    {
+      "alias": "apple",
+      "providerId": "apple",
+      "enabled": false,
+      "storeToken": true,
+      "trustEmail": true,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "",
+        "teamId": "",
+        "keyId": "",
+        "privateKey": ""
+      }
+    },
+    {
+      "alias": "facebook",
+      "providerId": "facebook",
+      "enabled": false,
+      "storeToken": true,
+      "trustEmail": true,
+      "firstBrokerLoginFlowAlias": "first broker login",
+      "config": {
+        "clientId": "",
+        "clientSecret": ""
+      }
+    }
   ]
 }
