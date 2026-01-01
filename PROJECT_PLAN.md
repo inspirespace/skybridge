@@ -26,10 +26,10 @@ Goal: ship the production web UI for CloudAhoy → FlySto imports, using the wir
 - [x] 2.3 Build layout shell (header, sticky left nav, accordion stack, footer) using default components; avoid custom UI hacks to mimic the wireframe.
 
 ## 3. Step Components (To Do)
-- [ ] 3.1 Sign‑in step UI (trust/info panel + sign‑in buttons).
-- [ ] 3.2 Connect step UI (credentials + import filters + connect CTA).
-- [ ] 3.3 Review step UI (progress card, summary chips, table, actions).
-- [ ] 3.4 Import step UI (progress card, results summary, conclusion).
+- [x] 3.1 Sign‑in step UI (trust/info panel + sign‑in buttons).
+- [x] 3.2 Connect step UI (credentials + import filters + connect CTA).
+- [x] 3.3 Review step UI (progress card, summary chips, table, actions).
+- [x] 3.4 Import step UI (progress card, results summary, conclusion).
 
 ## 4. State + Mocked Data (To Do)
 - [x] 4.1 Wire state model to components (locked/readonly behavior, CTA enablement).

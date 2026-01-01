@@ -19,6 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { ImportResults } from "@/components/import-results";
 import {
   Table,
   TableBody,
@@ -41,37 +42,17 @@ import {
   simulateReviewProgress,
 } from "@/state/mock-api";
 
-const mockFlights = [
-  {
-    id: "...inUjIKt47ulA",
-    date: "2025-11-21",
-    registration: "N12SB",
-    origin: "KPAO",
-    destination: "KTVL",
-    status: "OK",
-  },
-  {
-    id: "...DW98Fd25R6JM",
-    date: "2025-11-23",
-    registration: "—",
-    origin: "KSJC",
-    destination: "KSNS",
-    status: "Needs review",
-  },
-  {
-    id: "...c_U0DMhib1NA",
-    date: "2025-11-24",
-    registration: "N12SB",
-    origin: "KPAO",
-    destination: "KSOL",
-    status: "OK",
-  },
-];
+import { useJobSnapshot } from "@/hooks/use-job-snapshot";
 
 export default function App() {
   const [flow, setFlow] = React.useState<FlowState>(initialFlowState);
   const [reviewProgress, setReviewProgress] = React.useState(0);
   const [importProgress, setImportProgress] = React.useState(0);
+  const [showAllFlights, setShowAllFlights] = React.useState(false);
+  const { data: snapshot } = useJobSnapshot();
+
+  const flights = snapshot?.flights ?? [];
+  const reviewSummary = snapshot?.reviewSummary;
 
   const reviewComplete = flow.reviewStatus === "complete";
   const importComplete = flow.importStatus === "complete";
@@ -93,6 +74,7 @@ export default function App() {
       importStatus: "idle",
     }));
     setReviewProgress(0);
+    setShowAllFlights(false);
   };
 
   React.useEffect(() => {
@@ -127,18 +109,21 @@ export default function App() {
       reviewStatus: "idle",
       importStatus: "idle",
     }));
+    setShowAllFlights(false);
   };
 
   const handleStartOver = () => {
     setFlow(initialFlowState);
     setReviewProgress(0);
     setImportProgress(0);
+    setShowAllFlights(false);
   };
 
   const handleSignOut = () => {
     setFlow(initialFlowState);
     setReviewProgress(0);
     setImportProgress(0);
+    setShowAllFlights(false);
   };
 
   return (
@@ -355,9 +340,15 @@ export default function App() {
                       </div>
                       {reviewComplete && (
                         <div className="flex flex-wrap gap-2">
-                          <Badge variant="secondary">Flights: 12</Badge>
-                          <Badge variant="secondary">Hours: 24.6</Badge>
-                          <Badge variant="warning">Registration missing: 2</Badge>
+                          <Badge variant="secondary">
+                            Flights: {reviewSummary?.flights ?? 0}
+                          </Badge>
+                          <Badge variant="secondary">
+                            Hours: {reviewSummary?.hours ?? 0}
+                          </Badge>
+                          <Badge variant="warning">
+                            Registration missing: {reviewSummary?.missingRegistration ?? 0}
+                          </Badge>
                         </div>
                       )}
                       {reviewComplete && (
@@ -373,7 +364,7 @@ export default function App() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {mockFlights.map((flight) => (
+                          {flights.map((flight) => (
                               <TableRow key={flight.id}>
                                 <TableCell>
                                   <Badge
@@ -394,10 +385,19 @@ export default function App() {
                           </TableBody>
                         </Table>
                       )}
-                      {reviewComplete && (
-                        <Button variant="link" className="h-auto px-0 text-sm text-muted-foreground">
+                      {reviewComplete && !showAllFlights && (
+                        <Button
+                          variant="link"
+                          className="h-auto px-0 text-sm text-muted-foreground"
+                          onClick={() => setShowAllFlights(true)}
+                        >
                           Show more flights
                         </Button>
+                      )}
+                      {reviewComplete && showAllFlights && (
+                        <div className="text-sm text-muted-foreground">
+                          All flights shown
+                        </div>
                       )}
                       <div className="flex flex-wrap gap-3">
                         <Button
@@ -456,6 +456,14 @@ export default function App() {
                           />
                         </div>
                       </div>
+                      {importComplete && snapshot?.importResults && (
+                        <ImportResults
+                          imported={snapshot.importResults.imported}
+                          pending={snapshot.importResults.pending}
+                          failed={snapshot.importResults.failed}
+                          registrationMissing={snapshot.importResults.registrationMissing}
+                        />
+                      )}
                       {importComplete && (
                         <Alert>
                           <AlertTitle>Next steps</AlertTitle>
@@ -465,6 +473,12 @@ export default function App() {
                             retained.
                           </AlertDescription>
                         </Alert>
+                      )}
+                      {importComplete && (
+                        <div className="flex flex-wrap gap-3">
+                          <Button>Download report</Button>
+                          <Button variant="destructive">Delete results now</Button>
+                        </div>
                       )}
                     </CardContent>
                   </Card>
