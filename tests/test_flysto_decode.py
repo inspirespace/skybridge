@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from src.flysto.client import _decode_flysto_payload, _swap_chars
+from src.core.flysto.client import _decode_flysto_payload, _swap_chars
 
 
 def test_decode_flysto_payload_handles_wait_prefix():

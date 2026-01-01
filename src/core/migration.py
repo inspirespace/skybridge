@@ -9,11 +9,11 @@ from pathlib import Path
 import string
 from typing import Callable
 
-from src.cloudahoy.client import CloudAhoyClient
-from src.cloudahoy.points import build_points_schema, points_preview
-from src.flysto.client import FlyStoClient
-from src.models import FlightDetail, FlightSummary, MigrationResult
-from src.state import MigrationState
+from src.core.cloudahoy.client import CloudAhoyClient
+from src.core.cloudahoy.points import build_points_schema, points_preview
+from src.core.flysto.client import FlyStoClient
+from src.core.models import FlightDetail, FlightSummary, MigrationResult
+from src.core.state import MigrationState
 
 
 @dataclass(frozen=True)

@@ -5,8 +5,8 @@ from pathlib import Path
 import json
 import tempfile
 
-from src.migration import migrate_flights, verify_import_report
-from src.models import FlightDetail, FlightSummary
+from src.core.migration import migrate_flights, verify_import_report
+from src.core.models import FlightDetail, FlightSummary
 
 
 class FakeCloudAhoy:

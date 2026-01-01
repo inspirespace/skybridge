@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from src.guided import _filter_summaries_by_date, _parse_date_bound
-from src.models import FlightSummary
+from src.core.guided import _filter_summaries_by_date, _parse_date_bound
+from src.core.models import FlightSummary
 
 
 def test_guided_parse_date_bound():

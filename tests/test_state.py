@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.state import MigrationState
+from src.core.state import MigrationState
 
 
 class MigrationStateTests(unittest.TestCase):

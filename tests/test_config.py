@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from src.config import load_config
+from src.core.config import load_config
 
 
 class ConfigTests(unittest.TestCase):

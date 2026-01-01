@@ -8,10 +8,10 @@ services:
       - ./docker/https/certs:/etc/caddy/certs:ro
     depends_on:
       - api
-      - web
+      - frontend
       - keycloak
 
-  web:
+  frontend:
     image: node:24-alpine
     working_dir: /app
     volumes:

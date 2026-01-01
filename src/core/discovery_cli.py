@@ -3,8 +3,8 @@ import os
 import sys
 from pathlib import Path
 
-from src.config import ConfigError, load_config
-from src.discovery import DiscoveryConfig, run_discovery
+from src.core.config import ConfigError, load_config
+from src.core.discovery import DiscoveryConfig, run_discovery
 
 
 def build_parser() -> argparse.ArgumentParser:

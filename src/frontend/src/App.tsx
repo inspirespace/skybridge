@@ -1,9 +1,5 @@
 import * as React from "react";
 
-import { format } from "date-fns";
-import type { DateRange } from "react-day-picker";
-import { CalendarIcon } from "lucide-react";
-
 import {
   Accordion,
   AccordionContent,
@@ -13,7 +9,6 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Card,
   CardContent,
@@ -23,7 +18,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Progress } from "@/components/ui/progress";
 import { ImportResults } from "@/components/import-results";
 import {
@@ -100,7 +94,8 @@ export default function App() {
   const [cloudahoyPassword, setCloudahoyPassword] = React.useState("");
   const [flystoEmail, setFlystoEmail] = React.useState("");
   const [flystoPassword, setFlystoPassword] = React.useState("");
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>();
+  const [startDate, setStartDate] = React.useState("");
+  const [endDate, setEndDate] = React.useState("");
   const [maxFlights, setMaxFlights] = React.useState("");
 
   const isSignedIn = AUTH_MODE === "oidc" ? Boolean(accessToken) : Boolean(userId);
@@ -272,8 +267,8 @@ export default function App() {
           flysto_username: flystoEmail,
           flysto_password: flystoPassword,
         },
-        start_date: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : null,
-        end_date: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : null,
+        start_date: startDate || null,
+        end_date: endDate || null,
         max_flights: maxFlights ? Number(maxFlights) : null,
       };
       const createdJob = await createJob(payload, auth);
@@ -621,42 +616,25 @@ export default function App() {
                       </div>
 
                       <div className="grid gap-3 md:grid-cols-3">
-                        <div className="space-y-2 md:col-span-2">
-                          <Label>Date range</Label>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                className="w-full justify-start text-left font-normal"
-                                disabled={connectLocked}
-                              >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {dateRange?.from ? (
-                                  dateRange.to ? (
-                                    <>
-                                      {format(dateRange.from, "LLL dd, y")} -{" "}
-                                      {format(dateRange.to, "LLL dd, y")}
-                                    </>
-                                  ) : (
-                                    format(dateRange.from, "LLL dd, y")
-                                  )
-                                ) : (
-                                  <span className="text-muted-foreground">
-                                    Pick a date range
-                                  </span>
-                                )}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                mode="range"
-                                defaultMonth={dateRange?.from}
-                                selected={dateRange}
-                                onSelect={setDateRange}
-                                numberOfMonths={2}
-                              />
-                            </PopoverContent>
-                          </Popover>
+                        <div className="space-y-2">
+                          <Label htmlFor="start-date">Start date</Label>
+                          <Input
+                            id="start-date"
+                            type="date"
+                            disabled={connectLocked}
+                            value={startDate}
+                            onChange={(event) => setStartDate(event.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="end-date">End date</Label>
+                          <Input
+                            id="end-date"
+                            type="date"
+                            disabled={connectLocked}
+                            value={endDate}
+                            onChange={(event) => setEndDate(event.target.value)}
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="max-flights">Max flights to import</Label>

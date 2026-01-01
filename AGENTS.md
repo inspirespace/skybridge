@@ -26,7 +26,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Backend dev auth uses Keycloak OIDC in Docker Compose (login with `demo` / `demo-password`); local runs should set `AUTH_MODE=oidc`, `AUTH_ISSUER_URL`, `AUTH_BROWSER_ISSUER_URL`, and `AUTH_CLIENT_ID`.
 - Dev backend queues jobs for the worker when `BACKEND_USE_WORKER=1` (credentials are claimed once via `BACKEND_WORKER_TOKEN`).
 - `./scripts/build-lambda.sh` — package the Lambda handlers to `infra/terraform/lambda/backend-handlers.zip`.
-- `python -m src.cli --review` — run locally (requires Python deps).
+- `python -m src.core.cli --review` — run locally (requires Python deps).
 - CLI supports `--start-date` / `--end-date` for targeted imports (YYYY-MM-DD or ISO8601).
 - Set `CLOUD_AHOY_G3X_INCLUDE_HDG=1` to include heading in G3X exports (TRK is always included; default omits HDG to preserve block-time detection).
 - `pytest` — run tests (if installed).

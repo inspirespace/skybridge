@@ -24,9 +24,9 @@ from rich.progress import (
 from rich.prompt import Confirm, IntPrompt, Prompt
 from rich.table import Table
 
-from src.cloudahoy.client import CloudAhoyClient
-from src.flysto.client import FlyStoClient
-from src.migration import (
+from src.core.cloudahoy.client import CloudAhoyClient
+from src.core.flysto.client import FlyStoClient
+from src.core.migration import (
     migrate_flights,
     prepare_review,
     reconcile_aircraft_from_report,
@@ -34,8 +34,8 @@ from src.migration import (
     reconcile_metadata_from_report,
     verify_import_report,
 )
-from src.models import FlightSummary
-from src.state import MigrationState
+from src.core.models import FlightSummary
+from src.core.state import MigrationState
 
 
 @dataclass

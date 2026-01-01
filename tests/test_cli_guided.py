@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from src.config import Config, ConfigError
-from src.cli import run
+from src.core.config import Config, ConfigError
+from src.core.cli import run
 
 
 class DummyClient:
@@ -45,11 +45,11 @@ def _fake_config() -> Config:
 def test_guided_ctrl_c_is_clean(monkeypatch, tmp_path, capsys):
     monkeypatch.setenv("RUNS_DIR", str(tmp_path))
     monkeypatch.delenv("RUN_ID", raising=False)
-    monkeypatch.setattr("src.cli.load_config", lambda: _fake_config())
-    monkeypatch.setattr("src.cli.CloudAhoyClient", DummyClient)
-    monkeypatch.setattr("src.cli.FlyStoClient", DummyClient)
+    monkeypatch.setattr("src.core.cli.load_config", lambda: _fake_config())
+    monkeypatch.setattr("src.core.cli.CloudAhoyClient", DummyClient)
+    monkeypatch.setattr("src.core.cli.FlyStoClient", DummyClient)
 
-    import src.guided as guided_module
+    import src.core.guided as guided_module
 
     def _raise_keyboard_interrupt(*args, **kwargs):
         raise KeyboardInterrupt
@@ -75,13 +75,13 @@ def test_guided_prompts_for_missing_env(monkeypatch, tmp_path):
             )
         return _fake_config()
 
-    monkeypatch.setattr("src.cli.load_config", _load_config)
-    monkeypatch.setattr("src.cli.CloudAhoyClient", DummyClient)
-    monkeypatch.setattr("src.cli.FlyStoClient", DummyClient)
+    monkeypatch.setattr("src.core.cli.load_config", _load_config)
+    monkeypatch.setattr("src.core.cli.CloudAhoyClient", DummyClient)
+    monkeypatch.setattr("src.core.cli.FlyStoClient", DummyClient)
     monkeypatch.setattr("builtins.input", lambda prompt="": "user@example.com")
-    monkeypatch.setattr("src.cli.getpass.getpass", lambda prompt="": "secret")
+    monkeypatch.setattr("src.core.cli.getpass.getpass", lambda prompt="": "secret")
 
-    import src.guided as guided_module
+    import src.core.guided as guided_module
 
     monkeypatch.setattr(guided_module, "run_guided", lambda **kwargs: 0)
 

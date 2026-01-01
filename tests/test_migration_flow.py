@@ -3,9 +3,9 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
-from src.migration import migrate_flights
-from src.models import FlightDetail, FlightSummary
-from src.flysto.client import UploadResult
+from src.core.migration import migrate_flights
+from src.core.models import FlightDetail, FlightSummary
+from src.core.flysto.client import UploadResult
 
 
 class DummyCloudAhoy:

@@ -4,7 +4,7 @@ import csv
 from datetime import datetime, timezone
 from pathlib import Path
 
-from src.cloudahoy.points import write_points_foreflight_csv
+from src.core.cloudahoy.points import write_points_foreflight_csv
 
 
 def _schema() -> list[dict]:

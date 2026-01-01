@@ -11,7 +11,7 @@ from urllib.parse import urljoin, urlparse
 
 import requests
 
-from src.models import FlightDetail
+from src.core.models import FlightDetail
 
 
 @dataclass(frozen=True)

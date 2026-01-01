@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from src.cloudahoy.client import _infer_point_timing
+from src.core.cloudahoy.client import _infer_point_timing
 
 
 def test_infer_point_timing_prefers_summary_when_meta_duration_too_long() -> None:

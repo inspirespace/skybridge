@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from src.flysto.client import _parse_signature_field, _parse_upload_response
+from src.core.flysto.client import _parse_signature_field, _parse_upload_response
 
 
 def test_parse_upload_signature_from_fixture():

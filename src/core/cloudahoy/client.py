@@ -6,7 +6,7 @@ from pathlib import Path
 
 import requests
 
-from src.cloudahoy.points import (
+from src.core.cloudahoy.points import (
     build_points_schema,
     write_points_gpx,
     write_points_csv,
@@ -16,7 +16,7 @@ from src.cloudahoy.points import (
     write_points_mvp50_csv,
     write_points_foreflight_csv,
 )
-from src.models import FlightDetail, FlightSummary
+from src.core.models import FlightDetail, FlightSummary
 import json
 import string
 

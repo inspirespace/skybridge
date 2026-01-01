@@ -7,8 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from src.cloudahoy.client import CloudAhoyClient
-from src.migration import (
+from src.core.cloudahoy.client import CloudAhoyClient
+from src.core.migration import (
     prepare_review,
     migrate_flights,
     verify_import_report,
@@ -16,9 +16,9 @@ from src.migration import (
     reconcile_crew_from_report,
     reconcile_metadata_from_report,
 )
-from src.models import FlightSummary as CoreFlightSummary
-from src.state import MigrationState
-from src.flysto.client import FlyStoClient
+from src.core.models import FlightSummary as CoreFlightSummary
+from src.core.state import MigrationState
+from src.core.flysto.client import FlyStoClient
 
 from .models import ImportReport, JobAcceptRequest, JobCreateRequest, JobRecord, ReviewSummary, FlightSummary
 from .store import JobStore

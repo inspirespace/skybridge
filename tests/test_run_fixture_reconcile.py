@@ -4,7 +4,7 @@ import json
 import shutil
 from pathlib import Path
 
-from src.migration import (
+from src.core.migration import (
     reconcile_aircraft_from_report,
     reconcile_crew_from_report,
     reconcile_metadata_from_report,
@@ -53,8 +53,8 @@ def test_reconcile_from_run_fixture(tmp_path: Path):
     fixture_dir = Path("tests/fixtures/run-20251228T185601Z")
     report_src = fixture_dir / "import_report.json"
     review_src = fixture_dir / "review.json"
-    assert report_src.exists()
-    assert review_src.exists()
+    assert report_src.core.exists()
+    assert review_src.core.exists()
 
     report_path = tmp_path / "import_report.json"
     review_path = tmp_path / "review.json"

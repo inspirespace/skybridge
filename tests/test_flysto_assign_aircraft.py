@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 
-from src.flysto.client import FlyStoClient
+from src.core.flysto.client import FlyStoClient
 
 
 @dataclass

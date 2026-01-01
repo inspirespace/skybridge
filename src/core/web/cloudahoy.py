@@ -7,8 +7,8 @@ from typing import Any
 
 from playwright.sync_api import Page
 
-from src.models import FlightDetail, FlightSummary
-from src.web.browser import BrowserOptions, BrowserSession
+from src.core.models import FlightDetail, FlightSummary
+from src.core.web.browser import BrowserOptions, BrowserSession
 
 
 @dataclass(frozen=True)

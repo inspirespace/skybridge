@@ -5,8 +5,8 @@ from pathlib import Path
 
 from playwright.sync_api import Page
 
-from src.models import FlightDetail
-from src.web.browser import BrowserOptions, BrowserSession
+from src.core.models import FlightDetail
+from src.core.web.browser import BrowserOptions, BrowserSession
 
 
 @dataclass(frozen=True)

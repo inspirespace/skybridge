@@ -7,11 +7,11 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from src.cloudahoy.client import CloudAhoyClient
-from src.models import FlightSummary
-from src.config import ConfigError, load_config
-from src.flysto.client import FlyStoClient
-from src.migration import (
+from src.core.cloudahoy.client import CloudAhoyClient
+from src.core.models import FlightSummary
+from src.core.config import ConfigError, load_config
+from src.core.flysto.client import FlyStoClient
+from src.core.migration import (
     migrate_flights,
     prepare_review,
     reconcile_aircraft_from_report,
@@ -19,7 +19,7 @@ from src.migration import (
     reconcile_metadata_from_report,
     verify_import_report,
 )
-from src.state import MigrationState
+from src.core.state import MigrationState
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -401,7 +401,7 @@ def run(argv: list[str]) -> int:
             print("Install dependencies or use the devcontainer image.", file=sys.stderr)
             return 2
         try:
-            from src.guided import run_guided
+            from src.core.guided import run_guided
         except Exception as exc:
             print(f"Guided mode failed to load: {exc}", file=sys.stderr)
             return 2

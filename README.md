@@ -143,10 +143,10 @@ make install PREFIX=$HOME/.local
 Local execution without Docker is possible with:
 
 ```sh
-python -m src.cli --review
-python -m src.cli --approve-import
-python -m src.cli --approve-import --review-id <id> --wait-for-processing
-python -m src.cli --reconcile-import-report --wait-for-processing
+python -m src.core.cli --review
+python -m src.core.cli --approve-import
+python -m src.core.cli --approve-import --review-id <id> --wait-for-processing
+python -m src.core.cli --reconcile-import-report --wait-for-processing
 ```
 
 Development runs should use the devcontainer scripts (`./scripts/run*.sh`) to guarantee required dependencies (like `rich`) and browser tooling. Local execution is best reserved for one-off debugging.

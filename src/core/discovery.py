@@ -10,7 +10,7 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
 
-from src.web.browser import BrowserOptions, BrowserSession
+from src.core.web.browser import BrowserOptions, BrowserSession
 
 
 @dataclass(frozen=True)

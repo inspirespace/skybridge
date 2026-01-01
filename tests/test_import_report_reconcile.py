@@ -3,13 +3,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from src.migration import (
+from src.core.migration import (
     reconcile_aircraft_from_report,
     reconcile_crew_from_report,
     reconcile_metadata_from_report,
     verify_import_report,
 )
-from src.flysto.client import FlyStoClient
+from src.core.flysto.client import FlyStoClient
 
 
 class DummyResponse:

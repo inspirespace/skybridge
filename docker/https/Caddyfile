@@ -9,7 +9,7 @@ https://skybridge.localhost {
     reverse_proxy api:8000
   }
   handle {
-    reverse_proxy web:5173
+    reverse_proxy frontend:5173
   }
 }
 

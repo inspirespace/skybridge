@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from src.migration import reconcile_crew_from_report
+from src.core.migration import reconcile_crew_from_report
 
 
 class DummyFlySto:
@@ -40,7 +40,7 @@ def test_reconcile_crew_resolves_and_retries(monkeypatch, tmp_path: Path):
     report_path.write_text(json.dumps(payload))
 
     dummy = DummyFlySto()
-    monkeypatch.setattr("src.migration.time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("src.core.migration.time.sleep", lambda _seconds: None)
 
     updated = reconcile_crew_from_report(report_path, dummy)
 
