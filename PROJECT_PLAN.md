@@ -15,10 +15,10 @@ Goal: ship the production web UI for CloudAhoy → FlySto imports, using the wir
 - [x] 0.10 Confirmed: light/dark mode toggle required.
 
 ## 1. UI Inventory + State Model (To Do)
-- [ ] 1.0 Prerequisite: complete section 1 before moving to sections 2–4.
-- [ ] 1.1 Define component inventory (accordion, stepper, progress card, chips, tables, CTA bar, info panels).
-- [ ] 1.2 Define state machine for the flow (signed‑out → signed‑in → connected → review running → review complete → import running → import complete).
-- [ ] 1.3 Document action rules (when CTAs are enabled, when steps are locked/readonly).
+- [x] 1.0 Prerequisite: complete section 1 before moving to sections 2–4.
+- [x] 1.1 Define component inventory (accordion, stepper, progress card, chips, tables, CTA bar, info panels).
+- [x] 1.2 Define state machine for the flow (signed‑out → signed‑in → connected → review running → review complete → import running → import complete).
+- [x] 1.3 Document action rules (when CTAs are enabled, when steps are locked/readonly).
 
 ## 2. App Skeleton + Theming (To Do)
 - [x] 2.1 Set up React + Vite + shadcn/ui with IBM Plex Sans (use the wireframe as the structure reference: `design/final/skybridge-import-flow-wireframe.html`).

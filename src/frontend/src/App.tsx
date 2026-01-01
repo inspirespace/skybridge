@@ -28,6 +28,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  canApproveImport,
+  canEditFilters,
+  canStartOver,
+  getOpenStep,
+  initialFlowState,
+  type FlowState,
+} from "@/state/flow";
 
 const mockFlights = [
   {
@@ -56,36 +64,15 @@ const mockFlights = [
   },
 ];
 
-type ReviewStatus = "idle" | "running" | "complete";
-type ImportStatus = "idle" | "running" | "complete";
-
-type FlowState = {
-  signedIn: boolean;
-  connected: boolean;
-  reviewStatus: ReviewStatus;
-  importStatus: ImportStatus;
-};
-
 export default function App() {
-  const [flow, setFlow] = React.useState<FlowState>({
-    signedIn: false,
-    connected: false,
-    reviewStatus: "idle",
-    importStatus: "idle",
-  });
+  const [flow, setFlow] = React.useState<FlowState>(initialFlowState);
 
   const reviewComplete = flow.reviewStatus === "complete";
   const importComplete = flow.importStatus === "complete";
   const reviewRunning = flow.reviewStatus === "running";
   const importRunning = flow.importStatus === "running";
 
-  const openStep = React.useMemo(() => {
-    if (!flow.signedIn) return "sign-in";
-    if (!flow.connected) return "connect";
-    if (!reviewComplete) return "review";
-    if (!importComplete) return "import";
-    return "import";
-  }, [flow.connected, flow.signedIn, reviewComplete, importComplete]);
+  const openStep = React.useMemo(() => getOpenStep(flow), [flow]);
 
   const handleSignIn = () => {
     setFlow((prev) => ({ ...prev, signedIn: true }));
@@ -130,21 +117,11 @@ export default function App() {
   };
 
   const handleStartOver = () => {
-    setFlow({
-      signedIn: false,
-      connected: false,
-      reviewStatus: "idle",
-      importStatus: "idle",
-    });
+    setFlow(initialFlowState);
   };
 
   const handleSignOut = () => {
-    setFlow({
-      signedIn: false,
-      connected: false,
-      reviewStatus: "idle",
-      importStatus: "idle",
-    });
+    setFlow(initialFlowState);
   };
 
   return (
@@ -154,7 +131,12 @@ export default function App() {
           <div className="text-sm font-semibold tracking-[0.3em]">SKYBRIDGE</div>
           <div className="flex items-center gap-4">
             {flow.signedIn && (
-              <Button variant="outline" size="sm" onClick={handleStartOver}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleStartOver}
+                disabled={!canStartOver(flow)}
+              >
                 Start over
               </Button>
             )}
@@ -378,11 +360,15 @@ export default function App() {
                       <div className="flex flex-wrap gap-3">
                         <Button
                           onClick={handleApproveImport}
-                          disabled={!reviewComplete || importRunning || importComplete}
+                          disabled={!canApproveImport(flow) || importRunning || importComplete}
                         >
                           Accept and start import
                         </Button>
-                        <Button variant="outline" onClick={handleEditFilters} disabled={!reviewComplete}>
+                        <Button
+                          variant="outline"
+                          onClick={handleEditFilters}
+                          disabled={!canEditFilters(flow)}
+                        >
                           Edit import filters
                         </Button>
                       </div>
