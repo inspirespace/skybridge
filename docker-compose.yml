@@ -8,7 +8,17 @@ services:
       - ./docker/https/certs:/etc/caddy/certs:ro
     depends_on:
       - api
+      - web
       - keycloak
+
+  web:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./src/frontend:/app
+    command: ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0 --port 5173"]
+    ports:
+      - "5173:5173"
 
   api:
     build:
@@ -28,6 +38,7 @@ services:
       - AUTH_BROWSER_ISSUER_URL=https://auth.skybridge.localhost/realms/skybridge-dev
       - AUTH_CLIENT_ID=skybridge-dev
       - AUTH_SCOPE=openid profile email
+      - AUTH_REDIRECT_PATH=/api/auth/callback
       - AUTH_TOKEN_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/token
       - AUTH_TOKEN_PROXY=true
       - BACKEND_USE_WORKER=true

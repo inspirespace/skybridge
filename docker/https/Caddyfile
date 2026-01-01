@@ -5,7 +5,13 @@
 https://skybridge.localhost {
   tls /etc/caddy/certs/skybridge.localhost.pem /etc/caddy/certs/skybridge.localhost-key.pem
   encode gzip
-  reverse_proxy api:8000
+  @api path /api/*
+  handle @api {
+    reverse_proxy api:8000
+  }
+  handle {
+    reverse_proxy web:5173
+  }
 }
 
 https://auth.skybridge.localhost {
