@@ -30,6 +30,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - CLI supports `--start-date` / `--end-date` for targeted imports (YYYY-MM-DD or ISO8601).
 - Set `CLOUD_AHOY_G3X_INCLUDE_HDG=1` to include heading in G3X exports (TRK is always included; default omits HDG to preserve block-time detection).
 - `pytest` — run tests (if installed).
+- Use Devcontainer CLI for tests when available: `devcontainer exec --workspace-folder . pytest`.
 - `terraform fmt -check -recursive` (run from `infra/terraform`) — format check for IaC.
 - Runbook + readiness docs are in `docs/backend-runbook.md`, `docs/backend-maintenance.md`, and `docs/backend-release-readiness.md`.
 - Run all CLI workflows through the devcontainer scripts (`./scripts/run*.sh`) so required dependencies and browser tooling are available.
