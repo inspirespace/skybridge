@@ -20,9 +20,9 @@ Goal: ship the production web UI for CloudAhoy → FlySto imports, using the wir
 - [ ] 1.3 Document action rules (when CTAs are enabled, when steps are locked/readonly).
 
 ## 2. App Skeleton + Theming (To Do)
-- [ ] 2.1 Set up React + Vite + shadcn/ui with IBM Plex Sans.
+- [ ] 2.1 Set up React + Vite + shadcn/ui with IBM Plex Sans (use the wireframe as the structure reference: `design/final/skybridge-import-flow-wireframe.html`).
 - [ ] 2.2 Implement light/dark theme toggle (choose tokens strategy: CSS vars vs Tailwind config).
-- [ ] 2.3 Build layout shell (header, sticky left nav, accordion stack, footer) using default components.
+- [ ] 2.3 Build layout shell (header, sticky left nav, accordion stack, footer) using default components; avoid custom UI hacks to mimic the wireframe.
 
 ## 3. Step Components (To Do)
 - [ ] 3.1 Sign‑in step UI (trust/info panel + sign‑in buttons).
