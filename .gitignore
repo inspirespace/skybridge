@@ -39,3 +39,5 @@ docker/https/certs/
 
 # Lambda packages
 infra/terraform/lambda/*.zip
+.npm-cache/
+web/.npm-cache/
