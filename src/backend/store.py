@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from dataclasses import asdict, dataclass
 from datetime import datetime
@@ -69,7 +70,12 @@ class JobStore:
             rmtree(job_dir)
         if self._object_store and _bool_env("BACKEND_S3_DELETE_ON_CLEAR", False):
             prefix = self._object_store.key_for(str(job_id))
-            self._object_store.delete_prefix(prefix)
+            try:
+                self._object_store.delete_prefix(prefix)
+            except Exception as exc:
+                logging.getLogger(__name__).warning(
+                    "Failed to delete remote artifacts for job %s: %s", job_id, exc
+                )
 
     def save_job(self, job: JobRecord) -> None:
         job_dir = self._job_dir(job.job_id)
@@ -84,13 +90,23 @@ class JobStore:
         artifact_file.write_text(json.dumps(payload, indent=2))
         if self._object_store:
             key = self._object_store.key_for(str(job_id), name)
-            self._object_store.put_json(key, payload)
+            try:
+                self._object_store.put_json(key, payload)
+            except Exception as exc:
+                logging.getLogger(__name__).warning(
+                    "Failed to upload artifact %s for job %s: %s", name, job_id, exc
+                )
 
     def upload_artifact(self, job_id: UUID, name: str, path: Path) -> None:
         if not self._object_store or not path.exists():
             return
         key = self._object_store.key_for(str(job_id), name)
-        self._object_store.put_file(key, path)
+        try:
+            self._object_store.put_file(key, path)
+        except Exception as exc:
+            logging.getLogger(__name__).warning(
+                "Failed to upload artifact file %s for job %s: %s", name, job_id, exc
+            )
 
     def list_artifacts(self, job_id: UUID) -> list[str]:
         job_dir = self._job_dir(job_id)

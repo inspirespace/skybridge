@@ -74,7 +74,7 @@ services:
       - S3_SECRET_KEY=minioadmin
       - S3_USE_SSL=false
       - S3_VERIFY_SSL=false
-      - S3_SSE=true
+      - S3_SSE=false
     depends_on:
       dynamodb:
         condition: service_started
@@ -126,7 +126,7 @@ services:
       - S3_SECRET_KEY=minioadmin
       - S3_USE_SSL=false
       - S3_VERIFY_SSL=false
-      - S3_SSE=true
+      - S3_SSE=false
     depends_on:
       dynamodb:
         condition: service_started
