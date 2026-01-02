@@ -7,16 +7,21 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -627,16 +632,13 @@ export default function App() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Sign in</CardTitle>
-                      <CardDescription className="text-base font-medium text-foreground">
+                  <div className="rounded-md border bg-card p-6">
+                    <div className="space-y-6">
+                      <p className="text-base font-semibold text-foreground">
                         Skybridge imports your CloudAhoy flights into FlySto. You’ll
                         connect both accounts, review the summary, and approve the
                         import.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
+                      </p>
                       <Alert>
                         <AlertTitle>What you can expect</AlertTitle>
                         <AlertDescription>
@@ -700,8 +702,8 @@ export default function App() {
                           <AlertDescription>{signInError}</AlertDescription>
                         </Alert>
                       )}
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </AccordionContent>
               </AccordionItem>
 
@@ -726,14 +728,11 @@ export default function App() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Connect accounts</CardTitle>
-                      <CardDescription>
+                  <div className="rounded-md border bg-card p-6">
+                    <div className="space-y-6">
+                      <p className="text-sm text-muted-foreground">
                         Enter CloudAhoy and FlySto credentials, then run the review.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
+                      </p>
                       <Alert variant="default">
                         <AlertTitle>Credentials</AlertTitle>
                         <AlertDescription>
@@ -796,11 +795,9 @@ export default function App() {
                         </div>
                       </div>
 
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base">Import filters</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
+                      <div className="rounded-md border p-4">
+                        <div className="space-y-3">
+                          <div className="text-sm font-semibold">Import filters</div>
                           <div className="grid gap-3 md:grid-cols-3">
                             <div className="space-y-2 md:col-span-2">
                               <Label>Date range</Label>
@@ -866,8 +863,8 @@ export default function App() {
                           <p className="text-xs text-muted-foreground">
                             Caps the total number of flights that will be imported.
                           </p>
-                        </CardContent>
-                      </Card>
+                        </div>
+                      </div>
 
                       {connectError && (
                         <Alert variant="destructive">
@@ -887,8 +884,8 @@ export default function App() {
                       >
                         Connect and review
                       </Button>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </AccordionContent>
               </AccordionItem>
 
@@ -919,11 +916,8 @@ export default function App() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <Card>
-                    <CardHeader>
-                    <CardTitle>Review</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
+                  <div className="rounded-md border bg-card p-6">
+                    <div className="space-y-4">
                       {showReviewProgress && (
                         <div className="rounded-md border bg-muted/40 p-4 text-sm">
                           <div className="flex items-center justify-between">
@@ -1052,8 +1046,8 @@ export default function App() {
                           </Button>
                         )}
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </AccordionContent>
               </AccordionItem>
 
@@ -1092,14 +1086,11 @@ export default function App() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Import</CardTitle>
-                      <CardDescription>
+                  <div className="rounded-md border bg-card p-6">
+                    <div className="space-y-4">
+                      <p className="text-sm text-muted-foreground">
                         Import runs after approval and produces a report summary.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
+                      </p>
                       {showImportProgress && (
                         <div className="rounded-md border bg-muted/40 p-4 text-sm">
                           <div className="flex items-center justify-between">
@@ -1164,13 +1155,30 @@ export default function App() {
                                 Open FlySto
                               </a>
                             </Button>
-                            <Button
-                              variant="destructive"
-                              onClick={handleDeleteResults}
-                              disabled={actionLoading}
-                            >
-                              Delete results now
-                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="destructive">Delete results now</Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete import results?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This removes the stored reports and review summary for this
+                                    run. This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={handleDeleteResults}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    disabled={actionLoading}
+                                  >
+                                    Delete results
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           </div>
                         </Alert>
                       )}
@@ -1192,8 +1200,8 @@ export default function App() {
                           </Button>
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
