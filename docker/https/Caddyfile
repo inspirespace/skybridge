@@ -34,5 +34,15 @@ https://auth.skybridge.localhost {
 https://storage.skybridge.localhost {
   tls /etc/caddy/certs/storage.skybridge.localhost.pem /etc/caddy/certs/storage.skybridge.localhost-key.pem
   encode gzip
-  reverse_proxy minio:9000
+  @root path /
+  redir @root /console/ 302
+  handle_path /console* {
+    reverse_proxy minio:9001
+  }
+  handle_path /minio* {
+    reverse_proxy minio:9001
+  }
+  handle {
+    reverse_proxy minio:9000
+  }
 }
