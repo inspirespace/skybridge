@@ -40,6 +40,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
 import {
   acceptReview,
@@ -622,9 +623,9 @@ export default function App() {
               value={openStep}
               onValueChange={handleAccordionChange}
             >
-              <AccordionItem value="sign-in">
+              <AccordionItem value="sign-in" className="rounded-md border bg-card px-6">
                 <AccordionTrigger disabled={!allowedSteps.has("sign-in")}>
-                  <div className="flex items-center gap-3">
+                  <div className="flex w-full items-center justify-between">
                     <span>1 · Sign in</span>
                     <Badge variant={flow.signedIn ? "success" : "secondary"}>
                       {flow.signedIn ? "Signed in" : "Required"}
@@ -632,8 +633,7 @@ export default function App() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="rounded-md border bg-card p-6">
-                    <div className="space-y-6">
+                  <div className="space-y-6 pb-6">
                       <p className="text-base font-semibold text-foreground">
                         Skybridge imports your CloudAhoy flights into FlySto. You’ll
                         connect both accounts, review the summary, and approve the
@@ -702,22 +702,22 @@ export default function App() {
                           <AlertDescription>{signInError}</AlertDescription>
                         </Alert>
                       )}
-                    </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>
 
               <AccordionItem
                 value="connect"
-                className={
-                  !allowedSteps.has("connect") ? "border border-dashed rounded-md" : undefined
-                }
+                className={cn(
+                  "rounded-md border bg-card px-6",
+                  !allowedSteps.has("connect") && "border-dashed"
+                )}
               >
                 <AccordionTrigger
                   disabled={!allowedSteps.has("connect")}
                   className={!allowedSteps.has("connect") ? "font-normal text-muted-foreground" : undefined}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex w-full items-center justify-between">
                     <span>2 · Connect accounts</span>
                     <Badge
                       variant={flow.connected ? "success" : "outline"}
@@ -728,8 +728,7 @@ export default function App() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="rounded-md border bg-card p-6">
-                    <div className="space-y-6">
+                  <div className="space-y-6 pb-6">
                       <p className="text-sm text-muted-foreground">
                         Enter CloudAhoy and FlySto credentials, then run the review.
                       </p>
@@ -884,22 +883,22 @@ export default function App() {
                       >
                         Connect and review
                       </Button>
-                    </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>
 
               <AccordionItem
                 value="review"
-                className={
-                  !allowedSteps.has("review") ? "border border-dashed rounded-md" : undefined
-                }
+                className={cn(
+                  "rounded-md border bg-card px-6",
+                  !allowedSteps.has("review") && "border-dashed"
+                )}
               >
                 <AccordionTrigger
                   disabled={!allowedSteps.has("review")}
                   className={!allowedSteps.has("review") ? "font-normal text-muted-foreground" : undefined}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex w-full items-center justify-between">
                     <span>3 · Review</span>
                     <Badge
                       variant={reviewComplete ? "success" : reviewRunning ? "active" : "outline"}
@@ -916,8 +915,7 @@ export default function App() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="rounded-md border bg-card p-6">
-                    <div className="space-y-4">
+                  <div className="space-y-4 pb-6">
                       {showReviewProgress && (
                         <div className="rounded-md border bg-muted/40 p-4 text-sm">
                           <div className="flex items-center justify-between">
@@ -1046,22 +1044,22 @@ export default function App() {
                           </Button>
                         )}
                       </div>
-                    </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>
 
               <AccordionItem
                 value="import"
-                className={
-                  !allowedSteps.has("import") ? "border border-dashed rounded-md" : undefined
-                }
+                className={cn(
+                  "rounded-md border bg-card px-6",
+                  !allowedSteps.has("import") && "border-dashed"
+                )}
               >
                 <AccordionTrigger
                   disabled={!allowedSteps.has("import")}
                   className={!allowedSteps.has("import") ? "font-normal text-muted-foreground" : undefined}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex w-full items-center justify-between">
                     <span>4 · Import</span>
                     <Badge
                       variant={
@@ -1086,8 +1084,7 @@ export default function App() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="rounded-md border bg-card p-6">
-                    <div className="space-y-4">
+                  <div className="space-y-4 pb-6">
                       <p className="text-sm text-muted-foreground">
                         Import runs after approval and produces a report summary.
                       </p>
@@ -1200,7 +1197,6 @@ export default function App() {
                           </Button>
                         </div>
                       )}
-                    </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>
