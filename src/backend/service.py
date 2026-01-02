@@ -322,7 +322,7 @@ def _build_cloudahoy_client(payload: JobCreateRequest | JobAcceptRequest, export
     export_formats = _parse_export_formats(_env("CLOUD_AHOY_EXPORT_FORMATS") or export_format)
     return CloudAhoyClient(
         api_key=_env("CLOUD_AHOY_API_KEY"),
-        base_url=_env("CLOUD_AHOY_BASE_URL") or "https://www.cloudahoy.com/api",
+        base_url=_cloudahoy_base_url(),
         email=payload.credentials.cloudahoy_username,
         password=payload.credentials.cloudahoy_password,
         exports_dir=exports_dir,
@@ -337,7 +337,7 @@ def _build_flysto_client(payload: JobAcceptRequest) -> FlyStoClient:
     max_request_retries = _int_env("FLYSTO_MAX_REQUEST_RETRIES", 2)
     return FlyStoClient(
         api_key=_env("FLYSTO_API_KEY") or "",
-        base_url=_env("FLYSTO_BASE_URL") or "https://www.flysto.net",
+        base_url=_flysto_base_url(),
         upload_url=_env("FLYSTO_LOG_UPLOAD_URL"),
         session_cookie=_env("FLYSTO_SESSION_COOKIE"),
         include_metadata=include_metadata,
@@ -565,6 +565,22 @@ def _int_env(name: str, default: int) -> int:
         return int(value)
     except ValueError:
         return default
+
+
+def _use_mocks() -> bool:
+    return _bool_env("DEV_USE_MOCKS", False)
+
+
+def _cloudahoy_base_url() -> str:
+    if _use_mocks():
+        return _env("MOCK_CLOUD_AHOY_BASE_URL") or "http://mock-cloudahoy:8081/api"
+    return _env("CLOUD_AHOY_BASE_URL") or "https://www.cloudahoy.com/api"
+
+
+def _flysto_base_url() -> str:
+    if _use_mocks():
+        return _env("MOCK_FLYSTO_BASE_URL") or "http://mock-flysto:8082"
+    return _env("FLYSTO_BASE_URL") or "https://www.flysto.net"
 
 
 def _maybe_wait_for_processing(flysto: FlyStoClient) -> None:

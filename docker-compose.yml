@@ -60,10 +60,9 @@ services:
       - BACKEND_WAIT_FOR_PROCESSING=true
       - BACKEND_PROCESSING_INTERVAL=20
       - BACKEND_PROCESSING_TIMEOUT=3600
-      - CLOUD_AHOY_BASE_URL=http://mock-cloudahoy:8081/api
-      - CLOUD_AHOY_WEB_BASE_URL=http://mock-cloudahoy:8081
-      - FLYSTO_BASE_URL=http://mock-flysto:8082
-      - FLYSTO_WEB_BASE_URL=http://mock-flysto:8082
+      - DEV_USE_MOCKS=${DEV_USE_MOCKS:-1}
+      - MOCK_CLOUD_AHOY_BASE_URL=http://mock-cloudahoy:8081/api
+      - MOCK_FLYSTO_BASE_URL=http://mock-flysto:8082
       - FLYSTO_API_VERSION=1
     depends_on:
       dynamodb:
@@ -102,10 +101,9 @@ services:
       - BACKEND_WAIT_FOR_PROCESSING=true
       - BACKEND_PROCESSING_INTERVAL=20
       - BACKEND_PROCESSING_TIMEOUT=3600
-      - CLOUD_AHOY_BASE_URL=http://mock-cloudahoy:8081/api
-      - CLOUD_AHOY_WEB_BASE_URL=http://mock-cloudahoy:8081
-      - FLYSTO_BASE_URL=http://mock-flysto:8082
-      - FLYSTO_WEB_BASE_URL=http://mock-flysto:8082
+      - DEV_USE_MOCKS=${DEV_USE_MOCKS:-1}
+      - MOCK_CLOUD_AHOY_BASE_URL=http://mock-cloudahoy:8081/api
+      - MOCK_FLYSTO_BASE_URL=http://mock-flysto:8082
       - FLYSTO_API_VERSION=1
     depends_on:
       dynamodb:

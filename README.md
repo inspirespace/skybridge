@@ -188,7 +188,7 @@ docker compose up --build
 Open:
 - https://skybridge.localhost (UI + API)
 - https://auth.skybridge.localhost (Keycloak)
-- https://storage.skybridge.localhost (MinIO S3 API)
+- https://storage.skybridge.localhost (MinIO console + S3 API)
 
 
 ### Docker Compose (API + worker + local data stores)
@@ -206,6 +206,10 @@ Services:
 - `caddy` (HTTPS proxy) on https://skybridge.localhost, https://auth.skybridge.localhost, and https://storage.skybridge.localhost
 
 The dev stack runs review/import via the worker (API queues jobs and issues one-time credential claims).
+
+Mock portal services (default in dev):
+- `DEV_USE_MOCKS=1` (default) routes CloudAhoy/FlySto calls to local mock services seeded from `data/runs/20251230T204121Z`.
+- To use real portals, set `DEV_USE_MOCKS=0` and configure `CLOUD_AHOY_BASE_URL`/`FLYSTO_BASE_URL` (plus auth vars).
 
 Test the API:
 
