@@ -275,10 +275,7 @@ export default function App() {
   const allowedSteps = React.useMemo(() => {
     if (!flow.signedIn) return new Set(["sign-in"]);
     if (!flow.connected) return new Set(["sign-in", "connect"]);
-    if (flow.importStatus === "running" || flow.importStatus === "complete") {
-      return new Set(["sign-in", "connect", "review", "import"]);
-    }
-    if (flow.reviewStatus === "complete") {
+    if (flow.importStatus !== "idle") {
       return new Set(["sign-in", "connect", "review", "import"]);
     }
     return new Set(["sign-in", "connect", "review"]);
