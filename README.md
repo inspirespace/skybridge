@@ -208,7 +208,7 @@ Services:
 The dev stack runs review/import via the worker (API queues jobs and issues one-time credential claims).
 
 Mock portal services (default in dev):
-- `DEV_USE_MOCKS=1` (default) routes CloudAhoy/FlySto calls to local mock services seeded from `data/runs/20251230T204121Z`.
+- `DEV_USE_MOCKS=1` (default) routes CloudAhoy/FlySto calls to local mock services seeded from `tests/fixtures/run-20251228T185601Z`.
 - To use real portals, set `DEV_USE_MOCKS=0` and configure `CLOUD_AHOY_BASE_URL`/`FLYSTO_BASE_URL` (plus auth vars).
 
 Test the API:

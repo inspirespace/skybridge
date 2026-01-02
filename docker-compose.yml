@@ -140,7 +140,7 @@ services:
     volumes:
       - ./:/app
     environment:
-      - MOCK_RUN_DIR=/app/data/runs/20251230T204121Z
+      - MOCK_RUN_DIR=/app/tests/fixtures/run-20251228T185601Z
 
   mock-flysto:
     build:
@@ -150,7 +150,7 @@ services:
     volumes:
       - ./:/app
     environment:
-      - MOCK_RUN_DIR=/app/data/runs/20251230T204121Z
+      - MOCK_RUN_DIR=/app/tests/fixtures/run-20251228T185601Z
 
   keycloak:
     image: quay.io/keycloak/keycloak:25.0.6
