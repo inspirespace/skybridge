@@ -60,6 +60,11 @@ services:
       - BACKEND_WAIT_FOR_PROCESSING=true
       - BACKEND_PROCESSING_INTERVAL=20
       - BACKEND_PROCESSING_TIMEOUT=3600
+      - CLOUD_AHOY_BASE_URL=http://mock-cloudahoy:8081/api
+      - CLOUD_AHOY_WEB_BASE_URL=http://mock-cloudahoy:8081
+      - FLYSTO_BASE_URL=http://mock-flysto:8082
+      - FLYSTO_WEB_BASE_URL=http://mock-flysto:8082
+      - FLYSTO_API_VERSION=1
     depends_on:
       dynamodb:
         condition: service_started
@@ -67,6 +72,10 @@ services:
         condition: service_started
       keycloak:
         condition: service_healthy
+      mock-cloudahoy:
+        condition: service_started
+      mock-flysto:
+        condition: service_started
 
   worker:
     build:
@@ -93,6 +102,11 @@ services:
       - BACKEND_WAIT_FOR_PROCESSING=true
       - BACKEND_PROCESSING_INTERVAL=20
       - BACKEND_PROCESSING_TIMEOUT=3600
+      - CLOUD_AHOY_BASE_URL=http://mock-cloudahoy:8081/api
+      - CLOUD_AHOY_WEB_BASE_URL=http://mock-cloudahoy:8081
+      - FLYSTO_BASE_URL=http://mock-flysto:8082
+      - FLYSTO_WEB_BASE_URL=http://mock-flysto:8082
+      - FLYSTO_API_VERSION=1
     depends_on:
       dynamodb:
         condition: service_started
@@ -100,6 +114,10 @@ services:
         condition: service_started
       keycloak:
         condition: service_healthy
+      mock-cloudahoy:
+        condition: service_started
+      mock-flysto:
+        condition: service_started
 
   dynamodb:
     image: amazon/dynamodb-local:2.5.0
@@ -115,6 +133,26 @@ services:
       MINIO_BROWSER_REDIRECT_URL: https://storage.skybridge.localhost/console/
       MINIO_SERVER_URL: https://storage.skybridge.localhost
     command: ["server", "/data", "--console-address", ":9001"]
+
+  mock-cloudahoy:
+    build:
+      context: .
+      dockerfile: docker/backend-dev/Dockerfile
+    command: ["python", "-m", "uvicorn", "src.backend.mocks.cloudahoy:app", "--host", "0.0.0.0", "--port", "8081"]
+    volumes:
+      - ./:/app
+    environment:
+      - MOCK_RUN_DIR=/app/data/runs/20251230T204121Z
+
+  mock-flysto:
+    build:
+      context: .
+      dockerfile: docker/backend-dev/Dockerfile
+    command: ["python", "-m", "uvicorn", "src.backend.mocks.flysto:app", "--host", "0.0.0.0", "--port", "8082"]
+    volumes:
+      - ./:/app
+    environment:
+      - MOCK_RUN_DIR=/app/data/runs/20251230T204121Z
 
   keycloak:
     image: quay.io/keycloak/keycloak:25.0.6

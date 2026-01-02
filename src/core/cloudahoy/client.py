@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
 import requests
 
@@ -32,7 +33,7 @@ class CloudAhoyClient:
     export_formats: list[str] | None = None
 
     def list_flights(self, limit: int | None = None) -> list[FlightSummary]:
-        session, auth = _login(self.email, self.password)
+        session, auth = _login(self.base_url, self.email, self.password)
         payload = _build_auth_payload(auth, initial_call=True)
         flights: list[dict] = []
         more = True
@@ -239,7 +240,7 @@ class CloudAhoyClient:
         return _extract_metadata(flt)
 
     def _fetch_raw(self, flight_id: str) -> dict:
-        session, auth = _login(self.email, self.password)
+        session, auth = _login(self.base_url, self.email, self.password)
         payload = _build_auth_payload(auth, initial_call=False)
         payload["flight"] = flight_id
         response = session.post(
@@ -258,10 +259,11 @@ def _csv_suffix(export_format: str) -> str:
     return f".{safe}"
 
 
-def _login(email: str, password: str) -> tuple[requests.Session, dict]:
+def _login(base_url: str, email: str, password: str) -> tuple[requests.Session, dict]:
     session = requests.Session()
+    api_base = _api_base(base_url).rstrip("/")
     response = session.post(
-        "https://www.cloudahoy.com/api/signin.cgi?form",
+        f"{api_base}/signin.cgi?form",
         data={"email": email, "password": password},
         timeout=60,
     )
@@ -273,8 +275,9 @@ def _login(email: str, password: str) -> tuple[requests.Session, dict]:
     }
     if not all(auth.values()):
         raise RuntimeError("CloudAhoy login failed: session cookies not found.")
+    domain = urlparse(api_base).hostname or "www.cloudahoy.com"
     for key, value in auth.items():
-        session.cookies.set(key, value, domain="www.cloudahoy.com", path="/")
+        session.cookies.set(key, value, domain=domain, path="/")
     return session, auth
 
 
