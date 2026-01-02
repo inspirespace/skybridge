@@ -211,8 +211,22 @@ def accept_review(
 ) -> JobRecord:
     user_id = user_id_from_request(authorization, x_user_id)
     job = _load_job_or_404(job_id, user_id)
+    review_path = store.job_dir(job.job_id) / "review.json"
+    has_import_events = any(
+        getattr(event, "phase", None) == "import"
+        if hasattr(event, "phase")
+        else event.get("phase") == "import"
+        for event in (job.progress_log or [])
+        if event
+    )
     if job.status != "review_ready":
-        raise HTTPException(status_code=409, detail="Review not ready")
+        if not (
+            job.status == "failed"
+            and job.review_summary is not None
+            and review_path.exists()
+            and not has_import_events
+        ):
+            raise HTTPException(status_code=409, detail="Review not ready")
     if _use_worker():
         token = credential_store.issue(
             job_id=str(job.job_id),

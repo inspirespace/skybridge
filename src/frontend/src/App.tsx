@@ -135,6 +135,7 @@ export default function App() {
     [job?.progress_log]
   );
   const latestImportEvent = importEvents[importEvents.length - 1];
+  const hasImportEvents = importEvents.length > 0;
 
   const reviewComplete = flow.reviewStatus === "complete";
   const reviewRunning = flow.reviewStatus === "running";
@@ -531,8 +532,14 @@ export default function App() {
   const dateRangeLabel = formatDateRange(dateRange);
 
   const visibleFlights = showAllFlights ? flights : flights.slice(0, 3);
-  const canApprove = job?.status === "review_ready" && !actionLoading;
-  const canEditFiltersNow = job?.status === "review_ready" && !actionLoading;
+  const canApprove =
+    (job?.status === "review_ready" ||
+      (job?.status === "failed" && reviewSummary && !hasImportEvents)) &&
+    !actionLoading;
+  const canEditFiltersNow =
+    (job?.status === "review_ready" ||
+      (job?.status === "failed" && reviewSummary && !hasImportEvents)) &&
+    !actionLoading;
 
   const stepIndex = !flow.signedIn
     ? 1

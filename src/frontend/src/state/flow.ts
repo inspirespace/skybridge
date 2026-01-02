@@ -49,14 +49,15 @@ export function deriveFlowState(signedIn: boolean, job: JobRecord | null): FlowS
         ? "complete"
         : "idle";
 
+  const hasImportEvents =
+    Array.isArray(job.progress_log) &&
+    job.progress_log.some((event) => event?.phase === "import");
   const importStatus: ImportStatus = IMPORT_RUNNING_STATUSES.includes(status)
     ? "running"
     : status === "completed"
       ? "complete"
-      : status === "failed"
-        ? job.review_summary
-          ? "failed"
-          : "idle"
+      : status === "failed" && hasImportEvents
+        ? "failed"
         : "idle";
 
   return {
