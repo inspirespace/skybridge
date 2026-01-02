@@ -211,6 +211,11 @@ Mock portal services (default in dev):
 - `DEV_USE_MOCKS=1` (default) routes CloudAhoy/FlySto calls to local mock services seeded from `tests/fixtures/run-20251228T185601Z`.
 - To use real portals, set `DEV_USE_MOCKS=0` and configure `CLOUD_AHOY_BASE_URL`/`FLYSTO_BASE_URL` (plus auth vars).
 
+Artifact storage (S3/MinIO):
+- When `BACKEND_S3_ENABLED=1`, review/import artifacts are uploaded to the configured S3 bucket.
+- The dev stack defaults to MinIO with bucket `skybridge-artifacts` and prefix `jobs/<job_id>/`.
+- Set `BACKEND_S3_DELETE_ON_CLEAR=1` to remove remote artifacts when deleting a job (privacy).
+
 Test the API:
 
 ```sh

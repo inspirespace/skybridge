@@ -117,6 +117,7 @@ class JobService:
             job.error_message = None
             self._store.save_job(job)
             self._store.write_artifact(job_id, "review-summary.json", review_summary.model_dump())
+            self._store.upload_artifact(job_id, "review.json", review_path)
             return job
         except Exception as exc:
             job.status = "failed"
@@ -269,6 +270,7 @@ class JobService:
             )
             job.error_message = None
             self._store.save_job(job)
+            self._store.upload_artifact(job_id, "import-report.json", report_path)
             return job
         except Exception as exc:
             job.status = "failed"

@@ -11,6 +11,7 @@ import requests
 from .models import JobAcceptRequest, JobCreateRequest
 from pathlib import Path
 
+from .object_store import build_object_store_from_env
 from .service import JobService
 from .store import JobStore
 
@@ -44,7 +45,7 @@ def _claim_credentials(job_id: UUID, purpose: str, token: str) -> tuple[dict | N
 
 
 def run() -> None:
-    store = JobStore(DATA_DIR)
+    store = JobStore(DATA_DIR, build_object_store_from_env())
     while True:
         jobs = store.list_all_jobs()
         now = datetime.now(timezone.utc).isoformat()

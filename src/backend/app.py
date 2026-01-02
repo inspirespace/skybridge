@@ -25,6 +25,7 @@ from .models import (
     JobListResponse,
     JobRecord,
 )
+from .object_store import build_object_store_from_env
 from .service import JobService
 from .store import JobStore
 from .web import landing_page
@@ -32,7 +33,7 @@ from .web import landing_page
 DATA_DIR = Path(os.environ.get("BACKEND_DATA_DIR", "data/backend/jobs"))
 
 app = FastAPI(title="Skybridge Backend Dev API")
-store = JobStore(DATA_DIR)
+store = JobStore(DATA_DIR, build_object_store_from_env())
 service = JobService(store)
 executor = ThreadPoolExecutor(max_workers=int(os.getenv("BACKEND_WORKERS") or "2"))
 credential_store = CredentialStore()

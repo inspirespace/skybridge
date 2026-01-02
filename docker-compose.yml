@@ -64,6 +64,17 @@ services:
       - MOCK_CLOUD_AHOY_BASE_URL=http://mock-cloudahoy:8081/api
       - MOCK_FLYSTO_BASE_URL=http://mock-flysto:8082
       - FLYSTO_API_VERSION=1
+      - BACKEND_S3_ENABLED=1
+      - BACKEND_S3_DELETE_ON_CLEAR=1
+      - S3_ENDPOINT_URL=http://minio:9000
+      - S3_BUCKET=skybridge-artifacts
+      - S3_PREFIX=jobs
+      - S3_REGION=us-east-1
+      - S3_ACCESS_KEY=minioadmin
+      - S3_SECRET_KEY=minioadmin
+      - S3_USE_SSL=false
+      - S3_VERIFY_SSL=false
+      - S3_SSE=true
     depends_on:
       dynamodb:
         condition: service_started
@@ -105,6 +116,17 @@ services:
       - MOCK_CLOUD_AHOY_BASE_URL=http://mock-cloudahoy:8081/api
       - MOCK_FLYSTO_BASE_URL=http://mock-flysto:8082
       - FLYSTO_API_VERSION=1
+      - BACKEND_S3_ENABLED=1
+      - BACKEND_S3_DELETE_ON_CLEAR=1
+      - S3_ENDPOINT_URL=http://minio:9000
+      - S3_BUCKET=skybridge-artifacts
+      - S3_PREFIX=jobs
+      - S3_REGION=us-east-1
+      - S3_ACCESS_KEY=minioadmin
+      - S3_SECRET_KEY=minioadmin
+      - S3_USE_SSL=false
+      - S3_VERIFY_SSL=false
+      - S3_SSE=true
     depends_on:
       dynamodb:
         condition: service_started

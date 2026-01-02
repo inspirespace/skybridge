@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
@@ -9,6 +10,7 @@ from typing import Any
 from uuid import UUID
 
 from .models import ImportReport, JobRecord, ReviewSummary
+from .object_store import ObjectStore
 
 
 @dataclass
@@ -17,8 +19,9 @@ class StoredJob:
 
 
 class JobStore:
-    def __init__(self, base_path: Path) -> None:
+    def __init__(self, base_path: Path, object_store: ObjectStore | None = None) -> None:
         self._base_path = base_path
+        self._object_store = object_store
         self._base_path.mkdir(parents=True, exist_ok=True)
 
     def _job_dir(self, job_id: UUID) -> Path:
@@ -64,6 +67,9 @@ class JobStore:
         job_dir = self._job_dir(job_id)
         if job_dir.exists():
             rmtree(job_dir)
+        if self._object_store and _bool_env("BACKEND_S3_DELETE_ON_CLEAR", False):
+            prefix = self._object_store.key_for(str(job_id))
+            self._object_store.delete_prefix(prefix)
 
     def save_job(self, job: JobRecord) -> None:
         job_dir = self._job_dir(job.job_id)
@@ -76,6 +82,15 @@ class JobStore:
         job_dir.mkdir(parents=True, exist_ok=True)
         artifact_file = job_dir / name
         artifact_file.write_text(json.dumps(payload, indent=2))
+        if self._object_store:
+            key = self._object_store.key_for(str(job_id), name)
+            self._object_store.put_json(key, payload)
+
+    def upload_artifact(self, job_id: UUID, name: str, path: Path) -> None:
+        if not self._object_store or not path.exists():
+            return
+        key = self._object_store.key_for(str(job_id), name)
+        self._object_store.put_file(key, path)
 
     def list_artifacts(self, job_id: UUID) -> list[str]:
         job_dir = self._job_dir(job_id)
@@ -123,3 +138,10 @@ def _serialize(job: JobRecord) -> dict[str, Any]:
 
     raw = job.model_dump()
     return {key: _normalize(value) for key, value in raw.items()}
+
+
+def _bool_env(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
