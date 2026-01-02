@@ -22,7 +22,6 @@ const REVIEW_COMPLETE_STATUSES: JobStatus[] = [
   "import_queued",
   "import_running",
   "completed",
-  "failed",
 ];
 
 const REVIEW_RUNNING_STATUSES: JobStatus[] = ["review_queued", "review_running"];
@@ -42,10 +41,12 @@ export function deriveFlowState(signedIn: boolean, job: JobRecord | null): FlowS
   const status = job.status;
   const reviewStatus: ReviewStatus = REVIEW_RUNNING_STATUSES.includes(status)
     ? "running"
-    : REVIEW_COMPLETE_STATUSES.includes(status)
-      ? "complete"
-      : status === "failed"
-        ? "failed"
+    : status === "failed"
+      ? job.review_summary
+        ? "complete"
+        : "failed"
+      : REVIEW_COMPLETE_STATUSES.includes(status)
+        ? "complete"
         : "idle";
 
   const importStatus: ImportStatus = IMPORT_RUNNING_STATUSES.includes(status)

@@ -534,8 +534,8 @@ export default function App() {
   const dateRangeLabel = formatDateRange(dateRange);
 
   const visibleFlights = showAllFlights ? flights : flights.slice(0, 3);
-  const canApprove = reviewComplete && !importRunning && !importComplete;
-  const canEditFiltersNow = reviewComplete && !importRunning && !importComplete;
+  const canApprove = job?.status === "review_ready" && !actionLoading;
+  const canEditFiltersNow = job?.status === "review_ready" && !actionLoading;
 
   const stepIndex = !flow.signedIn
     ? 1
@@ -1035,10 +1035,7 @@ export default function App() {
                         <Button
                           onClick={handleApproveImport}
                           disabled={
-                            !canApprove ||
-                            importRunning ||
-                            importComplete ||
-                            actionLoading
+                            !canApprove || importRunning || importComplete || actionLoading
                           }
                         >
                           Accept and start import
