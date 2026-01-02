@@ -534,8 +534,8 @@ export default function App() {
   const dateRangeLabel = formatDateRange(dateRange);
 
   const visibleFlights = showAllFlights ? flights : flights.slice(0, 3);
-  const canApprove = job?.status === "review_ready";
-  const canEditFiltersNow = job?.status === "review_ready";
+  const canApprove = reviewComplete && !importRunning && !importComplete;
+  const canEditFiltersNow = reviewComplete && !importRunning && !importComplete;
 
   const stepIndex = !flow.signedIn
     ? 1
