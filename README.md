@@ -188,6 +188,7 @@ docker compose up --build
 Open:
 - https://skybridge.localhost (UI + API)
 - https://auth.skybridge.localhost (Keycloak)
+- https://storage.skybridge.localhost (MinIO S3 API)
 
 
 ### Docker Compose (API + worker + local data stores)
@@ -200,9 +201,9 @@ Services:
 - `api` (FastAPI + UI) on http://localhost:8000
 - `worker` (dev worker loop)
 - `dynamodb` (local) on http://localhost:8001
-- `minio` (S3-compatible) on http://localhost:9000, console on http://localhost:9001
+- `minio` (S3-compatible) behind Caddy at https://storage.skybridge.localhost
 - `keycloak` (OIDC dev auth) on http://localhost:8080
-- `caddy` (HTTPS proxy) on https://skybridge.localhost and https://auth.skybridge.localhost
+- `caddy` (HTTPS proxy) on https://skybridge.localhost, https://auth.skybridge.localhost, and https://storage.skybridge.localhost
 
 The dev stack runs review/import via the worker (API queues jobs and issues one-time credential claims).
 

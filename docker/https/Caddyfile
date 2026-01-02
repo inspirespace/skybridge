@@ -1,5 +1,5 @@
 {
-  auto_https off
+  auto_https on
 }
 
 https://skybridge.localhost {
@@ -17,4 +17,10 @@ https://auth.skybridge.localhost {
   tls /etc/caddy/certs/auth.skybridge.localhost.pem /etc/caddy/certs/auth.skybridge.localhost-key.pem
   encode gzip
   reverse_proxy keycloak:8080
+}
+
+https://storage.skybridge.localhost {
+  tls /etc/caddy/certs/storage.skybridge.localhost.pem /etc/caddy/certs/storage.skybridge.localhost-key.pem
+  encode gzip
+  reverse_proxy minio:9000
 }
