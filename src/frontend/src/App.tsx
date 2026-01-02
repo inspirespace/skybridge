@@ -557,10 +557,12 @@ export default function App() {
           : "All steps completed";
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
+    <div className="min-h-screen bg-muted/20 text-foreground">
+      <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
         <div className="container flex h-16 items-center justify-between">
-          <div className="text-sm font-semibold tracking-[0.3em]">SKYBRIDGE</div>
+          <div className="text-xs font-semibold tracking-[0.35em] text-muted-foreground">
+            SKYBRIDGE
+          </div>
           <div className="flex items-center gap-4">
             {flow.connected && (
               <Button
@@ -582,10 +584,10 @@ export default function App() {
         </div>
       </header>
 
-      <main className="container pb-24 pt-8 lg:pb-8">
+      <main className="container pb-24 pt-6 lg:pb-8">
         <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
           <aside className="hidden space-y-3 lg:sticky lg:top-20 lg:block lg:self-start">
-            <Card>
+            <Card className="rounded-xl border bg-card/80 shadow-sm">
               <CardHeader>
                 <CardTitle className="text-sm uppercase tracking-[0.25em] text-muted-foreground">
                   Progress
@@ -616,14 +618,17 @@ export default function App() {
             </Card>
           </aside>
 
-          <section className="space-y-4">
+          <section className="space-y-3">
             <Accordion
               type="single"
               collapsible
               value={openStep}
               onValueChange={handleAccordionChange}
             >
-              <AccordionItem value="sign-in" className="rounded-md border bg-card px-6">
+              <AccordionItem
+                value="sign-in"
+                className="rounded-xl border bg-card/80 px-5 shadow-sm"
+              >
                 <AccordionTrigger disabled={!allowedSteps.has("sign-in")}>
                   <div className="flex w-full items-center justify-between">
                     <span>1 · Sign in</span>
@@ -633,7 +638,7 @@ export default function App() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="space-y-6 pb-6">
+                  <div className="space-y-5 pb-5">
                       <p className="text-base font-semibold text-foreground">
                         Skybridge imports your CloudAhoy flights into FlySto. You’ll
                         connect both accounts, review the summary, and approve the
@@ -709,7 +714,7 @@ export default function App() {
               <AccordionItem
                 value="connect"
                 className={cn(
-                  "rounded-md border bg-card px-6",
+                  "rounded-xl border bg-card/80 px-5 shadow-sm",
                   !allowedSteps.has("connect") && "border-dashed"
                 )}
               >
@@ -728,7 +733,7 @@ export default function App() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="space-y-6 pb-6">
+                  <div className="space-y-5 pb-5">
                       <p className="text-sm text-muted-foreground">
                         Enter CloudAhoy and FlySto credentials, then run the review.
                       </p>
@@ -794,7 +799,7 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="rounded-md border p-4">
+                      <div className="rounded-lg border bg-background/60 p-3">
                         <div className="space-y-3">
                           <div className="text-sm font-semibold">Import filters</div>
                           <div className="grid gap-3 md:grid-cols-3">
@@ -890,7 +895,7 @@ export default function App() {
               <AccordionItem
                 value="review"
                 className={cn(
-                  "rounded-md border bg-card px-6",
+                  "rounded-xl border bg-card/80 px-5 shadow-sm",
                   !allowedSteps.has("review") && "border-dashed"
                 )}
               >
@@ -915,9 +920,9 @@ export default function App() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="space-y-4 pb-6">
+                  <div className="space-y-4 pb-5">
                       {showReviewProgress && (
-                        <div className="rounded-md border bg-muted/40 p-4 text-sm">
+                        <div className="rounded-lg border bg-background/70 p-3 text-sm shadow-sm">
                           <div className="flex items-center justify-between">
                             <span
                               className={`font-medium ${
@@ -1051,7 +1056,7 @@ export default function App() {
               <AccordionItem
                 value="import"
                 className={cn(
-                  "rounded-md border bg-card px-6",
+                  "rounded-xl border bg-card/80 px-5 shadow-sm",
                   !allowedSteps.has("import") && "border-dashed"
                 )}
               >
@@ -1084,12 +1089,12 @@ export default function App() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="space-y-4 pb-6">
+                  <div className="space-y-4 pb-5">
                       <p className="text-sm text-muted-foreground">
                         Import runs after approval and produces a report summary.
                       </p>
                       {showImportProgress && (
-                        <div className="rounded-md border bg-muted/40 p-4 text-sm">
+                        <div className="rounded-lg border bg-background/70 p-3 text-sm shadow-sm">
                           <div className="flex items-center justify-between">
                             <span
                               className={`font-medium ${
