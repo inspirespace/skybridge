@@ -109,6 +109,7 @@ async def assign_crew(_: Request) -> JSONResponse:
     return JSONResponse({"status": "ok"})
 
 
+@app.put("/api/log-annotations/{log_id}")
 @app.post("/api/log-annotations/{log_id}")
 async def log_annotations(log_id: str, _: Request) -> JSONResponse:
     return JSONResponse({"status": "ok", "logId": log_id})
