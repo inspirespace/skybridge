@@ -36,6 +36,9 @@ https://storage.skybridge.localhost {
   encode gzip
   @root path /
   redir @root /console/ 302
+  handle_path /api* {
+    reverse_proxy minio:9001
+  }
   handle_path /console* {
     reverse_proxy minio:9001
   }
