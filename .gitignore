@@ -42,3 +42,4 @@ infra/terraform/lambda/*.zip
 .npm-cache/
 src/frontend/.npm-cache/
 src/frontend/.npm-cache-shadcn/
+src/frontend/.vite/
