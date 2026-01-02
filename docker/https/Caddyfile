@@ -1,5 +1,17 @@
 {
-  auto_https on
+  auto_https off
+}
+
+http://skybridge.localhost {
+  redir https://skybridge.localhost{uri}
+}
+
+http://auth.skybridge.localhost {
+  redir https://auth.skybridge.localhost{uri}
+}
+
+http://storage.skybridge.localhost {
+  redir https://storage.skybridge.localhost{uri}
 }
 
 https://skybridge.localhost {
