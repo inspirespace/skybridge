@@ -115,6 +115,10 @@ def _serialize(job: JobRecord) -> dict[str, Any]:
             return json.loads(value.model_dump_json())
         if isinstance(value, ImportReport):
             return json.loads(value.model_dump_json())
+        if isinstance(value, list):
+            return [_normalize(item) for item in value]
+        if isinstance(value, dict):
+            return {key: _normalize(item) for key, item in value.items()}
         return value
 
     raw = job.model_dump()

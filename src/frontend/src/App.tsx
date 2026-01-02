@@ -9,6 +9,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Card,
   CardContent,
@@ -18,6 +19,11 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Progress } from "@/components/ui/progress";
 import { ImportResults } from "@/components/import-results";
 import {
@@ -37,11 +43,11 @@ import {
   exchangeToken,
   fetchArtifact,
   listArtifacts,
-  type FlightSummary,
   type AuthContext,
 } from "@/api/client";
 import { canStartOver, deriveFlowState, getOpenStep } from "@/state/flow";
 import { useJobSnapshot } from "@/hooks/use-job-snapshot";
+import type { DateRange } from "react-day-picker";
 
 const USER_ID_KEY = "skybridge_user_id";
 const JOB_ID_KEY = "skybridge_job_id";
@@ -92,8 +98,7 @@ export default function App() {
   const [cloudahoyPassword, setCloudahoyPassword] = React.useState("");
   const [flystoEmail, setFlystoEmail] = React.useState("");
   const [flystoPassword, setFlystoPassword] = React.useState("");
-  const [startDate, setStartDate] = React.useState("");
-  const [endDate, setEndDate] = React.useState("");
+  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
   const [maxFlights, setMaxFlights] = React.useState("");
 
   const isSignedIn = AUTH_MODE === "oidc" ? Boolean(accessToken) : Boolean(userId);
@@ -116,6 +121,15 @@ export default function App() {
 
   const reviewSummary = job?.review_summary ?? null;
   const flights = reviewSummary?.flights ?? [];
+  const importEvents = React.useMemo(
+    () =>
+      (job?.progress_log ?? [])
+        .filter((event) => event.phase === "import")
+        .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
+        .slice(-6),
+    [job?.progress_log]
+  );
+  const latestImportEvent = importEvents[importEvents.length - 1];
 
   const reviewComplete = flow.reviewStatus === "complete";
   const reviewRunning = flow.reviewStatus === "running";
@@ -124,6 +138,7 @@ export default function App() {
   const reviewApproved = importRunning || importComplete;
   const showReviewProgress = reviewRunning || reviewComplete;
   const showImportProgress = importRunning || importComplete;
+  const [now, setNow] = React.useState(() => new Date());
   const signInError =
     actionError?.scope === "sign-in" || actionError?.scope === "global"
       ? actionError.message
@@ -171,8 +186,17 @@ export default function App() {
     : importComplete
       ? "Import complete"
       : "Import running";
-  const elapsed = formatElapsed(job?.created_at, job?.updated_at);
-  const lastUpdate = formatLastUpdate(job?.updated_at);
+  React.useEffect(() => {
+    if (!reviewRunning && !importRunning) return;
+    const interval = window.setInterval(() => setNow(new Date()), 15000);
+    return () => window.clearInterval(interval);
+  }, [reviewRunning, importRunning]);
+
+  const elapsed = formatElapsed(
+    job?.created_at,
+    reviewRunning || importRunning ? now.toISOString() : job?.updated_at
+  );
+  const lastUpdate = formatLastUpdate(job?.updated_at, now);
 
   React.useEffect(() => {
     if (AUTH_MODE !== "oidc") return;
@@ -326,8 +350,8 @@ export default function App() {
           flysto_username: flystoEmail,
           flysto_password: flystoPassword,
         },
-        start_date: startDate || null,
-        end_date: endDate || null,
+        start_date: dateRange?.from ? formatISODate(dateRange.from) : null,
+        end_date: dateRange?.to ? formatISODate(dateRange.to) : null,
         max_flights: maxFlights ? Number(maxFlights) : null,
       };
       const createdJob = await createJob(payload, auth);
@@ -335,6 +359,10 @@ export default function App() {
       setJobId(createdJob.job_id);
       setShowAllFlights(false);
     } catch (err) {
+      if (isAuthExpiredError(err)) {
+        handleTokenExpired();
+        return;
+      }
       setActionError({
         scope: "connect",
         message: err instanceof Error ? err.message : "Failed to start review",
@@ -359,6 +387,10 @@ export default function App() {
       }, auth);
       refresh();
     } catch (err) {
+      if (isAuthExpiredError(err)) {
+        handleTokenExpired();
+        return;
+      }
       setActionError({
         scope: "review",
         message: err instanceof Error ? err.message : "Failed to start import",
@@ -407,6 +439,29 @@ export default function App() {
     }
   };
 
+  const handleTokenExpired = React.useCallback(() => {
+    localStorage.removeItem(USER_ID_KEY);
+    localStorage.removeItem(JOB_ID_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(ID_TOKEN_KEY);
+    sessionStorage.removeItem(CODE_VERIFIER_KEY);
+    sessionStorage.removeItem(AUTH_STATE_KEY);
+    setUserId(null);
+    setJobId(null);
+    setAccessToken(null);
+    setIdToken(null);
+    setShowAllFlights(false);
+    setActionError(null);
+  }, []);
+
+  React.useEffect(() => {
+    if (!jobError || !isSignedIn) return;
+    const text = jobError.toLowerCase();
+    if (text.includes("invalid token") || text.includes("signature") || text.includes("expired")) {
+      handleTokenExpired();
+    }
+  }, [jobError, isSignedIn, handleTokenExpired]);
+
   const handleDownloadReport = async () => {
     if (!jobId) return;
     setActionLoading(true);
@@ -430,6 +485,10 @@ export default function App() {
       link.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
+      if (isAuthExpiredError(err)) {
+        handleTokenExpired();
+        return;
+      }
       setActionError({
         scope: "import",
         message: err instanceof Error ? err.message : "Failed to download report",
@@ -448,6 +507,10 @@ export default function App() {
       localStorage.removeItem(JOB_ID_KEY);
       setJobId(null);
     } catch (err) {
+      if (isAuthExpiredError(err)) {
+        handleTokenExpired();
+        return;
+      }
       setActionError({
         scope: "import",
         message: err instanceof Error ? err.message : "Failed to delete results",
@@ -462,6 +525,8 @@ export default function App() {
     Boolean(cloudahoyPassword) &&
     Boolean(flystoEmail) &&
     Boolean(flystoPassword);
+  const rangeIncomplete = Boolean(dateRange?.from && !dateRange?.to);
+  const dateRangeLabel = formatDateRange(dateRange);
 
   const visibleFlights = showAllFlights ? flights : flights.slice(0, 3);
   const canApprove = job?.status === "review_ready";
@@ -738,25 +803,46 @@ export default function App() {
                         </CardHeader>
                         <CardContent className="space-y-3">
                           <div className="grid gap-3 md:grid-cols-3">
-                            <div className="space-y-2">
-                              <Label htmlFor="start-date">Start date</Label>
-                              <Input
-                                id="start-date"
-                                type="date"
-                                disabled={connectLocked}
-                                value={startDate}
-                                onChange={(event) => setStartDate(event.target.value)}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="end-date">End date</Label>
-                              <Input
-                                id="end-date"
-                                type="date"
-                                disabled={connectLocked}
-                                value={endDate}
-                                onChange={(event) => setEndDate(event.target.value)}
-                              />
+                            <div className="space-y-2 md:col-span-2">
+                              <Label>Date range</Label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className="w-full justify-start text-left font-normal"
+                                    disabled={connectLocked}
+                                  >
+                                    {dateRangeLabel}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-3" align="start">
+                                  <Calendar
+                                    mode="range"
+                                    numberOfMonths={1}
+                                    selected={dateRange}
+                                    onSelect={setDateRange}
+                                    disabled={connectLocked}
+                                  />
+                                  <div className="mt-3 flex items-center justify-between">
+                                    <div className="text-xs text-muted-foreground">
+                                      Leave empty to import all available flights.
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setDateRange(undefined)}
+                                      disabled={connectLocked || !dateRange?.from}
+                                    >
+                                      Clear dates
+                                    </Button>
+                                  </div>
+                                  {rangeIncomplete && (
+                                    <div className="mt-2 text-xs text-amber-600">
+                                      Select an end date or clear the range.
+                                    </div>
+                                  )}
+                                </PopoverContent>
+                              </Popover>
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="max-flights">Max flights to import</Label>
@@ -779,8 +865,7 @@ export default function App() {
                             </div>
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            Leave empty to import all available flights. Caps the total number
-                            of flights that will be imported.
+                            Caps the total number of flights that will be imported.
                           </p>
                         </CardContent>
                       </Card>
@@ -799,7 +884,7 @@ export default function App() {
 
                       <Button
                         onClick={handleConnectReview}
-                        disabled={connectLocked || !canConnect || actionLoading}
+                        disabled={connectLocked || !canConnect || rangeIncomplete || actionLoading}
                       >
                         Connect and review
                       </Button>
@@ -821,14 +906,16 @@ export default function App() {
                   <div className="flex items-center gap-3">
                     <span>3 · Review</span>
                     <Badge
-                      variant={reviewComplete ? "success" : "outline"}
+                      variant={reviewComplete ? "success" : reviewRunning ? "active" : "outline"}
                       className={!allowedSteps.has("review") ? "border-dashed" : undefined}
                     >
                       {reviewApproved
                         ? "Approved"
                         : reviewComplete
                           ? "Review ready"
-                          : "Connect accounts to continue"}
+                          : reviewRunning
+                            ? "Review running"
+                            : "Connect accounts to continue"}
                     </Badge>
                   </div>
                 </AccordionTrigger>
@@ -988,7 +1075,7 @@ export default function App() {
                         importComplete
                           ? "success"
                           : importRunning
-                            ? "secondary"
+                            ? "active"
                             : reviewComplete
                               ? "secondary"
                               : "outline"
@@ -1035,7 +1122,61 @@ export default function App() {
                               indicatorClassName={importComplete ? "bg-emerald-600" : undefined}
                             />
                           </div>
+                          {latestImportEvent && (
+                            <div className="mt-2 text-xs text-muted-foreground">
+                              {latestImportEvent.stage}
+                              {latestImportEvent.flight_id
+                                ? ` · ${formatFlightId({ flight_id: latestImportEvent.flight_id })}`
+                                : ""}
+                              {latestImportEvent.percent != null
+                                ? ` · ${latestImportEvent.percent}%`
+                                : ""}
+                              {" · "}
+                              {formatLastUpdate(latestImportEvent.created_at, now)}
+                            </div>
+                          )}
                         </div>
+                      )}
+                      {importEvents.length > 0 && (
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-base">Import activity</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <ul className="space-y-3 text-sm">
+                              {importEvents.map((event) => (
+                                <li
+                                  key={`${event.created_at}-${event.stage}`}
+                                  className="flex items-start justify-between gap-4 border-l-2 border-muted pl-3"
+                                >
+                                  <div>
+                                    <div className="font-medium">{event.stage}</div>
+                                    {event.flight_id && (
+                                      <div className="text-xs text-muted-foreground">
+                                        Flight: {formatFlightId({ flight_id: event.flight_id })}
+                                      </div>
+                                    )}
+                                    <div className="text-xs text-muted-foreground">
+                                      {event.percent != null ? `${event.percent}% · ` : ""}
+                                      {formatLastUpdate(event.created_at, now)}
+                                    </div>
+                                  </div>
+                                  <Badge
+                                    variant={
+                                      event.status === "failed"
+                                        ? "warning"
+                                        : event.status === "completed"
+                                          ? "success"
+                                          : "secondary"
+                                    }
+                                  >
+                                    {event.status.replace(/_/g, " ")}
+                                  </Badge>
+                                </li>
+                              ))}
+                            </ul>
+                          </CardContent>
+                        </Card>
                       )}
                       {importComplete && job?.import_report && (
                         <ImportResults
@@ -1057,7 +1198,11 @@ export default function App() {
                           </AlertDescription>
                           <div className="mt-4 flex flex-wrap gap-3">
                             <Button asChild>
-                              <a href="https://www.flysto.net" target="_blank" rel="noreferrer">
+                              <a
+                                href="https://www.flysto.net/logs"
+                                target="_blank"
+                                rel="noreferrer"
+                              >
                                 Open FlySto
                               </a>
                             </Button>
@@ -1162,11 +1307,31 @@ function formatDate(value?: string | null) {
   return value.slice(0, 10);
 }
 
-function formatFlightId(flight: FlightSummary) {
-  const id = flight.flight_id;
+function formatFlightId(flight: { flight_id?: string | null }) {
+  const id = flight.flight_id ?? "";
   if (!id) return "—";
   if (id.length <= 16) return id;
   return `...${id.slice(-12)}`;
+}
+
+function formatDateRange(range?: DateRange) {
+  if (!range?.from && !range?.to) return "Any date";
+  const formatter = new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+  if (range.from && range.to) {
+    return `${formatter.format(range.from)} – ${formatter.format(range.to)}`;
+  }
+  if (range.from) {
+    return `From ${formatter.format(range.from)}`;
+  }
+  return "Any date";
+}
+
+function formatISODate(value: Date) {
+  return value.toISOString().slice(0, 10);
 }
 
 function formatElapsed(start?: string | null, end?: string | null) {
@@ -1183,11 +1348,18 @@ function formatElapsed(start?: string | null, end?: string | null) {
   return `${hours}h ${rem}m`;
 }
 
-function formatLastUpdate(value?: string | null) {
+function formatLastUpdate(value?: string | null, now: Date = new Date()) {
   if (!value) return "just now";
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return "just now";
-  return parsed.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const diffMs = Math.max(0, now.getTime() - parsed.getTime());
+  const diffSec = Math.round(diffMs / 1000);
+  if (diffSec < 10) return "just now";
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.round(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.round(diffMin / 60);
+  return `${diffHr}h ago`;
 }
 
 function generateCodeVerifier() {
@@ -1225,4 +1397,17 @@ function parseJwt(token: string) {
   } catch {
     return null;
   }
+}
+
+function isAuthExpiredError(error: unknown) {
+  if (!error) return false;
+  const message =
+    error instanceof Error ? error.message : typeof error === "string" ? error : "";
+  const status = (error as Error & { status?: number }).status;
+  const lower = message.toLowerCase();
+  if (status === 401) return true;
+  if (lower.includes("invalid token")) return true;
+  if (lower.includes("signature") && lower.includes("expired")) return true;
+  if (lower.includes("token") && lower.includes("expired")) return true;
+  return false;
 }

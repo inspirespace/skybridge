@@ -62,6 +62,15 @@ class ImportReport(BaseModel):
     failed_count: int
 
 
+class ProgressEvent(BaseModel):
+    phase: Literal["review", "import"]
+    stage: str
+    flight_id: Optional[str] = None
+    percent: Optional[int] = None
+    status: JobStatus
+    created_at: datetime
+
+
 class JobRecord(BaseModel):
     job_id: UUID
     user_id: str
@@ -70,6 +79,7 @@ class JobRecord(BaseModel):
     updated_at: datetime
     progress_percent: Optional[int] = None
     progress_stage: Optional[str] = None
+    progress_log: list[ProgressEvent] = Field(default_factory=list)
     review_id: Optional[str] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None

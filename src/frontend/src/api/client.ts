@@ -33,6 +33,15 @@ export type ImportReport = {
   failed_count: number;
 };
 
+export type ProgressEvent = {
+  phase: "review" | "import";
+  stage: string;
+  flight_id?: string | null;
+  percent?: number | null;
+  status: JobStatus;
+  created_at: string;
+};
+
 export type JobRecord = {
   job_id: string;
   user_id: string;
@@ -41,6 +50,7 @@ export type JobRecord = {
   updated_at: string;
   progress_percent?: number | null;
   progress_stage?: string | null;
+  progress_log?: ProgressEvent[];
   review_id?: string | null;
   start_date?: string | null;
   end_date?: string | null;
@@ -132,7 +142,9 @@ async function requestJson<T>(
 
   if (!response.ok) {
     const message = await response.text();
-    throw new Error(message || "Request failed");
+    const error = new Error(message || "Request failed");
+    (error as Error & { status?: number }).status = response.status;
+    throw error;
   }
 
   return response.json() as Promise<T>;

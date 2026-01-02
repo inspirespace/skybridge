@@ -20,7 +20,15 @@ from src.core.models import FlightSummary as CoreFlightSummary
 from src.core.state import MigrationState
 from src.core.flysto.client import FlyStoClient
 
-from .models import ImportReport, JobAcceptRequest, JobCreateRequest, JobRecord, ReviewSummary, FlightSummary
+from .models import (
+    ImportReport,
+    JobAcceptRequest,
+    JobCreateRequest,
+    JobRecord,
+    ProgressEvent,
+    ReviewSummary,
+    FlightSummary,
+)
 from .store import JobStore
 
 
@@ -35,18 +43,21 @@ class JobService:
             status="review_running",
             created_at=_now(),
             updated_at=_now(),
-            progress_percent=5,
-            progress_stage="Queued",
         )
+        _append_progress(job, phase="review", stage="Queued", percent=5, status="review_running")
         self._store.save_job(job)
         return job
 
     def generate_review(self, job_id: UUID, payload: JobCreateRequest) -> JobRecord:
         job = self._store.load_job(job_id)
         job.status = "review_running"
-        job.progress_percent = 10
-        job.progress_stage = "Fetching CloudAhoy flights"
-        job.updated_at = _now()
+        _append_progress(
+            job,
+            phase="review",
+            stage="Fetching CloudAhoy flights",
+            percent=10,
+            status="review_running",
+        )
         job.error_message = None
         self._store.save_job(job)
 
@@ -66,9 +77,13 @@ class JobService:
                 payload.end_date,
                 payload.max_flights,
             )
-            job.progress_percent = 45
-            job.progress_stage = "Preparing review"
-            job.updated_at = _now()
+            _append_progress(
+                job,
+                phase="review",
+                stage="Preparing review",
+                percent=45,
+                status="review_running",
+            )
             self._store.save_job(job)
 
             items, review_id = prepare_review(
@@ -79,36 +94,53 @@ class JobService:
                 force=False,
                 output_path=review_path,
             )
-            job.progress_percent = 80
-            job.progress_stage = "Building summary"
-            job.updated_at = _now()
+            _append_progress(
+                job,
+                phase="review",
+                stage="Building summary",
+                percent=80,
+                status="review_running",
+            )
             self._store.save_job(job)
 
             review_summary = _build_review_summary(items)
             job.review_id = review_id
             job.review_summary = review_summary
             job.status = "review_ready"
-            job.progress_percent = 100
-            job.progress_stage = "Review ready"
-            job.updated_at = _now()
+            _append_progress(
+                job,
+                phase="review",
+                stage="Review ready",
+                percent=100,
+                status="review_ready",
+            )
             job.error_message = None
             self._store.save_job(job)
             self._store.write_artifact(job_id, "review-summary.json", review_summary.model_dump())
             return job
         except Exception as exc:
             job.status = "failed"
-            job.progress_stage = "Review failed"
+            _append_progress(
+                job,
+                phase="review",
+                stage="Review failed",
+                percent=job.progress_percent,
+                status="failed",
+            )
             job.error_message = f"Review failed: {exc}"
-            job.updated_at = _now()
             self._store.save_job(job)
             return job
 
     def accept_review(self, job_id: UUID, payload: JobAcceptRequest) -> JobRecord:
         job = self._store.load_job(job_id)
         job.status = "import_running"
-        job.progress_percent = 10
-        job.progress_stage = "Uploading flights"
-        job.updated_at = _now()
+        _append_progress(
+            job,
+            phase="import",
+            stage="Uploading flights",
+            percent=10,
+            status="import_running",
+        )
         job.error_message = None
         self._store.save_job(job)
 
@@ -134,6 +166,50 @@ class JobService:
             if not flysto.prepare():
                 raise RuntimeError("FlySto API unavailable; check credentials")
 
+            total_summaries = len(summaries)
+            processed = 0
+
+            def progress(event: str, payload: dict) -> None:
+                nonlocal processed
+                flight_id = payload.get("flight_id")
+                short_id = _short_flight_id(flight_id) if flight_id else None
+                if event == "start":
+                    _append_progress(
+                        job,
+                        phase="import",
+                        stage=f"Processing flight {short_id}" if short_id else "Processing flight",
+                        percent=job.progress_percent,
+                        status="import_running",
+                        flight_id=flight_id,
+                    )
+                    self._store.save_job(job)
+                elif event == "end":
+                    processed += 1
+                    if total_summaries:
+                        percent = 10 + int((processed / total_summaries) * 50)
+                        percent = min(percent, 70)
+                    else:
+                        percent = job.progress_percent
+                    _append_progress(
+                        job,
+                        phase="import",
+                        stage=f"Processed flight {short_id}" if short_id else "Processed flight",
+                        percent=percent,
+                        status="import_running",
+                        flight_id=flight_id,
+                    )
+                    self._store.save_job(job)
+                elif event == "flysto_upload_start":
+                    _append_progress(
+                        job,
+                        phase="import",
+                        stage=f"Uploading flight {short_id}" if short_id else "Uploading flight",
+                        percent=job.progress_percent,
+                        status="import_running",
+                        flight_id=flight_id,
+                    )
+                    self._store.save_job(job)
+
             results, _stats = migrate_flights(
                 cloudahoy=cloudahoy,
                 flysto=flysto,
@@ -144,11 +220,15 @@ class JobService:
                 force=False,
                 report_path=report_path,
                 review_id=review_id,
-                progress=None,
+                progress=progress,
             )
-            job.progress_percent = 70
-            job.progress_stage = "Reconciling data"
-            job.updated_at = _now()
+            _append_progress(
+                job,
+                phase="import",
+                stage="Reconciling data",
+                percent=70,
+                status="import_running",
+            )
             self._store.save_job(job)
 
             imported_count = sum(1 for result in results if result.status == "ok")
@@ -162,9 +242,13 @@ class JobService:
             )
 
             if _bool_env("BACKEND_RECONCILE", True) and not _bool_env("DRY_RUN", False):
-                job.progress_percent = 85
-                job.progress_stage = "Finalizing import"
-                job.updated_at = _now()
+                _append_progress(
+                    job,
+                    phase="import",
+                    stage="Finalizing import",
+                    percent=85,
+                    status="import_running",
+                )
                 self._store.save_job(job)
                 _maybe_wait_for_processing(flysto)
                 verify_import_report(report_path, flysto)
@@ -176,19 +260,60 @@ class JobService:
                 reconcile_crew_from_report(report_path, flysto, review_path, cloudahoy)
             job.import_report = report
             job.status = "completed"
-            job.progress_percent = 100
-            job.progress_stage = "Import complete"
-            job.updated_at = _now()
+            _append_progress(
+                job,
+                phase="import",
+                stage="Import complete",
+                percent=100,
+                status="completed",
+            )
             job.error_message = None
             self._store.save_job(job)
             return job
         except Exception as exc:
             job.status = "failed"
-            job.progress_stage = "Import failed"
+            _append_progress(
+                job,
+                phase="import",
+                stage="Import failed",
+                percent=job.progress_percent,
+                status="failed",
+            )
             job.error_message = f"Import failed: {exc}"
-            job.updated_at = _now()
             self._store.save_job(job)
             return job
+
+
+def _append_progress(
+    job: JobRecord,
+    *,
+    phase: str,
+    stage: str,
+    percent: int | None,
+    status: str,
+    flight_id: str | None = None,
+) -> None:
+    job.progress_stage = stage
+    job.progress_percent = percent
+    job.updated_at = _now()
+    job.progress_log.append(
+        ProgressEvent(
+            phase=phase,
+            stage=stage,
+            flight_id=flight_id,
+            percent=percent,
+            status=status,
+            created_at=job.updated_at,
+        )
+    )
+    if len(job.progress_log) > 200:
+        job.progress_log = job.progress_log[-200:]
+
+
+def _short_flight_id(flight_id: str) -> str:
+    if len(flight_id) <= 12:
+        return flight_id
+    return f"...{flight_id[-8:]}"
 
 
 def _build_cloudahoy_client(payload: JobCreateRequest | JobAcceptRequest, exports_dir: Path) -> CloudAhoyClient:

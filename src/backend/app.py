@@ -122,6 +122,15 @@ def create_job(
         job.progress_percent = 5
         job.progress_stage = "Queued"
         job.updated_at = datetime.now(timezone.utc)
+        job.progress_log.append(
+            {
+                "phase": "review",
+                "stage": "Queued",
+                "percent": 5,
+                "status": "review_queued",
+                "created_at": job.updated_at,
+            }
+        )
         store.save_job(job)
         store.write_token(job.job_id, "review", token)
     else:
@@ -214,6 +223,15 @@ def accept_review(
         job.progress_percent = 5
         job.progress_stage = "Queued"
         job.updated_at = datetime.now(timezone.utc)
+        job.progress_log.append(
+            {
+                "phase": "import",
+                "stage": "Queued",
+                "percent": 5,
+                "status": "import_queued",
+                "created_at": job.updated_at,
+            }
+        )
         store.save_job(job)
         store.write_token(job.job_id, "import", token)
     else:

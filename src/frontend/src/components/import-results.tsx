@@ -15,6 +15,7 @@ export function ImportResults({
   registrationMissing,
 }: ImportResultsProps) {
   const skippedFailedTotal = skipped + failed;
+  const totalProcessed = imported + skippedFailedTotal;
   const skippedBadge =
     skippedFailedTotal > 0 ? (
       <Badge variant="warning">Needs review</Badge>
@@ -33,6 +34,12 @@ export function ImportResults({
         <CardTitle>Import results</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        <ResultRow
+          label="Total processed"
+          description="All flights considered during this import."
+          total={totalProcessed}
+          badge={<Badge variant="success">OK</Badge>}
+        />
         <ResultRow
           label="Imported flights"
           description="All approved flights created in FlySto."
