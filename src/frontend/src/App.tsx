@@ -125,8 +125,7 @@ export default function App() {
     () =>
       (job?.progress_log ?? [])
         .filter((event) => event.phase === "import")
-        .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
-        .slice(-6),
+        .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at)),
     [job?.progress_log]
   );
   const latestImportEvent = importEvents[importEvents.length - 1];
@@ -1136,47 +1135,6 @@ export default function App() {
                             </div>
                           )}
                         </div>
-                      )}
-                      {importEvents.length > 0 && (
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-base">Import activity</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <ul className="space-y-3 text-sm">
-                              {importEvents.map((event) => (
-                                <li
-                                  key={`${event.created_at}-${event.stage}`}
-                                  className="flex items-start justify-between gap-4 border-l-2 border-muted pl-3"
-                                >
-                                  <div>
-                                    <div className="font-medium">{event.stage}</div>
-                                    {event.flight_id && (
-                                      <div className="text-xs text-muted-foreground">
-                                        Flight: {formatFlightId({ flight_id: event.flight_id })}
-                                      </div>
-                                    )}
-                                    <div className="text-xs text-muted-foreground">
-                                      {event.percent != null ? `${event.percent}% · ` : ""}
-                                      {formatLastUpdate(event.created_at, now)}
-                                    </div>
-                                  </div>
-                                  <Badge
-                                    variant={
-                                      event.status === "failed"
-                                        ? "warning"
-                                        : event.status === "completed"
-                                          ? "success"
-                                          : "secondary"
-                                    }
-                                  >
-                                    {event.status.replace(/_/g, " ")}
-                                  </Badge>
-                                </li>
-                              ))}
-                            </ul>
-                          </CardContent>
-                        </Card>
                       )}
                       {importComplete && job?.import_report && (
                         <ImportResults
