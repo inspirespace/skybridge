@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/table";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
-import { Apple, Calendar, Check, Chrome, Mail } from "lucide-react";
+import { Apple, Calendar as CalendarIcon, Check, Chrome, Mail } from "lucide-react";
 import {
   acceptReview,
   createJob,
@@ -864,7 +864,7 @@ export default function App() {
                                     )}
                                     disabled={connectLocked}
                                   >
-                                    <Calendar className="mr-2 h-4 w-4" />
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
                                     {dateRangeLabel}
                                   </Button>
                                 </PopoverTrigger>
