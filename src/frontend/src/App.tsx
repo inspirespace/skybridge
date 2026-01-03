@@ -659,7 +659,7 @@ export default function App() {
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-4 pb-4">
-                    <p className="text-base font-semibold text-foreground">
+                    <p className="max-w-2xl text-base font-semibold leading-relaxed text-foreground">
                       Skybridge imports your CloudAhoy flights into FlySto. You’ll
                       connect both accounts, review the summary, and approve the
                       import.
@@ -1261,6 +1261,14 @@ function StepStatus({
   active?: boolean;
   done?: boolean;
 }) {
+  const badgeVariant = done ? "success" : active ? "active" : "outline";
+  const badgeClass =
+    done || active ? "" : "border-dashed text-muted-foreground";
+  const labelClass = active
+    ? "font-semibold"
+    : done
+      ? "font-medium"
+      : "font-medium text-muted-foreground";
   return (
     <div
       className={cn(
@@ -1268,8 +1276,8 @@ function StepStatus({
         active ? "bg-muted/40" : "bg-transparent"
       )}
     >
-      <span className={active ? "font-semibold" : "font-medium"}>{label}</span>
-      <Badge variant={done ? "success" : "outline"} className="flex items-center gap-1">
+      <span className={labelClass}>{label}</span>
+      <Badge variant={badgeVariant} className={cn("flex items-center gap-1", badgeClass)}>
         {done ? (
           <>
             <Check className="h-3 w-3" /> Done
