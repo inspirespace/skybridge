@@ -1252,7 +1252,7 @@ export default function App() {
                         />
                       )}
                       {importComplete && (
-                        <Alert>
+                        <Alert className="border-emerald-200/70 bg-emerald-50/50 dark:border-emerald-900/50 dark:bg-emerald-950/40">
                           <AlertTitle>Next steps</AlertTitle>
                           <AlertDescription>
                             Review your imported flights in FlySto, download the report for
