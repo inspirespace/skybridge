@@ -980,14 +980,25 @@ export default function App() {
                         <div className={reviewProgressCardClass}>
                           <div className="flex items-center justify-between">
                             <span
-                              className={`font-medium ${
+                              className={cn(
+                                "flex items-center gap-2 font-medium",
                                 reviewComplete
                                   ? "text-emerald-800 dark:text-emerald-300"
                                   : reviewRunning
                                     ? "text-sky-800 dark:text-sky-300"
                                     : ""
-                              }`}
+                              )}
                             >
+                              <span
+                                className={cn(
+                                  "h-2 w-2 rounded-full",
+                                  reviewComplete
+                                    ? "bg-emerald-500"
+                                    : reviewRunning
+                                      ? "bg-sky-500 animate-pulse"
+                                      : "bg-muted-foreground/40"
+                                )}
+                              />
                               {reviewStage}
                             </span>
                             <span className="text-xs text-muted-foreground">
@@ -1171,14 +1182,25 @@ export default function App() {
                         <div className={importProgressCardClass}>
                           <div className="flex items-center justify-between">
                             <span
-                              className={`font-medium ${
+                              className={cn(
+                                "flex items-center gap-2 font-medium",
                                 importComplete
                                   ? "text-emerald-800 dark:text-emerald-300"
                                   : importRunning
                                     ? "text-sky-800 dark:text-sky-300"
                                     : ""
-                              }`}
+                              )}
                             >
+                              <span
+                                className={cn(
+                                  "h-2 w-2 rounded-full",
+                                  importComplete
+                                    ? "bg-emerald-500"
+                                    : importRunning
+                                      ? "bg-sky-500 animate-pulse"
+                                      : "bg-muted-foreground/40"
+                                )}
+                              />
                               {importStage}
                             </span>
                             <span className="text-xs text-muted-foreground">
