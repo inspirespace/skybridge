@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/table";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
-import { Apple, Check, Chrome, Mail } from "lucide-react";
+import { Apple, Calendar, Check, Chrome, Mail } from "lucide-react";
 import {
   acceptReview,
   createJob,
@@ -858,9 +858,13 @@ export default function App() {
                                 <PopoverTrigger asChild>
                                   <Button
                                     variant="outline"
-                                    className="w-full justify-start text-left font-normal"
+                                    className={cn(
+                                      "w-full justify-start text-left font-normal",
+                                      !dateRange?.from && "text-muted-foreground"
+                                    )}
                                     disabled={connectLocked}
                                   >
+                                    <Calendar className="mr-2 h-4 w-4" />
                                     {dateRangeLabel}
                                   </Button>
                                 </PopoverTrigger>
