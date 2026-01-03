@@ -585,6 +585,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 text-foreground">
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
         <div className="container flex h-14 items-center justify-between sm:h-16">
           <div className="text-xs font-semibold tracking-[0.28em] text-muted-foreground">
             SKYBRIDGE
@@ -1333,11 +1334,14 @@ function StepStatus({
   return (
     <div
       className={cn(
-        "flex items-center justify-between rounded-md border px-3 py-2 text-sm",
+        "relative flex items-center justify-between rounded-md border px-3 py-2 text-sm",
         active ? "bg-muted/40" : "bg-transparent"
       )}
     >
-      <span className={labelClass}>{label}</span>
+      {active && (
+        <span className="absolute left-0 top-2 h-[calc(100%-16px)] w-0.5 rounded-full bg-primary/60" />
+      )}
+      <span className={cn(labelClass, active && "pl-2")}>{label}</span>
       <Badge variant={badgeVariant} className={cn("flex items-center gap-1", badgeClass)}>
         {done ? (
           <>
