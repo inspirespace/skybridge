@@ -29,11 +29,11 @@ export function ImportResults({
       <Badge variant="success">OK</Badge>
     );
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Import results</CardTitle>
+    <Card className="border bg-card/90 shadow-sm">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Import results</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 pt-0">
         <ResultRow
           label="Total processed"
           description="All flights considered during this import."
@@ -75,7 +75,7 @@ function ResultRow({
   badge: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-md border px-4 py-3">
+    <div className="flex items-center justify-between gap-4 rounded-md border bg-muted/20 px-4 py-3">
       <div className="flex items-center gap-3">
         {badge}
         <div className="space-y-1">

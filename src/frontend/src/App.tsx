@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/popover";
 import { Progress } from "@/components/ui/progress";
 import { ImportResults } from "@/components/import-results";
+import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -530,6 +531,27 @@ export default function App() {
     Boolean(flystoPassword);
   const rangeIncomplete = Boolean(dateRange?.from && !dateRange?.to);
   const dateRangeLabel = formatDateRange(dateRange);
+  const reviewProgressCardClass = cn(
+    "rounded-md border p-3 text-sm shadow-sm",
+    reviewComplete
+      ? "border-emerald-200/70 bg-emerald-50/40"
+      : reviewRunning
+        ? "border-sky-200/70 bg-sky-50/40"
+        : "bg-background/70"
+  );
+  const reviewNoteClass = reviewComplete
+    ? "text-emerald-700 dark:text-emerald-300"
+    : reviewRunning
+      ? "text-sky-700 dark:text-sky-300"
+      : "text-muted-foreground";
+  const importProgressCardClass = cn(
+    "rounded-md border p-3 text-sm shadow-sm",
+    importComplete
+      ? "border-emerald-200/70 bg-emerald-50/40"
+      : importRunning
+        ? "border-sky-200/70 bg-sky-50/40"
+        : "bg-background/70"
+  );
 
   const visibleFlights = showAllFlights ? flights : flights.slice(0, 3);
   const canApprove =
@@ -561,7 +583,7 @@ export default function App() {
           : "All steps completed";
 
   return (
-    <div className="min-h-screen bg-muted/10 text-foreground">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 text-foreground">
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
         <div className="container flex h-14 items-center justify-between sm:h-16">
           <div className="text-xs font-semibold tracking-[0.28em] text-muted-foreground">
@@ -647,7 +669,7 @@ export default function App() {
             >
               <AccordionItem
                 value="sign-in"
-                className="rounded-lg border bg-card/90 px-4 shadow-sm"
+                className="rounded-lg border bg-card/90 px-4 shadow-sm data-[state=open]:ring-1 data-[state=open]:ring-primary/10"
               >
                 <AccordionTrigger disabled={!allowedSteps.has("sign-in")}>
                   <div className="flex w-full items-center justify-between">
@@ -664,7 +686,7 @@ export default function App() {
                       connect both accounts, review the summary, and approve the
                       import.
                     </p>
-                    <Alert className="bg-muted/40">
+                    <Alert className="border-sky-100 bg-sky-50/60 text-slate-900 dark:border-sky-900/50 dark:bg-sky-950/40 dark:text-slate-100">
                       <AlertTitle>What you can expect</AlertTitle>
                       <AlertDescription>
                         <ul className="list-disc space-y-1 pl-5">
@@ -685,7 +707,7 @@ export default function App() {
                     </Alert>
                     <div className="grid gap-2 sm:grid-cols-3">
                       <Button
-                        className="w-full justify-start gap-2"
+                        className="w-full justify-start gap-2 shadow-sm"
                         onClick={handleSignIn}
                         disabled={flow.signedIn || actionLoading}
                       >
@@ -739,8 +761,8 @@ export default function App() {
               <AccordionItem
                 value="connect"
                 className={cn(
-                  "rounded-lg border bg-card/90 px-4 shadow-sm",
-                  !allowedSteps.has("connect") && "border-dashed"
+                  "rounded-lg border bg-card/90 px-4 shadow-sm data-[state=open]:ring-1 data-[state=open]:ring-primary/10",
+                  !allowedSteps.has("connect") && "border-dashed bg-muted/20"
                 )}
               >
                 <AccordionTrigger
@@ -823,6 +845,8 @@ export default function App() {
                           </div>
                         </div>
                       </div>
+
+                      <Separator className="my-1" />
 
                       <div className="rounded-md border bg-background/60 p-3">
                         <div className="space-y-3">
@@ -910,6 +934,7 @@ export default function App() {
                       <Button
                         onClick={handleConnectReview}
                         disabled={connectLocked || !canConnect || rangeIncomplete || actionLoading}
+                        className="shadow-sm"
                       >
                         Connect and review
                       </Button>
@@ -920,8 +945,8 @@ export default function App() {
               <AccordionItem
                 value="review"
                 className={cn(
-                  "rounded-lg border bg-card/90 px-4 shadow-sm",
-                  !allowedSteps.has("review") && "border-dashed"
+                  "rounded-lg border bg-card/90 px-4 shadow-sm data-[state=open]:ring-1 data-[state=open]:ring-primary/10",
+                  !allowedSteps.has("review") && "border-dashed bg-muted/20"
                 )}
               >
                 <AccordionTrigger
@@ -947,11 +972,15 @@ export default function App() {
                 <AccordionContent>
                   <div className="space-y-3 pb-4">
                       {showReviewProgress && (
-                        <div className="rounded-md border bg-background/70 p-3 text-sm shadow-sm">
+                        <div className={reviewProgressCardClass}>
                           <div className="flex items-center justify-between">
                             <span
                               className={`font-medium ${
-                                reviewComplete ? "text-emerald-700 dark:text-emerald-300" : ""
+                                reviewComplete
+                                  ? "text-emerald-800 dark:text-emerald-300"
+                                  : reviewRunning
+                                    ? "text-sky-800 dark:text-sky-300"
+                                    : ""
                               }`}
                             >
                               {reviewStage}
@@ -963,18 +992,30 @@ export default function App() {
                           <div className="mt-3">
                             <Progress
                               value={reviewProgress}
-                              className={reviewComplete ? "bg-emerald-100" : undefined}
-                              indicatorClassName={reviewComplete ? "bg-emerald-600" : undefined}
+                              className={
+                                reviewComplete
+                                  ? "bg-emerald-100"
+                                  : reviewRunning
+                                    ? "bg-sky-100"
+                                    : undefined
+                              }
+                              indicatorClassName={
+                                reviewComplete
+                                  ? "bg-emerald-600"
+                                  : reviewRunning
+                                    ? "bg-sky-600"
+                                    : undefined
+                              }
                             />
                           </div>
-                          <div className="mt-3 text-xs text-emerald-700 dark:text-emerald-300">
+                          <div className={cn("mt-3 text-xs", reviewNoteClass)}>
                             Flights are fetched from CloudAhoy first so you can check them
                             before running the actual import.
                           </div>
                         </div>
                       )}
                       {reviewComplete && reviewSummary && (
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 rounded-md border bg-muted/20 p-2">
                           <Badge variant="secondary">
                             Flights: {reviewSummary.flight_count}
                           </Badge>
@@ -993,9 +1034,9 @@ export default function App() {
                         </div>
                       )}
                       {reviewComplete && (
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto rounded-md border bg-background/70">
                           <Table className="min-w-[720px]">
-                            <TableHeader>
+                            <TableHeader className="bg-muted/40">
                               <TableRow>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Flight ID</TableHead>
@@ -1013,9 +1054,8 @@ export default function App() {
                                 >
                                   <TableCell>
                                     <Badge
-                                      variant={
-                                        flight.tail_number ? "success" : "warning"
-                                      }
+                                      variant={flight.tail_number ? "success" : "warning"}
+                                      className="min-w-[110px] justify-center"
                                     >
                                       {flight.tail_number ? "OK" : "Needs review"}
                                     </Badge>
@@ -1062,6 +1102,7 @@ export default function App() {
                           disabled={
                             !canApprove || importRunning || importComplete || actionLoading
                           }
+                          className="shadow-sm"
                         >
                           Accept and start import
                         </Button>
@@ -1078,8 +1119,8 @@ export default function App() {
               <AccordionItem
                 value="import"
                 className={cn(
-                  "rounded-lg border bg-card/90 px-4 shadow-sm",
-                  !allowedSteps.has("import") && "border-dashed"
+                  "rounded-lg border bg-card/90 px-4 shadow-sm data-[state=open]:ring-1 data-[state=open]:ring-primary/10",
+                  !allowedSteps.has("import") && "border-dashed bg-muted/20"
                 )}
               >
                 <AccordionTrigger
@@ -1116,11 +1157,15 @@ export default function App() {
                         Import runs after approval and produces a report summary.
                       </p>
                       {showImportProgress && (
-                        <div className="rounded-md border bg-background/70 p-3 text-sm shadow-sm">
+                        <div className={importProgressCardClass}>
                           <div className="flex items-center justify-between">
                             <span
                               className={`font-medium ${
-                                importComplete ? "text-emerald-700 dark:text-emerald-300" : ""
+                                importComplete
+                                  ? "text-emerald-800 dark:text-emerald-300"
+                                  : importRunning
+                                    ? "text-sky-800 dark:text-sky-300"
+                                    : ""
                               }`}
                             >
                               {importStage}
@@ -1132,8 +1177,20 @@ export default function App() {
                           <div className="mt-3">
                             <Progress
                               value={importProgress}
-                              className={importComplete ? "bg-emerald-100" : undefined}
-                              indicatorClassName={importComplete ? "bg-emerald-600" : undefined}
+                              className={
+                                importComplete
+                                  ? "bg-emerald-100"
+                                  : importRunning
+                                    ? "bg-sky-100"
+                                    : undefined
+                              }
+                              indicatorClassName={
+                                importComplete
+                                  ? "bg-emerald-600"
+                                  : importRunning
+                                    ? "bg-sky-600"
+                                    : undefined
+                              }
                             />
                           </div>
                           {latestImportEvent && (
