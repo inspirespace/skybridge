@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/table";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
+import { Apple, Check, Chrome, Mail } from "lucide-react";
 import {
   acceptReview,
   createJob,
@@ -561,13 +561,13 @@ export default function App() {
           : "All steps completed";
 
   return (
-    <div className="min-h-screen bg-muted/20 text-foreground">
-      <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="text-xs font-semibold tracking-[0.35em] text-muted-foreground">
+    <div className="min-h-screen bg-muted/10 text-foreground">
+      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
+        <div className="container flex h-14 items-center justify-between sm:h-16">
+          <div className="text-xs font-semibold tracking-[0.28em] text-muted-foreground">
             SKYBRIDGE
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             {flow.connected && (
               <Button
                 variant="outline"
@@ -588,16 +588,32 @@ export default function App() {
         </div>
       </header>
 
-      <main className="container pb-24 pt-6 lg:pb-8">
-        <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
+      <main className="container pb-16 pt-5 lg:pb-8">
+        <div className="mb-4 lg:hidden">
+          <Card className="rounded-lg border bg-card/90">
+            <CardContent className="space-y-2 py-3">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Step {stepIndex} of 4</span>
+                <span>
+                  {nextLabel === "All steps completed"
+                    ? nextLabel
+                    : `Next: ${nextLabel}`}
+                </span>
+              </div>
+              <Progress value={(stepIndex / 4) * 100} />
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
           <aside className="hidden space-y-3 lg:sticky lg:top-20 lg:block lg:self-start">
-            <Card className="rounded-xl border bg-card/80 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-sm uppercase tracking-[0.25em] text-muted-foreground">
+            <Card className="rounded-lg border bg-card/90 shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xs uppercase tracking-[0.28em] text-muted-foreground">
                   Progress
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
+              <CardContent className="space-y-2 pt-0">
                 <StepStatus
                   label="1 · Sign in"
                   active={!flow.signedIn}
@@ -622,7 +638,7 @@ export default function App() {
             </Card>
           </aside>
 
-          <section className="space-y-3">
+          <section className="space-y-2.5">
             <Accordion
               type="single"
               collapsible
@@ -631,7 +647,7 @@ export default function App() {
             >
               <AccordionItem
                 value="sign-in"
-                className="rounded-xl border bg-card/80 px-5 shadow-sm"
+                className="rounded-lg border bg-card/90 px-4 shadow-sm"
               >
                 <AccordionTrigger disabled={!allowedSteps.has("sign-in")}>
                   <div className="flex w-full items-center justify-between">
@@ -642,75 +658,80 @@ export default function App() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="space-y-5 pb-5">
-                      <p className="text-base font-semibold text-foreground">
-                        Skybridge imports your CloudAhoy flights into FlySto. You’ll
-                        connect both accounts, review the summary, and approve the
-                        import.
-                      </p>
-                      <Alert>
-                        <AlertTitle>What you can expect</AlertTitle>
-                        <AlertDescription>
-                          <ul className="list-disc space-y-1 pl-5">
-                            <li>
-                              Sign-in is required to identify your job, protect your
-                              data, and let you resume later.
-                            </li>
-                            <li>
-                              We import flights, times, routes, aircraft details, and
-                              remarks. You can review everything before approving.
-                            </li>
-                            <li>
-                              Credentials are used only for this job and never stored.
-                              Results are retained for 10 days.
-                            </li>
-                          </ul>
-                        </AlertDescription>
-                      </Alert>
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        <Button
-                          className="w-full"
-                          onClick={handleSignIn}
-                          disabled={flow.signedIn || actionLoading}
-                        >
-                          Sign in with email
-                        </Button>
-                        {AUTH_MODE === "oidc" ? (
-                          <>
-                            <Button
-                              variant="outline"
-                              className="w-full"
-                              disabled={flow.signedIn || actionLoading}
-                              onClick={() => startOidcLogin("google")}
-                            >
-                              Continue with Google
-                            </Button>
-                            <Button
-                              variant="outline"
-                              className="w-full"
-                              disabled={flow.signedIn || actionLoading}
-                              onClick={() => startOidcLogin("apple")}
-                            >
-                              Continue with Apple
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button className="w-full" variant="outline" disabled>
-                              Continue with Google
-                            </Button>
-                            <Button className="w-full" variant="outline" disabled>
-                              Continue with Apple
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                      {signInError && (
-                        <Alert variant="destructive">
-                          <AlertTitle>Sign-in failed</AlertTitle>
-                          <AlertDescription>{signInError}</AlertDescription>
-                        </Alert>
+                  <div className="space-y-4 pb-4">
+                    <p className="text-base font-semibold text-foreground">
+                      Skybridge imports your CloudAhoy flights into FlySto. You’ll
+                      connect both accounts, review the summary, and approve the
+                      import.
+                    </p>
+                    <Alert className="bg-muted/40">
+                      <AlertTitle>What you can expect</AlertTitle>
+                      <AlertDescription>
+                        <ul className="list-disc space-y-1 pl-5">
+                          <li>
+                            Sign-in is required to identify your job, protect your
+                            data, and let you resume later.
+                          </li>
+                          <li>
+                            We import flights, times, routes, aircraft details, and
+                            remarks. You can review everything before approving.
+                          </li>
+                          <li>
+                            Credentials are used only for this job and never stored.
+                            Results are retained for 10 days.
+                          </li>
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <Button
+                        className="w-full justify-start gap-2"
+                        onClick={handleSignIn}
+                        disabled={flow.signedIn || actionLoading}
+                      >
+                        <Mail className="h-4 w-4" />
+                        Sign in with email
+                      </Button>
+                      {AUTH_MODE === "oidc" ? (
+                        <>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start gap-2"
+                            disabled={flow.signedIn || actionLoading}
+                            onClick={() => startOidcLogin("google")}
+                          >
+                            <Chrome className="h-4 w-4" />
+                            Continue with Google
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start gap-2"
+                            disabled={flow.signedIn || actionLoading}
+                            onClick={() => startOidcLogin("apple")}
+                          >
+                            <Apple className="h-4 w-4" />
+                            Continue with Apple
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button className="w-full justify-start gap-2" variant="outline" disabled>
+                            <Chrome className="h-4 w-4" />
+                            Continue with Google
+                          </Button>
+                          <Button className="w-full justify-start gap-2" variant="outline" disabled>
+                            <Apple className="h-4 w-4" />
+                            Continue with Apple
+                          </Button>
+                        </>
                       )}
+                    </div>
+                    {signInError && (
+                      <Alert variant="destructive">
+                        <AlertTitle>Sign-in failed</AlertTitle>
+                        <AlertDescription>{signInError}</AlertDescription>
+                      </Alert>
+                    )}
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -718,7 +739,7 @@ export default function App() {
               <AccordionItem
                 value="connect"
                 className={cn(
-                  "rounded-xl border bg-card/80 px-5 shadow-sm",
+                  "rounded-lg border bg-card/90 px-4 shadow-sm",
                   !allowedSteps.has("connect") && "border-dashed"
                 )}
               >
@@ -737,11 +758,11 @@ export default function App() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="space-y-5 pb-5">
+                  <div className="space-y-4 pb-4">
                       <p className="text-sm text-muted-foreground">
                         Enter CloudAhoy and FlySto credentials, then run the review.
                       </p>
-                      <Alert variant="default">
+                      <Alert variant="default" className="bg-muted/40">
                         <AlertTitle>Credentials</AlertTitle>
                         <AlertDescription>
                           Credentials are used only for this job and not stored.
@@ -803,7 +824,7 @@ export default function App() {
                         </div>
                       </div>
 
-                      <div className="rounded-lg border bg-background/60 p-3">
+                      <div className="rounded-md border bg-background/60 p-3">
                         <div className="space-y-3">
                           <div className="text-sm font-semibold">Import filters</div>
                           <div className="grid gap-3 md:grid-cols-3">
@@ -899,7 +920,7 @@ export default function App() {
               <AccordionItem
                 value="review"
                 className={cn(
-                  "rounded-xl border bg-card/80 px-5 shadow-sm",
+                  "rounded-lg border bg-card/90 px-4 shadow-sm",
                   !allowedSteps.has("review") && "border-dashed"
                 )}
               >
@@ -924,9 +945,9 @@ export default function App() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="space-y-4 pb-5">
+                  <div className="space-y-3 pb-4">
                       {showReviewProgress && (
-                        <div className="rounded-lg border bg-background/70 p-3 text-sm shadow-sm">
+                        <div className="rounded-md border bg-background/70 p-3 text-sm shadow-sm">
                           <div className="flex items-center justify-between">
                             <span
                               className={`font-medium ${
@@ -1035,7 +1056,7 @@ export default function App() {
                           </div>
                         </Alert>
                       )}
-                      <div className="flex flex-wrap gap-3">
+                      <div className="flex flex-wrap gap-2">
                         <Button
                           onClick={handleApproveImport}
                           disabled={
@@ -1057,7 +1078,7 @@ export default function App() {
               <AccordionItem
                 value="import"
                 className={cn(
-                  "rounded-xl border bg-card/80 px-5 shadow-sm",
+                  "rounded-lg border bg-card/90 px-4 shadow-sm",
                   !allowedSteps.has("import") && "border-dashed"
                 )}
               >
@@ -1090,12 +1111,12 @@ export default function App() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="space-y-4 pb-5">
+                  <div className="space-y-4 pb-4">
                       <p className="text-sm text-muted-foreground">
                         Import runs after approval and produces a report summary.
                       </p>
                       {showImportProgress && (
-                        <div className="rounded-lg border bg-background/70 p-3 text-sm shadow-sm">
+                        <div className="rounded-md border bg-background/70 p-3 text-sm shadow-sm">
                           <div className="flex items-center justify-between">
                             <span
                               className={`font-medium ${
@@ -1197,7 +1218,7 @@ export default function App() {
                         </Alert>
                       )}
                       {importComplete && (
-                        <div className="flex flex-wrap gap-3">
+                        <div className="flex flex-wrap gap-2">
                           <Button onClick={handleDownloadReport} disabled={actionLoading}>
                             Download report
                           </Button>
@@ -1210,18 +1231,6 @@ export default function App() {
           </section>
         </div>
       </main>
-
-      <div className="fixed bottom-0 left-0 right-0 border-t bg-background/90 backdrop-blur lg:hidden">
-        <div className="container py-3">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Step {stepIndex} of 4</span>
-            <span>{nextLabel === "All steps completed" ? nextLabel : `Next: ${nextLabel}`}</span>
-          </div>
-          <div className="mt-2">
-            <Progress value={(stepIndex / 4) * 100} />
-          </div>
-        </div>
-      </div>
 
       <footer className="border-t bg-background/80">
         <div className="container flex flex-wrap items-center justify-between gap-3 pb-20 pt-6 text-sm text-muted-foreground lg:py-6">
@@ -1253,7 +1262,12 @@ function StepStatus({
   done?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+    <div
+      className={cn(
+        "flex items-center justify-between rounded-md border px-3 py-2 text-sm",
+        active ? "bg-muted/40" : "bg-transparent"
+      )}
+    >
       <span className={active ? "font-semibold" : "font-medium"}>{label}</span>
       <Badge variant={done ? "success" : "outline"} className="flex items-center gap-1">
         {done ? (
