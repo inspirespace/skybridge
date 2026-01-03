@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import os
+import tempfile
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -11,9 +13,9 @@ from concurrent.futures import ThreadPoolExecutor
 import requests
 import asyncio
 import json as jsonlib
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, BackgroundTasks
 from fastapi import Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import ValidationError
 
 from .auth import user_id_from_request
@@ -305,6 +307,50 @@ def read_artifact(
         return store.load_artifact(job_id, artifact_name)
     except (FileNotFoundError, ValueError):
         raise HTTPException(status_code=404, detail="Artifact not found") from None
+
+
+@app.get("/jobs/{job_id}/artifacts.zip")
+def download_artifacts_zip(
+    job_id: UUID,
+    background_tasks: BackgroundTasks,
+    x_user_id: Optional[str] = Header(default=None),
+    authorization: Optional[str] = Header(default=None),
+) -> FileResponse:
+    user_id = user_id_from_request(authorization, x_user_id)
+    _load_job_or_404(job_id, user_id)
+    job_dir = store.job_dir(job_id)
+    if not job_dir.exists():
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    def include_path(path: Path) -> bool:
+        if path.name.endswith(".token"):
+            return False
+        if path.name == "migration.db":
+            return False
+        if "work" in path.parts:
+            return "cloudahoy_exports" in path.parts and path.suffix == ".json"
+        return True
+
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
+    temp_file.close()
+
+    with zipfile.ZipFile(temp_file.name, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
+        for path in job_dir.rglob("*"):
+            if not path.is_file():
+                continue
+            if not include_path(path):
+                continue
+            arcname = str(path.relative_to(job_dir))
+            zipf.write(path, arcname=arcname)
+
+    background_tasks.add_task(os.remove, temp_file.name)
+    filename = f"skybridge-run-{job_id}.zip"
+    return FileResponse(
+        temp_file.name,
+        media_type="application/zip",
+        filename=filename,
+        background=background_tasks,
+    )
 
 
 if __name__ == "__main__":

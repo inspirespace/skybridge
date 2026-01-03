@@ -47,9 +47,8 @@ import {
   acceptReview,
   createJob,
   deleteJob,
+  downloadArtifactsZip,
   exchangeToken,
-  fetchArtifact,
-  listArtifacts,
   type AuthContext,
 } from "@/api/client";
 import { canStartOver, deriveFlowState, getOpenStep } from "@/state/flow";
@@ -79,6 +78,8 @@ const DEV_CLOUD_AHOY_EMAIL = import.meta.env.VITE_CLOUD_AHOY_EMAIL ?? "";
 const DEV_CLOUD_AHOY_PASSWORD = import.meta.env.VITE_CLOUD_AHOY_PASSWORD ?? "";
 const DEV_FLYSTO_EMAIL = import.meta.env.VITE_FLYSTO_EMAIL ?? "";
 const DEV_FLYSTO_PASSWORD = import.meta.env.VITE_FLYSTO_PASSWORD ?? "";
+const RETENTION_DAYS = Number.parseInt(import.meta.env.VITE_RETENTION_DAYS ?? "7", 10);
+const retentionDays = Number.isFinite(RETENTION_DAYS) ? RETENTION_DAYS : 7;
 
 export default function App() {
   const [userId, setUserId] = React.useState<string | null>(() =>
@@ -411,11 +412,39 @@ export default function App() {
     setActionError(null);
   };
 
-  const handleStartOver = () => {
+  const clearLocalState = () => {
     localStorage.removeItem(JOB_ID_KEY);
     setJobId(null);
     setShowAllFlights(false);
     setActionError(null);
+  };
+
+  const handleStartOverConfirm = async () => {
+    if (!jobId) {
+      clearLocalState();
+      return;
+    }
+    setActionLoading(true);
+    setActionError(null);
+    try {
+      await deleteJob(jobId, auth);
+      clearLocalState();
+    } catch (err) {
+      if (isAuthExpiredError(err)) {
+        handleTokenExpired();
+        return;
+      }
+      if ((err as Error & { status?: number }).status === 404) {
+        clearLocalState();
+        return;
+      }
+      setActionError({
+        scope: "global",
+        message: err instanceof Error ? err.message : "Failed to start over",
+      });
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleSignOut = () => {
@@ -466,26 +495,16 @@ export default function App() {
     }
   }, [jobError, isSignedIn, handleTokenExpired]);
 
-  const handleDownloadReport = async () => {
+  const handleDownloadFiles = async () => {
     if (!jobId) return;
     setActionLoading(true);
     setActionError(null);
     try {
-      const artifacts = await listArtifacts(jobId, auth);
-      const reportName = artifacts.artifacts.find((artifact) =>
-        artifact.includes("import-report")
-      );
-      if (!reportName) {
-        throw new Error("Import report not found yet.");
-      }
-      const payload = await fetchArtifact(jobId, reportName, auth);
-      const blob = new Blob([JSON.stringify(payload, null, 2)], {
-        type: "application/json",
-      });
+      const blob = await downloadArtifactsZip(jobId, auth);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = reportName;
+      link.download = `skybridge-run-${jobId}.zip`;
       link.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
@@ -495,7 +514,7 @@ export default function App() {
       }
       setActionError({
         scope: "import",
-        message: err instanceof Error ? err.message : "Failed to download report",
+        message: err instanceof Error ? err.message : "Failed to download files",
       });
     } finally {
       setActionLoading(false);
@@ -513,6 +532,11 @@ export default function App() {
     } catch (err) {
       if (isAuthExpiredError(err)) {
         handleTokenExpired();
+        return;
+      }
+      if ((err as Error & { status?: number }).status === 404) {
+        localStorage.removeItem(JOB_ID_KEY);
+        setJobId(null);
         return;
       }
       setActionError({
@@ -534,10 +558,10 @@ export default function App() {
   const reviewProgressCardClass = cn(
     "rounded-md border p-3 text-sm shadow-sm",
     reviewComplete
-      ? "border-emerald-200/70 bg-emerald-50/40"
+      ? "border-emerald-200/70 bg-emerald-50/40 dark:border-emerald-900/60 dark:bg-emerald-950/40"
       : reviewRunning
-        ? "border-sky-200/70 bg-sky-50/40"
-        : "bg-background/70"
+        ? "border-sky-200/70 bg-sky-50/40 dark:border-sky-900/60 dark:bg-sky-950/40"
+        : "bg-background/70 dark:bg-background/80"
   );
   const reviewNoteClass = reviewComplete
     ? "text-emerald-700 dark:text-emerald-300"
@@ -547,10 +571,10 @@ export default function App() {
   const importProgressCardClass = cn(
     "rounded-md border p-3 text-sm shadow-sm",
     importComplete
-      ? "border-emerald-200/70 bg-emerald-50/40"
+      ? "border-emerald-200/70 bg-emerald-50/40 dark:border-emerald-900/60 dark:bg-emerald-950/40"
       : importRunning
-        ? "border-sky-200/70 bg-sky-50/40"
-        : "bg-background/70"
+        ? "border-sky-200/70 bg-sky-50/40 dark:border-sky-900/60 dark:bg-sky-950/40"
+        : "bg-background/70 dark:bg-background/80"
   );
 
   const visibleFlights = showAllFlights ? flights : flights.slice(0, 3);
@@ -592,14 +616,41 @@ export default function App() {
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
             {flow.connected && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleStartOver}
-                disabled={!canStartOver(flow)}
-              >
-                Start over
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={!canStartOver(flow)}>
+                    Start over
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Start a new import?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will delete the current run results. Download the files first if
+                      you want to keep them.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleDownloadFiles}
+                      disabled={!jobId || actionLoading}
+                    >
+                      Download files
+                    </Button>
+                  </div>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleStartOverConfirm}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      disabled={actionLoading}
+                    >
+                      Delete and start over
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
             {flow.signedIn && (
               <Button variant="outline" size="sm" onClick={handleSignOut}>
@@ -701,7 +752,7 @@ export default function App() {
                           </li>
                           <li>
                             Credentials are used only for this job and never stored.
-                            Results are retained for 10 days.
+                            Results are retained for {retentionDays} days, then deleted.
                           </li>
                         </ul>
                       </AlertDescription>
@@ -1006,16 +1057,16 @@ export default function App() {
                               value={reviewProgress}
                               className={
                                 reviewComplete
-                                  ? "bg-emerald-100"
+                                  ? "bg-emerald-100 dark:bg-emerald-950/50"
                                   : reviewRunning
-                                    ? "bg-sky-100"
+                                    ? "bg-sky-100 dark:bg-sky-950/50"
                                     : undefined
                               }
                               indicatorClassName={
                                 reviewComplete
-                                  ? "bg-emerald-600"
+                                  ? "bg-emerald-600 dark:bg-emerald-400"
                                   : reviewRunning
-                                    ? "bg-sky-600"
+                                    ? "bg-sky-600 dark:bg-sky-400"
                                     : undefined
                               }
                             />
@@ -1210,16 +1261,16 @@ export default function App() {
                               value={importProgress}
                               className={
                                 importComplete
-                                  ? "bg-emerald-100"
+                                  ? "bg-emerald-100 dark:bg-emerald-950/50"
                                   : importRunning
-                                    ? "bg-sky-100"
+                                    ? "bg-sky-100 dark:bg-sky-950/50"
                                     : undefined
                               }
                               indicatorClassName={
                                 importComplete
-                                  ? "bg-emerald-600"
+                                  ? "bg-emerald-600 dark:bg-emerald-400"
                                   : importRunning
-                                    ? "bg-sky-600"
+                                    ? "bg-sky-600 dark:bg-sky-400"
                                     : undefined
                               }
                             />
@@ -1253,9 +1304,9 @@ export default function App() {
                         <Alert className="border-emerald-200/70 bg-emerald-50/50 dark:border-emerald-900/50 dark:bg-emerald-950/40">
                           <AlertTitle>Next steps</AlertTitle>
                           <AlertDescription>
-                            Review your imported flights in FlySto, download the report for
+                            Review your imported flights in FlySto, download the files for
                             your records, and keep this page bookmarked while results are
-                            retained.
+                            retained for {retentionDays} days before deletion.
                           </AlertDescription>
                           <div className="mt-4 flex flex-wrap gap-3">
                             <Button asChild>
@@ -1307,8 +1358,8 @@ export default function App() {
                       )}
                       {importComplete && (
                         <div className="flex flex-wrap gap-2">
-                          <Button onClick={handleDownloadReport} disabled={actionLoading}>
-                            Download report
+                          <Button onClick={handleDownloadFiles} disabled={actionLoading}>
+                            Download files
                           </Button>
                         </div>
                       )}

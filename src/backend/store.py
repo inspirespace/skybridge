@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
 from typing import Any
@@ -41,7 +41,11 @@ class JobStore:
             if not job_file.exists():
                 continue
             job_data = json.loads(job_file.read_text())
-            jobs.append(JobRecord.model_validate(job_data))
+            job = JobRecord.model_validate(job_data)
+            if self._is_expired(job):
+                self.delete_job(job.job_id)
+                continue
+            jobs.append(job)
         return sorted(jobs, key=lambda job: job.created_at, reverse=True)
 
     def job_dir(self, job_id: UUID) -> Path:
@@ -56,13 +60,21 @@ class JobStore:
             job_data = json.loads(job_file.read_text())
             if job_data.get("user_id") != user_id:
                 continue
-            jobs.append(JobRecord.model_validate(job_data))
+            job = JobRecord.model_validate(job_data)
+            if self._is_expired(job):
+                self.delete_job(job.job_id)
+                continue
+            jobs.append(job)
         return sorted(jobs, key=lambda job: job.created_at, reverse=True)
 
     def load_job(self, job_id: UUID) -> JobRecord:
         job_file = self._job_file(job_id)
         job_data = json.loads(job_file.read_text())
-        return JobRecord.model_validate(job_data)
+        job = JobRecord.model_validate(job_data)
+        if self._is_expired(job):
+            self.delete_job(job.job_id)
+            raise FileNotFoundError("Job expired")
+        return job
 
     def delete_job(self, job_id: UUID) -> None:
         job_dir = self._job_dir(job_id)
@@ -158,6 +170,16 @@ class JobStore:
         token_file = self._token_file(job_id, purpose)
         if token_file.exists():
             token_file.unlink()
+
+    def _is_expired(self, job: JobRecord) -> bool:
+        retention_days = int(os.getenv("BACKEND_RETENTION_DAYS") or "7")
+        if retention_days <= 0:
+            return False
+        now = datetime.now(timezone.utc)
+        created_at = job.created_at
+        if created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
+        return created_at < now - timedelta(days=retention_days)
 
 
 def _serialize(job: JobRecord) -> dict[str, Any]:

@@ -56,6 +56,7 @@ Optional:
 - `FLYSTO_API_VERSION` (optional; inferred from FlySto bundle if omitted)
 - `FLYSTO_MIN_REQUEST_INTERVAL` (optional seconds between FlySto API calls; default `0.1`)
 - `FLYSTO_MAX_REQUEST_RETRIES` (optional FlySto request retries; default `2`)
+- `BACKEND_RETENTION_DAYS` (optional; default `7`, auto-deletes job artifacts after retention)
 
 ### Run Artifacts
 When using `./scripts/run.sh`, artifacts are grouped under `data/runs/<RUN_ID>/`:
@@ -215,6 +216,7 @@ Artifact storage (S3/MinIO):
 - When `BACKEND_S3_ENABLED=1`, review/import artifacts are uploaded to the configured S3 bucket.
 - The dev stack defaults to MinIO with bucket `skybridge-artifacts` and prefix `jobs/<job_id>/`.
 - Set `BACKEND_S3_DELETE_ON_CLEAR=1` to remove remote artifacts when deleting a job (privacy).
+- Jobs older than `BACKEND_RETENTION_DAYS` are deleted automatically (local + optional S3 cleanup).
 - Per-flight CloudAhoy raw JSON exports are also uploaded
   (`cloudahoy_exports/*.cloudahoy.json`).
 

@@ -185,6 +185,21 @@ export async function fetchArtifact(jobId: string, name: string, auth: AuthConte
   );
 }
 
+export async function downloadArtifactsZip(jobId: string, auth: AuthContext) {
+  const response = await fetch(`${apiBaseUrl}/jobs/${jobId}/artifacts.zip`, {
+    headers: {
+      ...buildAuthHeaders(auth),
+    },
+  });
+  if (!response.ok) {
+    const message = await response.text();
+    const error = new Error(message || "Download failed");
+    (error as Error & { status?: number }).status = response.status;
+    throw error;
+  }
+  return response.blob();
+}
+
 export async function deleteJob(jobId: string, auth: AuthContext) {
   return requestJson<{ deleted: boolean }>(`/jobs/${jobId}`, {
     method: "DELETE",
