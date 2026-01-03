@@ -108,6 +108,30 @@ class JobStore:
                 "Failed to upload artifact file %s for job %s: %s", name, job_id, exc
             )
 
+    def upload_artifact_dir(
+        self,
+        job_id: UUID,
+        *,
+        prefix: str,
+        directory: Path,
+        suffix: str | None = None,
+    ) -> None:
+        if not self._object_store or not directory.exists():
+            return
+        for path in directory.rglob("*"):
+            if not path.is_file():
+                continue
+            if suffix and not path.name.endswith(suffix):
+                continue
+            name = f"{prefix}/{path.relative_to(directory)}"
+            key = self._object_store.key_for(str(job_id), name)
+            try:
+                self._object_store.put_file(key, path)
+            except Exception as exc:
+                logging.getLogger(__name__).warning(
+                    "Failed to upload artifact file %s for job %s: %s", name, job_id, exc
+                )
+
     def list_artifacts(self, job_id: UUID) -> list[str]:
         job_dir = self._job_dir(job_id)
         if not job_dir.exists():

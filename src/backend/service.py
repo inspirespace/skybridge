@@ -118,6 +118,12 @@ class JobService:
             self._store.save_job(job)
             self._store.write_artifact(job_id, "review-summary.json", review_summary.model_dump())
             self._store.upload_artifact(job_id, "review.json", review_path)
+            self._store.upload_artifact_dir(
+                job_id,
+                prefix="cloudahoy_exports",
+                directory=exports_dir,
+                suffix=".cloudahoy.json",
+            )
             return job
         except Exception as exc:
             job.status = "failed"

@@ -215,6 +215,8 @@ Artifact storage (S3/MinIO):
 - When `BACKEND_S3_ENABLED=1`, review/import artifacts are uploaded to the configured S3 bucket.
 - The dev stack defaults to MinIO with bucket `skybridge-artifacts` and prefix `jobs/<job_id>/`.
 - Set `BACKEND_S3_DELETE_ON_CLEAR=1` to remove remote artifacts when deleting a job (privacy).
+- Per-flight CloudAhoy raw JSON exports are also uploaded
+  (`cloudahoy_exports/*.cloudahoy.json`).
 
 Test the API:
 
