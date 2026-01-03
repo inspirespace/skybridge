@@ -670,7 +670,7 @@ export default function App() {
             >
               <AccordionItem
                 value="sign-in"
-                className="rounded-lg border bg-card/90 px-4 shadow-sm data-[state=open]:border-primary/30 data-[state=open]:ring-1 data-[state=open]:ring-primary/10"
+                className="rounded-lg border bg-card/90 px-4 shadow-sm transition-shadow data-[state=open]:border-primary/30 data-[state=open]:ring-1 data-[state=open]:ring-primary/10 data-[state=open]:shadow-md data-[state=open]:shadow-primary/5"
               >
                 <AccordionTrigger disabled={!allowedSteps.has("sign-in")}>
                   <div className="flex w-full items-center justify-between">
@@ -762,7 +762,7 @@ export default function App() {
               <AccordionItem
                 value="connect"
                 className={cn(
-                  "rounded-lg border bg-card/90 px-4 shadow-sm data-[state=open]:border-primary/30 data-[state=open]:ring-1 data-[state=open]:ring-primary/10",
+                  "rounded-lg border bg-card/90 px-4 shadow-sm transition-shadow data-[state=open]:border-primary/30 data-[state=open]:ring-1 data-[state=open]:ring-primary/10 data-[state=open]:shadow-md data-[state=open]:shadow-primary/5",
                   !allowedSteps.has("connect") && "border-dashed bg-muted/20"
                 )}
               >
@@ -782,7 +782,7 @@ export default function App() {
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-4 pb-4">
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm leading-relaxed text-muted-foreground">
                         Enter CloudAhoy and FlySto credentials, then run the review.
                       </p>
                       <Alert className="border-sky-100 bg-sky-50/60 text-slate-900 dark:border-sky-900/50 dark:bg-sky-950/40 dark:text-slate-100">
@@ -849,7 +849,7 @@ export default function App() {
 
                       <Separator className="my-1" />
 
-                      <div className="rounded-md border bg-background/60 p-3">
+                      <div className="rounded-md border bg-muted/20 p-3">
                         <div className="space-y-3">
                           <div className="text-sm font-semibold">Import filters</div>
                           <div className="grid gap-3 md:grid-cols-3">
@@ -918,7 +918,7 @@ export default function App() {
                               />
                             </div>
                           </div>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs leading-relaxed text-muted-foreground">
                             Caps the total number of flights that will be imported.
                           </p>
                         </div>
@@ -950,7 +950,7 @@ export default function App() {
               <AccordionItem
                 value="review"
                 className={cn(
-                  "rounded-lg border bg-card/90 px-4 shadow-sm data-[state=open]:border-primary/30 data-[state=open]:ring-1 data-[state=open]:ring-primary/10",
+                  "rounded-lg border bg-card/90 px-4 shadow-sm transition-shadow data-[state=open]:border-primary/30 data-[state=open]:ring-1 data-[state=open]:ring-primary/10 data-[state=open]:shadow-md data-[state=open]:shadow-primary/5",
                   !allowedSteps.has("review") && "border-dashed bg-muted/20"
                 )}
               >
@@ -1031,7 +1031,7 @@ export default function App() {
                         </div>
                       )}
                       {reviewComplete && reviewSummary && (
-                        <div className="flex flex-wrap gap-2 rounded-md border bg-muted/20 p-2">
+                        <div className="flex flex-wrap gap-2 rounded-md border bg-muted/20 p-2 shadow-sm">
                           <Badge variant="secondary">
                             <span className="tabular-nums">
                               Flights: {reviewSummary.flight_count}
@@ -1141,7 +1141,7 @@ export default function App() {
               <AccordionItem
                 value="import"
                 className={cn(
-                  "rounded-lg border bg-card/90 px-4 shadow-sm data-[state=open]:border-primary/30 data-[state=open]:ring-1 data-[state=open]:ring-primary/10",
+                  "rounded-lg border bg-card/90 px-4 shadow-sm transition-shadow data-[state=open]:border-primary/30 data-[state=open]:ring-1 data-[state=open]:ring-primary/10 data-[state=open]:shadow-md data-[state=open]:shadow-primary/5",
                   !allowedSteps.has("import") && "border-dashed bg-muted/20"
                 )}
               >
