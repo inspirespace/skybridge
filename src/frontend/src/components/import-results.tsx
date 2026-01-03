@@ -85,7 +85,7 @@ function ResultRow({
       </div>
       <div className="text-right">
         <div className="text-xs text-muted-foreground">Total</div>
-        <div className="text-lg font-semibold">{total}</div>
+        <div className="text-lg font-semibold tabular-nums">{total}</div>
       </div>
     </div>
   );

@@ -1022,10 +1022,14 @@ export default function App() {
                       {reviewComplete && reviewSummary && (
                         <div className="flex flex-wrap gap-2 rounded-md border bg-muted/20 p-2">
                           <Badge variant="secondary">
-                            Flights: {reviewSummary.flight_count}
+                            <span className="tabular-nums">
+                              Flights: {reviewSummary.flight_count}
+                            </span>
                           </Badge>
                           <Badge variant="secondary">
-                            Hours: {reviewSummary.total_hours}
+                            <span className="tabular-nums">
+                              Hours: {reviewSummary.total_hours}
+                            </span>
                           </Badge>
                           <Badge
                             variant={
@@ -1034,7 +1038,9 @@ export default function App() {
                                 : "secondary"
                             }
                           >
-                            Registration missing: {reviewSummary.missing_tail_numbers}
+                            <span className="tabular-nums">
+                              Registration missing: {reviewSummary.missing_tail_numbers}
+                            </span>
                           </Badge>
                         </div>
                       )}
