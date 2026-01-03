@@ -785,7 +785,7 @@ export default function App() {
                       <p className="text-sm text-muted-foreground">
                         Enter CloudAhoy and FlySto credentials, then run the review.
                       </p>
-                      <Alert variant="default" className="bg-muted/40">
+                      <Alert className="border-sky-100 bg-sky-50/60 text-slate-900 dark:border-sky-900/50 dark:bg-sky-950/40 dark:text-slate-100">
                         <AlertTitle>Credentials</AlertTitle>
                         <AlertDescription>
                           Credentials are used only for this job and not stored.
