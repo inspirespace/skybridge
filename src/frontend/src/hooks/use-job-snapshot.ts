@@ -82,7 +82,7 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
             const dataLine = part
               .split("\n")
               .filter((line) => line.startsWith("data:"))
-              .map((line) => line.replace(/^data:\\s?/, ""))
+              .map((line) => line.replace(/^data:\s?/, ""))
               .join("\n")
               .trim();
             if (!dataLine) continue;

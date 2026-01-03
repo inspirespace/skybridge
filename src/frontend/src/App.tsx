@@ -669,7 +669,7 @@ export default function App() {
             >
               <AccordionItem
                 value="sign-in"
-                className="rounded-lg border bg-card/90 px-4 shadow-sm data-[state=open]:ring-1 data-[state=open]:ring-primary/10"
+                className="rounded-lg border bg-card/90 px-4 shadow-sm data-[state=open]:border-primary/30 data-[state=open]:ring-1 data-[state=open]:ring-primary/10"
               >
                 <AccordionTrigger disabled={!allowedSteps.has("sign-in")}>
                   <div className="flex w-full items-center justify-between">
@@ -761,7 +761,7 @@ export default function App() {
               <AccordionItem
                 value="connect"
                 className={cn(
-                  "rounded-lg border bg-card/90 px-4 shadow-sm data-[state=open]:ring-1 data-[state=open]:ring-primary/10",
+                  "rounded-lg border bg-card/90 px-4 shadow-sm data-[state=open]:border-primary/30 data-[state=open]:ring-1 data-[state=open]:ring-primary/10",
                   !allowedSteps.has("connect") && "border-dashed bg-muted/20"
                 )}
               >
@@ -945,7 +945,7 @@ export default function App() {
               <AccordionItem
                 value="review"
                 className={cn(
-                  "rounded-lg border bg-card/90 px-4 shadow-sm data-[state=open]:ring-1 data-[state=open]:ring-primary/10",
+                  "rounded-lg border bg-card/90 px-4 shadow-sm data-[state=open]:border-primary/30 data-[state=open]:ring-1 data-[state=open]:ring-primary/10",
                   !allowedSteps.has("review") && "border-dashed bg-muted/20"
                 )}
               >
@@ -1119,7 +1119,7 @@ export default function App() {
               <AccordionItem
                 value="import"
                 className={cn(
-                  "rounded-lg border bg-card/90 px-4 shadow-sm data-[state=open]:ring-1 data-[state=open]:ring-primary/10",
+                  "rounded-lg border bg-card/90 px-4 shadow-sm data-[state=open]:border-primary/30 data-[state=open]:ring-1 data-[state=open]:ring-primary/10",
                   !allowedSteps.has("import") && "border-dashed bg-muted/20"
                 )}
               >
