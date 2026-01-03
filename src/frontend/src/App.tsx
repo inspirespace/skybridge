@@ -512,6 +512,13 @@ export default function App() {
         handleTokenExpired();
         return;
       }
+      if ((err as Error & { status?: number }).status === 404) {
+        setActionError({
+          scope: "import",
+          message: "Files are no longer available (this run may have expired).",
+        });
+        return;
+      }
       setActionError({
         scope: "import",
         message: err instanceof Error ? err.message : "Failed to download files",
@@ -713,6 +720,7 @@ export default function App() {
           </aside>
 
           <section className="space-y-2.5">
+            <div className="rounded-xl border bg-card/90 shadow-sm">
             <Accordion
               type="single"
               collapsible
@@ -721,7 +729,7 @@ export default function App() {
             >
               <AccordionItem
                 value="sign-in"
-                className="rounded-lg border bg-card/90 px-4 shadow-sm transition-shadow data-[state=open]:border-primary/30 data-[state=open]:ring-1 data-[state=open]:ring-primary/10 data-[state=open]:shadow-md data-[state=open]:shadow-primary/5"
+                className="border-0 px-4"
               >
                 <AccordionTrigger disabled={!allowedSteps.has("sign-in")}>
                   <div className="flex w-full items-center justify-between">
@@ -810,11 +818,12 @@ export default function App() {
                 </AccordionContent>
               </AccordionItem>
 
+              <div className="mx-4 border-t" />
               <AccordionItem
                 value="connect"
                 className={cn(
-                  "rounded-lg border bg-card/90 px-4 shadow-sm transition-shadow data-[state=open]:border-primary/30 data-[state=open]:ring-1 data-[state=open]:ring-primary/10 data-[state=open]:shadow-md data-[state=open]:shadow-primary/5",
-                  !allowedSteps.has("connect") && "border-dashed bg-muted/20"
+                  "border-0 px-4",
+                  !allowedSteps.has("connect") && "bg-muted/10"
                 )}
               >
                 <AccordionTrigger
@@ -994,11 +1003,12 @@ export default function App() {
                 </AccordionContent>
               </AccordionItem>
 
+              <div className="mx-4 border-t" />
               <AccordionItem
                 value="review"
                 className={cn(
-                  "rounded-lg border bg-card/90 px-4 shadow-sm transition-shadow data-[state=open]:border-primary/30 data-[state=open]:ring-1 data-[state=open]:ring-primary/10 data-[state=open]:shadow-md data-[state=open]:shadow-primary/5",
-                  !allowedSteps.has("review") && "border-dashed bg-muted/20"
+                  "border-0 px-4",
+                  !allowedSteps.has("review") && "bg-muted/10"
                 )}
               >
                 <AccordionTrigger
@@ -1187,11 +1197,12 @@ export default function App() {
                 </AccordionContent>
               </AccordionItem>
 
+              <div className="mx-4 border-t" />
               <AccordionItem
                 value="import"
                 className={cn(
-                  "rounded-lg border bg-card/90 px-4 shadow-sm transition-shadow data-[state=open]:border-primary/30 data-[state=open]:ring-1 data-[state=open]:ring-primary/10 data-[state=open]:shadow-md data-[state=open]:shadow-primary/5",
-                  !allowedSteps.has("import") && "border-dashed bg-muted/20"
+                  "border-0 px-4",
+                  !allowedSteps.has("import") && "bg-muted/10"
                 )}
               >
                 <AccordionTrigger
@@ -1318,6 +1329,13 @@ export default function App() {
                                 Open FlySto
                               </a>
                             </Button>
+                            <Button
+                              variant="outline"
+                              onClick={handleDownloadFiles}
+                              disabled={actionLoading}
+                            >
+                              Download files
+                            </Button>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="destructive">Delete results now</Button>
@@ -1356,17 +1374,11 @@ export default function App() {
                           </div>
                         </Alert>
                       )}
-                      {importComplete && (
-                        <div className="flex flex-wrap gap-2">
-                          <Button onClick={handleDownloadFiles} disabled={actionLoading}>
-                            Download files
-                          </Button>
-                        </div>
-                      )}
                   </div>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
+            </div>
           </section>
         </div>
       </main>
