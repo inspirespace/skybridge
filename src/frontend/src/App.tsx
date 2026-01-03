@@ -795,7 +795,7 @@ export default function App() {
                       <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
                           <div className="text-sm font-medium">CloudAhoy</div>
-                          <div className="space-y-2">
+                          <div className="space-y-2 rounded-md border bg-background/60 p-3">
                             <Label htmlFor="cloudahoy-email">Email</Label>
                             <Input
                               id="cloudahoy-email"
@@ -806,8 +806,6 @@ export default function App() {
                                 setCloudahoyEmail(event.target.value)
                               }
                             />
-                          </div>
-                          <div className="space-y-2">
                             <Label htmlFor="cloudahoy-password">Password</Label>
                             <Input
                               id="cloudahoy-password"
@@ -823,7 +821,7 @@ export default function App() {
                         </div>
                         <div className="space-y-2">
                           <div className="text-sm font-medium">FlySto</div>
-                          <div className="space-y-2">
+                          <div className="space-y-2 rounded-md border bg-background/60 p-3">
                             <Label htmlFor="flysto-email">Email</Label>
                             <Input
                               id="flysto-email"
@@ -832,8 +830,6 @@ export default function App() {
                               value={flystoEmail}
                               onChange={(event) => setFlystoEmail(event.target.value)}
                             />
-                          </div>
-                          <div className="space-y-2">
                             <Label htmlFor="flysto-password">Password</Label>
                             <Input
                               id="flysto-password"
@@ -1056,7 +1052,7 @@ export default function App() {
                         </div>
                       )}
                       {reviewComplete && (
-                        <div className="overflow-x-auto rounded-md border bg-background/70">
+                        <div className="overflow-x-auto rounded-md border bg-background/70 shadow-sm">
                           <Table className="min-w-[720px]">
                             <TableHeader className="bg-muted/40">
                               <TableRow>
@@ -1094,13 +1090,15 @@ export default function App() {
                         </div>
                       )}
                       {reviewComplete && flights.length > 3 && !showAllFlights && (
-                        <Button
-                          variant="link"
-                          className="h-auto px-0 text-sm text-muted-foreground"
-                          onClick={() => setShowAllFlights(true)}
-                        >
-                          Show more flights
-                        </Button>
+                        <div className="flex">
+                          <Button
+                            variant="link"
+                            className="h-auto px-0 text-sm text-muted-foreground"
+                            onClick={() => setShowAllFlights(true)}
+                          >
+                            Show more flights
+                          </Button>
+                        </div>
                       )}
                       {reviewComplete && flights.length > 3 && showAllFlights && (
                         <div className="text-sm text-muted-foreground">
