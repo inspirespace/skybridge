@@ -74,6 +74,10 @@ You can override the defaults with `RUN_ID`, `RUNS_DIR`, `REVIEW_PATH`, `IMPORT_
 - `MAX_FLIGHTS` (integer)
 Note: `CLOUD_AHOY_API_KEY` and `FLYSTO_API_KEY` are not used yet.
 
+### Migration Notes
+
+2026-01-04: CloudAhoy flight identifiers now use `fdID` (UUID) for `flight_id`. If you have cached review/import data or custom tooling that referenced the old `key` field, regenerate those artifacts with the new IDs. See `docs/migrations.md` for details.
+
 CLI options:
 - `--state-path` (default `data/migration.db`)
 - `--force` to re-upload already migrated flights
