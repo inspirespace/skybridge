@@ -148,7 +148,8 @@ export default function App() {
   const showReviewProgress = reviewRunning || reviewComplete;
   const showImportProgress = importRunning || importComplete;
   const [now, setNow] = React.useState(() => new Date());
-  const jobErrorMessage = jobError ? jobError.message : null;
+  const jobErrorMessage =
+    jobError && !isAuthExpiredError(jobError) ? jobError.message : null;
   const signInError =
     actionError?.scope === "sign-in" || actionError?.scope === "global"
       ? actionError.message
