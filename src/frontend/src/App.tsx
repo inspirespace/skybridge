@@ -314,6 +314,7 @@ export default function App() {
           flysto_password: flystoPassword,
         },
       }, auth);
+      setManualOpen("import");
       refresh();
     } catch (err) {
       if (isAuthExpiredError(err)) {
@@ -330,11 +331,30 @@ export default function App() {
   };
 
   const handleEditFilters = () => {
-    localStorage.removeItem(JOB_ID_KEY);
-    setJobId(null);
-    setShowAllFlights(false);
+    if (!jobId) {
+      setManualOpen("connect");
+      return;
+    }
+    setActionLoading(true);
     setActionError(null);
-    setManualOpen("connect");
+    deleteJob(jobId, auth)
+      .catch((err) => {
+        if (isAuthExpiredError(err)) {
+          handleTokenExpired();
+          return;
+        }
+        setActionError({
+          scope: "review",
+          message: err instanceof Error ? err.message : "Failed to reset filters",
+        });
+      })
+      .finally(() => {
+        localStorage.removeItem(JOB_ID_KEY);
+        setJobId(null);
+        setShowAllFlights(false);
+        setManualOpen("connect");
+        setActionLoading(false);
+      });
   };
 
   const clearLocalState = () => {
