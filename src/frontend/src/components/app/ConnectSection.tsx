@@ -156,8 +156,9 @@ export function ConnectSection({
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
+                        size="sm"
                         className={cn(
-                          "w-full justify-start text-left font-normal bg-background/70 dark:bg-slate-950/50 dark:border-sky-900/60",
+                          "h-9 w-full justify-start text-left font-normal bg-background/70 dark:bg-slate-950/50 dark:border-sky-900/60",
                           !dateRange?.from && "text-muted-foreground"
                         )}
                         disabled={connectLocked}

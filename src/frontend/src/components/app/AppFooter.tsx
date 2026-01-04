@@ -37,7 +37,7 @@ export function AppFooter() {
 
 export function StaticHeader() {
   return (
-    <header className="border-b border-slate-200/80 bg-white/80 backdrop-blur dark:border-slate-800/70 dark:bg-slate-950/80">
+    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/80 backdrop-blur dark:border-slate-800/70 dark:bg-slate-950/80">
       <div className="container flex items-center justify-between py-5">
         <a
           href="/"
