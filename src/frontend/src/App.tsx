@@ -682,13 +682,13 @@ export default function App() {
                 <div className="space-y-2">
                   <h1 className="text-2xl font-semibold">Privacy policy</h1>
                   <p className="text-sm text-muted-foreground">
-                    Datenschutzerklärung für Skybridge
+                    This policy applies to Skybridge (Austria / EU).
                   </p>
                 </div>
                 <div className="space-y-4 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
                   <section className="space-y-2">
                     <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                      Verantwortlicher
+                      Controller
                     </h2>
                     <p>
                       Inspirespace e.U., Golfplatzstraße 32/5, 4048 Puchenau,
@@ -697,89 +697,82 @@ export default function App() {
                   </section>
                   <section className="space-y-2">
                     <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                      Zweck der Verarbeitung
+                      Purpose of processing
                     </h2>
                     <p>
-                      Skybridge ermöglicht den Import von Flugdaten aus CloudAhoy
-                      nach FlySto. Dafür verarbeiten wir Ihre Anmeldedaten zu
-                      CloudAhoy/FlySto nur zur Durchführung des jeweiligen
-                      Importvorgangs.
+                      Skybridge enables the import of flight data from CloudAhoy to
+                      FlySto. We process credentials only to execute the specific
+                      import requested by you and to display the review before
+                      import.
                     </p>
                   </section>
                   <section className="space-y-2">
                     <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                      Verarbeitete Daten
+                      Data we process (minimal by design)
                     </h2>
                     <ul className="list-disc space-y-1 pl-5">
-                      <li>Kontakt- und Kontodaten (z. B. E‑Mail-Adresse).</li>
+                      <li>Account identifiers (e.g., email address).</li>
                       <li>
-                        Zugangsdaten für CloudAhoy/FlySto (nur für den jeweiligen
-                        Import, nicht dauerhaft gespeichert).
+                        CloudAhoy / FlySto credentials (used only for the current
+                        job; not stored).
                       </li>
                       <li>
-                        Flugdaten inkl. Zeiten, Routen, Crew, Trajektoriendaten
-                        und Bemerkungen.
+                        Flight data including times, routes, crew, trajectory data,
+                        and remarks.
                       </li>
                       <li>
-                        Technische Protokolle (z. B. IP-Adresse, Gerätedaten) zur
-                        Sicherheit und Fehleranalyse.
+                        Basic technical logs (e.g., IP address, request metadata) for
+                        security and troubleshooting.
                       </li>
                     </ul>
                   </section>
                   <section className="space-y-2">
                     <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                      Rechtsgrundlagen
+                      Legal basis
                     </h2>
                     <ul className="list-disc space-y-1 pl-5">
-                      <li>
-                        Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung).
-                      </li>
-                      <li>
-                        Art. 6 Abs. 1 lit. f DSGVO (Sicherheit und
-                        Fehlerbehebung).
-                      </li>
+                      <li>Art. 6(1)(b) GDPR (contract performance).</li>
+                      <li>Art. 6(1)(f) GDPR (security and fault analysis).</li>
                     </ul>
                   </section>
                   <section className="space-y-2">
                     <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                      Empfänger und Auftragsverarbeiter
+                      Hosting and processors
                     </h2>
                     <p>
-                      Für den Datentransfer nutzen wir CloudAhoy und FlySto. Für
-                      Hosting und Speicherung können Cloud-Infrastrukturen (z. B.
-                      AWS) eingesetzt werden. Sofern dabei Daten in Drittländer
-                      übertragen werden, erfolgt dies auf Basis geeigneter
-                      Garantien (z. B. Standardvertragsklauseln).
+                      Production hosting is on AWS (EU). Authentication uses Amazon
+                      Cognito. For data transfer and import, CloudAhoy and FlySto are
+                      used as external services. If data is transferred outside the
+                      EU/EEA, appropriate safeguards (e.g., SCCs) are used.
                     </p>
                   </section>
                   <section className="space-y-2">
                     <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                      Speicherdauer
+                      Retention
                     </h2>
                     <p>
-                      Importergebnisse werden standardmäßig für {retentionDays} Tage
-                      aufbewahrt und anschließend automatisch gelöscht. Sie können
-                      die Ergebnisse jederzeit manuell löschen.
+                      Import artifacts are retained for {retentionDays} days and then
+                      automatically deleted. You can delete results earlier from the
+                      app. Access logs are kept only as long as necessary for
+                      security and diagnostics.
                     </p>
                   </section>
                   <section className="space-y-2">
                     <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                      Ihre Rechte
+                      Your rights
                     </h2>
                     <p>
-                      Sie haben das Recht auf Auskunft, Berichtigung, Löschung,
-                      Einschränkung der Verarbeitung, Datenübertragbarkeit und
-                      Widerspruch. Beschwerden können an die zuständige
-                      Datenschutzbehörde gerichtet werden.
+                      You have the right of access, rectification, deletion,
+                      restriction of processing, data portability, and objection.
+                      You may also lodge a complaint with your supervisory authority.
                     </p>
                   </section>
                   <section className="space-y-2">
                     <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                      Kontakt
+                      Contact
                     </h2>
                     <p>
-                      Für Datenschutzanfragen wenden Sie sich an
-                      hello@inspirespace.co.
+                      For privacy requests, contact hello@inspirespace.co.
                     </p>
                   </section>
                 </div>
