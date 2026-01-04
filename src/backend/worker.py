@@ -108,6 +108,9 @@ def _handle_job(store: JobStore, job_id: UUID, purpose: str, token: str | None) 
 
 
 def run() -> None:
+    env = (os.getenv("ENV") or "dev").lower()
+    if env == "prod" and not _use_queue():
+        raise RuntimeError("Production requires BACKEND_SQS_ENABLED=1")
     store = JobStore(DATA_DIR, build_object_store_from_env(), _dynamo_jobs_table())
     if _use_queue():
         queue_url = _queue_url()

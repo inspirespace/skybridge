@@ -160,6 +160,10 @@ export async function createJob(payload: JobCreatePayload, auth: AuthContext) {
   });
 }
 
+export async function listJobs(auth: AuthContext) {
+  return requestJson<JobListResponse>("/jobs", { auth });
+}
+
 export async function getJob(jobId: string, auth: AuthContext) {
   return requestJson<JobRecord>(`/jobs/${jobId}`, { auth });
 }

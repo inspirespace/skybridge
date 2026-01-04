@@ -94,6 +94,10 @@ CLI options:
 
 The default path uses CloudAhoy JSON APIs for full-flight data and FlySto API upload.
 
+## Production
+
+See `docs/production.md` for the minimum infrastructure and configuration required for a multi-tenant deployment.
+
 ## Web Automation Notes
 
 The web mode uses Playwright to log in and export/upload flights when no official APIs are available. Provide `CLOUD_AHOY_EXPORT_URL_TEMPLATE` and `FLYSTO_UPLOAD_URL` to bypass UI discovery if needed. For interactive debugging, run with `--headful` and watch the browser session. FlySto uploads are driven through the `Load logs` → `Browse files` flow on `/logs`. The CloudAhoy flights list uses the web UI and auto-clicks `Load more` to fetch additional pages when available. Auto mode does not fall back to web automation.

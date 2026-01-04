@@ -45,6 +45,12 @@ class JobStore:
     def object_store(self) -> ObjectStore | None:
         return self._object_store
 
+    def _object_prefix_for_job(self, job_id: UUID) -> str:
+        if not self._object_store:
+            return ""
+        job = self.load_job(job_id)
+        return self._object_store.key_for(job.user_id, str(job.job_id))
+
     def _job_file(self, job_id: UUID) -> Path:
         return self._job_dir(job_id) / "job.json"
 
@@ -144,7 +150,7 @@ class JobStore:
         if job_dir.exists():
             rmtree(job_dir)
         if self._object_store and _bool_env("BACKEND_S3_DELETE_ON_CLEAR", False):
-            prefix = self._object_store.key_for(str(job_id))
+            prefix = self._object_prefix_for_job(job_id)
             try:
                 self._object_store.delete_prefix(prefix)
             except Exception as exc:
@@ -175,7 +181,7 @@ class JobStore:
         artifact_file = job_dir / name
         artifact_file.write_text(json.dumps(payload, indent=2))
         if self._object_store:
-            key = self._object_store.key_for(str(job_id), name)
+            key = self._object_store.key_for(self.load_job(job_id).user_id, str(job_id), name)
             try:
                 self._object_store.put_json(key, payload)
             except Exception as exc:
@@ -186,7 +192,7 @@ class JobStore:
     def upload_artifact(self, job_id: UUID, name: str, path: Path) -> None:
         if not self._object_store or not path.exists():
             return
-        key = self._object_store.key_for(str(job_id), name)
+        key = self._object_store.key_for(self.load_job(job_id).user_id, str(job_id), name)
         try:
             self._object_store.put_file(key, path)
         except Exception as exc:
@@ -204,13 +210,14 @@ class JobStore:
     ) -> None:
         if not self._object_store or not directory.exists():
             return
+        user_id = self.load_job(job_id).user_id
         for path in directory.rglob("*"):
             if not path.is_file():
                 continue
             if suffix and not path.name.endswith(suffix):
                 continue
             name = f"{prefix}/{path.relative_to(directory)}"
-            key = self._object_store.key_for(str(job_id), name)
+            key = self._object_store.key_for(user_id, str(job_id), name)
             try:
                 self._object_store.put_file(key, path)
             except Exception as exc:
@@ -221,7 +228,7 @@ class JobStore:
     def list_artifacts(self, job_id: UUID) -> list[str]:
         job_dir = self._job_dir(job_id)
         if not job_dir.exists() and self._object_store:
-            prefix = self._object_store.key_for(str(job_id))
+            prefix = self._object_prefix_for_job(job_id)
             return self._object_store.list_prefix(prefix)
         if not job_dir.exists():
             return []
@@ -234,7 +241,7 @@ class JobStore:
         if artifact_file.exists():
             return json.loads(artifact_file.read_text())
         if self._object_store:
-            key = self._object_store.key_for(str(job_id), name)
+            key = self._object_store.key_for(self.load_job(job_id).user_id, str(job_id), name)
             payload = self._object_store.get_json(key)
             if payload is not None:
                 return payload

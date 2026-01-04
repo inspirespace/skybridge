@@ -31,10 +31,27 @@ from .object_store import build_object_store_from_env
 from .service import JobService
 from .store import JobStore
 from .web import landing_page
+from .rate_limit import RateLimiter
 
 DATA_DIR = Path(os.environ.get("BACKEND_DATA_DIR", "data/backend/jobs"))
 
 app = FastAPI(title="Skybridge Backend Dev API")
+
+_ENV = (os.getenv("ENV") or "dev").lower()
+if _ENV == "prod":
+    if not _use_worker() or not _use_queue():
+        raise RuntimeError(
+            "Production requires BACKEND_USE_WORKER=1 and BACKEND_SQS_ENABLED=1"
+        )
+
+_jobs_rate_limiter = RateLimiter(
+    window_seconds=int(os.getenv("BACKEND_RATE_WINDOW") or "60"),
+    max_events=int(os.getenv("BACKEND_RATE_JOBS_PER_MIN") or "10"),
+)
+_accept_rate_limiter = RateLimiter(
+    window_seconds=int(os.getenv("BACKEND_RATE_WINDOW") or "60"),
+    max_events=int(os.getenv("BACKEND_RATE_ACCEPT_PER_MIN") or "5"),
+)
 def _dynamo_jobs_table() -> str | None:
     if (os.getenv("BACKEND_DYNAMO_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
         table = os.getenv("DYNAMO_JOBS_TABLE") or None
@@ -106,6 +123,33 @@ def _load_job_or_404(job_id: UUID, user_id: str) -> JobRecord:
     return job
 
 
+def _enforce_job_limits(user_id: str, *, for_import: bool) -> None:
+    max_active = int(os.getenv("BACKEND_MAX_ACTIVE_JOBS") or "1")
+    jobs = store.list_jobs(user_id)
+    if for_import:
+        active = [
+            job
+            for job in jobs
+            if job.status in {"import_queued", "import_running"}
+        ]
+        if len(active) >= max_active:
+            raise HTTPException(
+                status_code=429,
+                detail="An import is already running for this account.",
+            )
+        return
+    active = [
+        job
+        for job in jobs
+        if job.status in {"review_queued", "review_running"}
+    ]
+    if len(active) >= max_active:
+        raise HTTPException(
+            status_code=429,
+            detail="A review is already running for this account.",
+        )
+
+
 @app.get("/", include_in_schema=False)
 def index() -> object:
     return landing_page()
@@ -153,6 +197,9 @@ def create_job(
     authorization: Optional[str] = Header(default=None),
 ) -> JobRecord:
     user_id = user_id_from_request(authorization, x_user_id)
+    if not _jobs_rate_limiter.allow(f"{user_id}:create"):
+        raise HTTPException(status_code=429, detail="Too many requests. Try again soon.")
+    _enforce_job_limits(user_id, for_import=False)
     job = service.create_job(user_id)
     job.start_date = payload.start_date
     job.end_date = payload.end_date
@@ -256,7 +303,10 @@ def accept_review(
     authorization: Optional[str] = Header(default=None),
 ) -> JobRecord:
     user_id = user_id_from_request(authorization, x_user_id)
+    if not _accept_rate_limiter.allow(f"{user_id}:accept"):
+        raise HTTPException(status_code=429, detail="Too many requests. Try again soon.")
     job = _load_job_or_404(job_id, user_id)
+    _enforce_job_limits(user_id, for_import=True)
     review_path = store.job_dir(job.job_id) / "review.json"
     has_import_events = any(
         getattr(event, "phase", None) == "import"
@@ -389,12 +439,12 @@ def download_artifacts_zip(
                 arcname = str(path.relative_to(job_dir))
                 zipf.write(path, arcname=arcname)
         elif store.object_store:
-            prefix = store.object_store.key_for(str(job_id))
+            prefix = store.object_store.key_for(user_id, str(job_id))
             keys = store.object_store.list_prefix(prefix)
             for key in keys:
                 if key.endswith(".token") or key.endswith("migration.db"):
                     continue
-                full_key = store.object_store.key_for(str(job_id), key)
+                full_key = store.object_store.key_for(user_id, str(job_id), key)
                 payload = store.object_store.get_bytes(full_key)
                 if payload is None:
                     continue

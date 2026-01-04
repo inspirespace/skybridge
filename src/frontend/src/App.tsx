@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import {
   acceptReview,
   createJob,
+  listJobs,
   deleteJob,
   downloadArtifactsZip,
   type AuthContext,
@@ -391,6 +392,30 @@ export default function App() {
       handleTokenExpired();
     }
   }, [jobError, isSignedIn, handleTokenExpired]);
+
+  React.useEffect(() => {
+    if (!isSignedIn) return;
+    if (jobId || actionLoading) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await listJobs(auth);
+        if (cancelled) return;
+        const latest = response.jobs?.[0];
+        if (latest?.job_id) {
+          localStorage.setItem(JOB_ID_KEY, latest.job_id);
+          setJobId(latest.job_id);
+        }
+      } catch (err) {
+        if (isAuthExpiredError(err)) {
+          handleTokenExpired();
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSignedIn, jobId, actionLoading, auth, handleTokenExpired]);
 
   const handleDownloadFiles = async () => {
     if (!jobId) return;
