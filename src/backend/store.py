@@ -245,11 +245,11 @@ class JobStore:
         token_file.write_text(token)
         if self._dynamo_table:
             job = self.load_job(job_id)
-            field = f\"{purpose}_token\"
+            field = f"{purpose}_token"
             self._dynamo_table.update_item(
-                Key={\"user_id\": job.user_id, \"job_id\": str(job.job_id)},
-                UpdateExpression=f\"SET {field} = :token\",
-                ExpressionAttributeValues={\":token\": token},
+                Key={"user_id": job.user_id, "job_id": str(job.job_id)},
+                UpdateExpression=f"SET {field} = :token",
+                ExpressionAttributeValues={":token": token},
             )
 
     def read_token(self, job_id: UUID, purpose: str) -> str | None:
@@ -260,12 +260,12 @@ class JobStore:
                     job = self.load_job(job_id)
                 except FileNotFoundError:
                     return None
-                field = f\"{purpose}_token\"
+                field = f"{purpose}_token"
                 response = self._dynamo_table.get_item(
-                    Key={\"user_id\": job.user_id, \"job_id\": str(job.job_id)},
+                    Key={"user_id": job.user_id, "job_id": str(job.job_id)},
                     ProjectionExpression=field,
                 )
-                item = response.get(\"Item\") if isinstance(response, dict) else None
+                item = response.get("Item") if isinstance(response, dict) else None
                 return item.get(field) if item else None
             return None
         return token_file.read_text().strip()
@@ -279,10 +279,10 @@ class JobStore:
                 job = self.load_job(job_id)
             except FileNotFoundError:
                 return
-            field = f\"{purpose}_token\"
+            field = f"{purpose}_token"
             self._dynamo_table.update_item(
-                Key={\"user_id\": job.user_id, \"job_id\": str(job.job_id)},
-                UpdateExpression=f\"REMOVE {field}\",
+                Key={"user_id": job.user_id, "job_id": str(job.job_id)},
+                UpdateExpression=f"REMOVE {field}",
             )
 
     def _is_expired(self, job: JobRecord) -> bool:
@@ -297,7 +297,7 @@ class JobStore:
 
 
 def _ttl_epoch(created_at: datetime) -> int:
-    retention_days = int(os.getenv(\"BACKEND_RETENTION_DAYS\") or \"7\")
+    retention_days = int(os.getenv("BACKEND_RETENTION_DAYS") or "7")
     if retention_days <= 0:
         retention_days = 7
     if created_at.tzinfo is None:
@@ -306,7 +306,7 @@ def _ttl_epoch(created_at: datetime) -> int:
 
 
 def _deserialize_item(item: dict[str, Any]) -> JobRecord:
-    payload = item.get(\"payload\") or \"{}\"
+    payload = item.get("payload") or "{}"
     data = json.loads(payload)
     return JobRecord.model_validate(data)
 
