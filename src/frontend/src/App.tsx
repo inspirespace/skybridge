@@ -614,7 +614,7 @@ export default function App() {
           : "All steps completed";
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#f7f9fc] to-[#eef3f8] text-[#1c2430] dark:bg-slate-950 dark:text-slate-100">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#f7f9fc] to-[#eef3f8] text-[#1c2430] dark:bg-gradient-to-b dark:from-[#0b1120] dark:to-[#0f172a] dark:text-slate-100">
       <header className="sticky top-0 z-40 border-b border-[#d9e1ec] bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
         <div className="absolute inset-x-0 top-0 h-1 bg-[#f1f4f8] dark:bg-slate-900" />
         <div className="container flex h-14 items-center justify-between sm:h-16">
@@ -669,7 +669,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="container pb-16 pt-5 lg:pb-8">
+      <main className="container flex-1 pb-16 pt-5 lg:pb-8">
         <div className="mb-4 lg:hidden">
           <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
             <CardContent className="space-y-2 py-3">
@@ -720,7 +720,7 @@ export default function App() {
           </aside>
 
           <section className="space-y-2.5">
-            <div className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
+            <div className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-slate-700 dark:bg-slate-900/90 dark:shadow-none">
             <Accordion
               type="single"
               collapsible
@@ -729,7 +729,7 @@ export default function App() {
             >
               <AccordionItem
                 value="sign-in"
-                className="border-0 px-4 bg-white dark:bg-slate-900"
+                className="border-0 px-4 bg-white dark:bg-transparent"
               >
                 <AccordionTrigger disabled={!allowedSteps.has("sign-in")}>
                   <div className="flex w-full items-center justify-between">
@@ -818,12 +818,12 @@ export default function App() {
                 </AccordionContent>
               </AccordionItem>
 
-              <div className="mx-4 border-t border-[#d9e1ec] dark:border-slate-800" />
+              <div className="mx-4 border-t border-[#c9d6ea] dark:border-slate-700" />
               <AccordionItem
                 value="connect"
                 className={cn(
-                  "border-0 px-4 bg-white dark:bg-slate-900",
-                  !allowedSteps.has("connect") && "bg-[#f8fafc] dark:bg-slate-900/70"
+                  "border-0 px-4 bg-white dark:bg-transparent",
+                  !allowedSteps.has("connect") && "bg-[#f8fafc] dark:bg-slate-900/60"
                 )}
               >
                 <AccordionTrigger
@@ -1003,12 +1003,12 @@ export default function App() {
                 </AccordionContent>
               </AccordionItem>
 
-              <div className="mx-4 border-t border-[#d9e1ec] dark:border-slate-800" />
+              <div className="mx-4 border-t border-[#c9d6ea] dark:border-slate-700" />
               <AccordionItem
                 value="review"
                 className={cn(
-                  "border-0 px-4 bg-white dark:bg-slate-900",
-                  !allowedSteps.has("review") && "bg-[#f8fafc] dark:bg-slate-900/70"
+                  "border-0 px-4 bg-white dark:bg-transparent",
+                  !allowedSteps.has("review") && "bg-[#f8fafc] dark:bg-slate-900/60"
                 )}
               >
                 <AccordionTrigger
@@ -1197,12 +1197,12 @@ export default function App() {
                 </AccordionContent>
               </AccordionItem>
 
-              <div className="mx-4 border-t border-[#d9e1ec] dark:border-slate-800" />
+              <div className="mx-4 border-t border-[#c9d6ea] dark:border-slate-700" />
               <AccordionItem
                 value="import"
                 className={cn(
-                  "border-0 px-4 bg-white dark:bg-slate-900",
-                  !allowedSteps.has("import") && "bg-[#f8fafc] dark:bg-slate-900/70"
+                  "border-0 px-4 bg-white dark:bg-transparent",
+                  !allowedSteps.has("import") && "bg-[#f8fafc] dark:bg-slate-900/60"
                 )}
               >
                 <AccordionTrigger
