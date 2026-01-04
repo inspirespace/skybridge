@@ -49,8 +49,11 @@ class JobStore:
         if not self._object_store:
             return ""
         if user_id is None:
-            job = self.load_job(job_id)
-            user_id = job.user_id
+            try:
+                job = self.load_job(job_id)
+                user_id = job.user_id
+            except FileNotFoundError:
+                return ""
         return self._object_store.key_for(user_id, str(job_id))
 
     def _job_file(self, job_id: UUID) -> Path:
@@ -119,7 +122,10 @@ class JobStore:
     def delete_jobs_for_user(self, user_id: str) -> None:
         jobs = self.list_jobs(user_id)
         for job in jobs:
-            self.delete_job(job.job_id, user_id=user_id)
+            try:
+                self.delete_job(job.job_id, user_id=user_id)
+            except FileNotFoundError:
+                continue
 
     def load_job(self, job_id: UUID) -> JobRecord:
         if self._dynamo_table:
@@ -159,12 +165,13 @@ class JobStore:
             rmtree(job_dir)
         if self._object_store and _bool_env("BACKEND_S3_DELETE_ON_CLEAR", False):
             prefix = self._object_prefix_for_job(job_id, user_id=user_id)
-            try:
-                self._object_store.delete_prefix(prefix)
-            except Exception as exc:
-                logging.getLogger(__name__).warning(
-                    "Failed to delete remote artifacts for job %s: %s", job_id, exc
-                )
+            if prefix:
+                try:
+                    self._object_store.delete_prefix(prefix)
+                except Exception as exc:
+                    logging.getLogger(__name__).warning(
+                        "Failed to delete remote artifacts for job %s: %s", job_id, exc
+                    )
 
     def save_job(self, job: JobRecord) -> None:
         job_dir = self._job_dir(job.job_id)
