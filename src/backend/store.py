@@ -45,11 +45,13 @@ class JobStore:
     def object_store(self) -> ObjectStore | None:
         return self._object_store
 
-    def _object_prefix_for_job(self, job_id: UUID) -> str:
+    def _object_prefix_for_job(self, job_id: UUID, *, user_id: str | None = None) -> str:
         if not self._object_store:
             return ""
-        job = self.load_job(job_id)
-        return self._object_store.key_for(job.user_id, str(job.job_id))
+        if user_id is None:
+            job = self.load_job(job_id)
+            user_id = job.user_id
+        return self._object_store.key_for(user_id, str(job_id))
 
     def _job_file(self, job_id: UUID) -> Path:
         return self._job_dir(job_id) / "job.json"
@@ -117,7 +119,7 @@ class JobStore:
     def delete_jobs_for_user(self, user_id: str) -> None:
         jobs = self.list_jobs(user_id)
         for job in jobs:
-            self.delete_job(job.job_id)
+            self.delete_job(job.job_id, user_id=user_id)
 
     def load_job(self, job_id: UUID) -> JobRecord:
         if self._dynamo_table:
@@ -142,20 +144,21 @@ class JobStore:
             raise FileNotFoundError("Job expired")
         return job
 
-    def delete_job(self, job_id: UUID) -> None:
+    def delete_job(self, job_id: UUID, *, user_id: str | None = None) -> None:
         if self._dynamo_table:
             try:
                 job = self.load_job(job_id)
                 self._dynamo_table.delete_item(
                     Key={"user_id": job.user_id, "job_id": str(job.job_id)}
                 )
+                user_id = user_id or job.user_id
             except FileNotFoundError:
                 pass
         job_dir = self._job_dir(job_id)
         if job_dir.exists():
             rmtree(job_dir)
         if self._object_store and _bool_env("BACKEND_S3_DELETE_ON_CLEAR", False):
-            prefix = self._object_prefix_for_job(job_id)
+            prefix = self._object_prefix_for_job(job_id, user_id=user_id)
             try:
                 self._object_store.delete_prefix(prefix)
             except Exception as exc:
