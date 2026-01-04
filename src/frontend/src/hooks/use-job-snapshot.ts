@@ -19,7 +19,7 @@ const POLLABLE_STATUSES: JobStatus[] = [
 export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
   const [data, setData] = React.useState<JobRecord | null>(null);
   const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [error, setError] = React.useState<Error | null>(null);
   const [streamFailed, setStreamFailed] = React.useState(false);
 
   const load = React.useCallback(async () => {
@@ -30,7 +30,7 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
       setData(job);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load job");
+      setError(err instanceof Error ? err : new Error("Failed to load job"));
     } finally {
       setLoading(false);
     }
@@ -63,7 +63,10 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
         });
 
         if (!response.ok || !response.body) {
-          throw new Error("Failed to open progress stream");
+          const err = new Error(`Request failed (${response.status})`);
+          (err as Error & { status?: number }).status = response.status;
+          setError(err);
+          throw err;
         }
 
         const reader = response.body.getReader();

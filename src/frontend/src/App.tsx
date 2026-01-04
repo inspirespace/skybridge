@@ -12,6 +12,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { AppFooter } from "@/components/app/AppFooter";
 import { StaticPage } from "@/components/app/StaticPage";
 import { SignInSection } from "@/components/app/SignInSection";
@@ -382,8 +385,7 @@ export default function App() {
 
   React.useEffect(() => {
     if (!jobError || !isSignedIn) return;
-    const text = jobError.toLowerCase();
-    if (text.includes("invalid token") || text.includes("signature") || text.includes("expired")) {
+    if (isAuthExpiredError(jobError)) {
       handleTokenExpired();
     }
   }, [jobError, isSignedIn, handleTokenExpired]);
