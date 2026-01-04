@@ -148,6 +148,7 @@ export default function App() {
   const showReviewProgress = reviewRunning || reviewComplete;
   const showImportProgress = importRunning || importComplete;
   const [now, setNow] = React.useState(() => new Date());
+  const jobErrorMessage = jobError ? jobError.message : null;
   const signInError =
     actionError?.scope === "sign-in" || actionError?.scope === "global"
       ? actionError.message
@@ -155,17 +156,17 @@ export default function App() {
   const connectError = flow.signedIn
     ? actionError?.scope === "connect" || actionError?.scope === "global"
       ? actionError.message
-      : jobError
+      : jobErrorMessage
     : null;
   const reviewError = flow.connected
     ? actionError?.scope === "review" || actionError?.scope === "global"
       ? actionError.message
-      : jobError
+      : jobErrorMessage
     : null;
   const importError = flow.connected
     ? actionError?.scope === "import" || actionError?.scope === "global"
       ? actionError.message
-      : jobError
+      : jobErrorMessage
     : null;
 
   const reviewProgress =
