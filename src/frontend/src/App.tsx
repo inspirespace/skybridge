@@ -614,11 +614,11 @@ export default function App() {
           : "All steps completed";
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 text-foreground">
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
-        <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-transparent via-primary/25 to-transparent" />
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
+        <div className="absolute inset-x-0 top-0 h-1 bg-slate-100 dark:bg-slate-900" />
         <div className="container flex h-14 items-center justify-between sm:h-16">
-          <div className="text-xs font-semibold tracking-[0.28em] text-muted-foreground">
+          <div className="text-xs font-semibold tracking-[0.28em] text-slate-600 dark:text-slate-300">
             SKYBRIDGE
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
@@ -671,9 +671,9 @@ export default function App() {
 
       <main className="container pb-16 pt-5 lg:pb-8">
         <div className="mb-4 lg:hidden">
-          <Card className="rounded-lg border bg-card/90">
+          <Card className="rounded-xl border border-slate-200 bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
             <CardContent className="space-y-2 py-3">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center justify-between text-xs text-slate-500">
                 <span>Step {stepIndex} of 4</span>
                 <span>
                   {nextLabel === "All steps completed"
@@ -688,9 +688,9 @@ export default function App() {
 
         <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
           <aside className="hidden space-y-3 lg:sticky lg:top-20 lg:block lg:self-start">
-            <Card className="rounded-lg border bg-card/90 shadow-sm">
+            <Card className="rounded-xl border border-slate-200 bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
               <CardHeader className="pb-2">
-                <CardTitle className="text-xs uppercase tracking-[0.28em] text-muted-foreground">
+                <CardTitle className="text-xs uppercase tracking-[0.28em] text-slate-500">
                   Progress
                 </CardTitle>
               </CardHeader>
@@ -720,7 +720,7 @@ export default function App() {
           </aside>
 
           <section className="space-y-2.5">
-            <div className="rounded-xl border bg-card/90 shadow-sm">
+            <div className="rounded-xl border border-slate-200 bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
             <Accordion
               type="single"
               collapsible
@@ -729,7 +729,7 @@ export default function App() {
             >
               <AccordionItem
                 value="sign-in"
-                className="border-0 px-4"
+                className="border-0 px-4 bg-white dark:bg-slate-900"
               >
                 <AccordionTrigger disabled={!allowedSteps.has("sign-in")}>
                   <div className="flex w-full items-center justify-between">
@@ -818,12 +818,12 @@ export default function App() {
                 </AccordionContent>
               </AccordionItem>
 
-              <div className="mx-4 border-t" />
+              <div className="mx-4 border-t border-slate-200 dark:border-slate-800" />
               <AccordionItem
                 value="connect"
                 className={cn(
-                  "border-0 px-4",
-                  !allowedSteps.has("connect") && "bg-muted/10"
+                  "border-0 px-4 bg-white dark:bg-slate-900",
+                  !allowedSteps.has("connect") && "bg-slate-50/60 dark:bg-slate-900/70"
                 )}
               >
                 <AccordionTrigger
@@ -1003,12 +1003,12 @@ export default function App() {
                 </AccordionContent>
               </AccordionItem>
 
-              <div className="mx-4 border-t" />
+              <div className="mx-4 border-t border-slate-200 dark:border-slate-800" />
               <AccordionItem
                 value="review"
                 className={cn(
-                  "border-0 px-4",
-                  !allowedSteps.has("review") && "bg-muted/10"
+                  "border-0 px-4 bg-white dark:bg-slate-900",
+                  !allowedSteps.has("review") && "bg-slate-50/60 dark:bg-slate-900/70"
                 )}
               >
                 <AccordionTrigger
@@ -1197,12 +1197,12 @@ export default function App() {
                 </AccordionContent>
               </AccordionItem>
 
-              <div className="mx-4 border-t" />
+              <div className="mx-4 border-t border-slate-200 dark:border-slate-800" />
               <AccordionItem
                 value="import"
                 className={cn(
-                  "border-0 px-4",
-                  !allowedSteps.has("import") && "bg-muted/10"
+                  "border-0 px-4 bg-white dark:bg-slate-900",
+                  !allowedSteps.has("import") && "bg-slate-50/60 dark:bg-slate-900/70"
                 )}
               >
                 <AccordionTrigger
@@ -1423,8 +1423,8 @@ function StepStatus({
   return (
     <div
       className={cn(
-        "relative flex items-center justify-between rounded-md border px-3 py-2 text-sm",
-        active ? "bg-muted/40" : "bg-transparent"
+        "relative flex items-center justify-between rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900",
+        active ? "bg-slate-100 dark:bg-slate-800" : "bg-slate-50 dark:bg-slate-900"
       )}
     >
       {active && (

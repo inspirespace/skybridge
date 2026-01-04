@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Skybridge Mockup — Airline Ops Dusk</title>
+  <style>
+    :root {
+      --bg: #0c1220;
+      --panel: rgba(255, 255, 255, 0.65);
+      --panel-strong: rgba(255, 255, 255, 0.72);
+      --border: rgba(170, 195, 230, 0.55);
+      --divider: rgba(154, 180, 216, 0.65);
+      --text: #1c2430;
+      --muted: #556477;
+      --accent: #1f6feb;
+      --accent-soft: rgba(224, 236, 255, 0.85);
+      --success: #14b86e;
+      --shadow: 0 18px 50px rgba(8, 16, 34, 0.45);
+      --glow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 18px 50px rgba(8, 16, 34, 0.45);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 50% 18%, rgba(80, 120, 170, 0.3), transparent 60%),
+        linear-gradient(180deg, #0b1020 0%, #0f1930 48%, #152340 70%, #1c2d4c 82%, #263b64 90%, #2c456f 94%, #3a5b7e 95.5%, #6aa0c8 96.5%, #cbe7f8 97.4%, #f7f1c8 98.1%, #f2a44d 98.8%, #c94f2e 100%);
+      min-height: 100vh;
+    }
+    header {
+      background: rgba(12, 18, 32, 0.82);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      backdrop-filter: blur(16px);
+      color: #e6edf7;
+    }
+    header .logo {
+      font-weight: 700;
+      letter-spacing: 0.3em;
+      font-size: 12px;
+      color: #c8d9f0;
+    }
+    header .actions button {
+      margin-left: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.32);
+      background: rgba(15, 24, 40, 0.5);
+      font-weight: 600;
+      color: #d2ddf0;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+    main {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 20px;
+      padding: 24px 28px 60px;
+    }
+    .card {
+      background: linear-gradient(180deg, var(--panel-strong) 0%, var(--panel) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--glow);
+      backdrop-filter: blur(14px) saturate(140%);
+    }
+    .sidebar {
+      padding: 16px;
+      position: sticky;
+      top: 90px;
+      height: fit-content;
+    }
+    .sidebar h4 {
+      font-size: 11px;
+      letter-spacing: 0.3em;
+      margin: 0 0 12px;
+      text-transform: uppercase;
+      color: #4d5d74;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: rgba(248, 250, 252, 0.75);
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+    .step span.status {
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid rgba(170, 195, 230, 0.45);
+    }
+    .accordion {
+      overflow: hidden;
+    }
+    .acc-item {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--divider);
+      background: rgba(12, 18, 32, 0.03);
+    }
+    .acc-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 600;
+    }
+    .pill {
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: rgba(238, 242, 248, 0.8);
+      color: var(--muted);
+      border: 1px solid rgba(190, 205, 224, 0.55);
+    }
+    .pill.success {
+      background: rgba(231, 247, 239, 0.9);
+      color: #0f7e4b;
+      border: 1px solid rgba(184, 236, 207, 0.8);
+    }
+    .acc-body {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .panel {
+      margin-top: 14px;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(150, 185, 235, 0.7);
+      background: rgba(232, 243, 255, 0.65);
+      color: #2b4f7f;
+      font-size: 13px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+    }
+    .cta {
+      margin-top: 16px;
+      display: flex;
+      gap: 10px;
+    }
+    .cta button {
+      padding: 10px 16px;
+      border-radius: 12px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 10px 24px rgba(31, 111, 235, 0.4);
+    }
+    .cta button.secondary {
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      box-shadow: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">SKYBRIDGE</div>
+    <div class="actions">
+      <button>Start over</button>
+      <button>Sign out</button>
+    </div>
+  </header>
+  <main>
+    <aside class="card sidebar">
+      <h4>Progress</h4>
+      <div class="step">1 · Sign in <span class="status">Done</span></div>
+      <div class="step">2 · Connect <span class="status">Done</span></div>
+      <div class="step">3 · Review <span class="status">Active</span></div>
+      <div class="step">4 · Import <span class="status">Pending</span></div>
+    </aside>
+    <section class="card accordion">
+      <div class="acc-item">
+        <div class="acc-header">1 · Sign in <span class="pill success">Signed in</span></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header">2 · Connect accounts <span class="pill success">Connected</span></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header">3 · Review <span class="pill">Review running</span></div>
+        <div class="acc-body">
+          Flights are fetched from CloudAhoy first so you can check them before running the actual import.
+          <div class="panel">Review in progress · Elapsed: 2m · Last update: just now</div>
+          <div class="cta">
+            <button>Accept and start import</button>
+            <button class="secondary">Edit import filters</button>
+          </div>
+        </div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header">4 · Import <span class="pill">Waiting for review</span></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
