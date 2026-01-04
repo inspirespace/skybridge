@@ -42,6 +42,7 @@ import {
   formatISODate,
   formatPhaseElapsed,
   formatPhaseLastUpdate,
+  formatLastUpdate,
 } from "@/lib/format";
 import { isAuthExpiredError } from "@/lib/auth-helpers";
 import { useOidcAuth } from "@/hooks/use-oidc-auth";
