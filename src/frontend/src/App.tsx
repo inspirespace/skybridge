@@ -785,7 +785,7 @@ export default function App() {
                 </AccordionContent>
               </AccordionItem>
 
-              <div className="border-t border-[#e3ebf5] dark:border-slate-700" />
+              <div className="border-t border-[#e3ebf5] dark:border-sky-900/60" />
               <AccordionItem
                 value="connect"
                 className={cn(
@@ -822,7 +822,7 @@ export default function App() {
                       <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
                           <div className="text-sm font-medium">CloudAhoy</div>
-                          <div className="space-y-2 rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-slate-800 dark:bg-slate-900/80">
+                          <div className="space-y-2 rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-sky-900/60 dark:bg-slate-900/80">
                             <Label htmlFor="cloudahoy-email">Email</Label>
                             <Input
                               id="cloudahoy-email"
@@ -848,7 +848,7 @@ export default function App() {
                         </div>
                         <div className="space-y-2">
                           <div className="text-sm font-medium">FlySto</div>
-                          <div className="space-y-2 rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-slate-800 dark:bg-slate-900/80">
+                          <div className="space-y-2 rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-sky-900/60 dark:bg-slate-900/80">
                             <Label htmlFor="flysto-email">Email</Label>
                             <Input
                               id="flysto-email"
@@ -872,7 +872,7 @@ export default function App() {
 
                       <Separator className="my-1" />
 
-                      <div className="rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-slate-800 dark:bg-slate-900/80">
+                      <div className="rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-sky-900/60 dark:bg-slate-900/80">
                         <div className="space-y-3">
                           <div className="text-sm font-semibold">Import filters</div>
                           <div className="grid gap-3 md:grid-cols-3">
@@ -883,7 +883,7 @@ export default function App() {
                                   <Button
                                     variant="outline"
                                     className={cn(
-                                      "w-full justify-start text-left font-normal bg-white/70 dark:bg-slate-900/70",
+                                      "w-full justify-start text-left font-normal bg-white/70 dark:bg-slate-900/70 dark:border-sky-900/60",
                                       !dateRange?.from && "text-muted-foreground"
                                     )}
                                     disabled={connectLocked}
@@ -970,7 +970,7 @@ export default function App() {
                 </AccordionContent>
               </AccordionItem>
 
-              <div className="border-t border-[#e3ebf5] dark:border-slate-700" />
+              <div className="border-t border-[#e3ebf5] dark:border-sky-900/60" />
               <AccordionItem
                 value="review"
                 className={cn(
@@ -1164,7 +1164,7 @@ export default function App() {
                 </AccordionContent>
               </AccordionItem>
 
-              <div className="border-t border-[#e3ebf5] dark:border-slate-700" />
+              <div className="border-t border-[#e3ebf5] dark:border-sky-900/60" />
               <AccordionItem
                 value="import"
                 className={cn(
