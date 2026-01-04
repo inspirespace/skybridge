@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/table";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
-import { Apple, Calendar as CalendarIcon, Check, Chrome, Mail } from "lucide-react";
+import { Calendar as CalendarIcon, Check, Mail } from "lucide-react";
 import {
   acceptReview,
   createJob,
@@ -774,39 +774,6 @@ export default function App() {
                         <Mail className="h-4 w-4" />
                         Sign in with email
                       </Button>
-                      {AUTH_MODE === "oidc" ? (
-                        <>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start gap-2"
-                            disabled={flow.signedIn || actionLoading}
-                            onClick={() => startOidcLogin("google")}
-                          >
-                            <Chrome className="h-4 w-4" />
-                            Continue with Google
-                          </Button>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start gap-2"
-                            disabled={flow.signedIn || actionLoading}
-                            onClick={() => startOidcLogin("apple")}
-                          >
-                            <Apple className="h-4 w-4" />
-                            Continue with Apple
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button className="w-full justify-start gap-2" variant="outline" disabled>
-                            <Chrome className="h-4 w-4" />
-                            Continue with Google
-                          </Button>
-                          <Button className="w-full justify-start gap-2" variant="outline" disabled>
-                            <Apple className="h-4 w-4" />
-                            Continue with Apple
-                          </Button>
-                        </>
-                      )}
                     </div>
                     {signInError && (
                       <Alert variant="destructive">
