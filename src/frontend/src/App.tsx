@@ -26,34 +26,24 @@ import {
   createJob,
   deleteJob,
   downloadArtifactsZip,
-  exchangeToken,
   type AuthContext,
 } from "@/api/client";
 import { canStartOver, deriveFlowState, getOpenStep } from "@/state/flow";
 import { useJobSnapshot } from "@/hooks/use-job-snapshot";
 import type { DateRange } from "react-day-picker";
 import {
+  formatDate,
   formatDateRange,
   formatElapsed,
   formatFlightId,
   formatISODate,
   formatLastUpdate,
 } from "@/lib/format";
-import {
-  generateCodeChallenge,
-  generateCodeVerifier,
-  generateState,
-  isAuthExpiredError,
-  parseJwt,
-} from "@/lib/auth-helpers";
+import { isAuthExpiredError } from "@/lib/auth-helpers";
+import { useOidcAuth } from "@/hooks/use-oidc-auth";
 
 const USER_ID_KEY = "skybridge_user_id";
 const JOB_ID_KEY = "skybridge_job_id";
-const TOKEN_KEY = "skybridge_access_token";
-const ID_TOKEN_KEY = "skybridge_id_token";
-const CODE_VERIFIER_KEY = "skybridge_code_verifier";
-const AUTH_STATE_KEY = "skybridge_auth_state";
-
 const AUTH_MODE = import.meta.env.VITE_AUTH_MODE ?? "header";
 const AUTH_ISSUER =
   import.meta.env.VITE_AUTH_ISSUER_URL ??
@@ -87,19 +77,28 @@ export default function App() {
   const [jobId, setJobId] = React.useState<string | null>(() =>
     localStorage.getItem(JOB_ID_KEY)
   );
-  const [accessToken, setAccessToken] = React.useState<string | null>(() =>
-    localStorage.getItem(TOKEN_KEY)
-  );
-  const [idToken, setIdToken] = React.useState<string | null>(() =>
-    localStorage.getItem(ID_TOKEN_KEY)
-  );
   const [showAllFlights, setShowAllFlights] = React.useState(false);
   const [actionError, setActionError] = React.useState<{
     scope: "sign-in" | "connect" | "review" | "import" | "global";
     message: string;
   } | null>(null);
   const [actionLoading, setActionLoading] = React.useState(false);
-  const didExchangeRef = React.useRef(false);
+  const {
+    accessToken,
+    startLogin: startOidcLogin,
+    signOut: signOutOidc,
+    clearAuth: clearOidcAuth,
+  } = useOidcAuth({
+    enabled: AUTH_MODE === "oidc",
+    issuer: AUTH_ISSUER,
+    clientId: AUTH_CLIENT_ID,
+    scope: AUTH_SCOPE,
+    redirectPath: AUTH_REDIRECT_PATH,
+    providerParam: AUTH_PROVIDER_PARAM,
+    logoutUrl: AUTH_LOGOUT_URL,
+    onError: (message) => setActionError({ scope: "sign-in", message }),
+    onLoadingChange: setActionLoading,
+  });
 
   const [cloudahoyEmail, setCloudahoyEmail] = React.useState("");
   const [cloudahoyPassword, setCloudahoyPassword] = React.useState("");
@@ -206,65 +205,6 @@ export default function App() {
   const lastUpdate = formatLastUpdate(job?.updated_at, now);
 
   React.useEffect(() => {
-    if (AUTH_MODE !== "oidc") return;
-    const url = new URL(window.location.href);
-    const redirectPath = AUTH_REDIRECT_PATH.endsWith("/")
-      ? AUTH_REDIRECT_PATH.slice(0, -1)
-      : AUTH_REDIRECT_PATH;
-    const currentPath = url.pathname.endsWith("/")
-      ? url.pathname.slice(0, -1)
-      : url.pathname;
-    if (!currentPath.endsWith(redirectPath)) return;
-    const code = url.searchParams.get("code");
-    const state = url.searchParams.get("state");
-    if (!code || !state) return;
-    if (didExchangeRef.current) return;
-    const expectedState = sessionStorage.getItem(AUTH_STATE_KEY);
-    const verifier = sessionStorage.getItem(CODE_VERIFIER_KEY);
-    if (!verifier || !expectedState || expectedState !== state) {
-      setActionError({
-        scope: "sign-in",
-        message: "Auth session expired. Please sign in again.",
-      });
-      return;
-    }
-    const redirectUri = `${window.location.origin}${AUTH_REDIRECT_PATH}`;
-    (async () => {
-      setActionLoading(true);
-      setActionError(null);
-      didExchangeRef.current = true;
-      try {
-        const token = await exchangeToken({
-          code,
-          code_verifier: verifier,
-          redirect_uri: redirectUri,
-        });
-        localStorage.setItem(TOKEN_KEY, token.access_token);
-        setAccessToken(token.access_token);
-        if (token.id_token) {
-          localStorage.setItem(ID_TOKEN_KEY, token.id_token);
-          setIdToken(token.id_token);
-          const claims = parseJwt(token.id_token);
-          if (claims?.email) {
-            localStorage.setItem(USER_ID_KEY, claims.email);
-            setUserId(claims.email);
-          }
-        }
-        sessionStorage.removeItem(CODE_VERIFIER_KEY);
-        sessionStorage.removeItem(AUTH_STATE_KEY);
-        window.history.replaceState({}, document.title, "/");
-      } catch (err) {
-        setActionError({
-          scope: "sign-in",
-          message: err instanceof Error ? err.message : "Auth failed",
-        });
-      } finally {
-        setActionLoading(false);
-      }
-    })();
-  }, []);
-
-  React.useEffect(() => {
     if (!DEV_PREFILL) return;
     if (DEV_CLOUD_AHOY_EMAIL) setCloudahoyEmail(DEV_CLOUD_AHOY_EMAIL);
     if (DEV_CLOUD_AHOY_PASSWORD) setCloudahoyPassword(DEV_CLOUD_AHOY_PASSWORD);
@@ -299,39 +239,8 @@ export default function App() {
     setManualOpen(value);
   };
 
-  const startOidcLogin = async (provider?: string) => {
-    setActionError(null);
-    if (!AUTH_ISSUER) {
-      setActionError({
-        scope: "sign-in",
-        message: "Auth issuer is not configured.",
-      });
-      return;
-    }
-    const redirectUri = `${window.location.origin}${AUTH_REDIRECT_PATH}`;
-    const verifier = generateCodeVerifier();
-    sessionStorage.setItem(CODE_VERIFIER_KEY, verifier);
-    const challenge = await generateCodeChallenge(verifier);
-    const state = generateState();
-    sessionStorage.setItem(AUTH_STATE_KEY, state);
-    const issuerBase = AUTH_ISSUER.endsWith("/")
-      ? AUTH_ISSUER.slice(0, -1)
-      : AUTH_ISSUER;
-    const authUrl = new URL(`${issuerBase}/protocol/openid-connect/auth`);
-    authUrl.searchParams.set("client_id", AUTH_CLIENT_ID);
-    authUrl.searchParams.set("response_type", "code");
-    authUrl.searchParams.set("scope", AUTH_SCOPE);
-    authUrl.searchParams.set("redirect_uri", redirectUri);
-    authUrl.searchParams.set("code_challenge", challenge);
-    authUrl.searchParams.set("code_challenge_method", "S256");
-    authUrl.searchParams.set("state", state);
-    if (provider) {
-      authUrl.searchParams.set(AUTH_PROVIDER_PARAM, provider);
-    }
-    window.location.assign(authUrl.toString());
-  };
-
   const handleSignIn = () => {
+    setActionError(null);
     if (AUTH_MODE === "oidc") {
       startOidcLogin();
       return;
@@ -447,44 +356,29 @@ export default function App() {
   };
 
   const handleSignOut = () => {
-    localStorage.removeItem(USER_ID_KEY);
     localStorage.removeItem(JOB_ID_KEY);
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(ID_TOKEN_KEY);
-    sessionStorage.removeItem(CODE_VERIFIER_KEY);
-    sessionStorage.removeItem(AUTH_STATE_KEY);
-    setUserId(null);
     setJobId(null);
-    setAccessToken(null);
-    setIdToken(null);
     setShowAllFlights(false);
     setActionError(null);
-    if (AUTH_MODE === "oidc" && AUTH_LOGOUT_URL && idToken) {
-      const url = new URL(AUTH_LOGOUT_URL);
-      url.searchParams.set("client_id", AUTH_CLIENT_ID);
-      url.searchParams.set("id_token_hint", idToken);
-      url.searchParams.set(
-        "post_logout_redirect_uri",
-        window.location.origin + AUTH_REDIRECT_PATH
-      );
-      window.location.assign(url.toString());
+    if (AUTH_MODE === "oidc") {
+      signOutOidc();
+      return;
     }
+    localStorage.removeItem(USER_ID_KEY);
+    setUserId(null);
   };
 
   const handleTokenExpired = React.useCallback(() => {
     localStorage.removeItem(USER_ID_KEY);
     localStorage.removeItem(JOB_ID_KEY);
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(ID_TOKEN_KEY);
-    sessionStorage.removeItem(CODE_VERIFIER_KEY);
-    sessionStorage.removeItem(AUTH_STATE_KEY);
     setUserId(null);
     setJobId(null);
-    setAccessToken(null);
-    setIdToken(null);
+    if (AUTH_MODE === "oidc") {
+      clearOidcAuth();
+    }
     setShowAllFlights(false);
     setActionError(null);
-  }, []);
+  }, [AUTH_MODE, clearOidcAuth]);
 
   React.useEffect(() => {
     if (!jobError || !isSignedIn) return;

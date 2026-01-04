@@ -1,4 +1,6 @@
-export function navigateWithFade(event: React.MouseEvent<HTMLElement>, href: string) {
+import type { MouseEvent } from "react";
+
+export function navigateWithFade(event: MouseEvent<HTMLElement>, href: string) {
   if (
     event.defaultPrevented ||
     event.button !== 0 ||

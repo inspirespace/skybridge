@@ -1,5 +1,16 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
@@ -18,6 +29,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ArrowRight } from "lucide-react";
 import type { FlightSummary, ReviewSummary } from "@/api/client";
+import * as React from "react";
 
 export function ReviewSection({
   allowed,
@@ -74,6 +86,13 @@ export function ReviewSection({
   onEditFilters: () => void;
   formatDate: (value?: string | null) => string;
 }) {
+  const [ackOpen, setAckOpen] = React.useState(false);
+  const [acknowledged, setAcknowledged] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!ackOpen) setAcknowledged(false);
+  }, [ackOpen]);
+
   return (
     <AccordionItem
       value="review"
@@ -254,13 +273,41 @@ export function ReviewSection({
             </Alert>
           )}
           <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={onApproveImport}
-              disabled={!canApprove || importRunning || importComplete || actionLoading}
-              className="shadow-sm"
-            >
-              Accept and start import
-            </Button>
+            <AlertDialog open={ackOpen} onOpenChange={setAckOpen}>
+              <AlertDialogTrigger asChild>
+                <Button
+                  disabled={!canApprove || importRunning || importComplete || actionLoading}
+                  className="shadow-sm"
+                >
+                  Accept and start import
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Confirm import</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    By proceeding, you acknowledge that you are using Skybridge at your own risk.
+                    Inspirespace e.U. is not responsible for any damages, data loss, or other issues
+                    resulting from this import.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <label className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-200">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 accent-sky-600"
+                    checked={acknowledged}
+                    onChange={(event) => setAcknowledged(event.target.checked)}
+                  />
+                  <span>I understand and want to proceed with the import.</span>
+                </label>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={onApproveImport} disabled={!acknowledged}>
+                    Start import
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             {canEditFiltersNow && (
               <Button variant="outline" onClick={onEditFilters}>
                 Edit import filters
