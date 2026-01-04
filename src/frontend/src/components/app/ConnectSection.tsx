@@ -186,7 +186,6 @@ export function ConnectSection({
                     <PopoverContent className="w-auto p-3" align="start">
                       <Calendar
                         mode="range"
-                        captionLayout="dropdown"
                         fixedWeeks
                         numberOfMonths={isDesktop ? 2 : 1}
                         selected={dateRange}
