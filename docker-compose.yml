@@ -60,6 +60,7 @@ services:
       - BACKEND_WAIT_FOR_PROCESSING=true
       - BACKEND_PROCESSING_INTERVAL=20
       - BACKEND_PROCESSING_TIMEOUT=3600
+      - AWS_REGION=us-east-1
       - DEV_USE_MOCKS=${DEV_USE_MOCKS:-1}
       - MOCK_CLOUD_AHOY_BASE_URL=http://mock-cloudahoy:8081/api
       - MOCK_FLYSTO_BASE_URL=http://mock-flysto:8082
@@ -112,6 +113,7 @@ services:
       - BACKEND_WAIT_FOR_PROCESSING=true
       - BACKEND_PROCESSING_INTERVAL=20
       - BACKEND_PROCESSING_TIMEOUT=3600
+      - AWS_REGION=us-east-1
       - DEV_USE_MOCKS=${DEV_USE_MOCKS:-1}
       - MOCK_CLOUD_AHOY_BASE_URL=http://mock-cloudahoy:8081/api
       - MOCK_FLYSTO_BASE_URL=http://mock-flysto:8082

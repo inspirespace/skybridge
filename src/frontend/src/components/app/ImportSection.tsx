@@ -56,8 +56,13 @@ export function ImportSection({
   elapsed: string;
   lastUpdate: string;
   importProgress: number;
-  latestImportEvent?: { stage: string; flight_id?: string | null; percent?: number | null; created_at: string } | null;
-  formatFlightId: (value: { flight_id?: string | null }) => string;
+  latestImportEvent?: {
+    stage: string;
+    flight_id?: string | null;
+    percent?: number | null;
+    created_at: string;
+  } | null;
+  formatFlightId: (value?: string | null) => string;
   formatLastUpdate: (value?: string | null, now?: Date) => string;
   now: Date;
   job?: JobRecord | null;
@@ -156,7 +161,7 @@ export function ImportSection({
                 <div className="mt-2 text-xs text-muted-foreground">
                   {latestImportEvent.stage}
                   {latestImportEvent.flight_id
-                    ? ` · ${formatFlightId({ flight_id: latestImportEvent.flight_id })}`
+                    ? ` · ${formatFlightId(latestImportEvent.flight_id)}`
                     : ""}
                   {latestImportEvent.percent != null ? ` · ${latestImportEvent.percent}%` : ""}
                   {" · "}

@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 import requests
-import boto3
 
 from .models import JobAcceptRequest, JobCreateRequest
 from pathlib import Path
@@ -17,7 +16,7 @@ from .service import JobService
 from .store import JobStore
 
 DATA_DIR = Path(os.environ.get("BACKEND_DATA_DIR", "data/backend/jobs"))
-_sqs_client = boto3.client("sqs")
+_sqs_client = None
 
 
 def _api_url() -> str:
@@ -40,6 +39,19 @@ def _dynamo_jobs_table() -> str | None:
     if (os.getenv("BACKEND_DYNAMO_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
         return os.getenv("DYNAMO_JOBS_TABLE") or None
     return None
+
+
+def _sqs_region() -> str:
+    return os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION") or "us-east-1"
+
+
+def _get_sqs_client():
+    global _sqs_client
+    if _sqs_client is None:
+        import boto3
+
+        _sqs_client = boto3.client("sqs", region_name=_sqs_region())
+    return _sqs_client
 
 
 def _claim_credentials(job_id: UUID, purpose: str, token: str) -> tuple[dict | None, bool]:
@@ -99,7 +111,7 @@ def run() -> None:
         if not queue_url:
             raise RuntimeError("SQS_QUEUE_URL not configured")
         while True:
-            response = _sqs_client.receive_message(
+            response = _get_sqs_client().receive_message(
                 QueueUrl=queue_url,
                 MaxNumberOfMessages=1,
                 WaitTimeSeconds=10,
@@ -119,10 +131,10 @@ def run() -> None:
                         raise ValueError("Invalid purpose")
                     _handle_job(store, job_id, purpose, token)
                     if receipt:
-                        _sqs_client.delete_message(QueueUrl=queue_url, ReceiptHandle=receipt)
+                        _get_sqs_client().delete_message(QueueUrl=queue_url, ReceiptHandle=receipt)
                 except Exception as exc:
                     if receipt:
-                        _sqs_client.delete_message(QueueUrl=queue_url, ReceiptHandle=receipt)
+                        _get_sqs_client().delete_message(QueueUrl=queue_url, ReceiptHandle=receipt)
                     try:
                         job = store.load_job(job_id)
                         job.status = "failed"

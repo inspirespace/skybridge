@@ -1,4 +1,5 @@
 import { ThemeToggle } from "@/components/theme-toggle";
+import { navigateWithFade } from "@/lib/navigation";
 
 export function AppFooter() {
   return (
@@ -6,10 +7,18 @@ export function AppFooter() {
       <div className="container flex flex-wrap items-center justify-between gap-3 pb-20 pt-6 text-sm text-muted-foreground lg:py-6">
         <div>© {new Date().getFullYear()} Inspirespace e.U.</div>
         <div className="flex flex-wrap gap-4">
-          <a className="hover:text-foreground" href="/imprint">
+          <a
+            className="hover:text-foreground"
+            href="/imprint"
+            onClick={(event) => navigateWithFade(event, "/imprint")}
+          >
             Imprint
           </a>
-          <a className="hover:text-foreground" href="/privacy">
+          <a
+            className="hover:text-foreground"
+            href="/privacy"
+            onClick={(event) => navigateWithFade(event, "/privacy")}
+          >
             Privacy
           </a>
           <a
@@ -33,6 +42,7 @@ export function StaticHeader() {
         <a
           href="/"
           className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-600 dark:text-slate-300"
+          onClick={(event) => navigateWithFade(event, "/")}
         >
           Skybridge
         </a>

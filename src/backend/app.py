@@ -11,7 +11,6 @@ from uuid import UUID
 from concurrent.futures import ThreadPoolExecutor
 
 import requests
-import boto3
 import asyncio
 import json as jsonlib
 from fastapi import FastAPI, Header, HTTPException, BackgroundTasks
@@ -46,7 +45,7 @@ store = JobStore(DATA_DIR, build_object_store_from_env(), _dynamo_jobs_table())
 service = JobService(store)
 executor = ThreadPoolExecutor(max_workers=int(os.getenv("BACKEND_WORKERS") or "2"))
 credential_store = build_credential_store()
-_sqs_client = boto3.client("sqs")
+_sqs_client = None
 
 
 def _use_worker() -> bool:
@@ -69,13 +68,26 @@ def _sqs_queue_url() -> str:
     return os.getenv("SQS_QUEUE_URL") or ""
 
 
+def _sqs_region() -> str:
+    return os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION") or "us-east-1"
+
+
+def _get_sqs_client():
+    global _sqs_client
+    if _sqs_client is None:
+        import boto3
+
+        _sqs_client = boto3.client("sqs", region_name=_sqs_region())
+    return _sqs_client
+
+
 def _enqueue_job(job_id: UUID, purpose: str, token: str) -> None:
     if not _use_queue():
         return
     queue_url = _sqs_queue_url()
     if not queue_url:
         raise HTTPException(status_code=500, detail="SQS_QUEUE_URL not configured")
-    _sqs_client.send_message(
+    _get_sqs_client().send_message(
         QueueUrl=queue_url,
         MessageBody=jsonlib.dumps({"job_id": str(job_id), "purpose": purpose, "token": token}),
     )

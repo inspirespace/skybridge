@@ -12,18 +12,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppFooter } from "@/components/app/AppFooter";
 import { StaticPage } from "@/components/app/StaticPage";
 import { SignInSection } from "@/components/app/SignInSection";
 import { ConnectSection } from "@/components/app/ConnectSection";
 import { ReviewSection } from "@/components/app/ReviewSection";
 import { ImportSection } from "@/components/app/ImportSection";
+import { StepStatus } from "@/components/app/StepStatus";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
 import {
   acceptReview,
   createJob,
@@ -35,6 +32,20 @@ import {
 import { canStartOver, deriveFlowState, getOpenStep } from "@/state/flow";
 import { useJobSnapshot } from "@/hooks/use-job-snapshot";
 import type { DateRange } from "react-day-picker";
+import {
+  formatDateRange,
+  formatElapsed,
+  formatFlightId,
+  formatISODate,
+  formatLastUpdate,
+} from "@/lib/format";
+import {
+  generateCodeChallenge,
+  generateCodeVerifier,
+  generateState,
+  isAuthExpiredError,
+  parseJwt,
+} from "@/lib/auth-helpers";
 
 const USER_ID_KEY = "skybridge_user_id";
 const JOB_ID_KEY = "skybridge_job_id";
@@ -606,7 +617,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#f7f9fc] to-[#eef3f8] text-[#1c2430] dark:bg-gradient-to-b dark:from-[#0b1120] dark:to-[#0f172a] dark:text-slate-100">
+    <div className="app-shell min-h-screen flex flex-col bg-gradient-to-b from-[#f7f9fc] to-[#eef3f8] text-[#1c2430] dark:bg-gradient-to-b dark:from-[#0b1120] dark:to-[#0f172a] dark:text-slate-100">
       <header className="sticky top-0 z-40 border-b border-[#d9e1ec] bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
         <div className="absolute inset-x-0 top-0 h-1 bg-[#f1f4f8] dark:bg-slate-900" />
         <div className="container flex h-14 items-center justify-between sm:h-16">
@@ -819,157 +830,4 @@ export default function App() {
       <AppFooter />
     </div>
   );
-}
-
-function StepStatus({
-  label,
-  active,
-  done,
-}: {
-  label: string;
-  active?: boolean;
-  done?: boolean;
-}) {
-  const badgeVariant = done ? "success" : active ? "active" : "outline";
-  const badgeClass =
-    done || active ? "" : "border-dashed text-muted-foreground";
-  const labelClass = active
-    ? "font-semibold"
-    : done
-      ? "font-medium"
-      : "font-medium text-muted-foreground";
-  return (
-    <div
-      className={cn(
-        "relative flex items-center justify-between rounded-md border border-[#d9e1ec] bg-[#f8fafc] px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900",
-        active ? "bg-[#eef3f8] dark:bg-slate-800" : "bg-[#f8fafc] dark:bg-slate-900"
-      )}
-    >
-      {active && (
-        <span className="absolute left-0 top-2 h-[calc(100%-16px)] w-0.5 rounded-full bg-primary/60" />
-      )}
-      <span className={cn(labelClass, active && "pl-2")}>{label}</span>
-      <Badge variant={badgeVariant} className={cn("flex items-center gap-1", badgeClass)}>
-        {done ? (
-          <>
-            <Check className="h-3 w-3" /> Done
-          </>
-        ) : active ? (
-          "Active"
-        ) : (
-          "Locked"
-        )}
-      </Badge>
-    </div>
-  );
-}
-
-function formatDate(value?: string | null) {
-  if (!value) return "—";
-  return value.slice(0, 10);
-}
-
-function formatFlightId(flight: { flight_id?: string | null }) {
-  const id = flight.flight_id ?? "";
-  if (!id) return "—";
-  if (id.length <= 16) return id;
-  return `...${id.slice(-12)}`;
-}
-
-function formatDateRange(range?: DateRange) {
-  if (!range?.from && !range?.to) return "Any date";
-  const formatter = new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-  if (range.from && range.to) {
-    return `${formatter.format(range.from)} – ${formatter.format(range.to)}`;
-  }
-  if (range.from) {
-    return `From ${formatter.format(range.from)}`;
-  }
-  return "Any date";
-}
-
-function formatISODate(value: Date) {
-  return value.toISOString().slice(0, 10);
-}
-
-function formatElapsed(start?: string | null, end?: string | null) {
-  if (!start || !end) return "";
-  const startMs = Date.parse(start);
-  const endMs = Date.parse(end);
-  if (Number.isNaN(startMs) || Number.isNaN(endMs)) return "";
-  const diffMs = Math.max(0, endMs - startMs);
-  const mins = Math.round(diffMs / 60000);
-  if (mins < 1) return "<1m";
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  const rem = mins % 60;
-  return `${hours}h ${rem}m`;
-}
-
-function formatLastUpdate(value?: string | null, now: Date = new Date()) {
-  if (!value) return "just now";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "just now";
-  const diffMs = Math.max(0, now.getTime() - parsed.getTime());
-  const diffSec = Math.round(diffMs / 1000);
-  if (diffSec < 10) return "just now";
-  if (diffSec < 60) return `${diffSec}s ago`;
-  const diffMin = Math.round(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.round(diffMin / 60);
-  return `${diffHr}h ago`;
-}
-
-function generateCodeVerifier() {
-  const bytes = new Uint8Array(32);
-  window.crypto.getRandomValues(bytes);
-  return base64UrlEncode(bytes);
-}
-
-async function generateCodeChallenge(verifier: string) {
-  const data = new TextEncoder().encode(verifier);
-  const digest = await window.crypto.subtle.digest("SHA-256", data);
-  return base64UrlEncode(new Uint8Array(digest));
-}
-
-function generateState() {
-  const bytes = new Uint8Array(16);
-  window.crypto.getRandomValues(bytes);
-  return base64UrlEncode(bytes);
-}
-
-function base64UrlEncode(bytes: Uint8Array) {
-  let binary = "";
-  bytes.forEach((byte) => {
-    binary += String.fromCharCode(byte);
-  });
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function parseJwt(token: string) {
-  try {
-    const payload = token.split(".")[1];
-    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const decoded = atob(normalized);
-    return JSON.parse(decoded) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
-function isAuthExpiredError(error: unknown) {
-  if (!error) return false;
-  const message =
-    error instanceof Error ? error.message : typeof error === "string" ? error : "";
-  const status = (error as Error & { status?: number }).status;
-  const lower = message.toLowerCase();
-  if (status === 401) return true;
-  if (lower.includes("invalid token")) return true;
-  if (lower.includes("signature") && lower.includes("expired")) return true;
-  if (lower.includes("token") && lower.includes("expired")) return true;
-  return false;
 }

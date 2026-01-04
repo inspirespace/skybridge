@@ -1,4 +1,5 @@
 import { AppFooter, StaticHeader } from "@/components/app/AppFooter";
+import { navigateWithFade } from "@/lib/navigation";
 
 export function StaticPage({
   page,
@@ -8,7 +9,7 @@ export function StaticPage({
   retentionDays: number;
 }) {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <div className="app-shell min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <StaticHeader />
       <main className="container py-10">
         <div className="max-w-3xl space-y-6">
@@ -152,7 +153,11 @@ export function StaticPage({
             </>
           )}
           <div>
-            <a className="text-sm text-sky-600 hover:underline" href="/">
+            <a
+              className="text-sm text-sky-600 hover:underline"
+              href="/"
+              onClick={(event) => navigateWithFade(event, "/")}
+            >
               Back to app
             </a>
           </div>
