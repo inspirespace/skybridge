@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+"""Pydantic models for backend API payloads and job records."""
+
 from datetime import datetime
 from typing import Literal, Optional
 from uuid import UUID

@@ -1,5 +1,13 @@
 from __future__ import annotations
 
+"""FastAPI entrypoint for the Skybridge backend.
+
+Responsibilities:
+- HTTP API for jobs, artifacts, and auth exchange
+- SSE stream for live job updates (with polling fallback on the UI)
+- Queueing review/import work for the worker (SQS-backed in prod)
+"""
+
 import os
 import tempfile
 import zipfile

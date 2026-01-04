@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+"""S3-backed object storage for job artifacts."""
+
 import json
 import os
 from dataclasses import dataclass

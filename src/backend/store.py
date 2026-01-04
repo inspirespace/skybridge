@@ -1,5 +1,13 @@
 from __future__ import annotations
 
+"""Persistence layer for job metadata and artifacts.
+
+Supports:
+- Local filesystem storage (dev)
+- DynamoDB for job metadata (prod)
+- S3 via ObjectStore for artifacts (prod)
+"""
+
 import json
 import logging
 import os
@@ -23,6 +31,7 @@ class StoredJob:
 
 
 class JobStore:
+    """Store job metadata and artifacts across local and cloud backends."""
     def __init__(
         self,
         base_path: Path,

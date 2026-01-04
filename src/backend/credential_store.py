@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+"""Short-lived credential store for worker jobs.
+
+Credentials are issued with a TTL and can be claimed once by the worker.
+Backed by in-memory dict (dev) or DynamoDB (prod).
+"""
+
 import secrets
 import time
 import os

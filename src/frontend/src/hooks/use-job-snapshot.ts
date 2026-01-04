@@ -16,6 +16,7 @@ const POLLABLE_STATUSES: JobStatus[] = [
   "import_running",
 ];
 
+// Subscribe to a job via SSE with polling fallback.
 export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
   const [data, setData] = React.useState<JobRecord | null>(null);
   const [loading, setLoading] = React.useState(false);

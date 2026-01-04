@@ -27,6 +27,7 @@ const REVIEW_COMPLETE_STATUSES: JobStatus[] = [
 const REVIEW_RUNNING_STATUSES: JobStatus[] = ["review_queued", "review_running"];
 const IMPORT_RUNNING_STATUSES: JobStatus[] = ["import_queued", "import_running"];
 
+// Derive step state from the current job status.
 export function deriveFlowState(signedIn: boolean, job: JobRecord | null): FlowState {
   if (!signedIn) return initialFlowState;
   if (!job) {
@@ -68,6 +69,7 @@ export function deriveFlowState(signedIn: boolean, job: JobRecord | null): FlowS
   };
 }
 
+// Determine which step should be open by default.
 export function getOpenStep(state: FlowState) {
   if (!state.signedIn) return "sign-in";
   if (!state.connected) return "connect";

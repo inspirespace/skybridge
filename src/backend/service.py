@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+"""Job orchestration for review/import flows.
+
+This module bridges the core migration logic (`src/core/`) with the backend
+job model, persisting progress and artifacts via JobStore.
+"""
+
 import json
 import os
 import time
@@ -33,6 +39,7 @@ from .store import JobStore
 
 
 class JobService:
+    """Coordinates job lifecycle transitions and persists progress."""
     def __init__(self, store: JobStore) -> None:
         self._store = store
 

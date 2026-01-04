@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+"""Worker process for queued review/import jobs.
+
+Consumes SQS messages in production and calls JobService with claimed
+credentials. In dev it can run inline without SQS.
+"""
+
 import os
 import time
 import json
