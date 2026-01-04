@@ -25,22 +25,24 @@ Deliver a single-cloud (AWS) web application that lets any user migrate CloudAho
 - **API Layer:** API Gateway (REST or HTTP) → Lambda (or Step Functions + Lambda workers).
 - **Execution model:** Serverless-first (Lambda + Step Functions). Container workloads are optional only for local dev or future heavy compute, not required for the dev workflow.
 - **Auth:** Cognito User Pools + Hosted UI for sign-in; short-lived JWTs for API access.
-- **Job Orchestration:** Step Functions to coordinate the migration pipeline (create job, run migration, post-process, finalize).
+- **Job Orchestration:** SQS queue + worker fleet (Lambda or ECS) to coordinate the migration pipeline (create job, run migration, post-process, finalize).
 - **Data Storage:**
   - **DynamoDB** for job metadata, state machine transitions, and job result index.
   - **S3** for job artifacts (review manifests, logs, exports, import report).
 - **Observability:** CloudWatch Logs + Metrics, optional X-Ray for tracing.
 
 ## Data Privacy Model
-- **No credential storage:** CloudAhoy/FlySto credentials are provided per job and used transiently in-memory by worker Lambdas.
+- **Short-lived credential storage:** CloudAhoy/FlySto credentials are stored only long enough for worker pickup (DynamoDB TTL, minutes), then deleted after a single claim.
 - **In-transit encryption:** TLS everywhere; optional client-side encryption for sensitive payload fields (future enhancement).
 - **At-rest encryption:** DynamoDB and S3 encrypted with AWS-managed KMS keys by default.
 - **Retention policy:**
-  - Job artifacts in S3 expire via lifecycle rules (e.g., 30 days).
-  - DynamoDB items have TTL fields (e.g., 30–90 days depending on billing tier).
+  - Job artifacts in S3 expire via lifecycle rules (7 days).
+  - DynamoDB items use TTL (`ttl_epoch`) with the same 7‑day retention.
 
 ## Job Orchestration & Data Lifecycle
 **Job states:** `created → queued → running → post_processing → completed` or `failed`.
+
+**Queueing:** API enqueues work to SQS with `{job_id, purpose}`. Workers pick up messages, claim one‑time credentials, and run the review/import steps.
 
 **DynamoDB schema (example):**
 - Partition key: `user_id`

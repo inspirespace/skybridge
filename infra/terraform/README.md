@@ -3,7 +3,7 @@
 This directory provides the initial Terraform baseline for the Skybridge backend stack.
 
 ## Layout
-- `main.tf`: core AWS services (S3, DynamoDB, Cognito, API Gateway, Step Functions).
+- `main.tf`: core AWS services (S3, DynamoDB, SQS, Cognito, API Gateway, Step Functions).
 - `variables.tf`: environment and tagging inputs.
 - `outputs.tf`: key resource outputs.
 - `envs/`: environment-specific tfvars.

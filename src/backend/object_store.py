@@ -64,6 +64,39 @@ class ObjectStore:
             extra["ServerSideEncryption"] = "AES256"
         self._client.upload_file(str(path), self.bucket, key, ExtraArgs=extra or None)
 
+    def get_json(self, key: str) -> dict[str, Any] | None:
+        try:
+            response = self._client.get_object(Bucket=self.bucket, Key=key)
+        except ClientError:
+            return None
+        body = response.get("Body")
+        if not body:
+            return None
+        payload = body.read().decode("utf-8")
+        return json.loads(payload)
+
+    def get_bytes(self, key: str) -> bytes | None:
+        try:
+            response = self._client.get_object(Bucket=self.bucket, Key=key)
+        except ClientError:
+            return None
+        body = response.get("Body")
+        if not body:
+            return None
+        return body.read()
+
+    def list_prefix(self, prefix: str) -> list[str]:
+        keys: list[str] = []
+        paginator = self._client.get_paginator("list_objects_v2")
+        for page in paginator.paginate(Bucket=self.bucket, Prefix=prefix):
+            contents = page.get("Contents") or []
+            for item in contents:
+                key = item.get("Key")
+                if not key:
+                    continue
+                keys.append(key[len(prefix) + 1 :] if key.startswith(f"{prefix}/") else key)
+        return sorted(keys)
+
     def delete_prefix(self, prefix: str) -> None:
         paginator = self._client.get_paginator("list_objects_v2")
         for page in paginator.paginate(Bucket=self.bucket, Prefix=prefix):
@@ -116,4 +149,3 @@ def _bool_env(name: str, default: bool) -> bool:
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
-

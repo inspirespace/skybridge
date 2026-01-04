@@ -11,6 +11,7 @@ from uuid import UUID
 from concurrent.futures import ThreadPoolExecutor
 
 import requests
+import boto3
 import asyncio
 import json as jsonlib
 from fastapi import FastAPI, Header, HTTPException, BackgroundTasks
@@ -19,7 +20,7 @@ from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import ValidationError
 
 from .auth import user_id_from_request
-from .credential_store import CredentialStore
+from .credential_store import build_credential_store
 from .models import (
     ArtifactListResponse,
     JobAcceptRequest,
@@ -35,14 +36,25 @@ from .web import landing_page
 DATA_DIR = Path(os.environ.get("BACKEND_DATA_DIR", "data/backend/jobs"))
 
 app = FastAPI(title="Skybridge Backend Dev API")
-store = JobStore(DATA_DIR, build_object_store_from_env())
+def _dynamo_jobs_table() -> str | None:
+    if (os.getenv("BACKEND_DYNAMO_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
+        return os.getenv("DYNAMO_JOBS_TABLE") or None
+    return None
+
+
+store = JobStore(DATA_DIR, build_object_store_from_env(), _dynamo_jobs_table())
 service = JobService(store)
 executor = ThreadPoolExecutor(max_workers=int(os.getenv("BACKEND_WORKERS") or "2"))
-credential_store = CredentialStore()
+credential_store = build_credential_store()
+_sqs_client = boto3.client("sqs")
 
 
 def _use_worker() -> bool:
     return (os.getenv("BACKEND_USE_WORKER") or "false").lower() in {"1", "true", "yes", "on"}
+
+
+def _use_queue() -> bool:
+    return (os.getenv("BACKEND_SQS_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}
 
 
 def _credential_ttl() -> int:
@@ -51,6 +63,22 @@ def _credential_ttl() -> int:
 
 def _worker_token() -> str:
     return os.getenv("BACKEND_WORKER_TOKEN") or ""
+
+
+def _sqs_queue_url() -> str:
+    return os.getenv("SQS_QUEUE_URL") or ""
+
+
+def _enqueue_job(job_id: UUID, purpose: str, token: str) -> None:
+    if not _use_queue():
+        return
+    queue_url = _sqs_queue_url()
+    if not queue_url:
+        raise HTTPException(status_code=500, detail="SQS_QUEUE_URL not configured")
+    _sqs_client.send_message(
+        QueueUrl=queue_url,
+        MessageBody=jsonlib.dumps({"job_id": str(job_id), "purpose": purpose, "token": token}),
+    )
 
 
 def _load_job_or_404(job_id: UUID, user_id: str) -> JobRecord:
@@ -114,7 +142,7 @@ def create_job(
     job.start_date = payload.start_date
     job.end_date = payload.end_date
     job.max_flights = payload.max_flights
-    if _use_worker():
+    if _use_worker() or _use_queue():
         token = credential_store.issue(
             job_id=str(job.job_id),
             purpose="review",
@@ -136,6 +164,7 @@ def create_job(
         )
         store.save_job(job)
         store.write_token(job.job_id, "review", token)
+        _enqueue_job(job.job_id, "review", token)
     else:
         executor.submit(service.generate_review, job.job_id, payload)
     return job
@@ -229,7 +258,7 @@ def accept_review(
             and not has_import_events
         ):
             raise HTTPException(status_code=409, detail="Review not ready")
-    if _use_worker():
+    if _use_worker() or _use_queue():
         token = credential_store.issue(
             job_id=str(job.job_id),
             purpose="import",
@@ -251,6 +280,7 @@ def accept_review(
         )
         store.save_job(job)
         store.write_token(job.job_id, "import", token)
+        _enqueue_job(job.job_id, "import", token)
     else:
         job.status = "import_running"
         job.updated_at = datetime.now(timezone.utc)
@@ -265,7 +295,7 @@ def claim_credentials(
     payload: dict,
     x_worker_token: Optional[str] = Header(default=None),
 ) -> dict:
-    if not _use_worker():
+    if not (_use_worker() or _use_queue()):
         raise HTTPException(status_code=409, detail="Worker mode disabled")
     if not _worker_token() or x_worker_token != _worker_token():
         raise HTTPException(status_code=401, detail="Missing worker token")
@@ -319,7 +349,7 @@ def download_artifacts_zip(
     user_id = user_id_from_request(authorization, x_user_id)
     _load_job_or_404(job_id, user_id)
     job_dir = store.job_dir(job_id)
-    if not job_dir.exists():
+    if not job_dir.exists() and not store.object_store:
         raise HTTPException(status_code=404, detail="Job not found")
 
     def include_path(path: Path) -> bool:
@@ -335,13 +365,25 @@ def download_artifacts_zip(
     temp_file.close()
 
     with zipfile.ZipFile(temp_file.name, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
-        for path in job_dir.rglob("*"):
-            if not path.is_file():
-                continue
-            if not include_path(path):
-                continue
-            arcname = str(path.relative_to(job_dir))
-            zipf.write(path, arcname=arcname)
+        if job_dir.exists():
+            for path in job_dir.rglob("*"):
+                if not path.is_file():
+                    continue
+                if not include_path(path):
+                    continue
+                arcname = str(path.relative_to(job_dir))
+                zipf.write(path, arcname=arcname)
+        elif store.object_store:
+            prefix = store.object_store.key_for(str(job_id))
+            keys = store.object_store.list_prefix(prefix)
+            for key in keys:
+                if key.endswith(".token") or key.endswith("migration.db"):
+                    continue
+                full_key = store.object_store.key_for(str(job_id), key)
+                payload = store.object_store.get_bytes(full_key)
+                if payload is None:
+                    continue
+                zipf.writestr(key, payload)
 
     background_tasks.add_task(os.remove, temp_file.name)
     filename = f"skybridge-run-{job_id}.zip"

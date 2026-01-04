@@ -19,7 +19,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
     status = "Enabled"
 
     expiration {
-      days = 30
+      days = 7
     }
   }
 }
@@ -44,6 +44,33 @@ resource "aws_dynamodb_table" "jobs" {
     attribute_name = "ttl_epoch"
     enabled        = true
   }
+
+  global_secondary_index {
+    name            = "job_id-index"
+    hash_key        = "job_id"
+    projection_type = "ALL"
+  }
+}
+
+resource "aws_dynamodb_table" "credentials" {
+  name         = "${local.name_prefix}-credentials"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "token"
+
+  attribute {
+    name = "token"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "ttl_epoch"
+    enabled        = true
+  }
+}
+
+resource "aws_sqs_queue" "job_queue" {
+  name                       = "${local.name_prefix}-job-queue"
+  visibility_timeout_seconds = 900
 }
 
 resource "aws_cognito_user_pool" "users" {

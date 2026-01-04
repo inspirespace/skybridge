@@ -8,6 +8,11 @@ output "jobs_table_name" {
   value       = aws_dynamodb_table.jobs.name
 }
 
+output "credentials_table_name" {
+  description = "DynamoDB table for short-lived credentials."
+  value       = aws_dynamodb_table.credentials.name
+}
+
 output "user_pool_id" {
   description = "Cognito user pool ID."
   value       = aws_cognito_user_pool.users.id
@@ -26,6 +31,11 @@ output "user_pool_domain" {
 output "api_id" {
   description = "API Gateway HTTP API ID."
   value       = aws_apigatewayv2_api.http_api.id
+}
+
+output "job_queue_url" {
+  description = "SQS queue URL for job orchestration."
+  value       = aws_sqs_queue.job_queue.url
 }
 
 output "lambda_handler_zip" {

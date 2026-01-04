@@ -10,6 +10,9 @@ from shutil import rmtree
 from typing import Any
 from uuid import UUID
 
+import boto3
+from boto3.dynamodb.conditions import Key
+
 from .models import ImportReport, JobRecord, ReviewSummary
 from .object_store import ObjectStore
 
@@ -20,13 +23,27 @@ class StoredJob:
 
 
 class JobStore:
-    def __init__(self, base_path: Path, object_store: ObjectStore | None = None) -> None:
+    def __init__(
+        self,
+        base_path: Path,
+        object_store: ObjectStore | None = None,
+        dynamo_table_name: str | None = None,
+    ) -> None:
         self._base_path = base_path
         self._object_store = object_store
+        self._dynamo_table = (
+            boto3.resource("dynamodb").Table(dynamo_table_name)
+            if dynamo_table_name
+            else None
+        )
         self._base_path.mkdir(parents=True, exist_ok=True)
 
     def _job_dir(self, job_id: UUID) -> Path:
         return self._base_path / str(job_id)
+
+    @property
+    def object_store(self) -> ObjectStore | None:
+        return self._object_store
 
     def _job_file(self, job_id: UUID) -> Path:
         return self._job_dir(job_id) / "job.json"
@@ -35,6 +52,17 @@ class JobStore:
         return self._job_dir(job_id) / f"{purpose}.token"
 
     def list_all_jobs(self) -> list[JobRecord]:
+        if self._dynamo_table:
+            jobs: list[JobRecord] = []
+            response = self._dynamo_table.scan()
+            for item in response.get("Items", []):
+                job = _deserialize_item(item)
+                if self._is_expired(job):
+                    self.delete_job(job.job_id)
+                    continue
+                jobs.append(job)
+            return sorted(jobs, key=lambda job: job.created_at, reverse=True)
+
         jobs: list[JobRecord] = []
         for job_dir in self._base_path.iterdir():
             job_file = job_dir / "job.json"
@@ -52,6 +80,19 @@ class JobStore:
         return self._job_dir(job_id)
 
     def list_jobs(self, user_id: str) -> list[JobRecord]:
+        if self._dynamo_table:
+            response = self._dynamo_table.query(
+                KeyConditionExpression=Key("user_id").eq(user_id)
+            )
+            jobs: list[JobRecord] = []
+            for item in response.get("Items", []):
+                job = _deserialize_item(item)
+                if self._is_expired(job):
+                    self.delete_job(job.job_id)
+                    continue
+                jobs.append(job)
+            return sorted(jobs, key=lambda job: job.created_at, reverse=True)
+
         jobs: list[JobRecord] = []
         for job_dir in self._base_path.iterdir():
             job_file = job_dir / "job.json"
@@ -68,6 +109,20 @@ class JobStore:
         return sorted(jobs, key=lambda job: job.created_at, reverse=True)
 
     def load_job(self, job_id: UUID) -> JobRecord:
+        if self._dynamo_table:
+            response = self._dynamo_table.query(
+                IndexName="job_id-index",
+                KeyConditionExpression=Key("job_id").eq(str(job_id)),
+            )
+            items = response.get("Items", [])
+            if not items:
+                raise FileNotFoundError("Job not found")
+            job = _deserialize_item(items[0])
+            if self._is_expired(job):
+                self.delete_job(job.job_id)
+                raise FileNotFoundError("Job expired")
+            return job
+
         job_file = self._job_file(job_id)
         job_data = json.loads(job_file.read_text())
         job = JobRecord.model_validate(job_data)
@@ -77,6 +132,14 @@ class JobStore:
         return job
 
     def delete_job(self, job_id: UUID) -> None:
+        if self._dynamo_table:
+            try:
+                job = self.load_job(job_id)
+                self._dynamo_table.delete_item(
+                    Key={"user_id": job.user_id, "job_id": str(job.job_id)}
+                )
+            except FileNotFoundError:
+                pass
         job_dir = self._job_dir(job_id)
         if job_dir.exists():
             rmtree(job_dir)
@@ -94,6 +157,17 @@ class JobStore:
         job_dir.mkdir(parents=True, exist_ok=True)
         job_file = job_dir / "job.json"
         job_file.write_text(json.dumps(_serialize(job), indent=2))
+        if self._dynamo_table:
+            ttl_epoch = _ttl_epoch(job.created_at)
+            item = {
+                "user_id": job.user_id,
+                "job_id": str(job.job_id),
+                "payload": json.dumps(_serialize(job)),
+                "created_at": job.created_at.isoformat(),
+                "updated_at": job.updated_at.isoformat(),
+                "ttl_epoch": ttl_epoch,
+            }
+            self._dynamo_table.put_item(Item=item)
 
     def write_artifact(self, job_id: UUID, name: str, payload: dict[str, Any]) -> None:
         job_dir = self._job_dir(job_id)
@@ -146,6 +220,9 @@ class JobStore:
 
     def list_artifacts(self, job_id: UUID) -> list[str]:
         job_dir = self._job_dir(job_id)
+        if not job_dir.exists() and self._object_store:
+            prefix = self._object_store.key_for(str(job_id))
+            return self._object_store.list_prefix(prefix)
         if not job_dir.exists():
             return []
         return sorted(
@@ -154,15 +231,42 @@ class JobStore:
 
     def load_artifact(self, job_id: UUID, name: str) -> dict[str, Any]:
         artifact_file = self._job_dir(job_id) / name
-        return json.loads(artifact_file.read_text())
+        if artifact_file.exists():
+            return json.loads(artifact_file.read_text())
+        if self._object_store:
+            key = self._object_store.key_for(str(job_id), name)
+            payload = self._object_store.get_json(key)
+            if payload is not None:
+                return payload
+        raise FileNotFoundError("Artifact not found")
 
     def write_token(self, job_id: UUID, purpose: str, token: str) -> None:
         token_file = self._token_file(job_id, purpose)
         token_file.write_text(token)
+        if self._dynamo_table:
+            job = self.load_job(job_id)
+            field = f\"{purpose}_token\"
+            self._dynamo_table.update_item(
+                Key={\"user_id\": job.user_id, \"job_id\": str(job.job_id)},
+                UpdateExpression=f\"SET {field} = :token\",
+                ExpressionAttributeValues={\":token\": token},
+            )
 
     def read_token(self, job_id: UUID, purpose: str) -> str | None:
         token_file = self._token_file(job_id, purpose)
         if not token_file.exists():
+            if self._dynamo_table:
+                try:
+                    job = self.load_job(job_id)
+                except FileNotFoundError:
+                    return None
+                field = f\"{purpose}_token\"
+                response = self._dynamo_table.get_item(
+                    Key={\"user_id\": job.user_id, \"job_id\": str(job.job_id)},
+                    ProjectionExpression=field,
+                )
+                item = response.get(\"Item\") if isinstance(response, dict) else None
+                return item.get(field) if item else None
             return None
         return token_file.read_text().strip()
 
@@ -170,6 +274,16 @@ class JobStore:
         token_file = self._token_file(job_id, purpose)
         if token_file.exists():
             token_file.unlink()
+        if self._dynamo_table:
+            try:
+                job = self.load_job(job_id)
+            except FileNotFoundError:
+                return
+            field = f\"{purpose}_token\"
+            self._dynamo_table.update_item(
+                Key={\"user_id\": job.user_id, \"job_id\": str(job.job_id)},
+                UpdateExpression=f\"REMOVE {field}\",
+            )
 
     def _is_expired(self, job: JobRecord) -> bool:
         retention_days = int(os.getenv("BACKEND_RETENTION_DAYS") or "7")
@@ -180,6 +294,21 @@ class JobStore:
         if created_at.tzinfo is None:
             created_at = created_at.replace(tzinfo=timezone.utc)
         return created_at < now - timedelta(days=retention_days)
+
+
+def _ttl_epoch(created_at: datetime) -> int:
+    retention_days = int(os.getenv(\"BACKEND_RETENTION_DAYS\") or \"7\")
+    if retention_days <= 0:
+        retention_days = 7
+    if created_at.tzinfo is None:
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    return int(created_at.timestamp() + retention_days * 86400)
+
+
+def _deserialize_item(item: dict[str, Any]) -> JobRecord:
+    payload = item.get(\"payload\") or \"{}\"
+    data = json.loads(payload)
+    return JobRecord.model_validate(data)
 
 
 def _serialize(job: JobRecord) -> dict[str, Any]:

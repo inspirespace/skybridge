@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import secrets
 import time
+import os
+import json
 from dataclasses import dataclass
 from typing import Optional
+
+import boto3
 
 
 @dataclass
@@ -41,3 +45,47 @@ class CredentialStore:
         entry.used = True
         self._entries.pop(token, None)
         return entry.credentials
+
+
+class DynamoCredentialStore:
+    def __init__(self, table_name: str) -> None:
+        self._table = boto3.resource("dynamodb").Table(table_name)
+
+    def issue(self, job_id: str, purpose: str, credentials: dict, ttl_seconds: int) -> str:
+        token = secrets.token_urlsafe(32)
+        ttl_epoch = int(time.time() + ttl_seconds)
+        self._table.put_item(
+            Item={
+                "token": token,
+                "job_id": job_id,
+                "purpose": purpose,
+                "credentials": json.dumps(credentials),
+                "ttl_epoch": ttl_epoch,
+                "used": False,
+            }
+        )
+        return token
+
+    def claim(self, token: str, job_id: str, purpose: str) -> Optional[dict]:
+        response = self._table.get_item(Key={"token": token})
+        item = response.get("Item") if isinstance(response, dict) else None
+        if not item:
+            return None
+        if item.get("used") or item.get("job_id") != job_id or item.get("purpose") != purpose:
+            return None
+        if time.time() > int(item.get("ttl_epoch") or 0):
+            self._table.delete_item(Key={"token": token})
+            return None
+        self._table.delete_item(Key={"token": token})
+        try:
+            return json.loads(item.get("credentials") or "{}")
+        except json.JSONDecodeError:
+            return None
+
+
+def build_credential_store() -> CredentialStore | DynamoCredentialStore:
+    if (os.getenv("BACKEND_DYNAMO_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
+        table_name = os.getenv("DYNAMO_CREDENTIALS_TABLE") or ""
+        if table_name:
+            return DynamoCredentialStore(table_name)
+    return CredentialStore()

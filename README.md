@@ -220,6 +220,11 @@ Artifact storage (S3/MinIO):
 - Per-flight CloudAhoy raw JSON exports are also uploaded
   (`cloudahoy_exports/*.cloudahoy.json`).
 
+Production orchestration (stateless API):
+- `BACKEND_DYNAMO_ENABLED=1` with `DYNAMO_JOBS_TABLE` for job metadata.
+- `DYNAMO_CREDENTIALS_TABLE` for short-lived credentials (TTL minutes).
+- `BACKEND_SQS_ENABLED=1` with `SQS_QUEUE_URL` to enqueue review/import work.
+
 Test the API:
 
 ```sh
