@@ -785,7 +785,7 @@ export default function App() {
                 </AccordionContent>
               </AccordionItem>
 
-              <div className="mx-4 border-t border-[#e3ebf5] dark:border-slate-700" />
+              <div className="border-t border-[#e3ebf5] dark:border-slate-700" />
               <AccordionItem
                 value="connect"
                 className={cn(
@@ -970,7 +970,7 @@ export default function App() {
                 </AccordionContent>
               </AccordionItem>
 
-              <div className="mx-4 border-t border-[#e3ebf5] dark:border-slate-700" />
+              <div className="border-t border-[#e3ebf5] dark:border-slate-700" />
               <AccordionItem
                 value="review"
                 className={cn(
@@ -1164,7 +1164,7 @@ export default function App() {
                 </AccordionContent>
               </AccordionItem>
 
-              <div className="mx-4 border-t border-[#e3ebf5] dark:border-slate-700" />
+              <div className="border-t border-[#e3ebf5] dark:border-slate-700" />
               <AccordionItem
                 value="import"
                 className={cn(
