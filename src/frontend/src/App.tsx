@@ -421,8 +421,13 @@ export default function App() {
     if (!jobError || !isSignedIn) return;
     if (isAuthExpiredError(jobError)) {
       handleTokenExpired();
+      return;
     }
-  }, [jobError, isSignedIn, handleTokenExpired]);
+    const status = (jobError as Error & { status?: number }).status;
+    if (status === 404 || jobError.message.toLowerCase().includes("job not found")) {
+      clearLocalState();
+    }
+  }, [jobError, isSignedIn, handleTokenExpired, clearLocalState]);
 
   React.useEffect(() => {
     if (!isSignedIn) return;
