@@ -60,7 +60,7 @@ services:
       - BACKEND_WAIT_FOR_PROCESSING=true
       - BACKEND_PROCESSING_INTERVAL=20
       - BACKEND_PROCESSING_TIMEOUT=3600
-      - AWS_REGION=us-east-1
+      - AWS_REGION=eu-west-1
       - DEV_USE_MOCKS=${DEV_USE_MOCKS:-1}
       - MOCK_CLOUD_AHOY_BASE_URL=http://mock-cloudahoy:8081/api
       - MOCK_FLYSTO_BASE_URL=http://mock-flysto:8082
@@ -70,7 +70,7 @@ services:
       - S3_ENDPOINT_URL=http://minio:9000
       - S3_BUCKET=skybridge-artifacts
       - S3_PREFIX=jobs
-      - S3_REGION=us-east-1
+      - S3_REGION=eu-west-1
       - S3_ACCESS_KEY=minioadmin
       - S3_SECRET_KEY=minioadmin
       - S3_USE_SSL=false
@@ -113,7 +113,7 @@ services:
       - BACKEND_WAIT_FOR_PROCESSING=true
       - BACKEND_PROCESSING_INTERVAL=20
       - BACKEND_PROCESSING_TIMEOUT=3600
-      - AWS_REGION=us-east-1
+      - AWS_REGION=eu-west-1
       - DEV_USE_MOCKS=${DEV_USE_MOCKS:-1}
       - MOCK_CLOUD_AHOY_BASE_URL=http://mock-cloudahoy:8081/api
       - MOCK_FLYSTO_BASE_URL=http://mock-flysto:8082
@@ -123,7 +123,7 @@ services:
       - S3_ENDPOINT_URL=http://minio:9000
       - S3_BUCKET=skybridge-artifacts
       - S3_PREFIX=jobs
-      - S3_REGION=us-east-1
+      - S3_REGION=eu-west-1
       - S3_ACCESS_KEY=minioadmin
       - S3_SECRET_KEY=minioadmin
       - S3_USE_SSL=false
