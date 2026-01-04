@@ -755,8 +755,8 @@ export default function App() {
                             data, and let you resume later.
                           </li>
                           <li>
-                            We import flights, times, routes, aircraft details, and
-                            remarks. You can review everything before approving.
+                            We import flights, times, routes, crew, trajectory data,
+                            and remarks. You can review everything before approving.
                           </li>
                           <li>
                             Credentials are used only for this job and never stored.

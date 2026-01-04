@@ -142,7 +142,9 @@ async function requestJson<T>(
 
   if (!response.ok) {
     const message = await response.text();
-    const error = new Error(message || "Request failed");
+    const errorMessage =
+      message?.trim() || `Request failed (${response.status})`;
+    const error = new Error(errorMessage);
     (error as Error & { status?: number }).status = response.status;
     throw error;
   }
