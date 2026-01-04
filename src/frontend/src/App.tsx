@@ -82,6 +82,13 @@ const RETENTION_DAYS = Number.parseInt(import.meta.env.VITE_RETENTION_DAYS ?? "7
 const retentionDays = Number.isFinite(RETENTION_DAYS) ? RETENTION_DAYS : 7;
 
 export default function App() {
+  const pathname =
+    typeof window !== "undefined"
+      ? window.location.pathname.replace(/\/+$/, "") || "/"
+      : "/";
+  const staticPage =
+    pathname === "/imprint" ? "imprint" : pathname === "/privacy" ? "privacy" : null;
+
   const [userId, setUserId] = React.useState<string | null>(() =>
     localStorage.getItem(USER_ID_KEY)
   );
@@ -612,6 +619,203 @@ export default function App() {
         : !importComplete
           ? "Import"
           : "All steps completed";
+
+  if (staticPage) {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+        <header className="border-b border-slate-200/80 bg-white/80 backdrop-blur dark:border-slate-800/70 dark:bg-slate-950/80">
+          <div className="container flex items-center justify-between py-5">
+            <a
+              href="/"
+              className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-600 dark:text-slate-300"
+            >
+              Skybridge
+            </a>
+            <ThemeToggle />
+          </div>
+        </header>
+        <main className="container py-10">
+          <div className="max-w-3xl space-y-6">
+            {staticPage === "imprint" ? (
+              <>
+                <div className="space-y-2">
+                  <h1 className="text-2xl font-semibold">Imprint</h1>
+                  <p className="text-sm text-muted-foreground">
+                    Skybridge is operated by Inspirespace e.U.
+                  </p>
+                </div>
+                <div className="space-y-3 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
+                  <p>Inspirespace e.U.</p>
+                  <p>Eingetragenes Einzelunternehmen</p>
+                  <p>Inhaber: Ulrich Lehner</p>
+                  <p>
+                    Gewerbewortlaut: Dienstleistungen in der automatischen
+                    Datenverarbeitung und Informationstechnik
+                  </p>
+                  <p>
+                    Geschäftszweig: IT- und Marketing-Dienstleistungen,
+                    Konzeption, Entwicklung und Vermarktung von Software und
+                    Prototypen
+                  </p>
+                  <p>Firmensitz: Golfplatzstraße 32/5, 4048 Puchenau, Austria</p>
+                  <p>E-Mail: hello@inspirespace.co</p>
+                  <p>Telefon: +43 660 3243257</p>
+                  <p>UID-Nr: ATU76178226</p>
+                  <p>Firmenbuchnummer (FN): 542815h</p>
+                  <p>Firmenbuchgericht: Landesgericht Linz</p>
+                  <p>Aufsichtsbehörde: Bezirkshauptmannschaft Urfahr Umgebung</p>
+                  <p>
+                    Kammerzugehörigkeit: WKO Oberösterreich Sparte Information und
+                    Consulting
+                  </p>
+                  <p>Gewerbeordnung: www.ris.bka.gv.at</p>
+                  <p>
+                    Verbraucher haben die Möglichkeit, Beschwerden an die
+                    Online-Streitbeilegungsplattform der EU zu richten:
+                    http://ec.europa.eu/odr. Sie können allfällige Beschwerde
+                    auch an die oben angegebene E-Mail-Adresse richten.
+                  </p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <h1 className="text-2xl font-semibold">Privacy policy</h1>
+                  <p className="text-sm text-muted-foreground">
+                    Datenschutzerklärung für Skybridge
+                  </p>
+                </div>
+                <div className="space-y-4 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
+                  <section className="space-y-2">
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                      Verantwortlicher
+                    </h2>
+                    <p>
+                      Inspirespace e.U., Golfplatzstraße 32/5, 4048 Puchenau,
+                      Austria, hello@inspirespace.co.
+                    </p>
+                  </section>
+                  <section className="space-y-2">
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                      Zweck der Verarbeitung
+                    </h2>
+                    <p>
+                      Skybridge ermöglicht den Import von Flugdaten aus CloudAhoy
+                      nach FlySto. Dafür verarbeiten wir Ihre Anmeldedaten zu
+                      CloudAhoy/FlySto nur zur Durchführung des jeweiligen
+                      Importvorgangs.
+                    </p>
+                  </section>
+                  <section className="space-y-2">
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                      Verarbeitete Daten
+                    </h2>
+                    <ul className="list-disc space-y-1 pl-5">
+                      <li>Kontakt- und Kontodaten (z. B. E‑Mail-Adresse).</li>
+                      <li>
+                        Zugangsdaten für CloudAhoy/FlySto (nur für den jeweiligen
+                        Import, nicht dauerhaft gespeichert).
+                      </li>
+                      <li>
+                        Flugdaten inkl. Zeiten, Routen, Crew, Trajektoriendaten
+                        und Bemerkungen.
+                      </li>
+                      <li>
+                        Technische Protokolle (z. B. IP-Adresse, Gerätedaten) zur
+                        Sicherheit und Fehleranalyse.
+                      </li>
+                    </ul>
+                  </section>
+                  <section className="space-y-2">
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                      Rechtsgrundlagen
+                    </h2>
+                    <ul className="list-disc space-y-1 pl-5">
+                      <li>
+                        Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung).
+                      </li>
+                      <li>
+                        Art. 6 Abs. 1 lit. f DSGVO (Sicherheit und
+                        Fehlerbehebung).
+                      </li>
+                    </ul>
+                  </section>
+                  <section className="space-y-2">
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                      Empfänger und Auftragsverarbeiter
+                    </h2>
+                    <p>
+                      Für den Datentransfer nutzen wir CloudAhoy und FlySto. Für
+                      Hosting und Speicherung können Cloud-Infrastrukturen (z. B.
+                      AWS) eingesetzt werden. Sofern dabei Daten in Drittländer
+                      übertragen werden, erfolgt dies auf Basis geeigneter
+                      Garantien (z. B. Standardvertragsklauseln).
+                    </p>
+                  </section>
+                  <section className="space-y-2">
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                      Speicherdauer
+                    </h2>
+                    <p>
+                      Importergebnisse werden standardmäßig für {retentionDays} Tage
+                      aufbewahrt und anschließend automatisch gelöscht. Sie können
+                      die Ergebnisse jederzeit manuell löschen.
+                    </p>
+                  </section>
+                  <section className="space-y-2">
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                      Ihre Rechte
+                    </h2>
+                    <p>
+                      Sie haben das Recht auf Auskunft, Berichtigung, Löschung,
+                      Einschränkung der Verarbeitung, Datenübertragbarkeit und
+                      Widerspruch. Beschwerden können an die zuständige
+                      Datenschutzbehörde gerichtet werden.
+                    </p>
+                  </section>
+                  <section className="space-y-2">
+                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+                      Kontakt
+                    </h2>
+                    <p>
+                      Für Datenschutzanfragen wenden Sie sich an
+                      hello@inspirespace.co.
+                    </p>
+                  </section>
+                </div>
+              </>
+            )}
+            <div>
+              <a className="text-sm text-sky-600 hover:underline" href="/">
+                Back to app
+              </a>
+            </div>
+          </div>
+        </main>
+        <footer className="border-t bg-background/80">
+          <div className="container flex flex-wrap items-center justify-between gap-3 pb-20 pt-6 text-sm text-muted-foreground lg:py-6">
+            <div>© {new Date().getFullYear()} Inspirespace e.U.</div>
+            <div className="flex flex-wrap gap-4">
+              <a className="hover:text-foreground" href="/imprint">
+                Imprint
+              </a>
+              <a className="hover:text-foreground" href="/privacy">
+                Privacy
+              </a>
+              <a
+                className="hover:text-foreground"
+                href="https://github.com/inspirespace/skybridge/issues"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Support
+              </a>
+            </div>
+          </div>
+        </footer>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-[#f7f9fc] to-[#eef3f8] text-[#1c2430] dark:bg-gradient-to-b dark:from-[#0b1120] dark:to-[#0f172a] dark:text-slate-100">
@@ -1375,13 +1579,18 @@ export default function App() {
         <div className="container flex flex-wrap items-center justify-between gap-3 pb-20 pt-6 text-sm text-muted-foreground lg:py-6">
           <div>© {new Date().getFullYear()} Inspirespace e.U.</div>
           <div className="flex flex-wrap gap-4">
-            <a className="hover:text-foreground" href="#">
+            <a className="hover:text-foreground" href="/imprint">
               Imprint
             </a>
-            <a className="hover:text-foreground" href="#">
+            <a className="hover:text-foreground" href="/privacy">
               Privacy
             </a>
-            <a className="hover:text-foreground" href="#">
+            <a
+              className="hover:text-foreground"
+              href="https://github.com/inspirespace/skybridge/issues"
+              target="_blank"
+              rel="noreferrer"
+            >
               Support
             </a>
           </div>
