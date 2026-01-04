@@ -720,7 +720,7 @@ export default function App() {
           </aside>
 
           <section className="space-y-2.5">
-            <div className="rounded-xl border border-[#d1dbea] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-slate-700 dark:bg-slate-900/90 dark:shadow-none">
+            <div className="overflow-hidden rounded-xl border border-[#d1dbea] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-slate-700 dark:bg-slate-900/90 dark:shadow-none">
             <Accordion
               type="single"
               collapsible
