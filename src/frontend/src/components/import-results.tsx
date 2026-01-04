@@ -29,7 +29,7 @@ export function ImportResults({
       <Badge variant="success">OK</Badge>
     );
   return (
-    <Card className="border bg-card/90 shadow-sm">
+    <Card className="border border-[#e3ebf5] bg-card/90 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/40">
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Import results</CardTitle>
       </CardHeader>
@@ -75,7 +75,7 @@ function ResultRow({
   badge: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-md border bg-muted/20 px-4 py-3">
+    <div className="flex items-center justify-between gap-4 rounded-md border border-[#e3ebf5] bg-muted/20 px-4 py-3 dark:border-sky-900/60 dark:bg-slate-950/30">
       <div className="flex items-center gap-3">
         {badge}
         <div className="space-y-1">

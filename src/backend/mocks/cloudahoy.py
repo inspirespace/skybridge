@@ -95,6 +95,14 @@ def _build_meta(item: dict[str, Any]) -> dict[str, Any]:
     metadata = item.get("metadata")
     if isinstance(metadata, dict):
         meta.update(metadata)
+        if "from" not in meta:
+            meta["from"] = metadata.get("aircraft_from") or metadata.get("event_from")
+        if "to" not in meta:
+            meta["to"] = metadata.get("aircraft_to") or metadata.get("event_to")
+        if "e_from" not in meta:
+            meta["e_from"] = metadata.get("event_from")
+        if "e_to" not in meta:
+            meta["e_to"] = metadata.get("event_to")
     if "tailNumber" not in meta and item.get("tail_number"):
         meta["tailNumber"] = item.get("tail_number")
     if "summary" not in meta and isinstance(metadata, dict) and metadata.get("summary"):

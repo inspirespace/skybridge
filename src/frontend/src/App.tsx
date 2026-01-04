@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/table";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
-import { Calendar as CalendarIcon, Check, Mail } from "lucide-react";
+import { ArrowRight, Calendar as CalendarIcon, Check, LogIn } from "lucide-react";
 import {
   acceptReview,
   createJob,
@@ -771,7 +771,7 @@ export default function App() {
                         onClick={handleSignIn}
                         disabled={flow.signedIn || actionLoading}
                       >
-                        <Mail className="h-4 w-4" />
+                        <LogIn className="h-4 w-4" />
                         Sign up / Sign in
                       </Button>
                     </div>
@@ -1055,13 +1055,19 @@ export default function App() {
                         </div>
                       )}
                       {reviewComplete && reviewSummary && (
-                        <div className="flex flex-wrap gap-2 rounded-md border bg-muted/20 p-2 shadow-sm">
-                          <Badge variant="secondary">
+                        <div className="flex flex-wrap gap-2 rounded-md border border-[#e3ebf5] bg-muted/20 p-2 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/40">
+                          <Badge
+                            variant="secondary"
+                            className="border border-sky-200/40 text-foreground dark:border-sky-900/70 dark:bg-sky-950/40 dark:text-sky-100"
+                          >
                             <span className="tabular-nums">
                               Flights: {reviewSummary.flight_count}
                             </span>
                           </Badge>
-                          <Badge variant="secondary">
+                          <Badge
+                            variant="secondary"
+                            className="border border-sky-200/40 text-foreground dark:border-sky-900/70 dark:bg-sky-950/40 dark:text-sky-100"
+                          >
                             <span className="tabular-nums">
                               Hours: {reviewSummary.total_hours}
                             </span>
@@ -1072,6 +1078,11 @@ export default function App() {
                                 ? "warning"
                                 : "secondary"
                             }
+                            className={
+                              reviewSummary.missing_tail_numbers > 0
+                                ? undefined
+                                : "border border-sky-200/40 text-foreground dark:border-sky-900/70 dark:bg-sky-950/40 dark:text-sky-100"
+                            }
                           >
                             <span className="tabular-nums">
                               Registration missing: {reviewSummary.missing_tail_numbers}
@@ -1080,23 +1091,25 @@ export default function App() {
                         </div>
                       )}
                       {reviewComplete && (
-                        <div className="overflow-x-auto rounded-md border bg-background/70 shadow-sm">
-                          <Table className="min-w-[720px]">
-                            <TableHeader className="bg-muted/40">
+                        <div className="overflow-x-auto rounded-md border border-[#e3ebf5] bg-background/70 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/40">
+                          <Table className="min-w-[640px]">
+                            <TableHeader className="bg-muted/40 dark:bg-slate-900/60">
                               <TableRow>
                                 <TableHead>Status</TableHead>
-                                <TableHead>Flight ID</TableHead>
                                 <TableHead>Date</TableHead>
                                 <TableHead>Registration</TableHead>
-                                <TableHead>Origin</TableHead>
-                                <TableHead>Destination</TableHead>
+                                <TableHead>From / To</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
                               {visibleFlights.map((flight, index) => (
                                 <TableRow
                                   key={flight.flight_id}
-                                  className={index % 2 === 0 ? "bg-muted/40" : undefined}
+                                  className={
+                                    index % 2 === 0
+                                      ? "bg-muted/40 dark:bg-slate-900/30"
+                                      : undefined
+                                  }
                                 >
                                   <TableCell>
                                     <Badge
@@ -1106,11 +1119,19 @@ export default function App() {
                                       {flight.tail_number ? "OK" : "Needs review"}
                                     </Badge>
                                   </TableCell>
-                                  <TableCell>{formatFlightId(flight)}</TableCell>
                                   <TableCell>{formatDate(flight.date)}</TableCell>
                                   <TableCell>{flight.tail_number ?? "—"}</TableCell>
-                                  <TableCell>{flight.origin ?? "—"}</TableCell>
-                                  <TableCell>{flight.destination ?? "—"}</TableCell>
+                                  <TableCell>
+                                    <span className="inline-flex items-center gap-2">
+                                      <span className="tabular-nums">
+                                        {flight.origin ?? "—"}
+                                      </span>
+                                      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                                      <span className="tabular-nums">
+                                        {flight.destination ?? "—"}
+                                      </span>
+                                    </span>
+                                  </TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
