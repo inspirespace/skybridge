@@ -18,6 +18,10 @@ Production web UI for the CloudAhoy → FlySto import flow. The wireframe is the
 - API: `https://skybridge.localhost/api`
 - Auth (Keycloak): `https://auth.skybridge.localhost`
 
+## Tests (Devcontainer)
+- Unit/integration: `devcontainer exec --workspace-folder . npm --prefix src/frontend run test`
+- E2E (Playwright): `devcontainer exec --workspace-folder . npm --prefix src/frontend run test:e2e`
+
 ## State Model
 See `src/state/flow.ts` for flow state, open-step logic, and CTA rules.
 
