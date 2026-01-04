@@ -86,6 +86,7 @@ class DynamoCredentialStore:
 def build_credential_store() -> CredentialStore | DynamoCredentialStore:
     if (os.getenv("BACKEND_DYNAMO_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
         table_name = os.getenv("DYNAMO_CREDENTIALS_TABLE") or ""
-        if table_name:
-            return DynamoCredentialStore(table_name)
+        if not table_name:
+            raise RuntimeError("DYNAMO_CREDENTIALS_TABLE is required when BACKEND_DYNAMO_ENABLED=1")
+        return DynamoCredentialStore(table_name)
     return CredentialStore()

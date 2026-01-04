@@ -58,6 +58,7 @@ def _verify_token(token: str) -> dict[str, Any]:
         raise HTTPException(status_code=500, detail="AUTH_ISSUER_URL not configured")
 
     audience = _env("AUTH_AUDIENCE")
+    client_id = _env("AUTH_CLIENT_ID")
     key = _resolve_key(token, issuer)
     try:
         payload = jwt.decode(
@@ -70,6 +71,18 @@ def _verify_token(token: str) -> dict[str, Any]:
         )
     except jwt.PyJWTError as exc:
         raise HTTPException(status_code=401, detail=f"Invalid token: {exc}") from exc
+    if client_id:
+        azp = payload.get("azp")
+        aud = payload.get("aud")
+        aud_matches = False
+        if isinstance(aud, str):
+            aud_matches = aud == client_id
+        elif isinstance(aud, list):
+            aud_matches = client_id in aud
+        if azp and azp != client_id:
+            raise HTTPException(status_code=401, detail="Token audience mismatch")
+        if not azp and not aud_matches:
+            raise HTTPException(status_code=401, detail="Token audience mismatch")
     return payload
 
 

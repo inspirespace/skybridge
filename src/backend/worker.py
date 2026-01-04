@@ -37,7 +37,10 @@ def _queue_url() -> str:
 
 def _dynamo_jobs_table() -> str | None:
     if (os.getenv("BACKEND_DYNAMO_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
-        return os.getenv("DYNAMO_JOBS_TABLE") or None
+        table = os.getenv("DYNAMO_JOBS_TABLE") or None
+        if not table:
+            raise RuntimeError("DYNAMO_JOBS_TABLE is required when BACKEND_DYNAMO_ENABLED=1")
+        return table
     return None
 
 
