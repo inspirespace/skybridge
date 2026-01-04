@@ -1,0 +1,21 @@
+export const imprintContent = {
+  title: "Imprint",
+  subtitle: "Skybridge is operated by Inspirespace e.U.",
+  lines: [
+    "Inspirespace e.U.",
+    "Eingetragenes Einzelunternehmen",
+    "Inhaber: Ulrich Lehner",
+    "Gewerbewortlaut: Dienstleistungen in der automatischen Datenverarbeitung und Informationstechnik",
+    "Geschaftszweig: IT- und Marketing-Dienstleistungen, Konzeption, Entwicklung und Vermarktung von Software und Prototypen",
+    "Firmensitz: Golfplatzstrasse 32/5, 4048 Puchenau, Austria",
+    "E-Mail: hello@inspirespace.co",
+    "Telefon: +43 660 3243257",
+    "UID-Nr: ATU76178226",
+    "Firmenbuchnummer (FN): 542815h",
+    "Firmenbuchgericht: Landesgericht Linz",
+    "Aufsichtsbehorde: Bezirkshauptmannschaft Urfahr Umgebung",
+    "Kammerzugehorigkeit: WKO Oberosterreich Sparte Information und Consulting",
+    "Gewerbeordnung: www.ris.bka.gv.at",
+    "Verbraucher haben die Moglichkeit, Beschwerden an die Online-Streitbeilegungsplattform der EU zu richten: http://ec.europa.eu/odr. Sie konnen allfallige Beschwerde auch an die oben angegebene E-Mail-Adresse richten.",
+  ],
+};
