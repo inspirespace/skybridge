@@ -720,7 +720,7 @@ export default function App() {
           </aside>
 
           <section className="space-y-2.5">
-            <div className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-slate-700 dark:bg-slate-900/90 dark:shadow-none">
+            <div className="rounded-xl border border-[#d1dbea] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-slate-700 dark:bg-slate-900/90 dark:shadow-none">
             <Accordion
               type="single"
               collapsible
@@ -818,12 +818,12 @@ export default function App() {
                 </AccordionContent>
               </AccordionItem>
 
-              <div className="mx-4 border-t border-[#c9d6ea] dark:border-slate-700" />
+              <div className="mx-4 border-t border-[#e3ebf5] dark:border-slate-700" />
               <AccordionItem
                 value="connect"
                 className={cn(
                   "border-0 px-4 bg-white dark:bg-transparent",
-                  !allowedSteps.has("connect") && "bg-[#f8fafc] dark:bg-slate-900/60"
+                  !allowedSteps.has("connect") && "bg-[#f7fafd] dark:bg-slate-900/60"
                 )}
               >
                 <AccordionTrigger
@@ -1003,12 +1003,12 @@ export default function App() {
                 </AccordionContent>
               </AccordionItem>
 
-              <div className="mx-4 border-t border-[#c9d6ea] dark:border-slate-700" />
+              <div className="mx-4 border-t border-[#e3ebf5] dark:border-slate-700" />
               <AccordionItem
                 value="review"
                 className={cn(
                   "border-0 px-4 bg-white dark:bg-transparent",
-                  !allowedSteps.has("review") && "bg-[#f8fafc] dark:bg-slate-900/60"
+                  !allowedSteps.has("review") && "bg-[#f7fafd] dark:bg-slate-900/60"
                 )}
               >
                 <AccordionTrigger
@@ -1197,12 +1197,12 @@ export default function App() {
                 </AccordionContent>
               </AccordionItem>
 
-              <div className="mx-4 border-t border-[#c9d6ea] dark:border-slate-700" />
+              <div className="mx-4 border-t border-[#e3ebf5] dark:border-slate-700" />
               <AccordionItem
                 value="import"
                 className={cn(
                   "border-0 px-4 bg-white dark:bg-transparent",
-                  !allowedSteps.has("import") && "bg-[#f8fafc] dark:bg-slate-900/60"
+                  !allowedSteps.has("import") && "bg-[#f7fafd] dark:bg-slate-900/60"
                 )}
               >
                 <AccordionTrigger
