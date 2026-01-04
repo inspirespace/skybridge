@@ -1,12 +1,6 @@
 import * as React from "react";
 
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Accordion } from "@/components/ui/accordion";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,29 +14,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Progress } from "@/components/ui/progress";
-import { ImportResults } from "@/components/import-results";
-import { Separator } from "@/components/ui/separator";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { AppFooter } from "@/components/app/AppFooter";
+import { StaticPage } from "@/components/app/StaticPage";
+import { SignInSection } from "@/components/app/SignInSection";
+import { ConnectSection } from "@/components/app/ConnectSection";
+import { ReviewSection } from "@/components/app/ReviewSection";
+import { ImportSection } from "@/components/app/ImportSection";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
-import { ArrowRight, Calendar as CalendarIcon, Check, LogIn } from "lucide-react";
+import { Check } from "lucide-react";
 import {
   acceptReview,
   createJob,
@@ -621,193 +602,7 @@ export default function App() {
           : "All steps completed";
 
   if (staticPage) {
-    return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-        <header className="border-b border-slate-200/80 bg-white/80 backdrop-blur dark:border-slate-800/70 dark:bg-slate-950/80">
-          <div className="container flex items-center justify-between py-5">
-            <a
-              href="/"
-              className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-600 dark:text-slate-300"
-            >
-              Skybridge
-            </a>
-            <ThemeToggle />
-          </div>
-        </header>
-        <main className="container py-10">
-          <div className="max-w-3xl space-y-6">
-            {staticPage === "imprint" ? (
-              <>
-                <div className="space-y-2">
-                  <h1 className="text-2xl font-semibold">Imprint</h1>
-                  <p className="text-sm text-muted-foreground">
-                    Skybridge is operated by Inspirespace e.U.
-                  </p>
-                </div>
-                <div className="space-y-3 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
-                  <p>Inspirespace e.U.</p>
-                  <p>Eingetragenes Einzelunternehmen</p>
-                  <p>Inhaber: Ulrich Lehner</p>
-                  <p>
-                    Gewerbewortlaut: Dienstleistungen in der automatischen
-                    Datenverarbeitung und Informationstechnik
-                  </p>
-                  <p>
-                    Geschäftszweig: IT- und Marketing-Dienstleistungen,
-                    Konzeption, Entwicklung und Vermarktung von Software und
-                    Prototypen
-                  </p>
-                  <p>Firmensitz: Golfplatzstraße 32/5, 4048 Puchenau, Austria</p>
-                  <p>E-Mail: hello@inspirespace.co</p>
-                  <p>Telefon: +43 660 3243257</p>
-                  <p>UID-Nr: ATU76178226</p>
-                  <p>Firmenbuchnummer (FN): 542815h</p>
-                  <p>Firmenbuchgericht: Landesgericht Linz</p>
-                  <p>Aufsichtsbehörde: Bezirkshauptmannschaft Urfahr Umgebung</p>
-                  <p>
-                    Kammerzugehörigkeit: WKO Oberösterreich Sparte Information und
-                    Consulting
-                  </p>
-                  <p>Gewerbeordnung: www.ris.bka.gv.at</p>
-                  <p>
-                    Verbraucher haben die Möglichkeit, Beschwerden an die
-                    Online-Streitbeilegungsplattform der EU zu richten:
-                    http://ec.europa.eu/odr. Sie können allfällige Beschwerde
-                    auch an die oben angegebene E-Mail-Adresse richten.
-                  </p>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="space-y-2">
-                  <h1 className="text-2xl font-semibold">Privacy policy</h1>
-                  <p className="text-sm text-muted-foreground">
-                    This policy applies to Skybridge (Austria / EU).
-                  </p>
-                </div>
-                <div className="space-y-4 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
-                  <section className="space-y-2">
-                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                      Controller
-                    </h2>
-                    <p>
-                      Inspirespace e.U., Golfplatzstraße 32/5, 4048 Puchenau,
-                      Austria, hello@inspirespace.co.
-                    </p>
-                  </section>
-                  <section className="space-y-2">
-                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                      Purpose of processing
-                    </h2>
-                    <p>
-                      Skybridge enables the import of flight data from CloudAhoy to
-                      FlySto. We process credentials only to execute the specific
-                      import requested by you and to display the review before
-                      import.
-                    </p>
-                  </section>
-                  <section className="space-y-2">
-                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                      Data we process (minimal by design)
-                    </h2>
-                    <ul className="list-disc space-y-1 pl-5">
-                      <li>Account identifiers (e.g., email address).</li>
-                      <li>
-                        CloudAhoy / FlySto credentials (used only for the current
-                        job; not stored).
-                      </li>
-                      <li>
-                        Flight data including times, routes, crew, trajectory data,
-                        and remarks.
-                      </li>
-                      <li>
-                        Basic technical logs (e.g., IP address, request metadata) for
-                        security and troubleshooting.
-                      </li>
-                    </ul>
-                  </section>
-                  <section className="space-y-2">
-                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                      Legal basis
-                    </h2>
-                    <ul className="list-disc space-y-1 pl-5">
-                      <li>Art. 6(1)(b) GDPR (contract performance).</li>
-                      <li>Art. 6(1)(f) GDPR (security and fault analysis).</li>
-                    </ul>
-                  </section>
-                  <section className="space-y-2">
-                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                      Hosting and processors
-                    </h2>
-                    <p>
-                      Production hosting is on AWS (EU). Authentication uses Amazon
-                      Cognito. For data transfer and import, CloudAhoy and FlySto are
-                      used as external services. If data is transferred outside the
-                      EU/EEA, appropriate safeguards (e.g., SCCs) are used.
-                    </p>
-                  </section>
-                  <section className="space-y-2">
-                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                      Retention
-                    </h2>
-                    <p>
-                      Import artifacts are retained for {retentionDays} days and then
-                      automatically deleted. You can delete results earlier from the
-                      app. Access logs are kept only as long as necessary for
-                      security and diagnostics.
-                    </p>
-                  </section>
-                  <section className="space-y-2">
-                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                      Your rights
-                    </h2>
-                    <p>
-                      You have the right of access, rectification, deletion,
-                      restriction of processing, data portability, and objection.
-                      You may also lodge a complaint with your supervisory authority.
-                    </p>
-                  </section>
-                  <section className="space-y-2">
-                    <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
-                      Contact
-                    </h2>
-                    <p>
-                      For privacy requests, contact hello@inspirespace.co.
-                    </p>
-                  </section>
-                </div>
-              </>
-            )}
-            <div>
-              <a className="text-sm text-sky-600 hover:underline" href="/">
-                Back to app
-              </a>
-            </div>
-          </div>
-        </main>
-        <footer className="border-t bg-background/80">
-          <div className="container flex flex-wrap items-center justify-between gap-3 pb-20 pt-6 text-sm text-muted-foreground lg:py-6">
-            <div>© {new Date().getFullYear()} Inspirespace e.U.</div>
-            <div className="flex flex-wrap gap-4">
-              <a className="hover:text-foreground" href="/imprint">
-                Imprint
-              </a>
-              <a className="hover:text-foreground" href="/privacy">
-                Privacy
-              </a>
-              <a
-                className="hover:text-foreground"
-                href="https://github.com/inspirespace/skybridge/issues"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Support
-              </a>
-            </div>
-          </div>
-        </footer>
-      </div>
-    );
+    return <StaticPage page={staticPage} retentionDays={retentionDays} />;
   }
 
   return (
@@ -924,671 +719,104 @@ export default function App() {
               value={openStep}
               onValueChange={handleAccordionChange}
             >
-              <AccordionItem
-                value="sign-in"
-                className="border-0 px-4 bg-white dark:bg-transparent"
-              >
-                <AccordionTrigger disabled={!allowedSteps.has("sign-in")}>
-                  <div className="flex w-full items-center justify-between">
-                    <span>1 · Sign in</span>
-                    <Badge variant={flow.signedIn ? "success" : "secondary"}>
-                      {flow.signedIn ? "Signed in" : "Required"}
-                    </Badge>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-4 pb-4">
-                    <p className="max-w-2xl text-base font-semibold leading-relaxed text-foreground">
-                      Skybridge imports your CloudAhoy flights into FlySto. You’ll
-                      connect both accounts, review the summary, and approve the
-                      import.
-                    </p>
-                    <Alert className="border-sky-100 bg-sky-50/60 text-slate-900 dark:border-sky-900/50 dark:bg-sky-950/40 dark:text-slate-100">
-                      <AlertTitle>What you can expect</AlertTitle>
-                      <AlertDescription>
-                        <ul className="list-disc space-y-1 pl-5">
-                          <li>
-                            Sign-in is required to identify your job, protect your
-                            data, and let you resume later.
-                          </li>
-                          <li>
-                            We import flights, times, routes, crew, trajectory data,
-                            and remarks. You can review everything before approving.
-                          </li>
-                          <li>
-                            Credentials are used only for this job and never stored.
-                            Results are retained for {retentionDays} days, then deleted.
-                          </li>
-                        </ul>
-                      </AlertDescription>
-                    </Alert>
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      <Button
-                        className="w-full justify-start gap-2 shadow-sm"
-                        onClick={handleSignIn}
-                        disabled={flow.signedIn || actionLoading}
-                      >
-                        <LogIn className="h-4 w-4" />
-                        Sign up / Sign in
-                      </Button>
-                    </div>
-                    {signInError && (
-                      <Alert variant="destructive">
-                        <AlertTitle>Sign-in failed</AlertTitle>
-                        <AlertDescription>{signInError}</AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+              <SignInSection
+                allowed={allowedSteps.has("sign-in")}
+                signedIn={flow.signedIn}
+                onSignIn={handleSignIn}
+                actionLoading={actionLoading}
+                signInError={signInError}
+                retentionDays={retentionDays}
+              />
 
               <div className="border-t border-[#e3ebf5] dark:border-sky-900/60" />
-              <AccordionItem
-                value="connect"
-                className={cn(
-                  "border-0 px-4 bg-white dark:bg-transparent",
-                  !allowedSteps.has("connect") && "bg-[#f7fafd] dark:bg-slate-900/60"
-                )}
-              >
-                <AccordionTrigger
-                  disabled={!allowedSteps.has("connect")}
-                  className={!allowedSteps.has("connect") ? "font-normal text-muted-foreground" : undefined}
-                >
-                  <div className="flex w-full items-center justify-between">
-                    <span>2 · Connect accounts</span>
-                    <Badge
-                      variant={flow.connected ? "success" : "outline"}
-                      className={!allowedSteps.has("connect") ? "border-dashed" : undefined}
-                    >
-                      {flow.connected ? "Connected" : flow.signedIn ? "Required" : "Sign in required"}
-                    </Badge>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-4 pb-4">
-                      <p className="text-sm leading-relaxed text-muted-foreground">
-                        Enter CloudAhoy and FlySto credentials, then run the review.
-                      </p>
-                      <Alert className="border-sky-100 bg-sky-50/60 text-slate-900 dark:border-sky-900/50 dark:bg-sky-950/40 dark:text-slate-100">
-                        <AlertTitle>Credentials</AlertTitle>
-                        <AlertDescription>
-                          Credentials are used only for this job and not stored.
-                        </AlertDescription>
-                      </Alert>
-
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <div className="text-sm font-medium">CloudAhoy</div>
-                          <div className="space-y-2 rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-sky-900/60 dark:bg-slate-900/80">
-                            <Label htmlFor="cloudahoy-email">Email</Label>
-                            <Input
-                              id="cloudahoy-email"
-                              placeholder="Email"
-                              disabled={connectLocked}
-                              value={cloudahoyEmail}
-                              onChange={(event) =>
-                                setCloudahoyEmail(event.target.value)
-                              }
-                            />
-                            <Label htmlFor="cloudahoy-password">Password</Label>
-                            <Input
-                              id="cloudahoy-password"
-                              type="password"
-                              placeholder="Password"
-                              disabled={connectLocked}
-                              value={cloudahoyPassword}
-                              onChange={(event) =>
-                                setCloudahoyPassword(event.target.value)
-                              }
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="text-sm font-medium">FlySto</div>
-                          <div className="space-y-2 rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-sky-900/60 dark:bg-slate-900/80">
-                            <Label htmlFor="flysto-email">Email</Label>
-                            <Input
-                              id="flysto-email"
-                              placeholder="Email"
-                              disabled={connectLocked}
-                              value={flystoEmail}
-                              onChange={(event) => setFlystoEmail(event.target.value)}
-                            />
-                            <Label htmlFor="flysto-password">Password</Label>
-                            <Input
-                              id="flysto-password"
-                              type="password"
-                              placeholder="Password"
-                              disabled={connectLocked}
-                              value={flystoPassword}
-                              onChange={(event) => setFlystoPassword(event.target.value)}
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <Separator className="my-1" />
-
-                      <div className="rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-sky-900/60 dark:bg-slate-900/80">
-                        <div className="space-y-3">
-                          <div className="text-sm font-semibold">Import filters</div>
-                          <div className="grid gap-3 md:grid-cols-3">
-                            <div className="space-y-2 md:col-span-2">
-                              <Label>Date range</Label>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    className={cn(
-                                      "w-full justify-start text-left font-normal bg-white/70 dark:bg-slate-900/70 dark:border-sky-900/60",
-                                      !dateRange?.from && "text-muted-foreground"
-                                    )}
-                                    disabled={connectLocked}
-                                  >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {dateRangeLabel}
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-3" align="start">
-                                  <Calendar
-                                    mode="range"
-                                    numberOfMonths={1}
-                                    selected={dateRange}
-                                    onSelect={setDateRange}
-                                    disabled={connectLocked}
-                                  />
-                                  <div className="mt-3 flex items-center justify-between">
-                                    <div className="text-xs text-muted-foreground">
-                                      Leave empty to import all available flights.
-                                    </div>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() => setDateRange(undefined)}
-                                      disabled={connectLocked || !dateRange?.from}
-                                    >
-                                      Clear dates
-                                    </Button>
-                                  </div>
-                                  {rangeIncomplete && (
-                                    <div className="mt-2 text-xs text-amber-600">
-                                      Select an end date or clear the range.
-                                    </div>
-                                  )}
-                                </PopoverContent>
-                              </Popover>
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="max-flights">Max flights to import</Label>
-                              <Input
-                                id="max-flights"
-                                type="number"
-                                min={1}
-                                step={1}
-                                inputMode="numeric"
-                                placeholder="50"
-                                disabled={connectLocked}
-                                value={maxFlights}
-                                onChange={(event) => {
-                                  const next = event.target.value;
-                                  if (next === "" || /^[0-9]+$/.test(next)) {
-                                    setMaxFlights(next);
-                                  }
-                                }}
-                              />
-                            </div>
-                          </div>
-                          <p className="text-xs leading-relaxed text-muted-foreground">
-                            Caps the total number of flights that will be imported.
-                          </p>
-                        </div>
-                      </div>
-
-                      {connectError && (
-                        <Alert variant="destructive">
-                          <AlertTitle>Something went wrong</AlertTitle>
-                          <AlertDescription>{connectError}</AlertDescription>
-                          <div className="mt-3">
-                            <Button size="sm" variant="outline" onClick={refresh}>
-                              Retry
-                            </Button>
-                          </div>
-                        </Alert>
-                      )}
-
-                      <Button
-                        onClick={handleConnectReview}
-                        disabled={connectLocked || !canConnect || rangeIncomplete || actionLoading}
-                        className="shadow-sm"
-                      >
-                        Connect and review
-                      </Button>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+              <ConnectSection
+                allowed={allowedSteps.has("connect")}
+                connected={flow.connected}
+                signedIn={flow.signedIn}
+                connectLocked={connectLocked}
+                canConnect={canConnect}
+                rangeIncomplete={rangeIncomplete}
+                dateRange={dateRange}
+                dateRangeLabel={dateRangeLabel}
+                maxFlights={maxFlights}
+                cloudahoyEmail={cloudahoyEmail}
+                cloudahoyPassword={cloudahoyPassword}
+                flystoEmail={flystoEmail}
+                flystoPassword={flystoPassword}
+                setCloudahoyEmail={setCloudahoyEmail}
+                setCloudahoyPassword={setCloudahoyPassword}
+                setFlystoEmail={setFlystoEmail}
+                setFlystoPassword={setFlystoPassword}
+                setDateRange={setDateRange}
+                setMaxFlights={setMaxFlights}
+                onConnectReview={handleConnectReview}
+                actionLoading={actionLoading}
+                connectError={connectError}
+                onRefresh={refresh}
+              />
 
               <div className="border-t border-[#e3ebf5] dark:border-sky-900/60" />
-              <AccordionItem
-                value="review"
-                className={cn(
-                  "border-0 px-4 bg-white dark:bg-transparent",
-                  !allowedSteps.has("review") && "bg-[#f7fafd] dark:bg-slate-900/60"
-                )}
-              >
-                <AccordionTrigger
-                  disabled={!allowedSteps.has("review")}
-                  className={!allowedSteps.has("review") ? "font-normal text-muted-foreground" : undefined}
-                >
-                  <div className="flex w-full items-center justify-between">
-                    <span>3 · Review</span>
-                    <Badge
-                      variant={reviewComplete ? "success" : reviewRunning ? "active" : "outline"}
-                      className={!allowedSteps.has("review") ? "border-dashed" : undefined}
-                    >
-                      {reviewApproved
-                        ? "Approved"
-                        : reviewComplete
-                          ? "Review ready"
-                          : reviewRunning
-                            ? "Review running"
-                            : "Connect accounts to continue"}
-                    </Badge>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-3 pb-4">
-                      {showReviewProgress && (
-                        <div className={reviewProgressCardClass}>
-                          <div className="flex items-center justify-between">
-                            <span
-                              className={cn(
-                                "flex items-center gap-2 font-medium",
-                                reviewComplete
-                                  ? "text-emerald-800 dark:text-emerald-300"
-                                  : reviewRunning
-                                    ? "text-sky-800 dark:text-sky-300"
-                                    : ""
-                              )}
-                            >
-                              <span
-                                className={cn(
-                                  "h-2 w-2 rounded-full",
-                                  reviewComplete
-                                    ? "bg-emerald-500"
-                                    : reviewRunning
-                                      ? "bg-sky-500 animate-pulse"
-                                      : "bg-muted-foreground/40"
-                                )}
-                              />
-                              {reviewStage}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {elapsed ? `Elapsed: ${elapsed} · ` : ""}Last update: {lastUpdate}
-                            </span>
-                          </div>
-                          <div className="mt-3">
-                            <Progress
-                              value={reviewProgress}
-                              className={
-                                reviewComplete
-                                  ? "bg-emerald-100 dark:bg-emerald-950/50"
-                                  : reviewRunning
-                                    ? "bg-sky-100 dark:bg-sky-950/50"
-                                    : undefined
-                              }
-                              indicatorClassName={
-                                reviewComplete
-                                  ? "bg-emerald-600 dark:bg-emerald-400"
-                                  : reviewRunning
-                                    ? "bg-sky-600 dark:bg-sky-400"
-                                    : undefined
-                              }
-                            />
-                          </div>
-                          <div className={cn("mt-3 text-xs", reviewNoteClass)}>
-                            Flights are fetched from CloudAhoy first so you can check them
-                            before running the actual import.
-                          </div>
-                        </div>
-                      )}
-                      {reviewComplete && reviewSummary && (
-                        <div className="flex flex-wrap gap-2 rounded-md border border-[#e3ebf5] bg-muted/20 p-2 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/40">
-                          <Badge
-                            variant="secondary"
-                            className="border border-sky-200/40 text-foreground dark:border-sky-900/70 dark:bg-sky-950/40 dark:text-sky-100"
-                          >
-                            <span className="tabular-nums">
-                              Flights: {reviewSummary.flight_count}
-                            </span>
-                          </Badge>
-                          <Badge
-                            variant="secondary"
-                            className="border border-sky-200/40 text-foreground dark:border-sky-900/70 dark:bg-sky-950/40 dark:text-sky-100"
-                          >
-                            <span className="tabular-nums">
-                              Hours: {reviewSummary.total_hours}
-                            </span>
-                          </Badge>
-                          <Badge
-                            variant={
-                              reviewSummary.missing_tail_numbers > 0
-                                ? "warning"
-                                : "secondary"
-                            }
-                            className={
-                              reviewSummary.missing_tail_numbers > 0
-                                ? undefined
-                                : "border border-sky-200/40 text-foreground dark:border-sky-900/70 dark:bg-sky-950/40 dark:text-sky-100"
-                            }
-                          >
-                            <span className="tabular-nums">
-                              Registration missing: {reviewSummary.missing_tail_numbers}
-                            </span>
-                          </Badge>
-                        </div>
-                      )}
-                      {reviewComplete && (
-                        <div className="overflow-x-auto rounded-md border border-[#e3ebf5] bg-background/70 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/40">
-                          <Table className="min-w-[640px]">
-                            <TableHeader className="bg-muted/40 dark:bg-slate-900/60">
-                              <TableRow>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Registration</TableHead>
-                                <TableHead>From / To</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {visibleFlights.map((flight, index) => (
-                                <TableRow
-                                  key={flight.flight_id}
-                                  className={
-                                    index % 2 === 0
-                                      ? "bg-muted/40 dark:bg-slate-900/30"
-                                      : undefined
-                                  }
-                                >
-                                  <TableCell>
-                                    <Badge
-                                      variant={flight.tail_number ? "success" : "warning"}
-                                      className="min-w-[110px] justify-center"
-                                    >
-                                      {flight.tail_number ? "OK" : "Needs review"}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell>{formatDate(flight.date)}</TableCell>
-                                  <TableCell>{flight.tail_number ?? "—"}</TableCell>
-                                  <TableCell>
-                                    <span className="inline-flex items-center gap-2">
-                                      <span className="tabular-nums">
-                                        {flight.origin ?? "—"}
-                                      </span>
-                                      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                                      <span className="tabular-nums">
-                                        {flight.destination ?? "—"}
-                                      </span>
-                                    </span>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      )}
-                      {reviewComplete && flights.length > 3 && !showAllFlights && (
-                        <div className="flex">
-                          <Button
-                            variant="link"
-                            className="h-auto px-0 text-sm text-muted-foreground"
-                            onClick={() => setShowAllFlights(true)}
-                          >
-                            Show more flights
-                          </Button>
-                        </div>
-                      )}
-                      {reviewComplete && flights.length > 3 && showAllFlights && (
-                        <div className="text-sm text-muted-foreground">
-                          All flights shown
-                        </div>
-                      )}
-                      {reviewError && (
-                        <Alert variant="destructive">
-                          <AlertTitle>Something went wrong</AlertTitle>
-                          <AlertDescription>{reviewError}</AlertDescription>
-                          <div className="mt-3">
-                            <Button size="sm" variant="outline" onClick={refresh}>
-                              Retry
-                            </Button>
-                          </div>
-                        </Alert>
-                      )}
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          onClick={handleApproveImport}
-                          disabled={
-                            !canApprove || importRunning || importComplete || actionLoading
-                          }
-                          className="shadow-sm"
-                        >
-                          Accept and start import
-                        </Button>
-                        {canEditFiltersNow && (
-                          <Button variant="outline" onClick={handleEditFilters}>
-                            Edit import filters
-                          </Button>
-                        )}
-                      </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+              <ReviewSection
+                allowed={allowedSteps.has("review")}
+                reviewComplete={reviewComplete}
+                reviewRunning={reviewRunning}
+                reviewApproved={reviewApproved}
+                showReviewProgress={showReviewProgress}
+                reviewProgressCardClass={reviewProgressCardClass}
+                reviewStage={reviewStage}
+                elapsed={elapsed}
+                lastUpdate={lastUpdate}
+                reviewProgress={reviewProgress}
+                reviewNoteClass={reviewNoteClass}
+                reviewSummary={reviewSummary}
+                flights={flights}
+                visibleFlights={visibleFlights}
+                showAllFlights={showAllFlights}
+                setShowAllFlights={setShowAllFlights}
+                reviewError={reviewError}
+                onRefresh={refresh}
+                canApprove={canApprove}
+                importRunning={importRunning}
+                importComplete={importComplete}
+                actionLoading={actionLoading}
+                onApproveImport={handleApproveImport}
+                canEditFiltersNow={canEditFiltersNow}
+                onEditFilters={handleEditFilters}
+                formatDate={formatDate}
+              />
 
               <div className="border-t border-[#e3ebf5] dark:border-sky-900/60" />
-              <AccordionItem
-                value="import"
-                className={cn(
-                  "border-0 px-4 bg-white dark:bg-transparent",
-                  !allowedSteps.has("import") && "bg-[#f7fafd] dark:bg-slate-900/60"
-                )}
-              >
-                <AccordionTrigger
-                  disabled={!allowedSteps.has("import")}
-                  className={!allowedSteps.has("import") ? "font-normal text-muted-foreground" : undefined}
-                >
-                  <div className="flex w-full items-center justify-between">
-                    <span>4 · Import</span>
-                    <Badge
-                      variant={
-                        importComplete
-                          ? "success"
-                          : importRunning
-                            ? "active"
-                            : reviewComplete
-                              ? "secondary"
-                              : "outline"
-                      }
-                      className={!allowedSteps.has("import") ? "border-dashed" : undefined}
-                    >
-                      {importComplete
-                        ? "Completed"
-                        : importRunning
-                          ? "Import running"
-                          : reviewComplete
-                            ? "Ready to import"
-                            : "Approve review to continue"}
-                    </Badge>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-4 pb-4">
-                      <p className="text-sm text-muted-foreground">
-                        Import runs after approval and produces a report summary.
-                      </p>
-                      {showImportProgress && (
-                        <div className={importProgressCardClass}>
-                          <div className="flex items-center justify-between">
-                            <span
-                              className={cn(
-                                "flex items-center gap-2 font-medium",
-                                importComplete
-                                  ? "text-emerald-800 dark:text-emerald-300"
-                                  : importRunning
-                                    ? "text-sky-800 dark:text-sky-300"
-                                    : ""
-                              )}
-                            >
-                              <span
-                                className={cn(
-                                  "h-2 w-2 rounded-full",
-                                  importComplete
-                                    ? "bg-emerald-500"
-                                    : importRunning
-                                      ? "bg-sky-500 animate-pulse"
-                                      : "bg-muted-foreground/40"
-                                )}
-                              />
-                              {importStage}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {elapsed ? `Elapsed: ${elapsed} · ` : ""}Last update: {lastUpdate}
-                            </span>
-                          </div>
-                          <div className="mt-3">
-                            <Progress
-                              value={importProgress}
-                              className={
-                                importComplete
-                                  ? "bg-emerald-100 dark:bg-emerald-950/50"
-                                  : importRunning
-                                    ? "bg-sky-100 dark:bg-sky-950/50"
-                                    : undefined
-                              }
-                              indicatorClassName={
-                                importComplete
-                                  ? "bg-emerald-600 dark:bg-emerald-400"
-                                  : importRunning
-                                    ? "bg-sky-600 dark:bg-sky-400"
-                                    : undefined
-                              }
-                            />
-                          </div>
-                          {latestImportEvent && (
-                            <div className="mt-2 text-xs text-muted-foreground">
-                              {latestImportEvent.stage}
-                              {latestImportEvent.flight_id
-                                ? ` · ${formatFlightId({ flight_id: latestImportEvent.flight_id })}`
-                                : ""}
-                              {latestImportEvent.percent != null
-                                ? ` · ${latestImportEvent.percent}%`
-                                : ""}
-                              {" · "}
-                              {formatLastUpdate(latestImportEvent.created_at, now)}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {importComplete && job?.import_report && (
-                        <ImportResults
-                          imported={job.import_report.imported_count}
-                          skipped={job.import_report.skipped_count}
-                          failed={job.import_report.failed_count}
-                          registrationMissing={
-                            reviewSummary?.missing_tail_numbers ?? 0
-                          }
-                        />
-                      )}
-                      {importComplete && (
-                        <Alert className="border-emerald-200/70 bg-emerald-50/50 dark:border-emerald-900/50 dark:bg-emerald-950/40">
-                          <AlertTitle>Next steps</AlertTitle>
-                          <AlertDescription>
-                            Review your imported flights in FlySto, download the files for
-                            your records, and keep this page bookmarked while results are
-                            retained for {retentionDays} days before deletion.
-                          </AlertDescription>
-                          <div className="mt-4 flex flex-wrap gap-3">
-                            <Button asChild>
-                              <a
-                                href="https://www.flysto.net/logs"
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                Open FlySto
-                              </a>
-                            </Button>
-                            <Button
-                              variant="outline"
-                              onClick={handleDownloadFiles}
-                              disabled={actionLoading}
-                            >
-                              Download files
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="destructive">Delete results now</Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete import results?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This removes the stored reports and review summary for this
-                                    run. This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={handleDeleteResults}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    disabled={actionLoading}
-                                  >
-                                    Delete results
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </Alert>
-                      )}
-                      {importError && (
-                        <Alert variant="destructive">
-                          <AlertTitle>Something went wrong</AlertTitle>
-                          <AlertDescription>{importError}</AlertDescription>
-                          <div className="mt-3">
-                            <Button size="sm" variant="outline" onClick={refresh}>
-                              Retry
-                            </Button>
-                          </div>
-                        </Alert>
-                      )}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+              <ImportSection
+                allowed={allowedSteps.has("import")}
+                importComplete={importComplete}
+                importRunning={importRunning}
+                reviewComplete={reviewComplete}
+                showImportProgress={showImportProgress}
+                importProgressCardClass={importProgressCardClass}
+                importStage={importStage}
+                elapsed={elapsed}
+                lastUpdate={lastUpdate}
+                importProgress={importProgress}
+                latestImportEvent={latestImportEvent ?? null}
+                formatFlightId={formatFlightId}
+                formatLastUpdate={formatLastUpdate}
+                now={now}
+                job={job}
+                reviewSummaryMissing={reviewSummary?.missing_tail_numbers ?? 0}
+                retentionDays={retentionDays}
+                onDownloadFiles={handleDownloadFiles}
+                onDeleteResults={handleDeleteResults}
+                actionLoading={actionLoading}
+                importError={importError}
+                onRefresh={refresh}
+              />
             </Accordion>
             </div>
           </section>
         </div>
       </main>
 
-      <footer className="border-t bg-background/80">
-        <div className="container flex flex-wrap items-center justify-between gap-3 pb-20 pt-6 text-sm text-muted-foreground lg:py-6">
-          <div>© {new Date().getFullYear()} Inspirespace e.U.</div>
-          <div className="flex flex-wrap gap-4">
-            <a className="hover:text-foreground" href="/imprint">
-              Imprint
-            </a>
-            <a className="hover:text-foreground" href="/privacy">
-              Privacy
-            </a>
-            <a
-              className="hover:text-foreground"
-              href="https://github.com/inspirespace/skybridge/issues"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Support
-            </a>
-          </div>
-        </div>
-      </footer>
+      <AppFooter />
     </div>
   );
 }
