@@ -30,6 +30,18 @@ export function parseJwt(token: string) {
   return JSON.parse(json);
 }
 
+export function isJwtExpired(token: string, skewSeconds = 60) {
+  try {
+    const payload = parseJwt(token);
+    const exp = typeof payload?.exp === "number" ? payload.exp : null;
+    if (!exp) return false;
+    const now = Math.floor(Date.now() / 1000);
+    return exp < now - skewSeconds;
+  } catch {
+    return false;
+  }
+}
+
 export function isAuthExpiredError(error: unknown) {
   if (!error || typeof error !== "object") return false;
   const status = (error as Error & { status?: number }).status;

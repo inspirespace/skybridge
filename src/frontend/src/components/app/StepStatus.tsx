@@ -22,8 +22,8 @@ export function StepStatus({
   return (
     <div
       className={cn(
-        "relative flex items-center justify-between rounded-md border border-[#d9e1ec] bg-[#f8fafc] px-3 py-2 text-sm dark:border-slate-800 dark:bg-slate-900",
-        active ? "bg-[#eef3f8] dark:bg-slate-800" : "bg-[#f8fafc] dark:bg-slate-900"
+        "relative flex items-center justify-between rounded-md border border-[#d9e1ec] bg-[#f8fafc] px-3 py-2 text-sm dark:border-sky-900/60 dark:bg-slate-950/70",
+        active ? "bg-[#eef3f8] dark:bg-slate-900/70" : "bg-[#f8fafc] dark:bg-slate-950/70"
       )}
     >
       {active && (

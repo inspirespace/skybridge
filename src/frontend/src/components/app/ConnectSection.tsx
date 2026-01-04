@@ -157,7 +157,7 @@ export function ConnectSection({
                       <Button
                         variant="outline"
                         className={cn(
-                          "w-full justify-start text-left font-normal bg-white/70 dark:bg-slate-900/70 dark:border-sky-900/60",
+                          "w-full justify-start text-left font-normal bg-background/70 dark:bg-slate-950/50 dark:border-sky-900/60",
                           !dateRange?.from && "text-muted-foreground"
                         )}
                         disabled={connectLocked}

@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { LogIn } from "lucide-react";
+import { UserRound } from "lucide-react";
 
 export function SignInSection({
   allowed,
@@ -64,7 +64,7 @@ export function SignInSection({
               onClick={onSignIn}
               disabled={signedIn || actionLoading}
             >
-              <LogIn className="h-4 w-4" />
+              <UserRound className="h-4 w-4" />
               Sign up / Sign in
             </Button>
           </div>

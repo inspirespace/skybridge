@@ -5,6 +5,7 @@ import {
   generateCodeChallenge,
   generateCodeVerifier,
   generateState,
+  isJwtExpired,
   parseJwt,
 } from "@/lib/auth-helpers";
 
@@ -56,6 +57,13 @@ export function useOidcAuth({
     setAccessToken(null);
     setIdToken(null);
   }, []);
+
+  React.useEffect(() => {
+    if (!enabled) return;
+    if (accessToken && isJwtExpired(accessToken)) {
+      clearAuth();
+    }
+  }, [enabled, accessToken, clearAuth]);
 
   React.useEffect(() => {
     if (!enabled) return;

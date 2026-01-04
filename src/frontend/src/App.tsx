@@ -481,13 +481,9 @@ export default function App() {
 
   const visibleFlights = showAllFlights ? flights : flights.slice(0, 3);
   const canApprove =
-    (job?.status === "review_ready" ||
-      (job?.status === "failed" && reviewSummary && !hasImportEvents)) &&
-    !actionLoading;
+    reviewComplete && !importRunning && !importComplete && !actionLoading;
   const canEditFiltersNow =
-    (job?.status === "review_ready" ||
-      (job?.status === "failed" && reviewSummary && !hasImportEvents)) &&
-    !actionLoading;
+    reviewComplete && !importRunning && !importComplete && !actionLoading;
 
   const stepIndex = !flow.signedIn
     ? 1
@@ -514,8 +510,8 @@ export default function App() {
 
   return (
     <div className="app-shell min-h-screen flex flex-col bg-gradient-to-b from-[#f7f9fc] to-[#eef3f8] text-[#1c2430] dark:bg-gradient-to-b dark:from-[#0b1120] dark:to-[#0f172a] dark:text-slate-100">
-      <header className="sticky top-0 z-40 border-b border-[#d9e1ec] bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
-        <div className="absolute inset-x-0 top-0 h-1 bg-[#f1f4f8] dark:bg-slate-900" />
+      <header className="sticky top-0 z-40 border-b border-[#d9e1ec] bg-white/95 backdrop-blur dark:border-sky-900/60 dark:bg-slate-950/90">
+        <div className="absolute inset-x-0 top-0 h-1 bg-[#f1f4f8] dark:bg-slate-900/70" />
         <div className="container flex h-14 items-center justify-between sm:h-16">
           <div className="text-xs font-semibold tracking-[0.28em] text-[#5b6775] dark:text-slate-300">
             SKYBRIDGE
@@ -570,7 +566,7 @@ export default function App() {
 
       <main className="container flex-1 pb-16 pt-5 lg:pb-8">
         <div className="mb-4 lg:hidden">
-          <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
+          <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
             <CardContent className="space-y-2 py-3">
               <div className="flex items-center justify-between text-xs text-[#5b6775]">
                 <span>Step {stepIndex} of 4</span>
@@ -587,7 +583,7 @@ export default function App() {
 
         <div className="grid gap-4 lg:grid-cols-[240px_1fr]">
           <aside className="hidden space-y-3 lg:sticky lg:top-20 lg:block lg:self-start">
-            <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
+            <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
               <CardHeader className="pb-2">
                 <CardTitle className="text-xs uppercase tracking-[0.28em] text-[#5b6775]">
                   Progress
@@ -619,7 +615,7 @@ export default function App() {
           </aside>
 
           <section className="space-y-2.5">
-            <div className="overflow-hidden rounded-xl border border-[#d1dbea] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-slate-700 dark:bg-slate-900/90 dark:shadow-none">
+            <div className="overflow-hidden rounded-xl border border-[#d1dbea] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
             <Accordion
               type="single"
               collapsible
