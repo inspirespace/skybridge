@@ -71,7 +71,7 @@ class CloudAhoyClient:
         summaries: list[FlightSummary] = []
         seen: set[str] = set()
         for flight in flights[: limit or len(flights)]:
-            flight_id = flight.get("key") or flight.get("fdID")
+            flight_id = flight.get("fdID")
             if not flight_id or flight_id in seen:
                 continue
             seen.add(flight_id)

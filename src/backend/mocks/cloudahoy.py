@@ -47,7 +47,6 @@ def _load_review() -> list[dict[str, Any]]:
             started_dt = datetime.now(tz=timezone.utc)
         flights.append(
             {
-                "key": flight_id,
                 "fdID": flight_id,
                 "gmtStart": int(started_dt.timestamp()),
                 "adjTime": int(started_dt.timestamp()),
