@@ -14,7 +14,7 @@ const AlertDialogOverlay = React.forwardRef<
   <AlertDialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity",
+      "fixed inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity duration-300",
       "data-[state=open]:opacity-100 data-[state=closed]:opacity-0",
       className
     )}
@@ -33,7 +33,7 @@ const AlertDialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%]",
-        "gap-4 border bg-background p-6 shadow-lg transition-opacity duration-200",
+        "gap-4 border bg-background p-6 shadow-lg transition-opacity duration-300",
         "data-[state=open]:opacity-100 data-[state=closed]:opacity-0",
         className
       )}

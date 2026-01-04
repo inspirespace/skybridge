@@ -200,6 +200,7 @@ def create_job(
     if not _jobs_rate_limiter.allow(f"{user_id}:create"):
         raise HTTPException(status_code=429, detail="Too many requests. Try again soon.")
     _enforce_job_limits(user_id, for_import=False)
+    store.delete_jobs_for_user(user_id)
     job = service.create_job(user_id)
     job.start_date = payload.start_date
     job.end_date = payload.end_date
@@ -291,7 +292,7 @@ def delete_job(
 ) -> dict:
     user_id = user_id_from_request(authorization, x_user_id)
     _load_job_or_404(job_id, user_id)
-    store.delete_job(job_id)
+    store.delete_jobs_for_user(user_id)
     return {"deleted": True}
 
 

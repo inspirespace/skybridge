@@ -38,10 +38,10 @@ import type { DateRange } from "react-day-picker";
 import {
   formatDate,
   formatDateRange,
-  formatElapsed,
   formatFlightId,
   formatISODate,
-  formatLastUpdate,
+  formatPhaseElapsed,
+  formatPhaseLastUpdate,
 } from "@/lib/format";
 import { isAuthExpiredError } from "@/lib/auth-helpers";
 import { useOidcAuth } from "@/hooks/use-oidc-auth";
@@ -204,11 +204,20 @@ export default function App() {
     return () => window.clearInterval(interval);
   }, [reviewRunning, importRunning]);
 
-  const elapsed = formatElapsed(
-    job?.created_at,
-    reviewRunning || importRunning ? now.toISOString() : job?.updated_at
+  const reviewElapsed = formatPhaseElapsed(
+    job?.progress_log,
+    "review",
+    now,
+    reviewRunning
   );
-  const lastUpdate = formatLastUpdate(job?.updated_at, now);
+  const importElapsed = formatPhaseElapsed(
+    job?.progress_log,
+    "import",
+    now,
+    importRunning
+  );
+  const reviewLastUpdate = formatPhaseLastUpdate(job?.progress_log, "review", now);
+  const importLastUpdate = formatPhaseLastUpdate(job?.progress_log, "import", now);
 
   React.useEffect(() => {
     if (!DEV_PREFILL) return;
@@ -324,6 +333,7 @@ export default function App() {
     setJobId(null);
     setShowAllFlights(false);
     setActionError(null);
+    setManualOpen("connect");
   };
 
   const clearLocalState = () => {
@@ -694,8 +704,8 @@ export default function App() {
                 showReviewProgress={showReviewProgress}
                 reviewProgressCardClass={reviewProgressCardClass}
                 reviewStage={reviewStage}
-                elapsed={elapsed}
-                lastUpdate={lastUpdate}
+                elapsed={reviewElapsed}
+                lastUpdate={reviewLastUpdate}
                 reviewProgress={reviewProgress}
                 reviewNoteClass={reviewNoteClass}
                 reviewSummary={reviewSummary}
@@ -724,8 +734,8 @@ export default function App() {
                 showImportProgress={showImportProgress}
                 importProgressCardClass={importProgressCardClass}
                 importStage={importStage}
-                elapsed={elapsed}
-                lastUpdate={lastUpdate}
+                elapsed={importElapsed}
+                lastUpdate={importLastUpdate}
                 importProgress={importProgress}
                 latestImportEvent={latestImportEvent ?? null}
                 formatFlightId={formatFlightId}

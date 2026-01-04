@@ -114,6 +114,11 @@ class JobStore:
             jobs.append(job)
         return sorted(jobs, key=lambda job: job.created_at, reverse=True)
 
+    def delete_jobs_for_user(self, user_id: str) -> None:
+        jobs = self.list_jobs(user_id)
+        for job in jobs:
+            self.delete_job(job.job_id)
+
     def load_job(self, job_id: UUID) -> JobRecord:
         if self._dynamo_table:
             response = self._dynamo_table.query(

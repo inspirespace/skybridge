@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Calendar as CalendarIcon } from "lucide-react";
 import type { DateRange } from "react-day-picker";
+import * as React from "react";
 
 export function ConnectSection({
   allowed,
@@ -68,6 +69,21 @@ export function ConnectSection({
   connectError?: string | null;
   onRefresh: () => void;
 }) {
+  const [isDesktop, setIsDesktop] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const media = window.matchMedia("(min-width: 768px)");
+    const update = () => setIsDesktop(media.matches);
+    update();
+    if (media.addEventListener) {
+      media.addEventListener("change", update);
+      return () => media.removeEventListener("change", update);
+    }
+    media.addListener(update);
+    return () => media.removeListener(update);
+  }, []);
+
   return (
     <AccordionItem
       value="connect"
@@ -158,7 +174,7 @@ export function ConnectSection({
                         variant="outline"
                         size="sm"
                         className={cn(
-                          "h-9 w-full justify-start text-left font-normal bg-background/70 dark:bg-slate-950/50 dark:border-sky-900/60",
+                          "h-9 w-full justify-start text-left font-normal border-input bg-white/70 hover:bg-white/70 dark:bg-slate-900/70 dark:border-sky-900/60 dark:hover:bg-slate-900/70",
                           !dateRange?.from && "text-muted-foreground"
                         )}
                         disabled={connectLocked}
@@ -170,9 +186,13 @@ export function ConnectSection({
                     <PopoverContent className="w-auto p-3" align="start">
                       <Calendar
                         mode="range"
-                        numberOfMonths={1}
+                        captionLayout="dropdown"
+                        fixedWeeks
+                        numberOfMonths={isDesktop ? 2 : 1}
                         selected={dateRange}
                         onSelect={setDateRange}
+                        fromYear={2000}
+                        toYear={new Date().getFullYear() + 1}
                         disabled={connectLocked}
                       />
                       <div className="mt-3 flex items-center justify-between">
