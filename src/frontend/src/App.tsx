@@ -772,7 +772,7 @@ export default function App() {
                         disabled={flow.signedIn || actionLoading}
                       >
                         <Mail className="h-4 w-4" />
-                        Sign in with email
+                        Sign up / Sign in
                       </Button>
                     </div>
                     {signInError && (
