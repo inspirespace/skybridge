@@ -16,8 +16,9 @@ export function LandingPage({
 }) {
   return (
     <section className="space-y-6">
-      <Card className="rounded-2xl border border-[#d1dbea] bg-white shadow-[0_12px_34px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
-        <CardContent className="space-y-6 p-6 sm:p-8">
+      <Card className="relative overflow-hidden rounded-2xl border border-[#d1dbea] bg-white shadow-[0_12px_34px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.15),_transparent_55%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.18),_transparent_55%)]" />
+        <CardContent className="relative space-y-6 p-6 sm:p-8">
           <Badge
             variant="secondary"
             className="w-fit border border-sky-200/50 text-slate-700 dark:border-sky-900/60 dark:bg-sky-950/60 dark:text-slate-200"
@@ -46,7 +47,7 @@ export function LandingPage({
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <Button size="lg" className="px-6" onClick={onSignIn}>
+                <Button size="lg" className="px-6 shadow-sm" onClick={onSignIn}>
                   Sign up / Sign in
                 </Button>
                 <div className="text-sm text-muted-foreground">
@@ -76,6 +77,26 @@ export function LandingPage({
                   Results are retained for {retentionDays} days, then deleted.
                 </li>
               </ul>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border border-sky-100 bg-white/70 p-3 text-sm text-muted-foreground dark:border-sky-900/60 dark:bg-slate-950/50">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Avg. setup
+              </div>
+              <div className="mt-1 text-lg font-semibold text-foreground">2 minutes</div>
+            </div>
+            <div className="rounded-lg border border-sky-100 bg-white/70 p-3 text-sm text-muted-foreground dark:border-sky-900/60 dark:bg-slate-950/50">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Review first
+              </div>
+              <div className="mt-1 text-lg font-semibold text-foreground">Always</div>
+            </div>
+            <div className="rounded-lg border border-sky-100 bg-white/70 p-3 text-sm text-muted-foreground dark:border-sky-900/60 dark:bg-slate-950/50">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                Retention
+              </div>
+              <div className="mt-1 text-lg font-semibold text-foreground">{retentionDays} days</div>
             </div>
           </div>
           {signInError && (
