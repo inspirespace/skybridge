@@ -28,7 +28,7 @@ export function LandingPage({
           </Badge>
           <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="space-y-4">
-              <h1 className="text-3xl font-semibold leading-tight text-foreground sm:text-4xl lg:text-[2.75rem]">
+              <h1 className="text-3xl font-semibold leading-snug text-foreground sm:text-4xl lg:text-[2.75rem] lg:leading-[1.1]">
                 Move your CloudAhoy history into FlySto with complete confidence.
               </h1>
               <p className="text-base leading-relaxed text-muted-foreground">
