@@ -18,7 +18,10 @@ export function LandingPage({
     <section className="space-y-6">
       <Card className="rounded-2xl border border-[#d1dbea] bg-white shadow-[0_12px_34px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
         <CardContent className="space-y-6 p-6 sm:p-8">
-          <Badge variant="secondary" className="w-fit border border-sky-200/50 text-slate-700 dark:border-sky-900/60 dark:bg-sky-950/60 dark:text-slate-200">
+          <Badge
+            variant="secondary"
+            className="w-fit border border-sky-200/50 text-slate-700 dark:border-sky-900/60 dark:bg-sky-950/60 dark:text-slate-200"
+          >
             CloudAhoy → FlySto
           </Badge>
           <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
@@ -28,9 +31,20 @@ export function LandingPage({
               </h1>
               <p className="text-base leading-relaxed text-muted-foreground">
                 Skybridge connects both accounts, builds a clean summary, and lets you review
-                everything before approving the import. No scripts, no manual CSV wrangling—just
-                a guided flow built for pilots and operators.
+                everything before approving the import. No scripts or CSV juggling—just a guided,
+                review‑first workflow built for pilots and operators.
               </p>
+              <div className="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+                <span className="rounded-full border border-sky-200/60 bg-white/70 px-3 py-1 dark:border-sky-900/60 dark:bg-slate-950/60">
+                  Review before import
+                </span>
+                <span className="rounded-full border border-sky-200/60 bg-white/70 px-3 py-1 dark:border-sky-900/60 dark:bg-slate-950/60">
+                  Credentials never stored
+                </span>
+                <span className="rounded-full border border-sky-200/60 bg-white/70 px-3 py-1 dark:border-sky-900/60 dark:bg-slate-950/60">
+                  Results retained {retentionDays} days
+                </span>
+              </div>
               <div className="flex flex-wrap items-center gap-3">
                 <Button size="lg" className="px-6" onClick={onSignIn}>
                   Sign up / Sign in
