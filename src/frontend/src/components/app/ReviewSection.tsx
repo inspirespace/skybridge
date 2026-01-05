@@ -207,8 +207,8 @@ export function ReviewSection({
             </div>
           )}
           {reviewComplete && (
-            <div className="overflow-x-auto rounded-md border border-[#e3ebf5] bg-background/70 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/40">
-              <Table className="min-w-[640px]">
+            <div className="w-full max-w-full overflow-x-auto rounded-md border border-[#e3ebf5] bg-background/70 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/40">
+              <Table className="min-w-[640px] w-full">
                 <TableHeader className="bg-muted/40 dark:bg-slate-900/60">
                   <TableRow>
                     <TableHead>Status</TableHead>
@@ -301,11 +301,11 @@ export function ReviewSection({
                   />
                   <span>I understand and want to proceed with the import.</span>
                 </label>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogFooter className="flex flex-col gap-3 sm:flex-row sm:justify-end">
                   <AlertDialogAction onClick={onApproveImport} disabled={!acknowledged}>
                     Start import
                   </AlertDialogAction>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>

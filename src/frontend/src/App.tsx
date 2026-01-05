@@ -291,6 +291,7 @@ export default function App() {
       localStorage.setItem(JOB_ID_KEY, createdJob.job_id);
       setJobId(createdJob.job_id);
       setShowAllFlights(false);
+      setManualOpen("review");
     } catch (err) {
       if (isAuthExpiredError(err)) {
         handleTokenExpired();
