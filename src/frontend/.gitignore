@@ -13,6 +13,7 @@ dist-ssr
 *.local
 .npm-cache
 .npm-cache-shadcn
+test-results
 
 # Editor directories and files
 .vscode/*
