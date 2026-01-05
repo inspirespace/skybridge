@@ -1,5 +1,19 @@
 import { test, expect } from "@playwright/test";
 
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/jobs", async (route) => {
+    if (route.request().method() === "GET") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ jobs: [] }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+});
+
 test("home page loads", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByText("SKYBRIDGE").first()).toBeVisible();
