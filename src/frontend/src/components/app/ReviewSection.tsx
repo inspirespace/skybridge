@@ -209,7 +209,7 @@ export function ReviewSection({
           {reviewComplete && (
             <div className="relative w-full max-w-full overflow-x-auto rounded-md border border-[#e3ebf5] bg-background/70 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/40">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.16),_transparent_60%)]" />
-              <Table className="min-w-[640px] w-max">
+              <Table className="w-full min-w-[640px]">
                 <TableHeader className="bg-muted/40 dark:bg-slate-900/60">
                   <TableRow>
                     <TableHead>Status</TableHead>
