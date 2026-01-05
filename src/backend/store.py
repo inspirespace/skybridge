@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Persistence layer for job metadata and artifacts.
 
 Supports:
@@ -7,6 +5,7 @@ Supports:
 - DynamoDB for job metadata (prod)
 - S3 via ObjectStore for artifacts (prod)
 """
+from __future__ import annotations
 
 import json
 import logging
@@ -33,12 +32,12 @@ class StoredJob:
 class JobStore:
     """Store job metadata and artifacts across local and cloud backends."""
     def __init__(
-    """Internal helper for init  ."""
         self,
         base_path: Path,
         object_store: ObjectStore | None = None,
         dynamo_table_name: str | None = None,
     ) -> None:
+        """Internal helper for init  ."""
         self._base_path = base_path
         self._object_store = object_store
         self._dynamo_table = (
@@ -49,16 +48,16 @@ class JobStore:
         self._base_path.mkdir(parents=True, exist_ok=True)
 
     def _job_dir(self, job_id: UUID) -> Path:
-    """Internal helper for job dir."""
+        """Internal helper for job dir."""
         return self._base_path / str(job_id)
 
     @property
     def object_store(self) -> ObjectStore | None:
-    """Handle object store."""
+        """Handle object store."""
         return self._object_store
 
     def _object_prefix_for_job(self, job_id: UUID, *, user_id: str | None = None) -> str:
-    """Internal helper for object prefix for job."""
+        """Internal helper for object prefix for job."""
         if not self._object_store:
             return ""
         if user_id is None:
@@ -70,15 +69,15 @@ class JobStore:
         return self._object_store.key_for(user_id, str(job_id))
 
     def _job_file(self, job_id: UUID) -> Path:
-    """Internal helper for job file."""
+        """Internal helper for job file."""
         return self._job_dir(job_id) / "job.json"
 
     def _token_file(self, job_id: UUID, purpose: str) -> Path:
-    """Internal helper for token file."""
+        """Internal helper for token file."""
         return self._job_dir(job_id) / f"{purpose}.token"
 
     def list_all_jobs(self) -> list[JobRecord]:
-    """Handle list all jobs."""
+        """Handle list all jobs."""
         if self._dynamo_table:
             jobs: list[JobRecord] = []
             response = self._dynamo_table.scan()
@@ -104,11 +103,11 @@ class JobStore:
         return sorted(jobs, key=lambda job: job.created_at, reverse=True)
 
     def job_dir(self, job_id: UUID) -> Path:
-    """Handle job dir."""
+        """Handle job dir."""
         return self._job_dir(job_id)
 
     def list_jobs(self, user_id: str) -> list[JobRecord]:
-    """Handle list jobs."""
+        """Handle list jobs."""
         if self._dynamo_table:
             response = self._dynamo_table.query(
                 KeyConditionExpression=Key("user_id").eq(user_id)
@@ -138,7 +137,7 @@ class JobStore:
         return sorted(jobs, key=lambda job: job.created_at, reverse=True)
 
     def delete_jobs_for_user(self, user_id: str) -> None:
-    """Delete jobs for user."""
+        """Delete jobs for user."""
         jobs = self.list_jobs(user_id)
         for job in jobs:
             try:
@@ -147,7 +146,7 @@ class JobStore:
                 continue
 
     def load_job(self, job_id: UUID) -> JobRecord:
-    """Handle load job."""
+        """Handle load job."""
         if self._dynamo_table:
             response = self._dynamo_table.query(
                 IndexName="job_id-index",
@@ -171,7 +170,7 @@ class JobStore:
         return job
 
     def delete_job(self, job_id: UUID, *, user_id: str | None = None) -> None:
-    """Delete job."""
+        """Delete job."""
         if self._dynamo_table:
             try:
                 job = self.load_job(job_id)
@@ -195,7 +194,7 @@ class JobStore:
                     )
 
     def save_job(self, job: JobRecord) -> None:
-    """Handle save job."""
+        """Handle save job."""
         job_dir = self._job_dir(job.job_id)
         job_dir.mkdir(parents=True, exist_ok=True)
         job_file = job_dir / "job.json"
@@ -213,7 +212,7 @@ class JobStore:
             self._dynamo_table.put_item(Item=item)
 
     def write_artifact(self, job_id: UUID, name: str, payload: dict[str, Any]) -> None:
-    """Handle write artifact."""
+        """Handle write artifact."""
         job_dir = self._job_dir(job_id)
         job_dir.mkdir(parents=True, exist_ok=True)
         artifact_file = job_dir / name
@@ -228,7 +227,7 @@ class JobStore:
                 )
 
     def upload_artifact(self, job_id: UUID, name: str, path: Path) -> None:
-    """Handle upload artifact."""
+        """Handle upload artifact."""
         if not self._object_store or not path.exists():
             return
         key = self._object_store.key_for(self.load_job(job_id).user_id, str(job_id), name)
@@ -240,7 +239,6 @@ class JobStore:
             )
 
     def upload_artifact_dir(
-    """Handle upload artifact dir."""
         self,
         job_id: UUID,
         *,
@@ -248,6 +246,7 @@ class JobStore:
         directory: Path,
         suffix: str | None = None,
     ) -> None:
+        """Handle upload artifact dir."""
         if not self._object_store or not directory.exists():
             return
         user_id = self.load_job(job_id).user_id
@@ -266,7 +265,7 @@ class JobStore:
                 )
 
     def list_artifacts(self, job_id: UUID) -> list[str]:
-    """Handle list artifacts."""
+        """Handle list artifacts."""
         job_dir = self._job_dir(job_id)
         if not job_dir.exists() and self._object_store:
             prefix = self._object_prefix_for_job(job_id)
@@ -278,7 +277,7 @@ class JobStore:
         )
 
     def load_artifact(self, job_id: UUID, name: str) -> dict[str, Any]:
-    """Handle load artifact."""
+        """Handle load artifact."""
         artifact_file = self._job_dir(job_id) / name
         if artifact_file.exists():
             return json.loads(artifact_file.read_text())
@@ -290,7 +289,7 @@ class JobStore:
         raise FileNotFoundError("Artifact not found")
 
     def write_token(self, job_id: UUID, purpose: str, token: str) -> None:
-    """Handle write token."""
+        """Handle write token."""
         token_file = self._token_file(job_id, purpose)
         token_file.write_text(token)
         if self._dynamo_table:
@@ -303,7 +302,7 @@ class JobStore:
             )
 
     def read_token(self, job_id: UUID, purpose: str) -> str | None:
-    """Handle read token."""
+        """Handle read token."""
         token_file = self._token_file(job_id, purpose)
         if not token_file.exists():
             if self._dynamo_table:
@@ -322,7 +321,7 @@ class JobStore:
         return token_file.read_text().strip()
 
     def clear_token(self, job_id: UUID, purpose: str) -> None:
-    """Handle clear token."""
+        """Handle clear token."""
         token_file = self._token_file(job_id, purpose)
         if token_file.exists():
             token_file.unlink()
@@ -338,7 +337,7 @@ class JobStore:
             )
 
     def _is_expired(self, job: JobRecord) -> bool:
-    """Internal helper for is expired."""
+        """Internal helper for is expired."""
         retention_days = int(os.getenv("BACKEND_RETENTION_DAYS") or "7")
         if retention_days <= 0:
             return False
@@ -350,7 +349,7 @@ class JobStore:
 
 
 def _ttl_epoch(created_at: datetime) -> int:
-"""Internal helper for ttl epoch."""
+    """Internal helper for ttl epoch."""
     retention_days = int(os.getenv("BACKEND_RETENTION_DAYS") or "7")
     if retention_days <= 0:
         retention_days = 7
@@ -360,16 +359,16 @@ def _ttl_epoch(created_at: datetime) -> int:
 
 
 def _deserialize_item(item: dict[str, Any]) -> JobRecord:
-"""Internal helper for deserialize item."""
+    """Internal helper for deserialize item."""
     payload = item.get("payload") or "{}"
     data = json.loads(payload)
     return JobRecord.model_validate(data)
 
 
 def _serialize(job: JobRecord) -> dict[str, Any]:
-"""Internal helper for serialize."""
+    """Internal helper for serialize."""
     def _normalize(value: Any) -> Any:
-    """Internal helper for normalize."""
+        """Internal helper for normalize."""
         if isinstance(value, datetime):
             return value.isoformat()
         if isinstance(value, UUID):
@@ -389,7 +388,7 @@ def _serialize(job: JobRecord) -> dict[str, Any]:
 
 
 def _bool_env(name: str, default: bool) -> bool:
-"""Internal helper for bool env."""
+    """Internal helper for bool env."""
     value = os.getenv(name)
     if value is None:
         return default

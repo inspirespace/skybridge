@@ -1,3 +1,4 @@
+"""tests/test_cloudahoy_timing.py module."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -6,7 +7,7 @@ from src.core.cloudahoy.client import _infer_point_timing
 
 
 def test_infer_point_timing_prefers_summary_when_meta_duration_too_long() -> None:
-"""Test infer point timing prefers summary when meta duration too long."""
+    """Test infer point timing prefers summary when meta duration too long."""
     flt = {
         "Meta": {
             "GMT_start": 1_000_000,

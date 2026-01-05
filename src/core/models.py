@@ -1,9 +1,11 @@
+"""src/core/models.py module."""
 from dataclasses import dataclass
 from datetime import datetime
 
 
 @dataclass(frozen=True)
 class FlightSummary:
+    """Represents FlightSummary."""
     id: str
     started_at: datetime
     duration_seconds: int | None
@@ -13,6 +15,7 @@ class FlightSummary:
 
 @dataclass(frozen=True)
 class FlightDetail:
+    """Represents FlightDetail."""
     id: str
     raw_payload: dict
     raw_path: str | None = None
@@ -25,6 +28,7 @@ class FlightDetail:
 
 @dataclass(frozen=True)
 class MigrationResult:
+    """Represents MigrationResult."""
     flight_id: str
     status: str
     message: str | None = None

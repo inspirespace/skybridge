@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """FastAPI entrypoint for the Skybridge backend.
 
 Responsibilities:
@@ -7,6 +5,7 @@ Responsibilities:
 - SSE stream for live job updates (with polling fallback on the UI)
 - Queueing review/import work for the worker (SQS-backed in prod)
 """
+from __future__ import annotations
 
 import os
 import tempfile
@@ -61,7 +60,7 @@ _accept_rate_limiter = RateLimiter(
     max_events=int(os.getenv("BACKEND_RATE_ACCEPT_PER_MIN") or "5"),
 )
 def _dynamo_jobs_table() -> str | None:
-"""Internal helper for dynamo jobs table."""
+    """Internal helper for dynamo jobs table."""
     if (os.getenv("BACKEND_DYNAMO_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
         table = os.getenv("DYNAMO_JOBS_TABLE") or None
         if not table:
@@ -78,37 +77,37 @@ _sqs_client = None
 
 
 def _use_worker() -> bool:
-"""Internal helper for use worker."""
+    """Internal helper for use worker."""
     return (os.getenv("BACKEND_USE_WORKER") or "false").lower() in {"1", "true", "yes", "on"}
 
 
 def _use_queue() -> bool:
-"""Internal helper for use queue."""
+    """Internal helper for use queue."""
     return (os.getenv("BACKEND_SQS_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}
 
 
 def _credential_ttl() -> int:
-"""Internal helper for credential ttl."""
+    """Internal helper for credential ttl."""
     return int(os.getenv("BACKEND_CREDENTIAL_TTL") or "900")
 
 
 def _worker_token() -> str:
-"""Internal helper for worker token."""
+    """Internal helper for worker token."""
     return os.getenv("BACKEND_WORKER_TOKEN") or ""
 
 
 def _sqs_queue_url() -> str:
-"""Internal helper for sqs queue url."""
+    """Internal helper for sqs queue url."""
     return os.getenv("SQS_QUEUE_URL") or ""
 
 
 def _sqs_region() -> str:
-"""Internal helper for sqs region."""
+    """Internal helper for sqs region."""
     return os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION") or "us-east-1"
 
 
 def _get_sqs_client():
-"""Internal helper for get sqs client."""
+    """Internal helper for get sqs client."""
     global _sqs_client
     if _sqs_client is None:
         import boto3
@@ -118,7 +117,7 @@ def _get_sqs_client():
 
 
 def _enqueue_job(job_id: UUID, purpose: str, token: str) -> None:
-"""Internal helper for enqueue job."""
+    """Internal helper for enqueue job."""
     if not _use_queue():
         return
     queue_url = _sqs_queue_url()
@@ -131,7 +130,7 @@ def _enqueue_job(job_id: UUID, purpose: str, token: str) -> None:
 
 
 def _load_job_or_404(job_id: UUID, user_id: str) -> JobRecord:
-"""Internal helper for load job or 404."""
+    """Internal helper for load job or 404."""
     try:
         job = store.load_job(job_id)
     except (FileNotFoundError, ValidationError, ValueError):
@@ -142,7 +141,7 @@ def _load_job_or_404(job_id: UUID, user_id: str) -> JobRecord:
 
 
 def _enforce_job_limits(user_id: str, *, for_import: bool) -> None:
-"""Internal helper for enforce job limits."""
+    """Internal helper for enforce job limits."""
     max_active = int(os.getenv("BACKEND_MAX_ACTIVE_JOBS") or "1")
     jobs = store.list_jobs(user_id)
     if for_import:
@@ -171,19 +170,19 @@ def _enforce_job_limits(user_id: str, *, for_import: bool) -> None:
 
 @app.get("/", include_in_schema=False)
 def index() -> object:
-"""Handle index."""
+    """Handle index."""
     return landing_page()
 
 
 @app.get("/auth/callback", include_in_schema=False)
 def auth_callback() -> object:
-"""Handle auth callback."""
+    """Handle auth callback."""
     return landing_page()
 
 
 @app.post("/auth/token", include_in_schema=False)
 def auth_token(payload: dict) -> dict:
-"""Handle auth token."""
+    """Handle auth token."""
     token_url = os.getenv("AUTH_TOKEN_URL") or ""
     if not token_url:
         raise HTTPException(status_code=500, detail="AUTH_TOKEN_URL not configured")
@@ -214,11 +213,11 @@ def auth_token(payload: dict) -> dict:
 
 @app.post("/jobs", response_model=JobRecord)
 def create_job(
-"""Create job."""
     payload: JobCreateRequest,
     x_user_id: Optional[str] = Header(default=None),
     authorization: Optional[str] = Header(default=None),
 ) -> JobRecord:
+    """Create job."""
     user_id = user_id_from_request(authorization, x_user_id)
     if not _jobs_rate_limiter.allow(f"{user_id}:create"):
         raise HTTPException(status_code=429, detail="Too many requests. Try again soon.")
@@ -258,10 +257,10 @@ def create_job(
 
 @app.get("/jobs", response_model=JobListResponse)
 def list_jobs(
-"""Handle list jobs."""
     x_user_id: Optional[str] = Header(default=None),
     authorization: Optional[str] = Header(default=None),
 ) -> JobListResponse:
+    """Handle list jobs."""
     user_id = user_id_from_request(authorization, x_user_id)
     jobs = store.list_jobs(user_id)
     return JobListResponse(jobs=jobs)
@@ -269,28 +268,28 @@ def list_jobs(
 
 @app.get("/jobs/{job_id}", response_model=JobRecord)
 def get_job(
-"""Get job."""
     job_id: UUID,
     x_user_id: Optional[str] = Header(default=None),
     authorization: Optional[str] = Header(default=None),
 ) -> JobRecord:
+    """Get job."""
     user_id = user_id_from_request(authorization, x_user_id)
     return _load_job_or_404(job_id, user_id)
 
 
 @app.get("/jobs/{job_id}/events")
 async def job_events(
-"""Handle job events."""
     job_id: UUID,
     request: Request,
     x_user_id: Optional[str] = Header(default=None),
     authorization: Optional[str] = Header(default=None),
 ) -> StreamingResponse:
+    """Handle job events."""
     user_id = user_id_from_request(authorization, x_user_id)
     _load_job_or_404(job_id, user_id)
 
     async def event_stream():
-    """Handle event stream."""
+        """Handle event stream."""
         last_payload = None
         while True:
             if await request.is_disconnected():
@@ -313,11 +312,11 @@ async def job_events(
 
 @app.delete("/jobs/{job_id}")
 def delete_job(
-"""Delete job."""
     job_id: UUID,
     x_user_id: Optional[str] = Header(default=None),
     authorization: Optional[str] = Header(default=None),
 ) -> dict:
+    """Delete job."""
     user_id = user_id_from_request(authorization, x_user_id)
     _load_job_or_404(job_id, user_id)
     store.delete_jobs_for_user(user_id)
@@ -326,12 +325,12 @@ def delete_job(
 
 @app.post("/jobs/{job_id}/review/accept", response_model=JobRecord)
 def accept_review(
-"""Handle accept review."""
     job_id: UUID,
     payload: JobAcceptRequest,
     x_user_id: Optional[str] = Header(default=None),
     authorization: Optional[str] = Header(default=None),
 ) -> JobRecord:
+    """Handle accept review."""
     user_id = user_id_from_request(authorization, x_user_id)
     if not _accept_rate_limiter.allow(f"{user_id}:accept"):
         raise HTTPException(status_code=429, detail="Too many requests. Try again soon.")
@@ -386,11 +385,11 @@ def accept_review(
 
 @app.post("/jobs/{job_id}/credentials/claim", include_in_schema=False)
 def claim_credentials(
-"""Handle claim credentials."""
     job_id: UUID,
     payload: dict,
     x_worker_token: Optional[str] = Header(default=None),
 ) -> dict:
+    """Handle claim credentials."""
     if not (_use_worker() or _use_queue()):
         raise HTTPException(status_code=409, detail="Worker mode disabled")
     if not _worker_token() or x_worker_token != _worker_token():
@@ -407,11 +406,11 @@ def claim_credentials(
 
 @app.get("/jobs/{job_id}/artifacts", response_model=ArtifactListResponse)
 def list_artifacts(
-"""Handle list artifacts."""
     job_id: UUID,
     x_user_id: Optional[str] = Header(default=None),
     authorization: Optional[str] = Header(default=None),
 ) -> ArtifactListResponse:
+    """Handle list artifacts."""
     user_id = user_id_from_request(authorization, x_user_id)
     _load_job_or_404(job_id, user_id)
     artifacts = store.list_artifacts(job_id)
@@ -420,12 +419,12 @@ def list_artifacts(
 
 @app.get("/jobs/{job_id}/artifacts/{artifact_name}")
 def read_artifact(
-"""Handle read artifact."""
     job_id: UUID,
     artifact_name: str,
     x_user_id: Optional[str] = Header(default=None),
     authorization: Optional[str] = Header(default=None),
 ) -> dict:
+    """Handle read artifact."""
     user_id = user_id_from_request(authorization, x_user_id)
     _load_job_or_404(job_id, user_id)
     artifacts = store.list_artifacts(job_id)
@@ -439,12 +438,12 @@ def read_artifact(
 
 @app.get("/jobs/{job_id}/artifacts.zip")
 def download_artifacts_zip(
-"""Handle download artifacts zip."""
     job_id: UUID,
     background_tasks: BackgroundTasks,
     x_user_id: Optional[str] = Header(default=None),
     authorization: Optional[str] = Header(default=None),
 ) -> FileResponse:
+    """Handle download artifacts zip."""
     user_id = user_id_from_request(authorization, x_user_id)
     _load_job_or_404(job_id, user_id)
     job_dir = store.job_dir(job_id)
@@ -452,7 +451,7 @@ def download_artifacts_zip(
         raise HTTPException(status_code=404, detail="Job not found")
 
     def include_path(path: Path) -> bool:
-    """Handle include path."""
+        """Handle include path."""
         if path.name.endswith(".token"):
             return False
         if path.name == "migration.db":

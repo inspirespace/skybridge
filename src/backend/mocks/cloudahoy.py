@@ -1,3 +1,4 @@
+"""src/backend/mocks/cloudahoy.py module."""
 from __future__ import annotations
 
 import json
@@ -25,7 +26,7 @@ STATE = _State()
 
 
 def _load_review() -> list[dict[str, Any]]:
-"""Internal helper for load review."""
+    """Internal helper for load review."""
     if STATE.flights is not None:
         return STATE.flights
     if not _REVIEW_PATH.exists():
@@ -61,7 +62,7 @@ def _load_review() -> list[dict[str, Any]]:
 
 
 def _load_item(flight_id: str) -> dict[str, Any] | None:
-"""Internal helper for load item."""
+    """Internal helper for load item."""
     if STATE.items_by_id is None:
         _load_review()
     if STATE.items_by_id is None:
@@ -70,7 +71,7 @@ def _load_item(flight_id: str) -> dict[str, Any] | None:
 
 
 def _build_points(item: dict[str, Any]) -> list[list[Any]]:
-"""Internal helper for build points."""
+    """Internal helper for build points."""
     points_preview = item.get("points_preview")
     if not isinstance(points_preview, list) or not points_preview:
         return []
@@ -93,7 +94,7 @@ def _build_points(item: dict[str, Any]) -> list[list[Any]]:
 
 
 def _build_meta(item: dict[str, Any]) -> dict[str, Any]:
-"""Internal helper for build meta."""
+    """Internal helper for build meta."""
     meta: dict[str, Any] = {}
     metadata = item.get("metadata")
     if isinstance(metadata, dict):
@@ -114,7 +115,7 @@ def _build_meta(item: dict[str, Any]) -> dict[str, Any]:
 
 
 def _cookie_html() -> str:
-"""Internal helper for cookie html."""
+    """Internal helper for cookie html."""
     return (
         '<html><head></head><body>'
         '<script>'
@@ -128,20 +129,20 @@ def _cookie_html() -> str:
 
 @app.post("/api/signin.cgi")
 async def signin(_: Request) -> PlainTextResponse:
-"""Handle signin."""
+    """Handle signin."""
     return PlainTextResponse(_cookie_html(), media_type="text/html")
 
 
 @app.post("/api/t-flights.cgi")
 async def list_flights(_: Request) -> JSONResponse:
-"""Handle list flights."""
+    """Handle list flights."""
     flights = _load_review()
     return JSONResponse({"flights": flights, "more": False})
 
 
 @app.post("/api/t-debrief.cgi")
 async def debrief(request: Request) -> JSONResponse:
-"""Handle debrief."""
+    """Handle debrief."""
     payload = await request.json()
     flight_id = payload.get("flight") if isinstance(payload, dict) else None
     if not flight_id:
@@ -161,5 +162,5 @@ async def debrief(request: Request) -> JSONResponse:
 
 @app.get("/healthz")
 async def health() -> dict[str, str]:
-"""Handle health."""
+    """Handle health."""
     return {"status": "ok", "run_dir": str(_RUN_DIR)}

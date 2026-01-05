@@ -1,3 +1,4 @@
+/** Type JobStatus. */
 export type JobStatus =
   | "review_queued"
   | "review_running"
@@ -7,6 +8,7 @@ export type JobStatus =
   | "completed"
   | "failed";
 
+/** Type FlightSummary. */
 export type FlightSummary = {
   flight_id: string;
   date: string;
@@ -18,6 +20,7 @@ export type FlightSummary = {
   message?: string | null;
 };
 
+/** Type ReviewSummary. */
 export type ReviewSummary = {
   flight_count: number;
   total_hours: number;
@@ -27,12 +30,14 @@ export type ReviewSummary = {
   flights: FlightSummary[];
 };
 
+/** Type ImportReport. */
 export type ImportReport = {
   imported_count: number;
   skipped_count: number;
   failed_count: number;
 };
 
+/** Type ProgressEvent. */
 export type ProgressEvent = {
   phase: "review" | "import";
   stage: string;
@@ -42,6 +47,7 @@ export type ProgressEvent = {
   created_at: string;
 };
 
+/** Type JobRecord. */
 export type JobRecord = {
   job_id: string;
   user_id: string;
@@ -60,10 +66,12 @@ export type JobRecord = {
   error_message?: string | null;
 };
 
+/** Type ArtifactListResponse. */
 export type ArtifactListResponse = {
   artifacts: string[];
 };
 
+/** Type CredentialsPayload. */
 export type CredentialsPayload = {
   cloudahoy_username: string;
   cloudahoy_password: string;
@@ -71,6 +79,7 @@ export type CredentialsPayload = {
   flysto_password: string;
 };
 
+/** Type JobCreatePayload. */
 export type JobCreatePayload = {
   credentials: CredentialsPayload;
   start_date?: string | null;
@@ -78,6 +87,7 @@ export type JobCreatePayload = {
   max_flights?: number | null;
 };
 
+/** Type JobAcceptPayload. */
 export type JobAcceptPayload = {
   credentials: CredentialsPayload;
 };
@@ -87,6 +97,7 @@ export const apiBaseUrl =
 
 const authMode = import.meta.env.VITE_AUTH_MODE ?? "header";
 
+/** Type AuthContext. */
 export type AuthContext = {
   userId?: string | null;
   token?: string | null;
@@ -214,6 +225,7 @@ export async function deleteJob(jobId: string, auth: AuthContext) {
   });
 }
 
+/** Type TokenExchangeResponse. */
 export type TokenExchangeResponse = {
   access_token: string;
   id_token?: string;

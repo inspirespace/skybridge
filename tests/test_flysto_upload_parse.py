@@ -1,3 +1,4 @@
+"""tests/test_flysto_upload_parse.py module."""
 from __future__ import annotations
 
 import json
@@ -9,7 +10,7 @@ from src.core.flysto.client import _parse_signature_field, _parse_upload_respons
 
 
 def test_parse_upload_signature_from_fixture():
-"""Test parse upload signature from fixture."""
+    """Test parse upload signature from fixture."""
     report = Path("data/runs/20251228T185601Z/import_report.json")
     if not report.exists():
         pytest.skip("fixture run not available")
@@ -27,7 +28,7 @@ def test_parse_upload_signature_from_fixture():
 
 
 def test_parse_signature_field_with_raw_value():
-"""Test parse signature field with raw value."""
+    """Test parse signature field with raw value."""
     sig = "flight.g3x.csv/dbb6797c/371885"
     signature, log_id, sig_hash = _parse_signature_field(sig, "flight.g3x.csv")
     assert signature == sig
@@ -36,7 +37,7 @@ def test_parse_signature_field_with_raw_value():
 
 
 def test_parse_upload_response_with_log_fields():
-"""Test parse upload response with log fields."""
+    """Test parse upload response with log fields."""
     payload = {
         "signature": "flight.gpx/hash999/log555",
         "logId": "log555",
@@ -51,7 +52,7 @@ def test_parse_upload_response_with_log_fields():
 
 
 def test_parse_signature_field_two_parts():
-"""Test parse signature field two parts."""
+    """Test parse signature field two parts."""
     sig = "flight.g3x.csv/dbb6797c"
     signature, log_id, sig_hash = _parse_signature_field(sig, "flight.g3x.csv")
     assert signature == sig

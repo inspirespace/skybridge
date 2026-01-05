@@ -1,3 +1,4 @@
+"""src/core/web/browser.py module."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -16,7 +17,7 @@ class BrowserOptions:
 
 class BrowserSession:
     def __init__(self, options: BrowserOptions) -> None:
-    """Internal helper for init  ."""
+        """Internal helper for init  ."""
         self._options = options
         self._playwright = None
         self._browser: Browser | None = None
@@ -24,7 +25,7 @@ class BrowserSession:
         self._page: Page | None = None
 
     def open(self) -> Page:
-    """Handle open."""
+        """Handle open."""
         self._playwright = sync_playwright().start()
         self._browser = self._playwright.chromium.launch(
             headless=self._options.headless,
@@ -40,12 +41,12 @@ class BrowserSession:
         return self._page
 
     def on_response(self, handler: Callable[[str, dict | None], None]) -> None:
-    """Handle on response."""
+        """Handle on response."""
         if not self._page:
             raise RuntimeError("BrowserSession is not open")
 
         def _handle(response) -> None:
-        """Internal helper for handle."""
+            """Internal helper for handle."""
             content_type = response.headers.get("content-type", "")
             if "application/json" not in content_type and "t-flights.cgi" not in response.url:
                 return
@@ -63,12 +64,12 @@ class BrowserSession:
         self._page.on("response", _handle)
 
     def on_request(self, handler: Callable[[str, str, dict, str | None], None]) -> None:
-    """Handle on request."""
+        """Handle on request."""
         if not self._page:
             raise RuntimeError("BrowserSession is not open")
 
         def _handle(request) -> None:
-        """Internal helper for handle."""
+            """Internal helper for handle."""
             post_data = None
             if request.method.upper() != "GET":
                 post_data_attr = request.post_data
@@ -78,12 +79,12 @@ class BrowserSession:
         self._page.on("request", _handle)
 
     def save_state(self) -> None:
-    """Handle save state."""
+        """Handle save state."""
         if self._context and self._options.storage_state_path:
             self._context.storage_state(path=str(self._options.storage_state_path))
 
     def close(self) -> None:
-    """Handle close."""
+        """Handle close."""
         if self._context:
             self._context.close()
         if self._browser:

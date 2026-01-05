@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+/** Type ImportResultsProps. */
 export type ImportResultsProps = {
   imported: number;
   skipped: number;

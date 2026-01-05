@@ -1,3 +1,4 @@
+"""scripts/inspect_flysto_aircraft_create_standard.py module."""
 import json
 import os
 from pathlib import Path

@@ -1,10 +1,12 @@
 import type { ImportStatus, ReviewStatus } from "@/state/flow";
 
+/** Type ReviewProgress. */
 export type ReviewProgress = {
   status: ReviewStatus;
   progress: number;
 };
 
+/** Type ImportProgress. */
 export type ImportProgress = {
   status: ImportStatus;
   progress: number;

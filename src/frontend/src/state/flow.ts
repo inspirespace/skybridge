@@ -1,8 +1,11 @@
 import type { JobRecord, JobStatus } from "@/api/client";
 
+/** Type ReviewStatus. */
 export type ReviewStatus = "idle" | "running" | "complete" | "failed";
+/** Type ImportStatus. */
 export type ImportStatus = "idle" | "running" | "complete" | "failed";
 
+/** Type FlowState. */
 export type FlowState = {
   signedIn: boolean;
   connected: boolean;

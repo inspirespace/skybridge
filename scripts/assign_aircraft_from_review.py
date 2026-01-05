@@ -1,3 +1,4 @@
+"""scripts/assign_aircraft_from_review.py module."""
 import json
 import os
 from pathlib import Path

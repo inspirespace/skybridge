@@ -1,3 +1,4 @@
+"""tests/test_flysto_assign_aircraft.py module."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -14,32 +15,32 @@ class DummyResponse:
 
 class DummyFlySto(FlyStoClient):
     def __init__(self):
-    """Internal helper for init  ."""
+        """Internal helper for init  ."""
         super().__init__(api_key="", base_url="https://example.test")
         self.request_calls: list[tuple[str, str, dict]] = []
 
     def _ensure_session(self, session):
-    """Internal helper for ensure session."""
+        """Internal helper for ensure session."""
         return None
 
     def _request(self, session, method: str, url: str, **kwargs):
-    """Internal helper for request."""
+        """Internal helper for request."""
         self.request_calls.append((method.lower(), url, kwargs))
         return DummyResponse()
 
     def resolve_log_for_file(
-    """Handle resolve log for file."""
         self,
         filename: str,
         retries: int = 8,
         delay_seconds: float = 3.0,
         logs_limit: int = 250,
     ):
+        """Handle resolve log for file."""
         return "log-1", "sig", "GenericGpx"
 
 
 def test_assign_aircraft_does_not_cache_unknown_group():
-"""Test assign aircraft does not cache unknown group."""
+    """Test assign aircraft does not cache unknown group."""
     client = DummyFlySto()
 
     client.assign_aircraft("tail-1", log_format_id="GenericGpx", system_id=None)
@@ -50,7 +51,7 @@ def test_assign_aircraft_does_not_cache_unknown_group():
 
 
 def test_assign_aircraft_caches_known_system_id():
-"""Test assign aircraft caches known system id."""
+    """Test assign aircraft caches known system id."""
     client = DummyFlySto()
 
     client.assign_aircraft("tail-1", log_format_id="GenericGpx", system_id="abc")
@@ -61,7 +62,7 @@ def test_assign_aircraft_caches_known_system_id():
 
 
 def test_assign_metadata_for_file_puts_remarks_and_tags():
-"""Test assign metadata for file puts remarks and tags."""
+    """Test assign metadata for file puts remarks and tags."""
     client = DummyFlySto()
 
     client.assign_metadata_for_file("A1.gpx", remarks="New remarks", tags=["cloudahoy", "cloudahoy:2025-03-20T15:37Z"])
@@ -80,20 +81,20 @@ def test_assign_metadata_for_file_puts_remarks_and_tags():
 
 
 def test_ensure_crew_members_tolerates_existing():
-"""Test ensure crew members tolerates existing."""
+    """Test ensure crew members tolerates existing."""
     class DummyFlyStoCrew(FlyStoClient):
         def __init__(self):
-        """Internal helper for init  ."""
+            """Internal helper for init  ."""
             super().__init__(api_key="", base_url="https://example.test")
             self.failed_create = False
             self.requested_names: list[str] = []
 
         def _ensure_session(self, session):
-        """Internal helper for ensure session."""
+            """Internal helper for ensure session."""
             return None
 
         def _request(self, session, method: str, url: str, **kwargs):
-        """Internal helper for request."""
+            """Internal helper for request."""
             if method.lower() == "post" and url.endswith("/api/new-crew"):
                 name = kwargs.get("json", {}).get("name")
                 if name:
@@ -103,7 +104,7 @@ def test_ensure_crew_members_tolerates_existing():
             return DummyResponse()
 
         def _list_crew(self):
-        """Internal helper for list crew."""
+            """Internal helper for list crew."""
             if self.failed_create:
                 return [{"name": "Alex"}]
             return []
@@ -114,43 +115,43 @@ def test_ensure_crew_members_tolerates_existing():
 
 
 def test_resolve_log_cached_across_assignments():
-"""Test resolve log cached across assignments."""
+    """Test resolve log cached across assignments."""
     class DummyFlyStoCached(FlyStoClient):
         def __init__(self):
-        """Internal helper for init  ."""
+            """Internal helper for init  ."""
             super().__init__(api_key="", base_url="https://example.test")
             self.resolve_calls = 0
             self.assigned: list[tuple[list[str], list[str], list[str]]] = []
 
         def _ensure_session(self, session):
-        """Internal helper for ensure session."""
+            """Internal helper for ensure session."""
             return None
 
         def _resolve_log_for_file_uncached(
-        """Internal helper for resolve log for file uncached."""
             self,
             filename: str,
             retries: int = 8,
             delay_seconds: float = 3.0,
             logs_limit: int = 250,
         ):
+            """Internal helper for resolve log for file uncached."""
             self.resolve_calls += 1
             return "log-1", "sig", "GenericGpx"
 
         def _ensure_crew_members(self, names):
-        """Internal helper for ensure crew members."""
+            """Internal helper for ensure crew members."""
             return None
 
         def _list_crew_roles(self):
-        """Internal helper for list crew roles."""
+            """Internal helper for list crew roles."""
             return [{"id": "role-1", "name": "Pilot"}]
 
         def assign_aircraft(self, aircraft_id: str, log_format_id: str = "GenericGpx", system_id: str | None = None):
-        """Handle assign aircraft."""
+            """Handle assign aircraft."""
             return None
 
         def _assign_crew(self, log_ids: list[str], names: list[str], roles: list[str]) -> None:
-        """Internal helper for assign crew."""
+            """Internal helper for assign crew."""
             self.assigned.append((log_ids, names, roles))
 
     client = DummyFlyStoCached()
@@ -165,39 +166,39 @@ def test_resolve_log_cached_across_assignments():
 
 
 def test_assign_crew_for_log_id_skips_resolution():
-"""Test assign crew for log id skips resolution."""
+    """Test assign crew for log id skips resolution."""
     class DummyFlyStoNoResolve(FlyStoClient):
         def __init__(self):
-        """Internal helper for init  ."""
+            """Internal helper for init  ."""
             super().__init__(api_key="", base_url="https://example.test")
             self.resolve_calls = 0
             self.assigned: list[tuple[list[str], list[str], list[str]]] = []
 
         def _ensure_session(self, session):
-        """Internal helper for ensure session."""
+            """Internal helper for ensure session."""
             return None
 
         def _resolve_log_for_file_uncached(
-        """Internal helper for resolve log for file uncached."""
             self,
             filename: str,
             retries: int = 8,
             delay_seconds: float = 3.0,
             logs_limit: int = 250,
         ):
+            """Internal helper for resolve log for file uncached."""
             self.resolve_calls += 1
             return "log-1", "sig", "GenericGpx"
 
         def _ensure_crew_members(self, names):
-        """Internal helper for ensure crew members."""
+            """Internal helper for ensure crew members."""
             return None
 
         def _list_crew_roles(self):
-        """Internal helper for list crew roles."""
+            """Internal helper for list crew roles."""
             return [{"id": "role-1", "name": "Pilot"}]
 
         def _assign_crew(self, log_ids: list[str], names: list[str], roles: list[str]) -> None:
-        """Internal helper for assign crew."""
+            """Internal helper for assign crew."""
             self.assigned.append((log_ids, names, roles))
 
     client = DummyFlyStoNoResolve()
@@ -211,28 +212,28 @@ def test_assign_crew_for_log_id_skips_resolution():
 
 
 def test_assign_crew_payload_matches_ui_format():
-"""Test assign crew payload matches ui format."""
+    """Test assign crew payload matches ui format."""
     class DummyFlyStoPayload(FlyStoClient):
         def __init__(self):
-        """Internal helper for init  ."""
+            """Internal helper for init  ."""
             super().__init__(api_key="", base_url="https://example.test")
             self.request_calls: list[tuple[str, str, dict]] = []
 
         def _ensure_session(self, session):
-        """Internal helper for ensure session."""
+            """Internal helper for ensure session."""
             return None
 
         def _request(self, session, method: str, url: str, **kwargs):
-        """Internal helper for request."""
+            """Internal helper for request."""
             self.request_calls.append((method.lower(), url, kwargs))
             return DummyResponse()
 
         def _ensure_crew_members(self, names):
-        """Internal helper for ensure crew members."""
+            """Internal helper for ensure crew members."""
             return None
 
         def _list_crew_roles(self):
-        """Internal helper for list crew roles."""
+            """Internal helper for list crew roles."""
             return [{"id": "-6", "name": "Student"}]
 
     client = DummyFlyStoPayload()
@@ -252,19 +253,19 @@ def test_assign_crew_payload_matches_ui_format():
 
 
 def test_list_crew_falls_back_to_all():
-"""Test list crew falls back to all."""
+    """Test list crew falls back to all."""
     class DummyFlyStoCrewFallback(FlyStoClient):
         def __init__(self):
-        """Internal helper for init  ."""
+            """Internal helper for init  ."""
             super().__init__(api_key="", base_url="https://example.test")
             self.calls: list[tuple[str, str, dict]] = []
 
         def _ensure_session(self, session):
-        """Internal helper for ensure session."""
+            """Internal helper for ensure session."""
             return None
 
         def _request(self, session, method: str, url: str, **kwargs):
-        """Internal helper for request."""
+            """Internal helper for request."""
             self.calls.append((method.lower(), url, kwargs))
             if url.endswith("/api/user-crew"):
                 return DummyResponse(text="[]")

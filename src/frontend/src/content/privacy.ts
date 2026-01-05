@@ -1,9 +1,11 @@
+/** Type PrivacySection. */
 export type PrivacySection = {
   title: string;
   paragraphs?: string[];
   list?: string[];
 };
 
+/** Type PrivacyContent. */
 export type PrivacyContent = {
   title: string;
   subtitle: string;

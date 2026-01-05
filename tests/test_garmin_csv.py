@@ -1,3 +1,4 @@
+"""tests/test_garmin_csv.py module."""
 from __future__ import annotations
 
 import csv
@@ -8,7 +9,7 @@ from src.core.cloudahoy.points import write_points_garmin_g1000_csv, write_point
 
 
 def _schema() -> list[dict]:
-"""Internal helper for schema."""
+    """Internal helper for schema."""
     return [
         {"index": 0, "name": "longitude_deg"},
         {"index": 1, "name": "latitude_deg"},
@@ -26,7 +27,7 @@ def _schema() -> list[dict]:
 
 
 def _point_row() -> list:
-"""Internal helper for point row."""
+    """Internal helper for point row."""
     row = [None] * 12
     row[0] = 14.0
     row[1] = 48.0
@@ -44,7 +45,7 @@ def _point_row() -> list:
 
 
 def test_garmin_g3x_csv_header_and_row(tmp_path: Path) -> None:
-"""Test garmin g3x csv header and row."""
+    """Test garmin g3x csv header and row."""
     out_path = tmp_path / "g3x.csv"
     start = datetime(2024, 9, 4, 12, 0, tzinfo=timezone.utc)
     metadata = {"tail_number": "D-KBUH", "aircraft_type": "WT9"}
@@ -75,7 +76,7 @@ def test_garmin_g3x_csv_header_and_row(tmp_path: Path) -> None:
 
 
 def test_garmin_g3x_hdg_optional_trk_always(tmp_path: Path, monkeypatch) -> None:
-"""Test garmin g3x hdg optional trk always."""
+    """Test garmin g3x hdg optional trk always."""
     out_path = tmp_path / "g3x.csv"
     start = datetime(2024, 9, 4, 12, 0, tzinfo=timezone.utc)
     metadata = {"tail_number": "D-KBUH", "aircraft_type": "WT9"}
@@ -111,7 +112,7 @@ def test_garmin_g3x_hdg_optional_trk_always(tmp_path: Path, monkeypatch) -> None
 
 
 def test_garmin_g1000_csv_header_and_row(tmp_path: Path) -> None:
-"""Test garmin g1000 csv header and row."""
+    """Test garmin g1000 csv header and row."""
     out_path = tmp_path / "g1000.csv"
     start = datetime(2024, 9, 4, 12, 0, tzinfo=timezone.utc)
     metadata = {"tail_number": "D-KBUH", "aircraft_type": "WT9"}

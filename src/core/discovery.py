@@ -1,3 +1,4 @@
+"""src/core/discovery.py module."""
 from __future__ import annotations
 
 import json
@@ -30,7 +31,7 @@ class DiscoveryConfig:
 
 
 def run_discovery(config: DiscoveryConfig) -> Path:
-"""Handle run discovery."""
+    """Handle run discovery."""
     config.output_dir.mkdir(parents=True, exist_ok=True)
     results: dict[str, Any] = {
         "started_at": datetime.now(timezone.utc).isoformat(),
@@ -43,7 +44,7 @@ def run_discovery(config: DiscoveryConfig) -> Path:
 
 
 def discover_cloudahoy(config: DiscoveryConfig) -> dict[str, Any]:
-"""Handle discover cloudahoy."""
+    """Handle discover cloudahoy."""
     session = BrowserSession(
         BrowserOptions(headless=config.headless, storage_state_path=None)
     )
@@ -82,7 +83,7 @@ def discover_cloudahoy(config: DiscoveryConfig) -> dict[str, Any]:
 
 
 def discover_flysto(config: DiscoveryConfig) -> dict[str, Any]:
-"""Handle discover flysto."""
+    """Handle discover flysto."""
     session = BrowserSession(
         BrowserOptions(headless=config.headless, storage_state_path=None)
     )
@@ -122,7 +123,7 @@ def discover_flysto(config: DiscoveryConfig) -> dict[str, Any]:
 
 
 def _log_response_raw(response, log: list[dict[str, Any]]) -> None:
-"""Internal helper for log response raw."""
+    """Internal helper for log response raw."""
     url = response.url
     if "flysto.net/api" not in url:
         return
@@ -150,7 +151,7 @@ def _log_response_raw(response, log: list[dict[str, Any]]) -> None:
 
 
 def _login_cloudahoy(page: Page, config: DiscoveryConfig) -> None:
-"""Internal helper for login cloudahoy."""
+    """Internal helper for login cloudahoy."""
     page.goto(f"{config.cloudahoy_base_url}/login.php", wait_until="networkidle")
     if page.locator("form#ca_loginform").count() == 0:
         return
@@ -163,7 +164,7 @@ def _login_cloudahoy(page: Page, config: DiscoveryConfig) -> None:
 
 
 def _login_flysto(page: Page, config: DiscoveryConfig) -> None:
-"""Internal helper for login flysto."""
+    """Internal helper for login flysto."""
     page.goto(f"{config.flysto_base_url}/login", wait_until="networkidle")
     email_input = page.locator(
         "input[name=email], input[type='email'], input[placeholder*='email' i]"
@@ -184,7 +185,7 @@ def _login_flysto(page: Page, config: DiscoveryConfig) -> None:
 
 
 def _guess_flights_url(page: Page, base_url: str) -> str | None:
-"""Internal helper for guess flights url."""
+    """Internal helper for guess flights url."""
     for label in ("My Debriefs", "Debriefs", "Flights", "My Flights"):
         locator = page.locator(f"a:has-text('{label}')")
         if locator.count() > 0:
@@ -202,7 +203,7 @@ def _guess_flights_url(page: Page, base_url: str) -> str | None:
 
 
 def _click_export_button(page: Page) -> str | None:
-"""Internal helper for click export button."""
+    """Internal helper for click export button."""
     export_labels = ["Export", "Download", "IGC", "GPX", "CSV"]
     for label in export_labels:
         if page.get_by_text(label).count() > 0:
@@ -217,7 +218,7 @@ def _click_export_button(page: Page) -> str | None:
 
 
 def _attempt_upload(page: Page, file_path: Path) -> str | None:
-"""Internal helper for attempt upload."""
+    """Internal helper for attempt upload."""
     if page.locator("input[type=file]").count() == 0:
         for label in ("Load logs", "Upload", "Add flight", "Import", "Upload flight"):
             if page.get_by_text(label).count() > 0:
@@ -250,7 +251,7 @@ def _attempt_upload(page: Page, file_path: Path) -> str | None:
 
 
 def _infer_template_from_url(url: str | None) -> str | None:
-"""Internal helper for infer template from url."""
+    """Internal helper for infer template from url."""
     if not url:
         return None
     parsed = urlparse(url)
@@ -273,13 +274,13 @@ def _infer_template_from_url(url: str | None) -> str | None:
 
 
 def _log_request(
-"""Internal helper for log request."""
     url: str,
     method: str,
     headers: dict,
     post_data: str | None,
     log: list[dict[str, Any]],
 ) -> None:
+    """Internal helper for log request."""
     content_type = headers.get("content-type", "")
     is_upload = method.upper() == "POST" and "multipart/form-data" in content_type
     payload = None
@@ -297,7 +298,7 @@ def _log_request(
 
 
 def _scrub_payload(post_data: str) -> str | None:
-"""Internal helper for scrub payload."""
+    """Internal helper for scrub payload."""
     if not post_data:
         return None
     try:
@@ -316,7 +317,7 @@ def _scrub_payload(post_data: str) -> str | None:
 
 
 def _redact_json(value: Any) -> Any:
-"""Internal helper for redact json."""
+    """Internal helper for redact json."""
     if isinstance(value, dict):
         return {key: _redact_json(item) for key, item in value.items()}
     if isinstance(value, list):
@@ -327,7 +328,7 @@ def _redact_json(value: Any) -> Any:
 
 
 def _log_response(url: str, data: dict | list | None, log: list[dict[str, Any]]) -> None:
-"""Internal helper for log response."""
+    """Internal helper for log response."""
     if data is None:
         return
     if isinstance(data, dict):

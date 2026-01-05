@@ -1,3 +1,4 @@
+"""src/core/discovery_cli.py module."""
 import argparse
 import os
 import sys
@@ -8,7 +9,7 @@ from src.core.discovery import DiscoveryConfig, run_discovery
 
 
 def build_parser() -> argparse.ArgumentParser:
-"""Build parser."""
+    """Build parser."""
     parser = argparse.ArgumentParser(
         prog="skybridge-discovery",
         description="Run CloudAhoy/FlySto endpoint discovery via web automation",
@@ -32,7 +33,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def run(argv: list[str]) -> int:
-"""Handle run."""
+    """Handle run."""
     parser = build_parser()
     args = parser.parse_args(argv)
 

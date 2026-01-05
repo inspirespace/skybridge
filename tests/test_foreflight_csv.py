@@ -1,3 +1,4 @@
+"""tests/test_foreflight_csv.py module."""
 from __future__ import annotations
 
 import csv
@@ -8,7 +9,7 @@ from src.core.cloudahoy.points import write_points_foreflight_csv
 
 
 def _schema() -> list[dict]:
-"""Internal helper for schema."""
+    """Internal helper for schema."""
     return [
         {"index": 0, "name": "longitude_deg"},
         {"index": 1, "name": "latitude_deg"},
@@ -30,7 +31,7 @@ def _schema() -> list[dict]:
 
 
 def _point_row() -> list:
-"""Internal helper for point row."""
+    """Internal helper for point row."""
     row = [None] * 21
     row[0] = 14.0
     row[1] = 48.0
@@ -52,7 +53,7 @@ def _point_row() -> list:
 
 
 def test_foreflight_csv_header_and_row(tmp_path: Path) -> None:
-"""Test foreflight csv header and row."""
+    """Test foreflight csv header and row."""
     out_path = tmp_path / "flight.csv"
     start = datetime(2024, 9, 4, 12, 0, tzinfo=timezone.utc)
     metadata = {"tail_number": "D-KBUH", "pilot": ["Ulrich", "u@example.com"]}

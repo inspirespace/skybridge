@@ -1,3 +1,4 @@
+"""src/core/guided.py module."""
 from __future__ import annotations
 
 import json
@@ -52,12 +53,12 @@ class GuidedOptions:
 
 
 def _timestamp() -> str:
-"""Internal helper for timestamp."""
+    """Internal helper for timestamp."""
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def _parse_started_at(value: str | None) -> datetime | None:
-"""Internal helper for parse started at."""
+    """Internal helper for parse started at."""
     if not value:
         return None
     try:
@@ -67,7 +68,7 @@ def _parse_started_at(value: str | None) -> datetime | None:
 
 
 def _summarize_review(path: Path) -> dict[str, Any]:
-"""Internal helper for summarize review."""
+    """Internal helper for summarize review."""
     payload = json.loads(path.read_text())
     items = payload.get("items", [])
     tails = Counter()
@@ -95,7 +96,7 @@ def _summarize_review(path: Path) -> dict[str, Any]:
 
 
 def _parse_date_bound(value: str, is_end: bool) -> datetime:
-"""Internal helper for parse date bound."""
+    """Internal helper for parse date bound."""
     raw = value.strip()
     normalized = raw.replace("Z", "+00:00")
     if "T" not in normalized and len(normalized) == 10:
@@ -112,11 +113,11 @@ def _parse_date_bound(value: str, is_end: bool) -> datetime:
 
 
 def _filter_summaries_by_date(
-"""Internal helper for filter summaries by date."""
     summaries: list[FlightSummary],
     start_date: datetime | None,
     end_date: datetime | None,
 ) -> list[FlightSummary]:
+    """Internal helper for filter summaries by date."""
     if not start_date and not end_date:
         return summaries
     filtered: list[FlightSummary] = []
@@ -135,7 +136,7 @@ def _filter_summaries_by_date(
 
 
 def _render_review_summary(console: Console, summary: dict[str, Any]) -> None:
-"""Internal helper for render review summary."""
+    """Internal helper for render review summary."""
     count = summary.get("count", 0)
     min_date = summary.get("min_date")
     max_date = summary.get("max_date")
@@ -160,12 +161,12 @@ def _render_review_summary(console: Console, summary: dict[str, Any]) -> None:
 
 
 def _write_guided_summary(
-"""Internal helper for write guided summary."""
     run_dir: Path,
     options: GuidedOptions,
     review_id: str | None,
     summary: dict[str, Any] | None,
 ) -> None:
+    """Internal helper for write guided summary."""
     summary_payload: dict[str, Any] = {}
     if summary:
         summary_payload = dict(summary)
@@ -194,11 +195,11 @@ def _write_guided_summary(
 
 
 def _prompt_guided_options(
-"""Internal helper for prompt guided options."""
     console: Console,
     default_max: int,
     run_id: str,
 ) -> GuidedOptions:
+    """Internal helper for prompt guided options."""
     console.print(Panel.fit("Skybridge guided migration", style="bold"))
     max_flights = IntPrompt.ask("Max flights to import", default=default_max)
     force = Confirm.ask("Force reimport existing flights?", default=False)
@@ -227,7 +228,7 @@ def _prompt_guided_options(
 
 
 def _preflight_checks(console: Console, cloudahoy: CloudAhoyClient, flysto: FlyStoClient) -> bool:
-"""Internal helper for preflight checks."""
+    """Internal helper for preflight checks."""
     table = Table(title="Preflight Checks", box=box.SIMPLE, show_edge=False)
     table.add_column("Check")
     table.add_column("Status")
@@ -255,7 +256,7 @@ def _preflight_checks(console: Console, cloudahoy: CloudAhoyClient, flysto: FlyS
 
 
 def _build_progress(console: Console, total: int) -> Progress:
-"""Internal helper for build progress."""
+    """Internal helper for build progress."""
     return Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -268,9 +269,9 @@ def _build_progress(console: Console, total: int) -> Progress:
 
 
 def _progress_callback(progress: Progress, task_id: int, console: Console) -> Callable[[str, dict], None]:
-"""Internal helper for progress callback."""
+    """Internal helper for progress callback."""
     def handler(event: str, payload: dict) -> None:
-    """Handle handler."""
+        """Handle handler."""
         if event == "start":
             flight_id = payload.get("flight_id") or "flight"
             progress.update(task_id, description=f"Importing {flight_id}")
@@ -287,7 +288,7 @@ def _progress_callback(progress: Progress, task_id: int, console: Console) -> Ca
 
 
 def _summaries_from_review(path: Path) -> list[FlightSummary]:
-"""Internal helper for summaries from review."""
+    """Internal helper for summaries from review."""
     payload = json.loads(path.read_text())
     items = payload.get("items", [])
     summaries: list[FlightSummary] = []
@@ -311,7 +312,6 @@ def _summaries_from_review(path: Path) -> list[FlightSummary]:
 
 
 def run_guided(
-"""Handle run guided."""
     *,
     console: Console,
     cloudahoy: CloudAhoyClient,
@@ -329,6 +329,7 @@ def run_guided(
     run_id: str,
     setup_logging: Callable[[str], None] | None = None,
 ) -> int:
+    """Handle run guided."""
     default_max = max_flights or 50
     console.print("Running preflight checks...")
     preflight_ok = _preflight_checks(console, cloudahoy, flysto)

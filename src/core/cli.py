@@ -1,3 +1,4 @@
+"""src/core/cli.py module."""
 import argparse
 import getpass
 import json
@@ -23,7 +24,7 @@ from src.core.state import MigrationState
 
 
 def build_parser() -> argparse.ArgumentParser:
-"""Build parser."""
+    """Build parser."""
     parser = argparse.ArgumentParser(
         prog="skybridge",
         description="Migrate CloudAhoy flights to FlySto",
@@ -130,7 +131,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _read_review_id(path: Path) -> str | None:
-"""Internal helper for read review id."""
+    """Internal helper for read review id."""
     if not path.exists():
         return None
     try:
@@ -142,7 +143,7 @@ def _read_review_id(path: Path) -> str | None:
 
 
 def _summaries_from_review(path: Path) -> list[FlightSummary]:
-"""Internal helper for summaries from review."""
+    """Internal helper for summaries from review."""
     payload = json.loads(path.read_text())
     items = payload.get("items", [])
     summaries: list[FlightSummary] = []
@@ -173,7 +174,7 @@ def _summaries_from_review(path: Path) -> list[FlightSummary]:
 
 
 def _parse_date_bound(value: str, is_end: bool) -> datetime:
-"""Internal helper for parse date bound."""
+    """Internal helper for parse date bound."""
     raw = value.strip()
     normalized = raw.replace("Z", "+00:00")
     if "T" not in normalized and len(normalized) == 10:
@@ -190,11 +191,11 @@ def _parse_date_bound(value: str, is_end: bool) -> datetime:
 
 
 def _filter_summaries_by_date(
-"""Internal helper for filter summaries by date."""
     summaries: list[FlightSummary],
     start_date: datetime | None,
     end_date: datetime | None,
 ) -> list[FlightSummary]:
+    """Internal helper for filter summaries by date."""
     if not start_date and not end_date:
         return summaries
     filtered: list[FlightSummary] = []
@@ -213,7 +214,7 @@ def _filter_summaries_by_date(
 
 
 def _apply_run_paths(args: argparse.Namespace, run_id: str, runs_dir: str) -> tuple[Path, str]:
-"""Internal helper for apply run paths."""
+    """Internal helper for apply run paths."""
     log_path = (os.getenv("LOG_PATH") or "").strip()
     if run_id:
         run_dir = Path(runs_dir) / run_id
@@ -242,7 +243,7 @@ def _apply_run_paths(args: argparse.Namespace, run_id: str, runs_dir: str) -> tu
 
 
 def _setup_logging(log_path: str) -> None:
-"""Internal helper for setup logging."""
+    """Internal helper for setup logging."""
     if not log_path:
         return
     log_file_path = Path(log_path)
@@ -251,11 +252,11 @@ def _setup_logging(log_path: str) -> None:
 
     class _Tee:
         def __init__(self, *streams):
-        """Internal helper for init  ."""
+            """Internal helper for init  ."""
             self._streams = streams
 
         def write(self, data: str) -> int:
-        """Handle write."""
+            """Handle write."""
             written = 0
             for stream in self._streams:
                 try:
@@ -265,7 +266,7 @@ def _setup_logging(log_path: str) -> None:
             return written
 
         def flush(self) -> None:
-        """Handle flush."""
+            """Handle flush."""
             for stream in self._streams:
                 try:
                     stream.flush()
@@ -277,7 +278,7 @@ def _setup_logging(log_path: str) -> None:
 
 
 def _parse_missing_env_vars(error: ConfigError) -> list[str]:
-"""Internal helper for parse missing env vars."""
+    """Internal helper for parse missing env vars."""
     prefix = "Missing required env vars: "
     message = str(error)
     if not message.startswith(prefix):
@@ -287,7 +288,7 @@ def _parse_missing_env_vars(error: ConfigError) -> list[str]:
 
 
 def _prompt_env_var(name: str) -> str:
-"""Internal helper for prompt env var."""
+    """Internal helper for prompt env var."""
     if "PASSWORD" in name:
         value = getpass.getpass(f"{name}: ")
     else:
@@ -296,7 +297,7 @@ def _prompt_env_var(name: str) -> str:
 
 
 def _prompt_for_missing_env_vars(missing: list[str]) -> bool:
-"""Internal helper for prompt for missing env vars."""
+    """Internal helper for prompt for missing env vars."""
     if not missing:
         return False
     print("Missing required credentials. Enter them to continue.")
@@ -308,7 +309,7 @@ def _prompt_for_missing_env_vars(missing: list[str]) -> bool:
 
 
 def run(argv: list[str]) -> int:
-"""Handle run."""
+    """Handle run."""
     parser = build_parser()
     args = parser.parse_args(argv)
     runs_dir = (os.getenv("RUNS_DIR") or "data/runs").strip()
@@ -402,7 +403,7 @@ def run(argv: list[str]) -> int:
             summaries = summaries[:max_flights]
 
     def _stamp() -> str:
-    """Internal helper for stamp."""
+        """Internal helper for stamp."""
         return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     if args.guided:
@@ -597,18 +598,18 @@ def run(argv: list[str]) -> int:
     step_times: dict[tuple[str, str], float] = {}
 
     def _step_start(flight_id: str, step: str) -> None:
-    """Internal helper for step start."""
+        """Internal helper for step start."""
         step_times[(flight_id, step)] = time.monotonic()
 
     def _step_done(flight_id: str, step: str) -> str:
-    """Internal helper for step done."""
+        """Internal helper for step done."""
         key = (flight_id, step)
         if key not in step_times:
             return ""
         return f" ({time.monotonic() - step_times[key]:.1f}s)"
 
     def progress(event: str, payload: dict) -> None:
-    """Handle progress."""
+        """Handle progress."""
         if not args.verbose:
             return
         if event == "start":
