@@ -96,7 +96,7 @@ export function LandingPage({
             </div>
             <div className="rounded-lg border border-sky-100 bg-white/70 p-3 text-sm text-muted-foreground dark:border-sky-900/60 dark:bg-slate-950/50">
               <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                Retention
+                Stored for
               </div>
               <div className="mt-1 text-lg font-semibold text-foreground">{retentionDays} days</div>
             </div>
