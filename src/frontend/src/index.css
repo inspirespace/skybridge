@@ -67,6 +67,15 @@
   }
 }
 
+.dark input[type="number"] {
+  color-scheme: dark;
+}
+
+.dark input[type="number"]::-webkit-inner-spin-button,
+.dark input[type="number"]::-webkit-outer-spin-button {
+  filter: invert(1) brightness(1.2);
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .app-shell {
     animation: fadeIn 180ms ease;
