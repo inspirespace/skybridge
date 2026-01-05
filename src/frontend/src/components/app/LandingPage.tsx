@@ -57,7 +57,7 @@ export function LandingPage({
                 </Button>
               </div>
             </div>
-            <div className="rounded-xl border border-sky-100 bg-sky-50/60 p-4 text-slate-900 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-slate-100">
+            <div className="rounded-xl border border-sky-200/80 bg-white/80 p-4 text-slate-900 shadow-[0_14px_28px_rgba(56,189,248,0.15)] dark:border-sky-800/70 dark:bg-slate-950/60 dark:text-slate-100 dark:shadow-[0_18px_30px_rgba(14,116,144,0.2)]">
               <div className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 What you can expect
               </div>
