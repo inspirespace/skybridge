@@ -8,6 +8,7 @@ export type ImportResultsProps = {
   registrationMissing: number;
 };
 
+/** Render ImportResults component. */
 export function ImportResults({
   imported,
   skipped,
@@ -63,6 +64,7 @@ export function ImportResults({
   );
 }
 
+/** Render ResultRow component. */
 function ResultRow({
   label,
   description,

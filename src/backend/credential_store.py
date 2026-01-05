@@ -27,9 +27,11 @@ class _Entry:
 
 class CredentialStore:
     def __init__(self) -> None:
+    """Internal helper for init  ."""
         self._entries: dict[str, _Entry] = {}
 
     def issue(self, job_id: str, purpose: str, credentials: dict, ttl_seconds: int) -> str:
+    """Handle issue."""
         token = secrets.token_urlsafe(32)
         self._entries[token] = _Entry(
             job_id=job_id,
@@ -40,6 +42,7 @@ class CredentialStore:
         return token
 
     def claim(self, token: str, job_id: str, purpose: str) -> Optional[dict]:
+    """Handle claim."""
         entry = self._entries.get(token)
         if not entry:
             return None
@@ -55,9 +58,11 @@ class CredentialStore:
 
 class DynamoCredentialStore:
     def __init__(self, table_name: str) -> None:
+    """Internal helper for init  ."""
         self._table = boto3.resource("dynamodb").Table(table_name)
 
     def issue(self, job_id: str, purpose: str, credentials: dict, ttl_seconds: int) -> str:
+    """Handle issue."""
         token = secrets.token_urlsafe(32)
         ttl_epoch = int(time.time() + ttl_seconds)
         self._table.put_item(
@@ -73,6 +78,7 @@ class DynamoCredentialStore:
         return token
 
     def claim(self, token: str, job_id: str, purpose: str) -> Optional[dict]:
+    """Handle claim."""
         response = self._table.get_item(Key={"token": token})
         item = response.get("Item") if isinstance(response, dict) else None
         if not item:
@@ -90,6 +96,7 @@ class DynamoCredentialStore:
 
 
 def build_credential_store() -> CredentialStore | DynamoCredentialStore:
+"""Build credential store."""
     if (os.getenv("BACKEND_DYNAMO_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
         table_name = os.getenv("DYNAMO_CREDENTIALS_TABLE") or ""
         if not table_name:

@@ -1,11 +1,13 @@
 import type { DateRange } from "react-day-picker";
 import type { ProgressEvent } from "@/api/client";
 
+/** Format date. */
 export function formatDate(value?: string | null) {
   if (!value) return "-";
   return new Date(value).toISOString().slice(0, 10);
 }
 
+/** Format daterange. */
 export function formatDateRange(range?: DateRange) {
   if (!range?.from && !range?.to) return "Any date";
   if (range?.from && range?.to) {
@@ -17,10 +19,12 @@ export function formatDateRange(range?: DateRange) {
   return `- ${formatISODate(range.to!)}`;
 }
 
+/** Format isodate. */
 export function formatISODate(value: Date) {
   return value.toISOString().slice(0, 10);
 }
 
+/** Format elapsed. */
 export function formatElapsed(start?: string | null, end?: string | null) {
   if (!start) return "-";
   const startMs = new Date(start).getTime();
@@ -35,6 +39,7 @@ export function formatElapsed(start?: string | null, end?: string | null) {
   return `${hours}h ${remaining}m`;
 }
 
+/** Format lastupdate. */
 export function formatLastUpdate(value?: string | null, now: Date = new Date()) {
   if (!value) return "-";
   const date = new Date(value);
@@ -48,11 +53,13 @@ export function formatLastUpdate(value?: string | null, now: Date = new Date()) 
   return `${days}d ago`;
 }
 
+/** Get phaseevents. */
 function getPhaseEvents(log?: ProgressEvent[], phase?: ProgressEvent["phase"]) {
   if (!log || !phase) return [];
   return log.filter((event) => event?.phase === phase && event?.created_at);
 }
 
+/** Format phaseelapsed. */
 export function formatPhaseElapsed(
   log: ProgressEvent[] | undefined,
   phase: ProgressEvent["phase"],
@@ -69,6 +76,7 @@ export function formatPhaseElapsed(
   return formatElapsed(start, end);
 }
 
+/** Format phaselastupdate. */
 export function formatPhaseLastUpdate(
   log: ProgressEvent[] | undefined,
   phase: ProgressEvent["phase"],
@@ -84,6 +92,7 @@ export function formatPhaseLastUpdate(
   return formatLastUpdate(latest.created_at, now);
 }
 
+/** Format flightid. */
 export function formatFlightId(value?: string | null) {
   const id = value ?? "";
   if (!id) return "-";

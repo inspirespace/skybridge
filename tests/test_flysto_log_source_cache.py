@@ -7,25 +7,30 @@ from src.core.flysto.client import FlyStoClient
 
 class DummyResponse:
     def __init__(self, text: str, status_code: int = 200) -> None:
+    """Internal helper for init  ."""
         self.text = text
         self.status_code = status_code
 
 
 class DummyFlyStoCached(FlyStoClient):
     def __init__(self, payload: dict) -> None:
+    """Internal helper for init  ."""
         super().__init__(api_key="", base_url="https://example.test")
         self.payload = payload
         self.request_count = 0
 
     def _ensure_session(self, session):
+    """Internal helper for ensure session."""
         return None
 
     def _request(self, session, method: str, url: str, **kwargs):
+    """Internal helper for request."""
         self.request_count += 1
         return DummyResponse(text=json.dumps(self.payload))
 
 
 def test_resolve_log_source_is_cached():
+"""Test resolve log source is cached."""
     payload = {
         "items": [{"id": "log-1", "aircraft": 0}],
         "aircraft": [{"avionics": {"logFormatId": "GenericGpx", "systemId": "gpx"}}],

@@ -92,6 +92,7 @@ export type AuthContext = {
   token?: string | null;
 };
 
+/** Build authheaders. */
 export function buildAuthHeaders(auth?: AuthContext, skipAuth = false) {
   const headers: Record<string, string> = {};
   if (skipAuth) return headers;

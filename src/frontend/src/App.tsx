@@ -68,6 +68,7 @@ const DEV_FLYSTO_PASSWORD = import.meta.env.VITE_FLYSTO_PASSWORD ?? "";
 const RETENTION_DAYS = Number.parseInt(import.meta.env.VITE_RETENTION_DAYS ?? "7", 10);
 const retentionDays = Number.isFinite(RETENTION_DAYS) ? RETENTION_DAYS : 7;
 
+/** Render App component. */
 export default function App() {
   const pathname =
     typeof window !== "undefined"
@@ -246,6 +247,7 @@ export default function App() {
     }
   }, [allowedSteps, manualOpen]);
 
+  /** Handle handleAccordionChange. */
   const handleAccordionChange = (value?: string) => {
     if (!value) {
       setManualOpen(undefined);
@@ -255,6 +257,7 @@ export default function App() {
     setManualOpen(value);
   };
 
+  /** Handle handleSignIn. */
   const handleSignIn = () => {
     setActionError(null);
     if (AUTH_MODE === "oidc") {
@@ -267,6 +270,7 @@ export default function App() {
     setActionError(null);
   };
 
+  /** Handle handleConnectReview. */
   const handleConnectReview = async () => {
     if (!isSignedIn) return;
     setActionLoading(true);
@@ -301,6 +305,7 @@ export default function App() {
     }
   };
 
+  /** Handle handleApproveImport. */
   const handleApproveImport = async () => {
     if (!isSignedIn || !jobId) return;
     setActionLoading(true);
@@ -330,6 +335,7 @@ export default function App() {
     }
   };
 
+  /** Handle handleEditFilters. */
   const handleEditFilters = () => {
     if (!jobId) {
       setManualOpen("connect");
@@ -357,6 +363,7 @@ export default function App() {
       });
   };
 
+  /** Handle clearLocalState. */
   const clearLocalState = () => {
     localStorage.removeItem(JOB_ID_KEY);
     setJobId(null);
@@ -364,6 +371,7 @@ export default function App() {
     setActionError(null);
   };
 
+  /** Handle handleStartOverConfirm. */
   const handleStartOverConfirm = async () => {
     if (!jobId) {
       clearLocalState();
@@ -392,6 +400,7 @@ export default function App() {
     }
   };
 
+  /** Handle handleSignOut. */
   const handleSignOut = () => {
     localStorage.removeItem(JOB_ID_KEY);
     setJobId(null);
@@ -453,6 +462,7 @@ export default function App() {
     };
   }, [isSignedIn, jobId, actionLoading, auth, handleTokenExpired]);
 
+  /** Handle handleDownloadFiles. */
   const handleDownloadFiles = async () => {
     if (!jobId) return;
     setActionLoading(true);
@@ -486,6 +496,7 @@ export default function App() {
     }
   };
 
+  /** Handle handleDeleteResults. */
   const handleDeleteResults = async () => {
     if (!jobId) return;
     setActionLoading(true);

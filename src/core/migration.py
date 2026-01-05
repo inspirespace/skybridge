@@ -49,6 +49,7 @@ class ReviewItem:
     has_kml: bool
 
     def to_dict(self) -> dict:
+    """Handle to dict."""
         return {
             "flight_id": self.flight_id,
             "started_at": self.started_at.isoformat(),
@@ -76,6 +77,7 @@ class ReviewItem:
 
 
 def prepare_review(
+"""Handle prepare review."""
     cloudahoy: CloudAhoyClient,
     summaries: list[FlightSummary] | None = None,
     max_flights: int | None = None,
@@ -172,6 +174,7 @@ def prepare_review(
 
 
 def _review_item(
+"""Internal helper for review item."""
     summary: FlightSummary,
     status: str,
     message: str | None,
@@ -218,6 +221,7 @@ def _review_item(
 
 
 def _describe_detail(
+"""Internal helper for describe detail."""
     raw_payload: dict, file_path: str | None
 ) -> tuple[int | None, bool, list[dict], list[dict]]:
     flt = raw_payload.get("flt") if isinstance(raw_payload, dict) else {}
@@ -232,6 +236,7 @@ def _describe_detail(
 
 
 def _summarize_review(items: list[ReviewItem]) -> dict:
+"""Internal helper for summarize review."""
     skipped = sum(1 for item in items if item.status == "skipped")
     ready = sum(1 for item in items if item.status == "ready")
     warnings = sum(1 for item in items if item.validation_warnings)
@@ -245,6 +250,7 @@ def _summarize_review(items: list[ReviewItem]) -> dict:
 
 
 def _summarize_points_schema(items: list[ReviewItem]) -> dict:
+"""Internal helper for summarize points schema."""
     by_index: dict[int, dict] = {}
     total_flights = 0
     for item in items:
@@ -278,6 +284,7 @@ def _summarize_points_schema(items: list[ReviewItem]) -> dict:
 
 
 def _cleanup_exports_dir(cloudahoy: CloudAhoyClient, items: list[ReviewItem]) -> None:
+"""Internal helper for cleanup exports dir."""
     exports_dir = getattr(cloudahoy, "exports_dir", None)
     if not isinstance(exports_dir, Path):
         return
@@ -325,6 +332,7 @@ def _cleanup_exports_dir(cloudahoy: CloudAhoyClient, items: list[ReviewItem]) ->
 
 
 def _payload_has_kml(flt: dict | None) -> bool:
+"""Internal helper for payload has kml."""
     if not isinstance(flt, dict):
         return False
     kml = flt.get("KML")
@@ -339,6 +347,7 @@ def _payload_has_kml(flt: dict | None) -> bool:
 
 
 def _extract_metadata(raw_payload: dict) -> dict:
+"""Internal helper for extract metadata."""
     flt = raw_payload.get("flt") if isinstance(raw_payload, dict) else {}
     meta = flt.get("Meta") if isinstance(flt, dict) else None
     if not isinstance(meta, dict):
@@ -365,10 +374,12 @@ def _extract_metadata(raw_payload: dict) -> dict:
 
 
 def _extract_crew_assignments(metadata: dict) -> list[dict]:
+"""Internal helper for extract crew assignments."""
     crew: list[dict] = []
     by_name: dict[str, dict] = {}
 
     def add_entry(name: object, role: object, is_pic: bool = False) -> None:
+    """Handle add entry."""
         if not isinstance(name, str) or not name.strip():
             return
         role_value = role if isinstance(role, str) and role.strip() else None
@@ -435,6 +446,7 @@ def _extract_crew_assignments(metadata: dict) -> list[dict]:
 
 
 def _normalize_remarks(value: object) -> str | None:
+"""Internal helper for normalize remarks."""
     if not isinstance(value, str):
         return None
     cleaned = _repair_mojibake(value).strip()
@@ -442,16 +454,19 @@ def _normalize_remarks(value: object) -> str | None:
 
 
 def _build_import_tags(import_tag: str) -> list[str]:
+"""Internal helper for build import tags."""
     return ["cloudahoy", import_tag]
 
 
 def _format_timestamp_tag(value: datetime) -> str:
+"""Internal helper for format timestamp tag."""
     if value.tzinfo is None:
         value = value.replace(tzinfo=timezone.utc)
     return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
 
 
 def _repair_mojibake(value: str) -> str:
+"""Internal helper for repair mojibake."""
     if "Ã" not in value and "Â" not in value:
         return value
     for source in ("cp1252", "latin-1"):
@@ -465,6 +480,7 @@ def _repair_mojibake(value: str) -> str:
 
 
 def _compute_review_id(items: list[ReviewItem]) -> str:
+"""Internal helper for compute review id."""
     payload = [
         {
             "flight_id": item.flight_id,
@@ -479,6 +495,7 @@ def _compute_review_id(items: list[ReviewItem]) -> str:
 
 
 def _normalize_tail_number(value: object) -> tuple[str | None, str | None, list[str] | None]:
+"""Internal helper for normalize tail number."""
     if isinstance(value, str):
         tail = value.strip()
         if _is_placeholder(tail):
@@ -506,6 +523,7 @@ def _normalize_tail_number(value: object) -> tuple[str | None, str | None, list[
 
 
 def _is_tail_candidate(value: str) -> bool:
+"""Internal helper for is tail candidate."""
     stripped = value.strip()
     if _is_placeholder(stripped):
         return False
@@ -520,10 +538,12 @@ def _is_tail_candidate(value: str) -> bool:
 
 
 def _is_placeholder(value: str) -> bool:
+"""Internal helper for is placeholder."""
     return value.strip().upper() in {"", "OTHER", "UNKNOWN"}
 
 
 def _matches_tail_pattern(value: str) -> bool:
+"""Internal helper for matches tail pattern."""
     if "-" not in value:
         return False
     prefix, suffix = value.split("-", 1)
@@ -539,6 +559,7 @@ def _matches_tail_pattern(value: str) -> bool:
 
 
 def migrate_flights(
+"""Handle migrate flights."""
     cloudahoy: CloudAhoyClient,
     flysto: FlyStoClient,
     dry_run: bool = False,
@@ -734,6 +755,7 @@ def migrate_flights(
 
 
 def _migrate_single(
+"""Internal helper for migrate single."""
     detail: FlightDetail,
     flysto: FlyStoClient,
     dry_run: bool,
@@ -861,6 +883,7 @@ def _migrate_single(
 
 
 def _hash_file(path: str | None) -> str | None:
+"""Internal helper for hash file."""
     if not path:
         return None
     file_path = Path(path)
@@ -874,6 +897,7 @@ def _hash_file(path: str | None) -> str | None:
 
 
 def _validate_detail(
+"""Internal helper for validate detail."""
     detail: FlightDetail,
     points_count: int | None,
     schema: list[dict],
@@ -905,6 +929,7 @@ def _validate_detail(
 
 
 def _build_report_item(
+"""Internal helper for build report item."""
     detail: FlightDetail,
     status: str,
     message: str | None,
@@ -965,6 +990,7 @@ def _build_report_item(
 
 
 def _write_import_report(
+"""Internal helper for write import report."""
     report_path: Path,
     review_id: str | None,
     stats: MigrationStats,
@@ -987,6 +1013,7 @@ def _write_import_report(
 
 
 def verify_import_report(report_path: Path, flysto: FlyStoClient) -> dict[str, int]:
+"""Handle verify import report."""
     payload = json.loads(report_path.read_text())
     items = payload.get("items", [])
     resolved = 0
@@ -1054,6 +1081,7 @@ def verify_import_report(report_path: Path, flysto: FlyStoClient) -> dict[str, i
 
 
 def reconcile_aircraft_from_report(report_path: Path, flysto: FlyStoClient) -> int:
+"""Handle reconcile aircraft from report."""
     payload = json.loads(report_path.read_text())
     items = payload.get("items", [])
     updated = 0
@@ -1113,6 +1141,7 @@ def reconcile_aircraft_from_report(report_path: Path, flysto: FlyStoClient) -> i
 
 
 def reconcile_crew_from_report(
+"""Handle reconcile crew from report."""
     report_path: Path,
     flysto: FlyStoClient,
     review_path: Path | None = None,
@@ -1185,6 +1214,7 @@ def reconcile_crew_from_report(
 
 
 def _log_metadata_has_crew(metadata: dict[str, Any] | None, log_id: str | None) -> bool:
+"""Internal helper for log metadata has crew."""
     if not metadata or not log_id:
         return False
     items = metadata.get("items")
@@ -1200,6 +1230,7 @@ def _log_metadata_has_crew(metadata: dict[str, Any] | None, log_id: str | None) 
 
 
 def reconcile_metadata_from_report(
+"""Handle reconcile metadata from report."""
     report_path: Path,
     flysto: FlyStoClient,
 ) -> int:

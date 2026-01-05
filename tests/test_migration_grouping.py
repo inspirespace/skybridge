@@ -11,18 +11,22 @@ from src.core.models import FlightDetail, FlightSummary
 
 class FakeCloudAhoy:
     def __init__(self, summaries: list[FlightSummary], details: dict[str, FlightDetail]):
+    """Internal helper for init  ."""
         self._summaries = summaries
         self._details = details
 
     def list_flights(self, limit: int | None = None):
+    """Handle list flights."""
         return self._summaries if limit is None else self._summaries[:limit]
 
     def fetch_flight(self, flight_id: str) -> FlightDetail:
+    """Handle fetch flight."""
         return self._details[flight_id]
 
 
 class FakeFlySto:
     def __init__(self):
+    """Internal helper for init  ."""
         self.uploaded: list[str] = []
         self.assigned_signatures: list[tuple[str, str | None, str | None]] = []
         self.assigned_unknown: list[str] = []
@@ -30,13 +34,16 @@ class FakeFlySto:
         self.metadata_calls: list[tuple[str | None, str | None, list[str]]] = []
 
     def ensure_aircraft(self, tail_number: str, aircraft_type: str | None = None):
+    """Handle ensure aircraft."""
         self.ensured.append(tail_number)
         return {"id": f"id-{tail_number}", "tail-number": tail_number}
 
     def upload_flight(self, detail: FlightDetail, dry_run: bool = False):
+    """Handle upload flight."""
         self.uploaded.append(detail.id)
 
     def assign_aircraft_for_signature(
+    """Handle assign aircraft for signature."""
         self,
         aircraft_id: str,
         signature: str | None,
@@ -46,14 +53,17 @@ class FakeFlySto:
         self.assigned_signatures.append((aircraft_id, signature, resolved_format or log_format_id))
 
     def assign_crew_for_log_id(self, log_id: str | None, crew: list[dict]):
+    """Handle assign crew for log id."""
         # Not relevant for grouping test
         return None
 
     def assign_aircraft(self, aircraft_id: str, log_format_id: str = "GenericGpx", system_id=None):
+    """Handle assign aircraft."""
         # Track group assignment calls
         self.assigned_unknown.append(aircraft_id)
 
     def assign_metadata_for_log_id(
+    """Handle assign metadata for log id."""
         self,
         log_id: str | None,
         remarks: str | None = None,
@@ -62,6 +72,7 @@ class FakeFlySto:
         self.metadata_calls.append((log_id, remarks, tags or []))
 
     def resolve_log_for_file(
+    """Handle resolve log for file."""
         self,
         filename: str,
         retries: int = 8,
@@ -72,6 +83,7 @@ class FakeFlySto:
 
 
 def _detail(flight_id: str, tail: str) -> FlightDetail:
+"""Internal helper for detail."""
     return FlightDetail(
         id=flight_id,
         raw_payload={"flt": {"Meta": {"tailNumber": tail}}},
@@ -82,6 +94,7 @@ def _detail(flight_id: str, tail: str) -> FlightDetail:
 
 
 def test_grouped_uploads_assign_unknown_per_tail():
+"""Test grouped uploads assign unknown per tail."""
     summaries = [
     FlightSummary("A1", datetime.now(timezone.utc), None, None, None),
     FlightSummary("A2", datetime.now(timezone.utc), None, None, None),
@@ -112,6 +125,7 @@ def test_grouped_uploads_assign_unknown_per_tail():
 
 
 def test_migration_adds_cloudahoy_tag_and_remarks():
+"""Test migration adds cloudahoy tag and remarks."""
     summaries = [
         FlightSummary("A1", datetime(2025, 3, 20, 15, 37), None, None, None),
     ]
@@ -144,6 +158,7 @@ def test_migration_adds_cloudahoy_tag_and_remarks():
 
 
 def test_migration_repairs_mojibake_remarks():
+"""Test migration repairs mojibake remarks."""
     summaries = [
         FlightSummary("A2", datetime(2025, 9, 4, 15, 26), None, None, None),
     ]
@@ -171,6 +186,7 @@ def test_migration_repairs_mojibake_remarks():
 
 
 def test_import_report_written():
+"""Test import report written."""
     summaries = [
         FlightSummary("A3", datetime(2025, 7, 23, 16, 29), None, None, None),
     ]
@@ -202,6 +218,7 @@ def test_import_report_written():
 
 
 def test_verify_import_report_updates_log_ids():
+"""Test verify import report updates log ids."""
     with tempfile.TemporaryDirectory() as temp_dir:
         report_path = Path(temp_dir) / "report.json"
         report_path.write_text(

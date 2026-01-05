@@ -8,17 +8,21 @@ from src.core.migration import reconcile_crew_from_report
 
 class DummyFlySto:
     def __init__(self) -> None:
+    """Internal helper for init  ."""
         self.assigned: list[str] = []
         self.fetch_calls = 0
 
     def resolve_log_for_file(self, filename: str, **_kwargs):
+    """Handle resolve log for file."""
         return "log-new", None, None
 
     def assign_crew_for_log_id(self, log_id: str | None, crew):
+    """Handle assign crew for log id."""
         if log_id:
             self.assigned.append(log_id)
 
     def fetch_log_metadata(self, log_id: str):
+    """Handle fetch log metadata."""
         self.fetch_calls += 1
         if self.fetch_calls == 1:
             return {"items": [{"id": log_id, "annotations": {}}]}
@@ -26,6 +30,7 @@ class DummyFlySto:
 
 
 def test_reconcile_crew_resolves_and_retries(monkeypatch, tmp_path: Path):
+"""Test reconcile crew resolves and retries."""
     report_path = tmp_path / "import_report.json"
     payload = {
         "items": [

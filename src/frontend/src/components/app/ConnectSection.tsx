@@ -20,6 +20,7 @@ import { Calendar as CalendarIcon } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import * as React from "react";
 
+/** Render ConnectSection component. */
 export function ConnectSection({
   allowed,
   connected,
@@ -74,6 +75,7 @@ export function ConnectSection({
   React.useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return;
     const media = window.matchMedia("(min-width: 768px)");
+    /** Update . */
     const update = () => setIsDesktop(media.matches);
     update();
     if (media.addEventListener) {

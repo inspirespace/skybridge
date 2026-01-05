@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { canStartOver, deriveFlowState, getOpenStep } from "@/state/flow";
 import type { JobRecord } from "@/api/client";
 
+/** Handle baseJob. */
 function baseJob(status: JobRecord["status"]): JobRecord {
   return {
     job_id: "00000000-0000-0000-0000-000000000000",

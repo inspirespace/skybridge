@@ -33,6 +33,7 @@ class CloudAhoyClient:
     export_formats: list[str] | None = None
 
     def list_flights(self, limit: int | None = None) -> list[FlightSummary]:
+    """Handle list flights."""
         session, auth = _login(self.base_url, self.email, self.password)
         payload = _build_auth_payload(auth, initial_call=True)
         flights: list[dict] = []
@@ -88,6 +89,7 @@ class CloudAhoyClient:
         return summaries
 
     def fetch_flight(self, flight_id: str) -> FlightDetail:
+    """Handle fetch flight."""
         data = self._fetch_raw(flight_id)
 
         flt = data.get("flt", {})
@@ -179,6 +181,7 @@ class CloudAhoyClient:
                     export_paths[fmt] = csv_path
 
                 def fmt_rank(name: str) -> int:
+                """Handle fmt rank."""
                     order = [
                         "g3x",
                         "garmin-g3x",
@@ -235,11 +238,13 @@ class CloudAhoyClient:
         )
 
     def fetch_metadata(self, flight_id: str) -> dict:
+    """Handle fetch metadata."""
         data = self._fetch_raw(flight_id)
         flt = data.get("flt", {})
         return _extract_metadata(flt)
 
     def _fetch_raw(self, flight_id: str) -> dict:
+    """Internal helper for fetch raw."""
         session, auth = _login(self.base_url, self.email, self.password)
         payload = _build_auth_payload(auth, initial_call=False)
         payload["flight"] = flight_id
@@ -253,6 +258,7 @@ class CloudAhoyClient:
 
 
 def _csv_suffix(export_format: str) -> str:
+"""Internal helper for csv suffix."""
     if not export_format or export_format == "gpx":
         return ""
     safe = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in export_format)
@@ -260,6 +266,7 @@ def _csv_suffix(export_format: str) -> str:
 
 
 def _login(base_url: str, email: str, password: str) -> tuple[requests.Session, dict]:
+"""Internal helper for login."""
     session = requests.Session()
     api_base = _api_base(base_url).rstrip("/")
     response = session.post(
@@ -282,6 +289,7 @@ def _login(base_url: str, email: str, password: str) -> tuple[requests.Session, 
 
 
 def _extract_cookie(html: str, name: str) -> str | None:
+"""Internal helper for extract cookie."""
     needle = f'setCookie("{name}","'
     start = html.find(needle)
     if start == -1:
@@ -294,6 +302,7 @@ def _extract_cookie(html: str, name: str) -> str | None:
 
 
 def _build_auth_payload(auth: dict, initial_call: bool) -> dict:
+"""Internal helper for build auth payload."""
     return {
         "userName": False,
         "initialCall": initial_call,
@@ -308,6 +317,7 @@ def _build_auth_payload(auth: dict, initial_call: bool) -> dict:
 
 
 def _from_unix(value: int | float | None) -> datetime:
+"""Internal helper for from unix."""
     if value is None:
         return datetime.now(tz=timezone.utc)
     try:
@@ -317,6 +327,7 @@ def _from_unix(value: int | float | None) -> datetime:
 
 
 def _infer_point_timing(flt: dict, points_count: int) -> tuple[datetime | None, float | None]:
+"""Internal helper for infer point timing."""
     meta = flt.get("Meta") if isinstance(flt, dict) else None
     if not isinstance(meta, dict):
         return None, None
@@ -378,6 +389,7 @@ def _infer_point_timing(flt: dict, points_count: int) -> tuple[datetime | None, 
 
 
 def _extract_kml(payload: dict) -> str | None:
+"""Internal helper for extract kml."""
     flt = payload.get("flt", {})
     kml = flt.get("KML")
     if isinstance(kml, dict):
@@ -390,12 +402,14 @@ def _extract_kml(payload: dict) -> str | None:
 
 
 def _api_base(base_url: str) -> str:
+"""Internal helper for api base."""
     if "api.cloudahoy.com" in base_url:
         return "https://www.cloudahoy.com/api"
     return base_url.rstrip("/")
 
 
 def _extract_last_token(flights: list[dict]) -> str | None:
+"""Internal helper for extract last token."""
     if not flights:
         return None
     last = flights[-1]
@@ -410,6 +424,7 @@ def _extract_last_token(flights: list[dict]) -> str | None:
 
 
 def _extract_metadata(flt: dict) -> dict:
+"""Internal helper for extract metadata."""
     meta = flt.get("Meta") if isinstance(flt, dict) else None
     if not isinstance(meta, dict):
         return {}
@@ -435,6 +450,7 @@ def _extract_metadata(flt: dict) -> dict:
 
 
 def _normalize_tail_number(value: object) -> tuple[str | None, str | None, list[str] | None]:
+"""Internal helper for normalize tail number."""
     if isinstance(value, str):
         tail = value.strip()
         if _is_placeholder(tail):
@@ -462,6 +478,7 @@ def _normalize_tail_number(value: object) -> tuple[str | None, str | None, list[
 
 
 def _is_tail_candidate(value: str) -> bool:
+"""Internal helper for is tail candidate."""
     stripped = value.strip()
     if _is_placeholder(stripped):
         return False
@@ -476,10 +493,12 @@ def _is_tail_candidate(value: str) -> bool:
 
 
 def _is_placeholder(value: str) -> bool:
+"""Internal helper for is placeholder."""
     return value.strip().upper() in {"", "OTHER", "UNKNOWN"}
 
 
 def _matches_tail_pattern(value: str) -> bool:
+"""Internal helper for matches tail pattern."""
     if "-" not in value:
         return False
     prefix, suffix = value.split("-", 1)

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserRound } from "lucide-react";
 
+/** Render SignInSection component. */
 export function SignInSection({
   allowed,
   signedIn,

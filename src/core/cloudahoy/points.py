@@ -31,6 +31,7 @@ _KPH_TO_KTS = 0.539957
 
 
 def build_points_schema(flt: dict) -> list[dict[str, Any]]:
+"""Build points schema."""
     points = flt.get("points") if isinstance(flt, dict) else None
     if not isinstance(points, list) or not points:
         return []
@@ -102,6 +103,7 @@ def build_points_schema(flt: dict) -> list[dict[str, Any]]:
 
 
 def write_points_csv(points: list, schema: list[dict[str, Any]], path: Path) -> None:
+"""Handle write points csv."""
     header = [column["name"] for column in schema]
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -115,6 +117,7 @@ def write_points_csv(points: list, schema: list[dict[str, Any]], path: Path) -> 
 
 
 def write_points_foreflight_csv(
+"""Handle write points foreflight csv."""
     points: list,
     schema: list[dict[str, Any]],
     path: Path,
@@ -155,6 +158,7 @@ def write_points_foreflight_csv(
 
 
 def write_points_flightradar24_csv(
+"""Handle write points flightradar24 csv."""
     points: list,
     schema: list[dict[str, Any]],
     path: Path,
@@ -179,6 +183,7 @@ def write_points_flightradar24_csv(
     callsign = metadata.get("callsign") or metadata.get("tail_number") or ""
 
     def meters_to_feet(value: Any):
+    """Handle meters to feet."""
         return float(value) * 3.28084
 
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -205,6 +210,7 @@ def write_points_flightradar24_csv(
 
 
 def write_points_mvp50_csv(
+"""Handle write points mvp50 csv."""
     points: list,
     schema: list[dict[str, Any]],
     path: Path,
@@ -227,12 +233,15 @@ def write_points_mvp50_csv(
         stride = max(1, int(math.ceil(0.25 / step)))
 
     def meters_to_feet(value: Any):
+    """Handle meters to feet."""
         return float(value) * 3.28084
 
     def fmt_time(ts: datetime) -> str:
+    """Handle fmt time."""
         return ts.strftime("%H:%M:%S")
 
     def fmt_date(ts: datetime) -> str:
+    """Handle fmt date."""
         return ts.strftime("%m/%d/%y")
 
     header_fields = [
@@ -318,6 +327,7 @@ def write_points_mvp50_csv(
 
 
 def write_points_garmin_g3x_csv(
+"""Handle write points garmin g3x csv."""
     points: list,
     schema: list[dict[str, Any]],
     path: Path,
@@ -359,15 +369,19 @@ def write_points_garmin_g3x_csv(
         stride = max(1, int(math.ceil(0.25 / step)))
 
     def meters_to_feet(value: Any):
+    """Handle meters to feet."""
         return float(value) * 3.28084
 
     def knots_to_fpm(value: Any):
+    """Handle knots to fpm."""
         return float(value) * 101.2686
 
     def fmt_date(ts: datetime) -> str:
+    """Handle fmt date."""
         return ts.strftime("%Y-%m-%d")
 
     def fmt_time(ts: datetime) -> str:
+    """Handle fmt time."""
         return ts.strftime("%H:%M:%S")
 
     airframe = metadata.get("aircraft_type") or "Unknown"
@@ -485,6 +499,7 @@ def write_points_garmin_g3x_csv(
 
 
 def write_points_garmin_g1000_csv(
+"""Handle write points garmin g1000 csv."""
     points: list,
     schema: list[dict[str, Any]],
     path: Path,
@@ -518,15 +533,19 @@ def write_points_garmin_g1000_csv(
         stride = max(1, int(math.ceil(0.25 / step)))
 
     def meters_to_feet(value: Any):
+    """Handle meters to feet."""
         return float(value) * 3.28084
 
     def knots_to_fpm(value: Any):
+    """Handle knots to fpm."""
         return float(value) * 101.2686
 
     def fmt_date(ts: datetime) -> str:
+    """Handle fmt date."""
         return ts.strftime("%Y-%m-%d")
 
     def fmt_time(ts: datetime) -> str:
+    """Handle fmt time."""
         return ts.strftime("%H:%M:%S")
 
     airframe = metadata.get("aircraft_type") or "Unknown"
@@ -619,6 +638,7 @@ def write_points_garmin_g1000_csv(
 
 
 def _infer_gmt_epoch(start_time: datetime | None, metadata: dict[str, Any]) -> int:
+"""Internal helper for infer gmt epoch."""
     if isinstance(start_time, datetime):
         return int(start_time.timestamp())
     summary = metadata.get("summary") if isinstance(metadata.get("summary"), dict) else None
@@ -633,6 +653,7 @@ def _infer_gmt_epoch(start_time: datetime | None, metadata: dict[str, Any]) -> i
 
 
 def _foreflight_metadata(metadata: dict[str, Any], gmt_epoch: int) -> list[tuple[str, str]]:
+"""Internal helper for foreflight metadata."""
     lines: list[tuple[str, str]] = [("METADATA", "CA_CSV.3"), ("GMT", str(gmt_epoch))]
     tail = metadata.get("tail_number")
     if tail:
@@ -665,6 +686,7 @@ def _foreflight_metadata(metadata: dict[str, Any], gmt_epoch: int) -> list[tuple
 
 
 def _extract_person(value: Any) -> tuple[str | None, str | None]:
+"""Internal helper for extract person."""
     if isinstance(value, list) and value:
         name = str(value[0]) if value[0] else None
         email = None
@@ -677,10 +699,12 @@ def _extract_person(value: Any) -> tuple[str | None, str | None]:
 
 
 def _foreflight_columns(
+"""Internal helper for foreflight columns."""
     schema_index: dict[str, int],
     alt_idx: int | None,
 ) -> list[tuple[str, Any]]:
     def pick_index(*names: str) -> int | None:
+    """Handle pick index."""
         for name in names:
             idx = schema_index.get(name)
             if idx is not None:
@@ -688,7 +712,9 @@ def _foreflight_columns(
         return None
 
     def from_idx(idx: int | None, transform=None):
+    """Handle from idx."""
         def _value(point: list, _row: int, _step: float):
+        """Internal helper for value."""
             if idx is None or idx >= len(point):
                 return ""
             value = point[idx]
@@ -704,12 +730,15 @@ def _foreflight_columns(
         return _value
 
     def time_value(_point: list, row: int, step: float):
+    """Handle time value."""
         return round(row * step, 3)
 
     def knots_to_fpm(value: Any):
+    """Handle knots to fpm."""
         return float(value) * 101.2686
 
     def meters_to_feet(value: Any):
+    """Handle meters to feet."""
         return float(value) * 3.28084
 
     columns: list[tuple[str, Any]] = [
@@ -785,6 +814,7 @@ def _foreflight_columns(
 
 
 def infer_point_indices(schema: list[dict[str, Any]]) -> tuple[int, int, int | None]:
+"""Handle infer point indices."""
     lat_idx = _index_for(schema, "latitude_deg", fallback=1)
     lon_idx = _index_for(schema, "longitude_deg", fallback=0)
     alt_idx = _index_for(schema, "alt_meters", fallback=2)
@@ -792,6 +822,7 @@ def infer_point_indices(schema: list[dict[str, Any]]) -> tuple[int, int, int | N
 
 
 def write_points_gpx(
+"""Handle write points gpx."""
     points: list,
     schema: list[dict[str, Any]],
     path: Path,
@@ -851,6 +882,7 @@ def write_points_gpx(
 
 
 def _index_for(schema: list[dict[str, Any]], name: str, fallback: int | None = None) -> int | None:
+"""Internal helper for index for."""
     for column in schema:
         if column.get("name") == name:
             return int(column.get("index", fallback or 0))
@@ -859,6 +891,7 @@ def _index_for(schema: list[dict[str, Any]], name: str, fallback: int | None = N
 
 
 def points_preview(
+"""Handle points preview."""
     points: list, schema: list[dict[str, Any]], limit: int = 3
 ) -> list[dict[str, Any]]:
     preview: list[dict[str, Any]] = []
@@ -874,6 +907,7 @@ def points_preview(
 
 
 def _extract_profiles(profiles: Any) -> dict[int, dict[str, Any]]:
+"""Internal helper for extract profiles."""
     mapping: dict[int, dict[str, Any]] = {}
     if not isinstance(profiles, list):
         return mapping
@@ -906,6 +940,7 @@ def _extract_profiles(profiles: Any) -> dict[int, dict[str, Any]]:
 
 
 def _median(values: list[float]) -> float | None:
+"""Internal helper for median."""
     if not values:
         return None
     values_sorted = sorted(values)
@@ -916,6 +951,7 @@ def _median(values: list[float]) -> float | None:
 
 
 def _to_float(value: Any) -> float | None:
+"""Internal helper for to float."""
     if value is None or value == "":
         return None
     try:
@@ -925,6 +961,7 @@ def _to_float(value: Any) -> float | None:
 
 
 def _track_gs_knots(
+"""Internal helper for track gs knots."""
     points: list,
     lat_idx: int | None,
     lon_idx: int | None,
@@ -956,6 +993,7 @@ def _track_gs_knots(
 
 
 def _haversine_nm(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+"""Internal helper for haversine nm."""
     r_nm = 3440.065
     phi1 = math.radians(lat1)
     phi2 = math.radians(lat2)
@@ -966,6 +1004,7 @@ def _haversine_nm(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 
 def _infer_speed_factor(observed: float | None, reference: float | None) -> float:
+"""Internal helper for infer speed factor."""
     if not observed or not reference:
         return 1.0
     if observed <= 0 or reference <= 0:
@@ -979,6 +1018,7 @@ def _infer_speed_factor(observed: float | None, reference: float | None) -> floa
 
 
 def _speed_factor_from_unit(
+"""Internal helper for speed factor from unit."""
     unit: str | None,
     observed: float | None,
     reference: float | None,
@@ -996,6 +1036,7 @@ def _speed_factor_from_unit(
 
 
 def _column_values(points: list, idx: int | None, stride: int) -> list[float]:
+"""Internal helper for column values."""
     if idx is None:
         return []
     values: list[float] = []
@@ -1012,6 +1053,7 @@ def _column_values(points: list, idx: int | None, stride: int) -> list[float]:
 
 
 def _slug(value: str) -> str:
+"""Internal helper for slug."""
     value = value.strip().lower()
     value = re.sub(r"[^a-z0-9]+", "_", value)
     return value.strip("_") or "col"

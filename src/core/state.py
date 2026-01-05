@@ -19,10 +19,12 @@ class MigrationRecord:
 
 class MigrationState:
     def __init__(self, db_path: Path) -> None:
+    """Internal helper for init  ."""
         self._db_path = db_path
         self._ensure_db()
 
     def _ensure_db(self) -> None:
+    """Internal helper for ensure db."""
         self._db_path.parent.mkdir(parents=True, exist_ok=True)
         with sqlite3.connect(self._db_path) as conn:
             conn.execute(
@@ -43,6 +45,7 @@ class MigrationState:
             self._ensure_column(conn, "metadata_hash")
 
     def _ensure_column(self, conn: sqlite3.Connection, column: str) -> None:
+    """Internal helper for ensure column."""
         existing = {
             row[1]
             for row in conn.execute("PRAGMA table_info(migrations)").fetchall()
@@ -52,6 +55,7 @@ class MigrationState:
         conn.execute(f"ALTER TABLE migrations ADD COLUMN {column} TEXT")
 
     def get(self, flight_id: str) -> MigrationRecord | None:
+    """Handle get."""
         with sqlite3.connect(self._db_path) as conn:
             row = conn.execute(
                 """
@@ -65,6 +69,7 @@ class MigrationState:
         return MigrationRecord(*row)
 
     def find_by_hash(self, file_hash: str | None, csv_hash: str | None) -> MigrationRecord | None:
+    """Handle find by hash."""
         if not file_hash and not csv_hash:
             return None
         with sqlite3.connect(self._db_path) as conn:
@@ -83,6 +88,7 @@ class MigrationState:
         return MigrationRecord(*row)
 
     def upsert(
+    """Handle upsert."""
         self,
         flight_id: str,
         status: str,

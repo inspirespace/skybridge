@@ -47,6 +47,7 @@ class FlyStoClient:
     log_source_cache: dict[str, tuple[str | None, str | None]] = field(default_factory=dict)
 
     def prepare(self) -> bool:
+    """Handle prepare."""
         session = requests.Session()
         try:
             self._ensure_session(session)
@@ -61,6 +62,7 @@ class FlyStoClient:
         return True
 
     def upload_flight(self, flight: FlightDetail, dry_run: bool = False) -> "UploadResult | None":
+    """Handle upload flight."""
         if dry_run:
             _validate_flight_for_upload(flight)
             return None
@@ -96,6 +98,7 @@ class FlyStoClient:
 
 
     def ensure_aircraft(self, tail_number: str | None, aircraft_type: str | None = None) -> dict[str, Any] | None:
+    """Handle ensure aircraft."""
         if not tail_number:
             return None
         session = requests.Session()
@@ -142,6 +145,7 @@ class FlyStoClient:
         return self._find_aircraft_by_tail(session, tail_number)
 
     def _find_aircraft_by_tail(self, session: requests.Session, tail_number: str) -> dict[str, Any] | None:
+    """Internal helper for find aircraft by tail."""
         aircraft = self._list_aircraft(session)
         for entry in aircraft:
             if entry.get("tail-number") == tail_number or entry.get("tailNumber") == tail_number:
@@ -149,6 +153,7 @@ class FlyStoClient:
         return None
 
     def _list_aircraft(self, session: requests.Session) -> list[dict[str, Any]]:
+    """Internal helper for list aircraft."""
         if self.aircraft_cache is not None:
             return self.aircraft_cache
         response = self._request(
@@ -171,6 +176,7 @@ class FlyStoClient:
         return self.aircraft_cache
 
     def _match_model_id(self, aircraft_type: str | None) -> str | None:
+    """Internal helper for match model id."""
         profiles = self._list_aircraft_profiles()
         if not profiles:
             return None
@@ -183,6 +189,7 @@ class FlyStoClient:
         return profiles[0].get("modelId")
 
     def _list_aircraft_profiles(self) -> list[dict[str, Any]]:
+    """Internal helper for list aircraft profiles."""
         if self.aircraft_profiles_cache is not None:
             return self.aircraft_profiles_cache
         session = requests.Session()
@@ -208,6 +215,7 @@ class FlyStoClient:
 
 
     def assign_aircraft(
+    """Handle assign aircraft."""
         self,
         aircraft_id: str,
         log_format_id: str = "GenericGpx",
@@ -246,6 +254,7 @@ class FlyStoClient:
 
 
     def resolve_log_for_file(
+    """Handle resolve log for file."""
         self,
         filename: str,
         retries: int = 8,
@@ -266,6 +275,7 @@ class FlyStoClient:
         return log_id, signature, log_format
 
     def _resolve_log_for_file_uncached(
+    """Internal helper for resolve log for file uncached."""
         self,
         filename: str,
         retries: int = 8,
@@ -362,6 +372,7 @@ class FlyStoClient:
         return None, None, None
 
     def assign_aircraft_for_file(
+    """Handle assign aircraft for file."""
         self,
         filename: str,
         aircraft_id: str,
@@ -376,6 +387,7 @@ class FlyStoClient:
         )
 
     def assign_aircraft_for_signature(
+    """Handle assign aircraft for signature."""
         self,
         aircraft_id: str,
         signature: str | None,
@@ -388,6 +400,7 @@ class FlyStoClient:
         self.assign_aircraft(aircraft_id, log_format_id=effective_format, system_id=signature)
 
     def resolve_log_source_for_log_id(
+    """Handle resolve log source for log id."""
         self,
         log_id: str,
         include_annotations: bool = True,
@@ -451,12 +464,14 @@ class FlyStoClient:
         return log_format_id, system_id
 
     def assign_crew_for_file(self, filename: str, crew: list[dict[str, Any]]) -> None:
+    """Handle assign crew for file."""
         if not crew:
             return
         log_id, _signature, _format = self.resolve_log_for_file(filename)
         self.assign_crew_for_log_id(log_id, crew)
 
     def assign_crew_for_log_id(self, log_id: str | None, crew: list[dict[str, Any]]) -> None:
+    """Handle assign crew for log id."""
         if not log_id:
             return
         names: list[str] = []
@@ -481,6 +496,7 @@ class FlyStoClient:
         self._assign_crew([log_id], names, roles)
 
     def assign_metadata_for_file(
+    """Handle assign metadata for file."""
         self,
         filename: str,
         remarks: str | None = None,
@@ -492,6 +508,7 @@ class FlyStoClient:
         self.assign_metadata_for_log_id(log_id, remarks=remarks, tags=tags)
 
     def assign_metadata_for_log_id(
+    """Handle assign metadata for log id."""
         self,
         log_id: str | None,
         remarks: str | None = None,
@@ -506,6 +523,7 @@ class FlyStoClient:
         self._update_log_annotations(log_id, remarks=final_remarks, tags=merged_tags)
 
     def fetch_log_metadata(
+    """Handle fetch log metadata."""
         self,
         log_id: str,
         annotations: str = "crew,tags,remarks",
@@ -530,6 +548,7 @@ class FlyStoClient:
         return None
 
     def _update_log_annotations(
+    """Internal helper for update log annotations."""
         self,
         log_id: str,
         remarks: str | None = None,
@@ -555,6 +574,7 @@ class FlyStoClient:
             )
 
     def _assign_crew(
+    """Internal helper for assign crew."""
         self,
         log_ids: list[str],
         names: list[str],
@@ -583,6 +603,7 @@ class FlyStoClient:
             )
 
     def _ensure_crew_members(self, names: list[str]) -> None:
+    """Internal helper for ensure crew members."""
         clean = sorted({name.strip() for name in names if name and isinstance(name, str)})
         if not clean:
             return
@@ -617,6 +638,7 @@ class FlyStoClient:
         self.crew_cache = None
 
     def _list_crew(self) -> list[dict[str, Any]]:
+    """Internal helper for list crew."""
         if self.crew_cache is not None:
             return self.crew_cache
         session = requests.Session()
@@ -659,6 +681,7 @@ class FlyStoClient:
         return self.crew_cache
 
     def _crew_name(self, entry: dict[str, Any]) -> str | None:
+    """Internal helper for crew name."""
         for key in ("name", "fullName", "crewName"):
             value = entry.get(key)
             if isinstance(value, str) and value.strip():
@@ -666,6 +689,7 @@ class FlyStoClient:
         return None
 
     def _list_crew_roles(self) -> list[dict[str, Any]]:
+    """Internal helper for list crew roles."""
         if self.crew_roles_cache is not None:
             return self.crew_roles_cache
         session = requests.Session()
@@ -690,6 +714,7 @@ class FlyStoClient:
         return self.crew_roles_cache
 
     def _default_role_id(self) -> str | None:
+    """Internal helper for default role id."""
         roles = self._list_crew_roles()
         if not roles:
             return None
@@ -704,6 +729,7 @@ class FlyStoClient:
         return role_id
 
     def _resolve_role_id(self, role_name: str | None, is_pic: bool) -> str | None:
+    """Internal helper for resolve role id."""
         roles = self._list_crew_roles()
         if not roles:
             return None
@@ -742,6 +768,7 @@ class FlyStoClient:
         return None
 
     def _role_id_name(self, role: dict[str, Any]) -> tuple[str | None, str | None]:
+    """Internal helper for role id name."""
         role_id = role.get("id") or role.get("crewRoleId") or role.get("roleId")
         name = role.get("name") or role.get("crewRoleName") or role.get("roleName")
         role_id = str(role_id) if role_id is not None else None
@@ -750,6 +777,7 @@ class FlyStoClient:
         return role_id, name if isinstance(name, str) else None
 
     def log_files_to_process(self) -> int | None:
+    """Handle log files to process."""
         session = requests.Session()
         self._ensure_session(session)
         response = self._request(
@@ -771,6 +799,7 @@ class FlyStoClient:
         return None
 
     def _ensure_session(self, session: requests.Session) -> None:
+    """Internal helper for ensure session."""
         if self.session_cookie:
             hostname = urlparse(self.base_url).hostname or "www.flysto.net"
             session.cookies.set(
@@ -789,6 +818,7 @@ class FlyStoClient:
         raise NotImplementedError("FlySto API auth not configured.")
 
     def _request(self, session: requests.Session, method: str, url: str, **kwargs) -> requests.Response:
+    """Internal helper for request."""
         method = method.lower()
         if self.api_version:
             headers = dict(kwargs.get("headers") or {})
@@ -813,6 +843,7 @@ class FlyStoClient:
         return response
 
     def _respect_rate_limit(self) -> None:
+    """Internal helper for respect rate limit."""
         if self.min_request_interval <= 0:
             return
         now = time.monotonic()
@@ -825,11 +856,13 @@ class FlyStoClient:
         self._last_request_at = time.monotonic()
 
     def _retry_delay(self, attempt: int) -> float:
+    """Internal helper for retry delay."""
         base = 0.5 * (2 ** attempt)
         return min(8.0, base)
 
 
 def _coerce_role_id(value: str) -> int | str:
+"""Internal helper for coerce role id."""
     try:
         return int(value)
     except (TypeError, ValueError):
@@ -839,6 +872,7 @@ def _coerce_role_id(value: str) -> int | str:
 
 
 def _decode_flysto_payload(text: str) -> Any:
+"""Internal helper for decode flysto payload."""
     if text.startswith("wait\n"):
         text = text.split("\n", 1)[1]
     if text.startswith("{"):
@@ -854,6 +888,7 @@ def _decode_flysto_payload(text: str) -> Any:
 
 
 def _swap_chars(value: str) -> str:
+"""Internal helper for swap chars."""
     chars: list[str] = []
     for ch in value:
         code = ord(ch)
@@ -865,11 +900,13 @@ def _swap_chars(value: str) -> str:
 
 
 def _normalize_role(value: str) -> str:
+"""Internal helper for normalize role."""
     lowered = value.strip().lower()
     return "".join(ch for ch in lowered if ch.isalnum())
 
 
 def _normalize_tag_list(value: object) -> list[str]:
+"""Internal helper for normalize tag list."""
     if value is None:
         return []
     if isinstance(value, list):
@@ -883,6 +920,7 @@ def _normalize_tag_list(value: object) -> list[str]:
 
 
 def _validate_flight_for_upload(flight: FlightDetail) -> None:
+"""Internal helper for validate flight for upload."""
     if not flight.file_path:
         raise RuntimeError("Flight export file is required for FlySto upload.")
     path = Path(flight.file_path)
@@ -893,6 +931,7 @@ def _validate_flight_for_upload(flight: FlightDetail) -> None:
 
 
 def _build_upload_payload(path: Path) -> bytes:
+"""Internal helper for build upload payload."""
     data = path.read_bytes()
     if path.suffix.lower() == ".zip":
         return data
@@ -903,6 +942,7 @@ def _build_upload_payload(path: Path) -> bytes:
 
 
 def _parse_upload_response(text: str, filename: str) -> UploadResult | None:
+"""Internal helper for parse upload response."""
     raw = text.strip()
     if not raw:
         return None
@@ -951,6 +991,7 @@ def _parse_upload_response(text: str, filename: str) -> UploadResult | None:
 
 
 def _parse_signature_field(value: str, filename: str) -> tuple[str | None, str | None, str | None]:
+"""Internal helper for parse signature field."""
     cleaned = value.strip()
     if not cleaned:
         return None, None, None
@@ -964,6 +1005,7 @@ def _parse_signature_field(value: str, filename: str) -> tuple[str | None, str |
         return cleaned, None, parts[-1]
     return cleaned, None, None
 def _metadata_payload(flight: FlightDetail) -> dict:
+"""Internal helper for metadata payload."""
     payload = flight.raw_payload.get("flt", {}).get("Meta", {})
     if not isinstance(payload, dict):
         return {}
@@ -971,6 +1013,7 @@ def _metadata_payload(flight: FlightDetail) -> dict:
 
 
 def _upload_url(upload_url: str | None, base_url: str, filename: str) -> str:
+"""Internal helper for upload url."""
     url = upload_url or (base_url.rstrip("/") + "/api/log-upload")
     if "?" in url:
         return url
@@ -979,6 +1022,7 @@ def _upload_url(upload_url: str | None, base_url: str, filename: str) -> str:
 
 
 def _api_login(
+"""Internal helper for api login."""
     session: requests.Session,
     base_url: str,
     email: str,
@@ -996,6 +1040,7 @@ def _api_login(
 
 
 def _infer_api_version(base_url: str) -> str | None:
+"""Internal helper for infer api version."""
     candidates: list[str] = []
     base = base_url.rstrip("/") + "/"
     candidates.append(urljoin(base, "login"))

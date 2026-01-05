@@ -3,6 +3,7 @@ import { imprintContent } from "@/content/imprint";
 import { buildPrivacyContent } from "@/content/privacy";
 import { navigateWithFade } from "@/lib/navigation";
 
+/** Render StaticPage component. */
 export function StaticPage({
   page,
   retentionDays,

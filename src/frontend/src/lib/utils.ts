@@ -9,8 +9,10 @@ type ClassValue =
   | ClassValue[]
   | { [key: string]: boolean };
 
+/** Handle cn. */
 export function cn(...inputs: ClassValue[]) {
   const classes: string[] = [];
+  /** Handle push. */
   const push = (value: ClassValue) => {
     if (!value) return;
     if (typeof value === "string" || typeof value === "number") {

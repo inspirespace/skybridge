@@ -28,6 +28,7 @@ class ObjectStoreConfig:
 
 class ObjectStore:
     def __init__(self, config: ObjectStoreConfig) -> None:
+    """Internal helper for init  ."""
         self._config = config
         client_config = Config(signature_version="s3v4", s3={"addressing_style": "path"})
         self._client = boto3.client(
@@ -44,9 +45,11 @@ class ObjectStore:
 
     @property
     def bucket(self) -> str:
+    """Handle bucket."""
         return self._config.bucket
 
     def key_for(self, *parts: str) -> str:
+    """Handle key for."""
         prefix = self._config.prefix.strip("/")
         joined = "/".join(part.strip("/") for part in parts if part and part.strip("/"))
         if prefix:
@@ -54,6 +57,7 @@ class ObjectStore:
         return joined
 
     def put_json(self, key: str, payload: dict[str, Any]) -> None:
+    """Handle put json."""
         body = json.dumps(payload, indent=2).encode("utf-8")
         extra = {"ContentType": "application/json"}
         if self._config.sse:
@@ -61,12 +65,14 @@ class ObjectStore:
         self._client.put_object(Bucket=self.bucket, Key=key, Body=body, **extra)
 
     def put_file(self, key: str, path: Path) -> None:
+    """Handle put file."""
         extra: dict[str, Any] = {}
         if self._config.sse:
             extra["ServerSideEncryption"] = "AES256"
         self._client.upload_file(str(path), self.bucket, key, ExtraArgs=extra or None)
 
     def get_json(self, key: str) -> dict[str, Any] | None:
+    """Get json."""
         try:
             response = self._client.get_object(Bucket=self.bucket, Key=key)
         except ClientError:
@@ -78,6 +84,7 @@ class ObjectStore:
         return json.loads(payload)
 
     def get_bytes(self, key: str) -> bytes | None:
+    """Get bytes."""
         try:
             response = self._client.get_object(Bucket=self.bucket, Key=key)
         except ClientError:
@@ -88,6 +95,7 @@ class ObjectStore:
         return body.read()
 
     def list_prefix(self, prefix: str) -> list[str]:
+    """Handle list prefix."""
         keys: list[str] = []
         paginator = self._client.get_paginator("list_objects_v2")
         for page in paginator.paginate(Bucket=self.bucket, Prefix=prefix):
@@ -100,6 +108,7 @@ class ObjectStore:
         return sorted(keys)
 
     def delete_prefix(self, prefix: str) -> None:
+    """Delete prefix."""
         paginator = self._client.get_paginator("list_objects_v2")
         for page in paginator.paginate(Bucket=self.bucket, Prefix=prefix):
             contents = page.get("Contents") or []
@@ -109,6 +118,7 @@ class ObjectStore:
             self._client.delete_objects(Bucket=self.bucket, Delete={"Objects": keys})
 
     def _ensure_bucket(self) -> None:
+    """Internal helper for ensure bucket."""
         try:
             self._client.head_bucket(Bucket=self.bucket)
             return
@@ -121,6 +131,7 @@ class ObjectStore:
 
 
 def build_object_store_from_env() -> ObjectStore | None:
+"""Build object store from env."""
     if not _bool_env("BACKEND_S3_ENABLED", False):
         return None
     bucket = os.getenv("S3_BUCKET") or "skybridge-artifacts"
@@ -147,6 +158,7 @@ def build_object_store_from_env() -> ObjectStore | None:
 
 
 def _bool_env(name: str, default: bool) -> bool:
+"""Internal helper for bool env."""
     value = os.getenv(name)
     if value is None:
         return default

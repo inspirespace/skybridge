@@ -13,22 +13,27 @@ from src.core.migration import (
 
 class DummyFlyStoFixture:
     def __init__(self, filename_to_log_id: dict[str, str]) -> None:
+    """Internal helper for init  ."""
         self._filename_to_log_id = filename_to_log_id
         self.assigned_aircraft: list[tuple[str | None, str | None]] = []
         self.assigned_crew: list[str] = []
         self.assigned_metadata: list[str] = []
 
     def resolve_log_for_file(self, filename: str, **_kwargs):
+    """Handle resolve log for file."""
         log_id = self._filename_to_log_id.get(filename)
         return log_id, f"sig-{filename}", "UnknownGarmin"
 
     def resolve_log_source_for_log_id(self, log_id: str, include_annotations: bool = True):
+    """Handle resolve log source for log id."""
         return None, None
 
     def ensure_aircraft(self, tail_number, aircraft_type=None):
+    """Handle ensure aircraft."""
         return {"id": f"aircraft-{tail_number}"}
 
     def assign_aircraft_for_signature(
+    """Handle assign aircraft for signature."""
         self,
         aircraft_id: str,
         signature: str | None,
@@ -38,18 +43,22 @@ class DummyFlyStoFixture:
         self.assigned_aircraft.append((signature, resolved_format))
 
     def assign_crew_for_log_id(self, log_id: str | None, crew):
+    """Handle assign crew for log id."""
         if log_id:
             self.assigned_crew.append(log_id)
 
     def assign_metadata_for_log_id(self, log_id: str | None, remarks=None, tags=None):
+    """Handle assign metadata for log id."""
         if log_id:
             self.assigned_metadata.append(log_id)
 
     def fetch_log_metadata(self, log_id: str, annotations: str = "crew,tags,remarks"):
+    """Handle fetch log metadata."""
         return {"items": [{"id": log_id, "annotations": {"crew": [[1, -6]]}}]}
 
 
 def test_reconcile_from_run_fixture(tmp_path: Path):
+"""Test reconcile from run fixture."""
     fixture_dir = Path("tests/fixtures/run-20251228T185601Z")
     report_src = fixture_dir / "import_report.json"
     review_src = fixture_dir / "review.json"

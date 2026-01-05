@@ -15,6 +15,7 @@ const CODE_VERIFIER_KEY = "skybridge_code_verifier";
 const AUTH_STATE_KEY = "skybridge_auth_state";
 const USER_ID_KEY = "skybridge_user_id";
 
+/** Hook for oidcauth. */
 export function useOidcAuth({
   enabled,
   issuer,

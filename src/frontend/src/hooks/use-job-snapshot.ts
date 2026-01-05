@@ -17,6 +17,7 @@ const POLLABLE_STATUSES: JobStatus[] = [
 ];
 
 // Subscribe to a job via SSE with polling fallback.
+/** Hook for jobsnapshot. */
 export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
   const [data, setData] = React.useState<JobRecord | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -52,6 +53,7 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
     if (!POLLABLE_STATUSES.includes(data.status)) return;
 
     const controller = new AbortController();
+    /** Handle startStream. */
     const startStream = async () => {
       try {
         const response = await fetch(`${apiBaseUrl}/jobs/${jobId}/events`, {

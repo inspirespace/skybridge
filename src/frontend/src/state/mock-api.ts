@@ -10,6 +10,7 @@ export type ImportProgress = {
   progress: number;
 };
 
+/** Handle simulateReviewProgress. */
 export function simulateReviewProgress(
   onTick: (state: ReviewProgress) => void
 ) {
@@ -27,6 +28,7 @@ export function simulateReviewProgress(
   return () => window.clearInterval(interval);
 }
 
+/** Handle simulateImportProgress. */
 export function simulateImportProgress(
   onTick: (state: ImportProgress) => void
 ) {

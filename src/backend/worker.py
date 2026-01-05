@@ -26,22 +26,27 @@ _sqs_client = None
 
 
 def _api_url() -> str:
+"""Internal helper for api url."""
     return (os.environ.get("BACKEND_API_URL") or "http://api:8000").rstrip("/")
 
 
 def _worker_token() -> str:
+"""Internal helper for worker token."""
     return os.environ.get("BACKEND_WORKER_TOKEN") or ""
 
 
 def _use_queue() -> bool:
+"""Internal helper for use queue."""
     return (os.getenv("BACKEND_SQS_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}
 
 
 def _queue_url() -> str:
+"""Internal helper for queue url."""
     return os.getenv("SQS_QUEUE_URL") or ""
 
 
 def _dynamo_jobs_table() -> str | None:
+"""Internal helper for dynamo jobs table."""
     if (os.getenv("BACKEND_DYNAMO_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
         table = os.getenv("DYNAMO_JOBS_TABLE") or None
         if not table:
@@ -51,10 +56,12 @@ def _dynamo_jobs_table() -> str | None:
 
 
 def _sqs_region() -> str:
+"""Internal helper for sqs region."""
     return os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION") or "us-east-1"
 
 
 def _get_sqs_client():
+"""Internal helper for get sqs client."""
     global _sqs_client
     if _sqs_client is None:
         import boto3
@@ -64,6 +71,7 @@ def _get_sqs_client():
 
 
 def _claim_credentials(job_id: UUID, purpose: str, token: str) -> tuple[dict | None, bool]:
+"""Internal helper for claim credentials."""
     headers = {"Content-Type": "application/json", "X-Worker-Token": _worker_token()}
     response = requests.post(
         f"{_api_url()}/jobs/{job_id}/credentials/claim",
@@ -82,6 +90,7 @@ def _claim_credentials(job_id: UUID, purpose: str, token: str) -> tuple[dict | N
 
 
 def _handle_job(store: JobStore, job_id: UUID, purpose: str, token: str | None) -> None:
+"""Internal helper for handle job."""
     job = store.load_job(job_id)
     token = token or store.read_token(job.job_id, purpose)
     if not token:
@@ -114,6 +123,7 @@ def _handle_job(store: JobStore, job_id: UUID, purpose: str, token: str | None) 
 
 
 def run() -> None:
+"""Handle run."""
     env = (os.getenv("ENV") or "dev").lower()
     if env == "prod" and not _use_queue():
         raise RuntimeError("Production requires BACKEND_SQS_ENABLED=1")

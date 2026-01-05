@@ -6,6 +6,7 @@ from src.core.config import load_config
 
 class ConfigTests(unittest.TestCase):
     def tearDown(self) -> None:
+    """Handle tearDown."""
         for key in list(os.environ.keys()):
             if key.startswith("CLOUD_AHOY_") or key.startswith("FLYSTO_") or key in {
                 "MODE",
@@ -16,6 +17,7 @@ class ConfigTests(unittest.TestCase):
                 os.environ.pop(key, None)
 
     def test_loads_defaults(self) -> None:
+    """Test loads defaults."""
         os.environ["MODE"] = "api"
         os.environ["CLOUD_AHOY_API_KEY"] = "ca"
         os.environ["FLYSTO_API_KEY"] = "fs"
@@ -32,6 +34,7 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config.flysto_max_request_retries, 2)
 
     def test_loads_max_flights(self) -> None:
+    """Test loads max flights."""
         os.environ["MODE"] = "api"
         os.environ["CLOUD_AHOY_API_KEY"] = "ca"
         os.environ["FLYSTO_API_KEY"] = "fs"
@@ -44,6 +47,7 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config.max_flights, 12)
 
     def test_custom_flysto_throttle(self) -> None:
+    """Test custom flysto throttle."""
         os.environ["MODE"] = "api"
         os.environ["CLOUD_AHOY_API_KEY"] = "ca"
         os.environ["FLYSTO_API_KEY"] = "fs"

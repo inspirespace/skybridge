@@ -22,6 +22,7 @@ import { ImportResults } from "@/components/import-results";
 import { cn } from "@/lib/utils";
 import type { JobRecord } from "@/api/client";
 
+/** Render ImportSection component. */
 export function ImportSection({
   allowed,
   importComplete,

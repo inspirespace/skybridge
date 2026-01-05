@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "skybridge-theme";
 
+/** Render ThemeToggle component. */
 export function ThemeToggle({ className }: { className?: string }) {
   const [isDark, setIsDark] = React.useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -20,6 +21,7 @@ export function ThemeToggle({ className }: { className?: string }) {
     }
   }, []);
 
+  /** Handle handleToggle. */
   const handleToggle = (checked: boolean) => {
     setIsDark(checked);
     document.documentElement.classList.toggle("dark", checked);

@@ -25,9 +25,11 @@ class CloudAhoyWebConfig:
 
 class CloudAhoyWebClient:
     def __init__(self, config: CloudAhoyWebConfig) -> None:
+    """Internal helper for init  ."""
         self._config = config
 
     def list_flights(self, limit: int | None = None) -> list[FlightSummary]:
+    """Handle list flights."""
         session = self._open_session()
         page = session.open()
         responses: list[dict[str, Any]] = []
@@ -53,6 +55,7 @@ class CloudAhoyWebClient:
         return summaries
 
     def fetch_flight(self, flight_id: str) -> FlightDetail:
+    """Handle fetch flight."""
         if not self._config.export_url_template:
             raise RuntimeError(
                 "CLOUD_AHOY_EXPORT_URL_TEMPLATE is required for web export."
@@ -79,6 +82,7 @@ class CloudAhoyWebClient:
         )
 
     def _open_session(self) -> BrowserSession:
+    """Internal helper for open session."""
         options = BrowserOptions(
             headless=self._config.headless,
             storage_state_path=self._config.storage_state_path,
@@ -86,6 +90,7 @@ class CloudAhoyWebClient:
         return BrowserSession(options)
 
     def _ensure_login(self, page: Page) -> None:
+    """Internal helper for ensure login."""
         page.goto(f"{self._config.base_url}/login.php", wait_until="networkidle")
         if page.locator("form#ca_loginform").count() == 0:
             return
@@ -99,6 +104,7 @@ class CloudAhoyWebClient:
         page.wait_for_load_state("load")
 
     def _guess_flights_url(self, page: Page) -> str | None:
+    """Internal helper for guess flights url."""
         links = page.locator("a")
         for idx in range(min(links.count(), 50)):
             href = links.nth(idx).get_attribute("href")
@@ -111,6 +117,7 @@ class CloudAhoyWebClient:
         return None
 
     def _record_response(
+    """Internal helper for record response."""
         self, url: str, data: dict | list | None, responses: list[dict[str, Any]]
     ) -> None:
         if data is None:
@@ -119,6 +126,7 @@ class CloudAhoyWebClient:
             responses.append({"url": url, "data": data})
 
     def _extract_flights(
+    """Internal helper for extract flights."""
         self, page: Page, responses: list[dict[str, Any]]
     ) -> list[FlightSummary]:
         summaries: list[FlightSummary] = []
@@ -163,6 +171,7 @@ class CloudAhoyWebClient:
         return summaries
 
     def _load_more_flights(
+    """Internal helper for load more flights."""
         self, page: Page, responses: list[dict[str, Any]], limit: int | None
     ) -> None:
         stalled = 0
@@ -203,9 +212,11 @@ class CloudAhoyWebClient:
                 return
 
     def _dom_flight_count(self, page: Page) -> int:
+    """Internal helper for dom flight count."""
         return page.locator("[data-flight-id], [data-debrief-id]").count()
 
     def _count_flights_from_responses(self, responses: list[dict[str, Any]]) -> int:
+    """Internal helper for count flights from responses."""
         count = 0
         for payload in responses:
             extracted = _extract_flight_items(payload.get("data"))
@@ -213,6 +224,7 @@ class CloudAhoyWebClient:
         return count
 
     def _download_file(self, page: Page, export_url: str) -> Path:
+    """Internal helper for download file."""
         self._config.downloads_dir.mkdir(parents=True, exist_ok=True)
         with page.expect_download() as download_info:
             page.goto(export_url, wait_until="networkidle")
@@ -227,11 +239,13 @@ class CloudAhoyWebClient:
 
 
 def _extract_flight_items(data: Any) -> list[FlightSummary]:
+"""Internal helper for extract flight items."""
     if not data:
         return []
     flights: list[FlightSummary] = []
 
     def handle_item(item: dict) -> None:
+    """Handle handle item."""
         flight_id = item.get("id") or item.get("flight_id") or item.get("debrief_id")
         if not flight_id:
             return

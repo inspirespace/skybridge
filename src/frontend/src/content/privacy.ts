@@ -10,6 +10,7 @@ export type PrivacyContent = {
   sections: PrivacySection[];
 };
 
+/** Build privacycontent. */
 export function buildPrivacyContent(retentionDays: number): PrivacyContent {
   return {
     title: "Privacy policy",

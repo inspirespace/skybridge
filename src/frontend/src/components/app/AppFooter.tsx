@@ -1,6 +1,7 @@
 import { ThemeToggle } from "@/components/theme-toggle";
 import { navigateWithFade } from "@/lib/navigation";
 
+/** Render AppFooter component. */
 export function AppFooter() {
   return (
     <footer className="border-t bg-background/80">
@@ -35,6 +36,7 @@ export function AppFooter() {
   );
 }
 
+/** Render StaticHeader component. */
 export function StaticHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/80 backdrop-blur dark:border-slate-800/70 dark:bg-slate-950/80">

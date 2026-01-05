@@ -10,9 +10,11 @@ from src.core.flysto.client import UploadResult
 
 class DummyCloudAhoy:
     def __init__(self, detail: FlightDetail) -> None:
+    """Internal helper for init  ."""
         self._detail = detail
 
     def list_flights(self, limit=None):
+    """Handle list flights."""
         return [
             FlightSummary(
                 id=self._detail.id,
@@ -24,18 +26,22 @@ class DummyCloudAhoy:
         ]
 
     def fetch_flight(self, flight_id: str) -> FlightDetail:
+    """Handle fetch flight."""
         return self._detail
 
 
 class DummyFlySto:
     def __init__(self) -> None:
+    """Internal helper for init  ."""
         self.assigned: list[tuple[str | None, str | None]] = []
         self.assigned_crews: list[str] = []
 
     def ensure_aircraft(self, tail_number, aircraft_type=None):
+    """Handle ensure aircraft."""
         return {"id": "aircraft-1"}
 
     def upload_flight(self, flight: FlightDetail, dry_run: bool = False):
+    """Handle upload flight."""
         return UploadResult(
             signature="flight.g3x.csv/hash123/log789",
             log_id="log789",
@@ -44,12 +50,15 @@ class DummyFlySto:
         )
 
     def resolve_log_for_file(self, filename: str, **_kwargs):
+    """Handle resolve log for file."""
         return "log-1", "sig-log", "UnknownGarmin"
 
     def resolve_log_source_for_log_id(self, log_id: str, include_annotations: bool = True):
+    """Handle resolve log source for log id."""
         return "UnknownGarmin", "system id: D-KBUH"
 
     def assign_aircraft_for_signature(
+    """Handle assign aircraft for signature."""
         self,
         aircraft_id: str,
         signature: str | None,
@@ -59,6 +68,7 @@ class DummyFlySto:
         self.assigned.append((signature, resolved_format))
 
     def assign_aircraft(
+    """Handle assign aircraft."""
         self,
         aircraft_id: str,
         log_format_id: str = "GenericGpx",
@@ -67,17 +77,21 @@ class DummyFlySto:
         return None
 
     def assign_crew_for_log_id(self, log_id: str | None, crew):
+    """Handle assign crew for log id."""
         if log_id:
             self.assigned_crews.append(log_id)
 
     def assign_metadata_for_log_id(self, log_id: str | None, remarks=None, tags=None):
+    """Handle assign metadata for log id."""
         return None
 
     def log_files_to_process(self):
+    """Handle log files to process."""
         return 0
 
 
 def test_migrate_flights_uses_system_id_for_unknown_garmin(tmp_path: Path):
+"""Test migrate flights uses system id for unknown garmin."""
     file_path = tmp_path / "flight.g3x.csv"
     file_path.write_text("data")
     raw_payload = {
@@ -117,12 +131,15 @@ def test_migrate_flights_uses_system_id_for_unknown_garmin(tmp_path: Path):
 
 class DummyFlyStoSignature(DummyFlySto):
     def resolve_log_source_for_log_id(self, log_id: str, include_annotations: bool = True):
+    """Handle resolve log source for log id."""
         return None, None
 
     def resolve_log_for_file(self, filename: str, **_kwargs):
+    """Handle resolve log for file."""
         return "log-1", "sig-log", "GenericGpx"
 
     def upload_flight(self, flight: FlightDetail, dry_run: bool = False):
+    """Handle upload flight."""
         return UploadResult(
             signature="flight.gpx/hash999/log555",
             log_id="log555",
@@ -132,6 +149,7 @@ class DummyFlyStoSignature(DummyFlySto):
 
 
 def test_migrate_flights_uses_upload_signature_hash(tmp_path: Path):
+"""Test migrate flights uses upload signature hash."""
     file_path = tmp_path / "flight.gpx"
     file_path.write_text("data")
     raw_payload = {"flt": {"Meta": {"tailNumber": "D-KBUH", "aircraftType": "WT9"}}}

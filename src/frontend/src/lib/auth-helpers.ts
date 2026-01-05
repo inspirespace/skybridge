@@ -1,3 +1,4 @@
+/** Handle generateCodeVerifier. */
 export function generateCodeVerifier() {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
@@ -10,12 +11,14 @@ export async function generateCodeChallenge(verifier: string) {
   return base64UrlEncode(new Uint8Array(digest));
 }
 
+/** Handle generateState. */
 export function generateState() {
   const array = new Uint8Array(16);
   crypto.getRandomValues(array);
   return base64UrlEncode(array);
 }
 
+/** Handle base64UrlEncode. */
 function base64UrlEncode(bytes: Uint8Array) {
   return btoa(String.fromCharCode(...bytes))
     .replace(/\+/g, "-")
@@ -23,6 +26,7 @@ function base64UrlEncode(bytes: Uint8Array) {
     .replace(/=+$/, "");
 }
 
+/** Handle parseJwt. */
 export function parseJwt(token: string) {
   const [, payload] = token.split(".");
   if (!payload) return {};
@@ -30,6 +34,7 @@ export function parseJwt(token: string) {
   return JSON.parse(json);
 }
 
+/** Handle isJwtExpired. */
 export function isJwtExpired(token: string, skewSeconds = 60) {
   try {
     const payload = parseJwt(token);
@@ -42,6 +47,7 @@ export function isJwtExpired(token: string, skewSeconds = 60) {
   }
 }
 
+/** Handle isAuthExpiredError. */
 export function isAuthExpiredError(error: unknown) {
   if (!error || typeof error !== "object") return false;
   const status = (error as Error & { status?: number }).status;

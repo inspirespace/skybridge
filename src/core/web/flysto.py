@@ -21,9 +21,11 @@ class FlyStoWebConfig:
 
 class FlyStoWebClient:
     def __init__(self, config: FlyStoWebConfig) -> None:
+    """Internal helper for init  ."""
         self._config = config
 
     def upload_flight(self, flight: FlightDetail, dry_run: bool = False) -> None:
+    """Handle upload flight."""
         if dry_run:
             return
         if not flight.file_path:
@@ -40,6 +42,7 @@ class FlyStoWebClient:
         session.close()
 
     def _open_session(self) -> BrowserSession:
+    """Internal helper for open session."""
         options = BrowserOptions(
             headless=self._config.headless,
             storage_state_path=self._config.storage_state_path,
@@ -47,6 +50,7 @@ class FlyStoWebClient:
         return BrowserSession(options)
 
     def _ensure_login(self, page: Page) -> None:
+    """Internal helper for ensure login."""
         page.goto(f"{self._config.base_url}/login", wait_until="networkidle")
         email_input = page.locator(
             "input[name=email], input[type='email'], input[placeholder*='email' i]"
@@ -66,6 +70,7 @@ class FlyStoWebClient:
         page.wait_for_load_state("load")
 
     def _navigate_to_upload(self, page: Page) -> None:
+    """Internal helper for navigate to upload."""
         if self._config.upload_url:
             page.goto(self._config.upload_url, wait_until="networkidle")
             return
@@ -84,6 +89,7 @@ class FlyStoWebClient:
         )
 
     def _upload_file(self, page: Page, file_path: Path) -> None:
+    """Internal helper for upload file."""
         file_inputs = page.locator("input[type=file]")
         if file_inputs.count() == 0 and page.get_by_text("Browse files").count() > 0:
             page.get_by_text("Browse files").first.click()

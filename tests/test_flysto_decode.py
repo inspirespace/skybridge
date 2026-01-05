@@ -6,6 +6,7 @@ from src.core.flysto.client import _decode_flysto_payload, _swap_chars
 
 
 def test_decode_flysto_payload_handles_wait_prefix():
+"""Test decode flysto payload handles wait prefix."""
     payload = {"ok": True, "items": [1, 2]}
     encoded = json.dumps({"RESPONSE": _swap_chars(json.dumps(payload))})
     decoded = _decode_flysto_payload("wait\n" + encoded)
@@ -14,6 +15,7 @@ def test_decode_flysto_payload_handles_wait_prefix():
 
 
 def test_decode_flysto_payload_passthrough_json():
+"""Test decode flysto payload passthrough json."""
     payload = {"hello": "world"}
     decoded = _decode_flysto_payload(json.dumps(payload))
     assert decoded == payload

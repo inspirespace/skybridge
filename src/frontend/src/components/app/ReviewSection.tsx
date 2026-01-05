@@ -31,6 +31,7 @@ import { ArrowRight } from "lucide-react";
 import type { FlightSummary, ReviewSummary } from "@/api/client";
 import * as React from "react";
 
+/** Render ReviewSection component. */
 export function ReviewSection({
   allowed,
   reviewComplete,

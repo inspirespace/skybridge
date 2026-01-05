@@ -1,5 +1,6 @@
 import type { MouseEvent } from "react";
 
+/** Handle navigateWithFade. */
 export function navigateWithFade(event: MouseEvent<HTMLElement>, href: string) {
   if (
     event.defaultPrevented ||

@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse
 
 
 def landing_page() -> HTMLResponse:
+"""Handle landing page."""
     auth_mode = (os.getenv("AUTH_MODE") or "header").lower()
     auth_enabled = auth_mode == "oidc"
     issuer = os.getenv("AUTH_BROWSER_ISSUER_URL") or os.getenv("AUTH_ISSUER_URL") or ""

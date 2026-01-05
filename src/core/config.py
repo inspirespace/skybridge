@@ -36,6 +36,7 @@ class ConfigError(ValueError):
 
 
 def _get_env(name: str) -> str | None:
+"""Internal helper for get env."""
     value = os.getenv(name)
     if value is None or value.strip() == "":
         return None
@@ -43,6 +44,7 @@ def _get_env(name: str) -> str | None:
 
 
 def _parse_export_formats(value: str | None) -> list[str]:
+"""Internal helper for parse export formats."""
     if not value:
         return ["g3x", "gpx"]
     raw = [part.strip().lower() for part in value.replace(";", ",").split(",")]
@@ -61,6 +63,7 @@ def _parse_export_formats(value: str | None) -> list[str]:
 
 
 def load_config() -> Config:
+"""Handle load config."""
     mode = (_get_env("MODE") or "auto").lower()
 
     cloudahoy_email = _get_env("CLOUD_AHOY_EMAIL")
