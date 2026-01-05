@@ -118,7 +118,8 @@ export function ConnectSection({
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <div className="text-sm font-medium">CloudAhoy</div>
-              <div className="space-y-2 rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-sky-900/60 dark:bg-slate-900/80">
+              <div className="relative space-y-2 overflow-hidden rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-sky-900/60 dark:bg-slate-900/80">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.16),_transparent_60%)]" />
                 <Label htmlFor="cloudahoy-email">Email</Label>
                 <Input
                   id="cloudahoy-email"
@@ -140,7 +141,8 @@ export function ConnectSection({
             </div>
             <div className="space-y-2">
               <div className="text-sm font-medium">FlySto</div>
-              <div className="space-y-2 rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-sky-900/60 dark:bg-slate-900/80">
+              <div className="relative space-y-2 overflow-hidden rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-sky-900/60 dark:bg-slate-900/80">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.16),_transparent_60%)]" />
                 <Label htmlFor="flysto-email">Email</Label>
                 <Input
                   id="flysto-email"
@@ -164,7 +166,8 @@ export function ConnectSection({
 
           <Separator className="my-1" />
 
-          <div className="rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-sky-900/60 dark:bg-slate-900/80">
+          <div className="relative rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-sky-900/60 dark:bg-slate-900/80">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.16),_transparent_60%)]" />
             <div className="space-y-3">
               <div className="text-sm font-semibold">Import filters</div>
               <div className="grid gap-3 md:grid-cols-3">

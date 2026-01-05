@@ -78,7 +78,9 @@ function ResultRow({
   badge: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-md border border-[#e3ebf5] bg-muted/20 px-4 py-3 dark:border-sky-900/60 dark:bg-slate-950/30">
+    <div className="relative overflow-hidden rounded-md border border-[#e3ebf5] bg-muted/20 px-4 py-3 dark:border-sky-900/60 dark:bg-slate-950/30">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.16),_transparent_60%)]" />
+      <div className="relative flex items-center justify-between gap-4">
       <div className="flex items-center gap-3">
         {badge}
         <div className="space-y-1">
@@ -89,6 +91,7 @@ function ResultRow({
       <div className="text-right">
         <div className="text-xs text-muted-foreground">Total</div>
         <div className="text-lg font-semibold tabular-nums">{total}</div>
+      </div>
       </div>
     </div>
   );

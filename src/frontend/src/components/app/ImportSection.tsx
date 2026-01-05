@@ -111,7 +111,8 @@ export function ImportSection({
             Import runs after approval and produces a report summary.
           </p>
           {showImportProgress && (
-            <div className={importProgressCardClass}>
+            <div className={cn("relative overflow-hidden", importProgressCardClass)}>
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.16),_transparent_60%)]" />
               <div className="flex items-center justify-between">
                 <span
                   className={cn(
@@ -172,12 +173,15 @@ export function ImportSection({
             </div>
           )}
           {importComplete && job?.import_report && (
-            <ImportResults
-              imported={job.import_report.imported_count}
-              skipped={job.import_report.skipped_count}
-              failed={job.import_report.failed_count}
-              registrationMissing={reviewSummaryMissing}
-            />
+            <div className="relative overflow-hidden rounded-md border border-border/60 bg-background/70 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/40">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.16),_transparent_60%)]" />
+              <ImportResults
+                imported={job.import_report.imported_count}
+                skipped={job.import_report.skipped_count}
+                failed={job.import_report.failed_count}
+                registrationMissing={reviewSummaryMissing}
+              />
+            </div>
           )}
           {importComplete && (
             <Alert className="border-emerald-200/70 bg-emerald-50/50 dark:border-emerald-900/50 dark:bg-emerald-950/40">
