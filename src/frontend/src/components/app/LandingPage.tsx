@@ -16,9 +16,10 @@ export function LandingPage({
 }) {
   return (
     <section className="space-y-6">
-      <Card className="relative overflow-hidden rounded-2xl border border-[#d1dbea] bg-white shadow-[0_12px_34px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.15),_transparent_55%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.18),_transparent_55%)]" />
-        <CardContent className="relative space-y-6 p-6 sm:p-8">
+      <Card className="relative overflow-hidden rounded-3xl border border-[#d1dbea] bg-white shadow-[0_18px_50px_rgba(22,32,44,0.12)] dark:border-sky-900/60 dark:bg-slate-950/75 dark:shadow-none">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_55%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.24),_transparent_55%)]" />
+        <div className="pointer-events-none absolute -right-32 top-20 h-72 w-72 rounded-full bg-sky-200/40 blur-3xl dark:bg-sky-500/20" />
+        <CardContent className="relative space-y-8 p-6 sm:p-10">
           <Badge
             variant="secondary"
             className="w-fit border border-sky-200/50 text-slate-700 dark:border-sky-900/60 dark:bg-sky-950/60 dark:text-slate-200"
@@ -27,8 +28,8 @@ export function LandingPage({
           </Badge>
           <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
             <div className="space-y-4">
-              <h1 className="text-3xl font-semibold leading-tight text-foreground sm:text-4xl">
-                Move your CloudAhoy history into FlySto with confidence.
+              <h1 className="text-3xl font-semibold leading-tight text-foreground sm:text-4xl lg:text-[2.75rem]">
+                Move your CloudAhoy history into FlySto with complete confidence.
               </h1>
               <p className="text-base leading-relaxed text-muted-foreground">
                 Skybridge connects both accounts, builds a clean summary, and lets you review
@@ -47,12 +48,13 @@ export function LandingPage({
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <Button size="lg" className="px-6 shadow-sm" onClick={onSignIn}>
+                <Button
+                  size="lg"
+                  className="px-6 shadow-[0_12px_24px_rgba(56,189,248,0.2)] dark:shadow-[0_14px_30px_rgba(56,189,248,0.22)]"
+                  onClick={onSignIn}
+                >
                   Sign up / Sign in
                 </Button>
-                <div className="text-sm text-muted-foreground">
-                  Review before import · Results retained for {retentionDays} days
-                </div>
               </div>
             </div>
             <div className="rounded-xl border border-sky-100 bg-sky-50/60 p-4 text-slate-900 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-slate-100">
