@@ -132,7 +132,12 @@ export default function App() {
   const [manualOpen, setManualOpen] = React.useState<string | undefined>(() =>
     typeof window !== "undefined" ? localStorage.getItem(OPEN_STEP_KEY) ?? undefined : undefined
   );
-  const openStep = React.useMemo(() => manualOpen ?? getOpenStep(flow), [flow, manualOpen]);
+  const openStep = React.useMemo(() => {
+    if (flow.importStatus === "running" || flow.importStatus === "complete") return "import";
+    if (flow.reviewStatus === "running") return "review";
+    if (!flow.connected) return "connect";
+    return manualOpen ?? getOpenStep(flow);
+  }, [flow, manualOpen]);
 
   const reviewSummary = job?.review_summary ?? null;
   const flights = reviewSummary?.flights ?? [];
@@ -264,8 +269,16 @@ export default function App() {
     if (!flow.signedIn) return;
     if (!flow.connected) {
       setManualOpen("connect");
+      return;
     }
-  }, [flow.connected, flow.signedIn]);
+    if (flow.importStatus === "running" || flow.importStatus === "complete") {
+      setManualOpen("import");
+      return;
+    }
+    if (flow.reviewStatus === "running") {
+      setManualOpen("review");
+    }
+  }, [flow.connected, flow.importStatus, flow.reviewStatus, flow.signedIn]);
 
   /** Handle handleAccordionChange. */
   const handleAccordionChange = (value?: string) => {
@@ -273,6 +286,13 @@ export default function App() {
       setManualOpen(undefined);
       return;
     }
+    if (
+      (flow.importStatus === "running" || flow.importStatus === "complete") &&
+      value !== "import"
+    ) {
+      return;
+    }
+    if (flow.reviewStatus === "running" && value !== "review") return;
     if (!allowedSteps.has(value)) return;
     setManualOpen(value);
   };

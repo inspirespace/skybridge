@@ -102,7 +102,7 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
         }
       } catch (err) {
         if ((err as Error).name === "AbortError") return;
-        console.warn("SSE stream failed, falling back to polling.", err);
+        console.debug("SSE stream failed, falling back to polling.", err);
         setStreamFailed(true);
       }
     };
