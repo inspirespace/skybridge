@@ -87,3 +87,11 @@
     transform: translateY(0);
   }
 }
+
+.calendar-months .rdp-month:nth-child(2) .rdp-caption_dropdowns {
+  display: none;
+}
+
+.calendar-months .rdp-month:nth-child(1) .rdp-caption_label {
+  display: none;
+}

@@ -16,14 +16,14 @@ function Calendar({
 }: CalendarProps) {
   return (
     <DayPicker
-      captionLayout="buttons"
+      captionLayout="dropdown"
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
       classNames={{
-        months: "relative flex flex-col gap-4 sm:flex-row sm:gap-6 px-10",
+        months: "calendar-months relative flex flex-col gap-4 sm:flex-row sm:gap-6 px-10",
         month: "space-y-4 min-w-[250px]",
         month_caption: "relative flex items-center justify-center pt-1",
-        caption_label: "text-sm font-medium",
+        caption_label: "text-sm font-medium text-foreground",
         nav: "pointer-events-none absolute inset-y-0 left-0 right-0 flex items-center justify-between",
         button_previous: cn(
           buttonVariants({ variant: "outline" }),
@@ -33,6 +33,12 @@ function Calendar({
           buttonVariants({ variant: "outline" }),
           "pointer-events-auto h-8 w-8 bg-transparent p-0 opacity-70 hover:opacity-100"
         ),
+        dropdowns: "flex items-center gap-2",
+        dropdown_root: "relative",
+        dropdown:
+          "rounded-md border border-input bg-background px-2 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring",
+        months_dropdown: "mr-1 w-[120px]",
+        years_dropdown: "w-[90px]",
         month_grid: "w-full border-collapse space-y-1",
         weekdays: "flex",
         weekday: "text-muted-foreground w-9 font-normal text-[0.8rem]",

@@ -208,7 +208,7 @@ export function ReviewSection({
           )}
           {reviewComplete && (
             <div className="w-full max-w-full overflow-x-auto rounded-md border border-[#e3ebf5] bg-background/70 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/40">
-              <Table className="min-w-[640px] w-full">
+              <Table className="min-w-[640px] w-max">
                 <TableHeader className="bg-muted/40 dark:bg-slate-900/60">
                   <TableRow>
                     <TableHead>Status</TableHead>
