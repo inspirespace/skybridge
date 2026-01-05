@@ -49,6 +49,7 @@ import { useOidcAuth } from "@/hooks/use-oidc-auth";
 
 const USER_ID_KEY = "skybridge_user_id";
 const JOB_ID_KEY = "skybridge_job_id";
+const OPEN_STEP_KEY = "skybridge_open_step";
 const AUTH_MODE = import.meta.env.VITE_AUTH_MODE ?? "header";
 const AUTH_ISSUER =
   import.meta.env.VITE_AUTH_ISSUER_URL ??
@@ -128,7 +129,9 @@ export default function App() {
     () => deriveFlowState(isSignedIn, job ?? null),
     [isSignedIn, job]
   );
-  const [manualOpen, setManualOpen] = React.useState<string | undefined>(undefined);
+  const [manualOpen, setManualOpen] = React.useState<string | undefined>(() =>
+    typeof window !== "undefined" ? localStorage.getItem(OPEN_STEP_KEY) ?? undefined : undefined
+  );
   const openStep = React.useMemo(() => manualOpen ?? getOpenStep(flow), [flow, manualOpen]);
 
   const reviewSummary = job?.review_summary ?? null;
@@ -246,6 +249,16 @@ export default function App() {
       setManualOpen(undefined);
     }
   }, [allowedSteps, manualOpen]);
+
+  React.useEffect(() => {
+    if (!isSignedIn) {
+      localStorage.removeItem(OPEN_STEP_KEY);
+      return;
+    }
+    if (openStep) {
+      localStorage.setItem(OPEN_STEP_KEY, openStep);
+    }
+  }, [isSignedIn, openStep]);
 
   React.useEffect(() => {
     if (!flow.signedIn) return;
