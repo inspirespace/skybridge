@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { AppFooter } from "@/components/app/AppFooter";
 import { StaticPage } from "@/components/app/StaticPage";
-import { SignInSection } from "@/components/app/SignInSection";
+import { LandingPage } from "@/components/app/LandingPage";
 import { ConnectSection } from "@/components/app/ConnectSection";
 import { ReviewSection } from "@/components/app/ReviewSection";
 import { ImportSection } from "@/components/app/ImportSection";
@@ -232,12 +232,12 @@ export default function App() {
   const connectLocked = flow.connected && flow.reviewStatus !== "idle";
 
   const allowedSteps = React.useMemo(() => {
-    if (!flow.signedIn) return new Set(["sign-in"]);
-    if (!flow.connected) return new Set(["sign-in", "connect"]);
+    if (!flow.signedIn) return new Set<string>();
+    if (!flow.connected) return new Set(["connect"]);
     if (flow.importStatus !== "idle") {
-      return new Set(["sign-in", "connect", "review", "import"]);
+      return new Set(["connect", "review", "import"]);
     }
-    return new Set(["sign-in", "connect", "review"]);
+    return new Set(["connect", "review"]);
   }, [flow]);
 
   React.useEffect(() => {
@@ -246,6 +246,13 @@ export default function App() {
       setManualOpen(undefined);
     }
   }, [allowedSteps, manualOpen]);
+
+  React.useEffect(() => {
+    if (!flow.signedIn) return;
+    if (!flow.connected) {
+      setManualOpen("connect");
+    }
+  }, [flow.connected, flow.signedIn]);
 
   /** Handle handleAccordionChange. */
   const handleAccordionChange = (value?: string) => {
@@ -268,6 +275,7 @@ export default function App() {
     localStorage.setItem(USER_ID_KEY, nextUserId);
     setUserId(nextUserId);
     setActionError(null);
+    setManualOpen("connect");
   };
 
   /** Handle handleConnectReview. */
@@ -407,6 +415,7 @@ export default function App() {
     setJobId(null);
     setShowAllFlights(false);
     setActionError(null);
+    setManualOpen(undefined);
     if (AUTH_MODE === "oidc") {
       signOutOidc();
       return;
@@ -425,6 +434,7 @@ export default function App() {
     }
     setShowAllFlights(false);
     setActionError(null);
+    setManualOpen(undefined);
   }, [AUTH_MODE, clearOidcAuth]);
 
   React.useEffect(() => {
@@ -560,24 +570,20 @@ export default function App() {
   const canEditFiltersNow =
     reviewComplete && !importRunning && !importComplete && !actionLoading;
 
-  const stepIndex = !flow.signedIn
+  const stepIndex = !flow.connected
     ? 1
-    : !flow.connected
+    : !reviewComplete
       ? 2
-      : !reviewComplete
+      : !importComplete
         ? 3
-        : !importComplete
-          ? 4
-          : 4;
-  const nextLabel = !flow.signedIn
-    ? "Sign in"
-    : !flow.connected
-      ? "Connect"
-      : !reviewComplete
-        ? "Review"
-        : !importComplete
-          ? "Import"
-          : "All steps completed";
+        : 3;
+  const nextLabel = !flow.connected
+    ? "Connect"
+    : !reviewComplete
+      ? "Review"
+      : !importComplete
+        ? "Import"
+        : "All steps completed";
 
   if (staticPage) {
     return <StaticPage page={staticPage} retentionDays={retentionDays} />;
@@ -592,6 +598,11 @@ export default function App() {
             SKYBRIDGE
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
+            {!flow.signedIn && (
+              <Button size="sm" onClick={handleSignIn}>
+                Sign up / Sign in
+              </Button>
+            )}
             {flow.connected && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -640,23 +651,33 @@ export default function App() {
       </header>
 
       <main className="container flex-1 pb-16 pt-5 lg:pb-8">
-        <div className="mb-4 lg:hidden">
-          <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
-            <CardContent className="space-y-2 py-3">
-              <div className="flex items-center justify-between text-xs text-[#5b6775]">
-                <span>Step {stepIndex} of 4</span>
-                <span>
-                  {nextLabel === "All steps completed"
-                    ? nextLabel
-                    : `Next: ${nextLabel}`}
-                </span>
-              </div>
-              <Progress value={(stepIndex / 4) * 100} />
-            </CardContent>
-          </Card>
-        </div>
+        {!flow.signedIn && (
+          <LandingPage
+            onSignIn={handleSignIn}
+            signInError={signInError}
+            retentionDays={retentionDays}
+          />
+        )}
 
-        <div className="grid min-w-0 gap-4 lg:grid-cols-[240px_1fr]">
+        {flow.signedIn && (
+          <>
+            <div className="mb-4 lg:hidden">
+              <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
+                <CardContent className="space-y-2 py-3">
+                  <div className="flex items-center justify-between text-xs text-[#5b6775]">
+                    <span>Step {stepIndex} of 3</span>
+                    <span>
+                      {nextLabel === "All steps completed"
+                        ? nextLabel
+                        : `Next: ${nextLabel}`}
+                    </span>
+                  </div>
+                  <Progress value={(stepIndex / 3) * 100} />
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid min-w-0 gap-4 lg:grid-cols-[240px_1fr]">
           <aside className="hidden space-y-3 lg:sticky lg:top-20 lg:block lg:self-start">
             <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
               <CardHeader className="pb-2">
@@ -666,22 +687,17 @@ export default function App() {
               </CardHeader>
               <CardContent className="space-y-2 pt-0">
                 <StepStatus
-                  label="1 · Sign in"
-                  active={!flow.signedIn}
-                  done={flow.signedIn}
-                />
-                <StepStatus
-                  label="2 · Connect"
-                  active={flow.signedIn && !flow.connected}
+                  label="1 · Connect"
+                  active={!flow.connected}
                   done={flow.connected}
                 />
                 <StepStatus
-                  label="3 · Review"
+                  label="2 · Review"
                   active={flow.connected && !reviewComplete}
                   done={reviewComplete}
                 />
                 <StepStatus
-                  label="4 · Import"
+                  label="3 · Import"
                   active={reviewComplete && !importComplete}
                   done={importComplete}
                 />
@@ -697,16 +713,6 @@ export default function App() {
               value={openStep}
               onValueChange={handleAccordionChange}
             >
-              <SignInSection
-                allowed={allowedSteps.has("sign-in")}
-                signedIn={flow.signedIn}
-                onSignIn={handleSignIn}
-                actionLoading={actionLoading}
-                signInError={signInError}
-                retentionDays={retentionDays}
-              />
-
-              <div className="border-t border-[#e3ebf5] dark:border-sky-900/60" />
               <ConnectSection
                 allowed={allowedSteps.has("connect")}
                 connected={flow.connected}
@@ -792,6 +798,8 @@ export default function App() {
             </div>
           </section>
         </div>
+          </>
+        )}
       </main>
 
       <AppFooter />

@@ -88,7 +88,7 @@ export function ImportSection({
         className={!allowed ? "font-normal text-muted-foreground" : undefined}
       >
         <div className="flex w-full items-center justify-between">
-          <span>4 · Import</span>
+          <span>3 · Import</span>
           <Badge
             variant={
               importComplete ? "success" : importRunning ? "active" : reviewComplete ? "secondary" : "outline"

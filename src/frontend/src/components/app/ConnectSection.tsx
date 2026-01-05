@@ -99,7 +99,7 @@ export function ConnectSection({
         className={!allowed ? "font-normal text-muted-foreground" : undefined}
       >
         <div className="flex w-full items-center justify-between">
-          <span>2 · Connect accounts</span>
+          <span>1 · Connect accounts</span>
           <Badge variant={connected ? "success" : "outline"} className={!allowed ? "border-dashed" : undefined}>
             {connected ? "Connected" : signedIn ? "Required" : "Sign in required"}
           </Badge>

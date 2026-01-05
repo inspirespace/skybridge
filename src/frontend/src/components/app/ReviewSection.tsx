@@ -107,7 +107,7 @@ export function ReviewSection({
         className={!allowed ? "font-normal text-muted-foreground" : undefined}
       >
         <div className="flex w-full items-center justify-between">
-          <span>3 · Review</span>
+          <span>2 · Review</span>
           <Badge
             variant={reviewComplete ? "success" : reviewRunning ? "active" : "outline"}
             className={!allowed ? "border-dashed" : undefined}

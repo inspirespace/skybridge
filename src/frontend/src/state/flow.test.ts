@@ -35,10 +35,10 @@ describe("deriveFlowState", () => {
 });
 
 describe("getOpenStep", () => {
-  it("opens sign-in when signed out", () => {
-    expect(getOpenStep({ signedIn: false, connected: false, reviewStatus: "idle", importStatus: "idle" })).toBe(
-      "sign-in"
-    );
+  it("opens connect when signed out", () => {
+    expect(
+      getOpenStep({ signedIn: false, connected: false, reviewStatus: "idle", importStatus: "idle" })
+    ).toBe("connect");
   });
 });
 

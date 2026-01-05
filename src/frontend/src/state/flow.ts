@@ -76,7 +76,6 @@ export function deriveFlowState(signedIn: boolean, job: JobRecord | null): FlowS
 // Determine which step should be open by default.
 /** Get openstep. */
 export function getOpenStep(state: FlowState) {
-  if (!state.signedIn) return "sign-in";
   if (!state.connected) return "connect";
   if (state.importStatus === "running" || state.importStatus === "complete") {
     return "import";
