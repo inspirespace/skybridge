@@ -35,7 +35,8 @@ test("sign in updates status", async ({ page }) => {
   await page.goto("/");
   const button = page.getByRole("button", { name: /sign up \/ sign in/i });
   await button.click();
-  await expect(page.getByText("Signed in").first()).toBeVisible();
+  await expect(page.getByText("Connect accounts").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: /connect and review/i })).toBeVisible();
 });
 
 test("edit import filters returns to connect step", async ({ page }) => {
