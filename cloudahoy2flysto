@@ -10,4 +10,5 @@ if [[ -f "${ENV_FILE}" ]]; then
   set +a
 fi
 
-python -m src.cli --guided "$@"
+PYTHONPATH="${ROOT_DIR}/src${PYTHONPATH:+:${PYTHONPATH}}" \
+  python -m core.cli --guided "$@"

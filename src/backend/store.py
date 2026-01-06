@@ -14,13 +14,13 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from shutil import rmtree
-from typing import Any
+from typing import Any, Callable
 from uuid import UUID
 
 import boto3
 from boto3.dynamodb.conditions import Key
 
-from .models import ImportReport, JobRecord, ReviewSummary
+from .models import FlightSummary, ImportReport, JobRecord, ReviewSummary
 from .object_store import ObjectStore
 
 
@@ -83,6 +83,7 @@ class JobStore:
             response = self._dynamo_table.scan()
             for item in response.get("Items", []):
                 job = _deserialize_item(item)
+                job = self._maybe_enrich_review_summary(job)
                 if self._is_expired(job):
                     self.delete_job(job.job_id)
                     continue
@@ -96,6 +97,7 @@ class JobStore:
                 continue
             job_data = json.loads(job_file.read_text())
             job = JobRecord.model_validate(job_data)
+            job = self._maybe_enrich_review_summary(job)
             if self._is_expired(job):
                 self.delete_job(job.job_id)
                 continue
@@ -115,6 +117,7 @@ class JobStore:
             jobs: list[JobRecord] = []
             for item in response.get("Items", []):
                 job = _deserialize_item(item)
+                job = self._maybe_enrich_review_summary(job)
                 if self._is_expired(job):
                     self.delete_job(job.job_id)
                     continue
@@ -130,6 +133,7 @@ class JobStore:
             if job_data.get("user_id") != user_id:
                 continue
             job = JobRecord.model_validate(job_data)
+            job = self._maybe_enrich_review_summary(job)
             if self._is_expired(job):
                 self.delete_job(job.job_id)
                 continue
@@ -159,7 +163,7 @@ class JobStore:
             if self._is_expired(job):
                 self.delete_job(job.job_id)
                 raise FileNotFoundError("Job expired")
-            return job
+            return self._maybe_enrich_review_summary(job)
 
         job_file = self._job_file(job_id)
         job_data = json.loads(job_file.read_text())
@@ -167,7 +171,7 @@ class JobStore:
         if self._is_expired(job):
             self.delete_job(job.job_id)
             raise FileNotFoundError("Job expired")
-        return job
+        return self._maybe_enrich_review_summary(job)
 
     def delete_job(self, job_id: UUID, *, user_id: str | None = None) -> None:
         """Delete job."""
@@ -320,6 +324,73 @@ class JobStore:
             return None
         return token_file.read_text().strip()
 
+    def _maybe_enrich_review_summary(self, job: JobRecord) -> JobRecord:
+        """Backfill origin/destination from review payload when missing."""
+        review_summary = job.review_summary
+        if not review_summary or not review_summary.flights:
+            return job
+        if all(flight.origin and flight.destination for flight in review_summary.flights):
+            return job
+        payload = self._load_review_payload(job)
+        if not payload:
+            return job
+        mapping = _extract_locations(
+            payload,
+            raw_loader=lambda raw_path: self._load_raw_payload(job, raw_path),
+        )
+        if not mapping:
+            return job
+        updated = False
+        updated_flights: list[FlightSummary] = []
+        for flight in review_summary.flights:
+            origin = flight.origin
+            destination = flight.destination
+            mapped = mapping.get(flight.flight_id)
+            if mapped:
+                origin = origin or mapped[0]
+                destination = destination or mapped[1]
+            if origin != flight.origin or destination != flight.destination:
+                updated = True
+            updated_flights.append(
+                flight.model_copy(update={"origin": origin, "destination": destination})
+            )
+        if not updated:
+            return job
+        job.review_summary = review_summary.model_copy(update={"flights": updated_flights})
+        self.save_job(job)
+        return job
+
+    def _load_review_payload(self, job: JobRecord) -> dict[str, Any] | None:
+        """Load review payload for enrichment."""
+        job_dir = self._job_dir(job.job_id)
+        review_path = job_dir / "review.json"
+        if review_path.exists():
+            return json.loads(review_path.read_text())
+        if not self._object_store:
+            return None
+        key = self._object_store.key_for(job.user_id, str(job.job_id), "review.json")
+        return self._object_store.get_json(key)
+
+    def _load_raw_payload(self, job: JobRecord, raw_path: str) -> dict[str, Any] | None:
+        """Load raw CloudAhoy payload for enrichment."""
+        raw_file = Path(raw_path)
+        if raw_file.exists():
+            try:
+                return json.loads(raw_file.read_text())
+            except json.JSONDecodeError:
+                return None
+        filename = raw_file.name
+        job_dir = self._job_dir(job.job_id) / "cloudahoy_exports" / filename
+        if job_dir.exists():
+            try:
+                return json.loads(job_dir.read_text())
+            except json.JSONDecodeError:
+                return None
+        if not self._object_store:
+            return None
+        key = self._object_store.key_for(job.user_id, str(job.job_id), f"cloudahoy_exports/{filename}")
+        return self._object_store.get_json(key)
+
     def clear_token(self, job_id: UUID, purpose: str) -> None:
         """Handle clear token."""
         token_file = self._token_file(job_id, purpose)
@@ -356,6 +427,93 @@ def _ttl_epoch(created_at: datetime) -> int:
     if created_at.tzinfo is None:
         created_at = created_at.replace(tzinfo=timezone.utc)
     return int(created_at.timestamp() + retention_days * 86400)
+
+
+def _extract_locations(
+    payload: dict[str, Any],
+    *,
+    raw_loader: Callable[[str], dict[str, Any] | None] | None = None,
+) -> dict[str, tuple[str | None, str | None]]:
+    """Extract origin/destination values from review payload."""
+    items = payload.get("items", [])
+    if not isinstance(items, list):
+        return {}
+    mapping: dict[str, tuple[str | None, str | None]] = {}
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        flight_id = item.get("flight_id")
+        if not isinstance(flight_id, str) or not flight_id:
+            continue
+        metadata = item.get("metadata")
+        if not isinstance(metadata, dict):
+            metadata = {}
+        origin = _coerce_location(
+            metadata.get("origin")
+            or metadata.get("aircraft_from")
+            or metadata.get("event_from")
+            or metadata.get("from")
+        )
+        destination = _coerce_location(
+            metadata.get("destination")
+            or metadata.get("aircraft_to")
+            or metadata.get("event_to")
+            or metadata.get("to")
+        )
+        if (origin is None or destination is None) and raw_loader:
+            raw_path = item.get("raw_path")
+            if isinstance(raw_path, str) and raw_path:
+                raw_payload = raw_loader(raw_path)
+                if isinstance(raw_payload, dict):
+                    raw_meta = _extract_metadata_from_raw(raw_payload)
+                    origin = origin or _coerce_location(
+                        raw_meta.get("origin")
+                        or raw_meta.get("aircraft_from")
+                        or raw_meta.get("event_from")
+                        or raw_meta.get("from")
+                    )
+                    destination = destination or _coerce_location(
+                        raw_meta.get("destination")
+                        or raw_meta.get("aircraft_to")
+                        or raw_meta.get("event_to")
+                        or raw_meta.get("to")
+                    )
+        if origin or destination:
+            mapping[flight_id] = (origin, destination)
+    return mapping
+
+
+def _coerce_location(value: Any) -> str | None:
+    """Coerce location values to strings."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        code = value.get("c")
+        name = value.get("t")
+        if isinstance(code, str) and code:
+            return code
+        if isinstance(name, str) and name:
+            return name
+    return None
+
+
+def _extract_metadata_from_raw(raw_payload: dict[str, Any]) -> dict[str, Any]:
+    """Extract metadata from raw CloudAhoy payload."""
+    flt = raw_payload.get("flt")
+    if not isinstance(flt, dict):
+        return {}
+    meta = flt.get("Meta")
+    if not isinstance(meta, dict):
+        return {}
+    fields = {
+        "aircraft_from": meta.get("from"),
+        "aircraft_to": meta.get("to"),
+        "event_from": meta.get("e_from"),
+        "event_to": meta.get("e_to"),
+        "origin": meta.get("origin"),
+        "destination": meta.get("destination"),
+    }
+    return {key: value for key, value in fields.items() if value not in (None, "", [])}
 
 
 def _deserialize_item(item: dict[str, Any]) -> JobRecord:
