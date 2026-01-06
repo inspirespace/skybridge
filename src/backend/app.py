@@ -454,10 +454,6 @@ def download_artifacts_zip(
         """Handle include path."""
         if path.name.endswith(".token"):
             return False
-        if path.name == "migration.db":
-            return False
-        if "work" in path.parts:
-            return "cloudahoy_exports" in path.parts and path.suffix == ".json"
         return True
 
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
