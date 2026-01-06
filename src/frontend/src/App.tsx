@@ -308,7 +308,8 @@ export default function App() {
     localStorage.setItem(USER_ID_KEY, nextUserId);
     setUserId(nextUserId);
     setActionError(null);
-    setManualOpen("connect");
+    const stored = localStorage.getItem(OPEN_STEP_KEY) ?? undefined;
+    setManualOpen(stored ?? "connect");
   };
 
   /** Handle handleConnectReview. */
@@ -448,7 +449,6 @@ export default function App() {
     setJobId(null);
     setShowAllFlights(false);
     setActionError(null);
-    setManualOpen(undefined);
     if (AUTH_MODE === "oidc") {
       signOutOidc();
       return;
@@ -467,7 +467,6 @@ export default function App() {
     }
     setShowAllFlights(false);
     setActionError(null);
-    setManualOpen(undefined);
   }, [AUTH_MODE, clearOidcAuth]);
 
   React.useEffect(() => {
