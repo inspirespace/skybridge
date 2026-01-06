@@ -107,6 +107,10 @@ def _build_meta(item: dict[str, Any]) -> dict[str, Any]:
             meta["to"] = _coerce_location(
                 metadata.get("aircraft_to") or metadata.get("event_to")
             )
+        if "origin" not in meta:
+            meta["origin"] = meta.get("from")
+        if "destination" not in meta:
+            meta["destination"] = meta.get("to")
         if "e_from" not in meta:
             meta["e_from"] = _coerce_location(metadata.get("event_from"))
         if "e_to" not in meta:
