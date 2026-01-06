@@ -135,7 +135,7 @@ export default function App() {
   const openStep = React.useMemo(() => {
     if (flow.importStatus === "running" || flow.importStatus === "complete") return "import";
     if (flow.reviewStatus === "running") return "review";
-    if (!flow.connected) return "connect";
+    if (!flow.connected) return manualOpen ?? "connect";
     return manualOpen ?? getOpenStep(flow);
   }, [flow, manualOpen]);
 
@@ -268,7 +268,9 @@ export default function App() {
   React.useEffect(() => {
     if (!flow.signedIn) return;
     if (!flow.connected) {
-      setManualOpen("connect");
+      if (!manualOpen && !jobId) {
+        setManualOpen("connect");
+      }
       return;
     }
     if (flow.importStatus === "running" || flow.importStatus === "complete") {
@@ -278,7 +280,7 @@ export default function App() {
     if (flow.reviewStatus === "running") {
       setManualOpen("review");
     }
-  }, [flow.connected, flow.importStatus, flow.reviewStatus, flow.signedIn]);
+  }, [flow.connected, flow.importStatus, flow.reviewStatus, flow.signedIn, jobId, manualOpen]);
 
   /** Handle handleAccordionChange. */
   const handleAccordionChange = (value?: string) => {
