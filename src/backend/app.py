@@ -450,31 +450,31 @@ def download_artifacts_zip(
     if not job_dir.exists() and not store.object_store:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    def include_path(path: Path) -> bool:
-        """Handle include path."""
-        if path.name.endswith(".token"):
-            return False
-        return True
-
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
     temp_file.close()
 
+    exports_dir = job_dir / "work" / "cloudahoy_exports"
     with zipfile.ZipFile(temp_file.name, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
-        if job_dir.exists():
-            for path in job_dir.rglob("*"):
+        if exports_dir.exists():
+            for path in exports_dir.rglob("*"):
                 if not path.is_file():
                     continue
-                if not include_path(path):
+                if path.name.endswith(".token"):
                     continue
-                arcname = str(path.relative_to(job_dir))
+                arcname = str(path.relative_to(exports_dir))
                 zipf.write(path, arcname=arcname)
         elif store.object_store:
-            prefix = store.object_store.key_for(user_id, str(job_id))
+            prefix = store.object_store.key_for(user_id, str(job_id), "cloudahoy_exports")
             keys = store.object_store.list_prefix(prefix)
             for key in keys:
-                if key.endswith(".token") or key.endswith("migration.db"):
+                if key.endswith(".token"):
                     continue
-                full_key = store.object_store.key_for(user_id, str(job_id), key)
+                full_key = store.object_store.key_for(
+                    user_id,
+                    str(job_id),
+                    "cloudahoy_exports",
+                    key,
+                )
                 payload = store.object_store.get_bytes(full_key)
                 if payload is None:
                     continue

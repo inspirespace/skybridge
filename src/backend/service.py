@@ -131,7 +131,6 @@ class JobService:
                 job_id,
                 prefix="cloudahoy_exports",
                 directory=exports_dir,
-                suffix=".cloudahoy.json",
             )
             return job
         except Exception as exc:
