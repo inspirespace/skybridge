@@ -89,6 +89,10 @@ export default function App() {
     scope: "sign-in" | "connect" | "review" | "import" | "global";
     message: string;
   } | null>(null);
+  const [actionNotice, setActionNotice] = React.useState<{
+    scope: "sign-in" | "connect" | "review" | "import" | "global";
+    message: string;
+  } | null>(null);
   const [actionLoading, setActionLoading] = React.useState(false);
   const {
     accessToken,
@@ -424,9 +428,14 @@ export default function App() {
     }
     setActionLoading(true);
     setActionError(null);
+    setActionNotice(null);
     try {
       await deleteJob(jobId, auth);
       clearLocalState();
+      setActionNotice({
+        scope: "global",
+        message: "Results deleted. You can start a new import now.",
+      });
     } catch (err) {
       if (isAuthExpiredError(err)) {
         handleTokenExpired();
@@ -546,10 +555,15 @@ export default function App() {
     if (!jobId) return;
     setActionLoading(true);
     setActionError(null);
+    setActionNotice(null);
     try {
       await deleteJob(jobId, auth);
       localStorage.removeItem(JOB_ID_KEY);
       setJobId(null);
+      setActionNotice({
+        scope: "global",
+        message: "Results deleted. You can start a new import any time.",
+      });
     } catch (err) {
       if (isAuthExpiredError(err)) {
         handleTokenExpired();
@@ -710,6 +724,13 @@ export default function App() {
                 </CardContent>
               </Card>
             </div>
+
+            {actionNotice && (
+              <Alert className="mb-4 border-emerald-200 bg-emerald-50/60 text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100">
+                <AlertTitle>Done</AlertTitle>
+                <AlertDescription>{actionNotice.message}</AlertDescription>
+              </Alert>
+            )}
 
             <div className="grid min-w-0 gap-4 lg:grid-cols-[240px_1fr]">
           <aside className="hidden space-y-3 lg:sticky lg:top-20 lg:block lg:self-start">

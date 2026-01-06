@@ -61,36 +61,28 @@ export function LandingPage({
               <div className="text-base font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 What you can expect
               </div>
-              <ul className="mt-4 space-y-3 text-base leading-[1.65]">
-                <li className="flex items-start gap-3">
-                  <span className="mt-[3px] flex h-5 w-5 shrink-0 items-center justify-center text-emerald-500">
-                    <CheckCircle2 className="h-5 w-5" />
-                  </span>
-                  <span className="leading-[1.7]">
+              <ul className="mt-4 space-y-3 text-base">
+                <li className="grid grid-cols-[20px_1fr] items-start gap-3">
+                  <CheckCircle2 className="mt-[2px] h-5 w-5 text-emerald-500" />
+                  <span className="leading-[1.65]">
                     Sign in to identify your job, protect your data, and resume later.
                   </span>
                 </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-[3px] flex h-5 w-5 shrink-0 items-center justify-center text-emerald-500">
-                    <CheckCircle2 className="h-5 w-5" />
-                  </span>
-                  <span className="leading-[1.7]">
+                <li className="grid grid-cols-[20px_1fr] items-start gap-3">
+                  <CheckCircle2 className="mt-[2px] h-5 w-5 text-emerald-500" />
+                  <span className="leading-[1.65]">
                     We import flights, times, routes, crew, trajectory data, and remarks.
                   </span>
                 </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-[3px] flex h-5 w-5 shrink-0 items-center justify-center text-emerald-500">
-                    <CheckCircle2 className="h-5 w-5" />
-                  </span>
-                  <span className="leading-[1.7]">
+                <li className="grid grid-cols-[20px_1fr] items-start gap-3">
+                  <CheckCircle2 className="mt-[2px] h-5 w-5 text-emerald-500" />
+                  <span className="leading-[1.65]">
                     Credentials are used only for this job and never stored.
                   </span>
                 </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-[3px] flex h-5 w-5 shrink-0 items-center justify-center text-emerald-500">
-                    <CheckCircle2 className="h-5 w-5" />
-                  </span>
-                  <span className="leading-[1.7]">
+                <li className="grid grid-cols-[20px_1fr] items-start gap-3">
+                  <CheckCircle2 className="mt-[2px] h-5 w-5 text-emerald-500" />
+                  <span className="leading-[1.65]">
                     Results are retained for {retentionDays} days, then deleted.
                   </span>
                 </li>

@@ -18,6 +18,7 @@ from typing import Any, Callable
 from uuid import UUID
 
 import boto3
+from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Key
 
 from .models import FlightSummary, ImportReport, JobRecord, ReviewSummary
@@ -188,6 +189,10 @@ class JobStore:
                 )
                 user_id = user_id or job.user_id
             except FileNotFoundError:
+                pass
+            except ClientError as exc:
+                if exc.response.get("Error", {}).get("Code") != "ResourceNotFoundException":
+                    raise
                 pass
         job_dir = self._job_dir(job_id)
         if job_dir.exists():
