@@ -23,6 +23,7 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<Error | null>(null);
   const [streamFailed, setStreamFailed] = React.useState(false);
+  const lastEventAtRef = React.useRef<number>(0);
 
   const load = React.useCallback(async () => {
     if (!jobId) return;
@@ -53,6 +54,7 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
     if (!POLLABLE_STATUSES.includes(data.status)) return;
 
     const controller = new AbortController();
+    let silentTimer: number | null = null;
     /** Handle startStream. */
     const startStream = async () => {
       try {
@@ -77,6 +79,13 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
         let buffer = "";
         let receivedAny = false;
         setStreamFailed(false);
+        lastEventAtRef.current = Date.now();
+        silentTimer = window.setInterval(() => {
+          if (Date.now() - lastEventAtRef.current > 6000) {
+            setStreamFailed(true);
+            controller.abort();
+          }
+        }, 2000);
 
         while (true) {
           const { value, done } = await reader.read();
@@ -94,6 +103,7 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
             if (!dataLine) continue;
             const payload = JSON.parse(dataLine) as JobRecord;
             receivedAny = true;
+            lastEventAtRef.current = Date.now();
             setData(payload);
           }
         }
@@ -104,11 +114,19 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
         if ((err as Error).name === "AbortError") return;
         console.debug("SSE stream failed, falling back to polling.", err);
         setStreamFailed(true);
+      } finally {
+        if (silentTimer) {
+          window.clearInterval(silentTimer);
+          silentTimer = null;
+        }
       }
     };
 
     startStream();
-    return () => controller.abort();
+    return () => {
+      if (silentTimer) window.clearInterval(silentTimer);
+      controller.abort();
+    };
   }, [jobId, data?.status, auth, load]);
 
   React.useEffect(() => {
