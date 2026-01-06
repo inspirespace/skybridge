@@ -21,6 +21,7 @@ class _State:
     uploads: dict[str, dict[str, str]] = {}
     aircraft: list[dict[str, Any]] = []
     crew: list[dict[str, Any]] = []
+    annotations: dict[str, dict[str, Any]] = {}
 
 
 STATE = _State()
@@ -96,7 +97,8 @@ async def log_metadata(request: Request) -> JSONResponse:
     log_id = params.get("logIdString") or params.get("log") or params.get("logId")
     items = []
     if log_id:
-        items.append({"id": str(log_id), "aircraft": 0})
+        annotations = STATE.annotations.get(str(log_id), {})
+        items.append({"id": str(log_id), "aircraft": 0, "annotations": annotations})
     return JSONResponse(
         {
             "items": items,
@@ -114,15 +116,39 @@ async def assign_aircraft(_: Request) -> JSONResponse:
 
 
 @app.post("/api/assign-crew")
-async def assign_crew(_: Request) -> JSONResponse:
+async def assign_crew(request: Request) -> JSONResponse:
     """Handle assign crew."""
+    payload = await request.json()
+    log_ids = payload.get("logIds") if isinstance(payload, dict) else []
+    names = payload.get("names") if isinstance(payload, dict) else []
+    roles = payload.get("roles") if isinstance(payload, dict) else []
+    if isinstance(log_ids, list):
+        for log_id in log_ids:
+            if not log_id:
+                continue
+            annotations = STATE.annotations.setdefault(str(log_id), {})
+            if isinstance(names, list) and isinstance(roles, list) and len(names) == len(roles):
+                annotations["crew"] = [
+                    {"name": name, "role": role}
+                    for name, role in zip(names, roles)
+                    if name
+                ]
     return JSONResponse({"status": "ok"})
 
 
 @app.put("/api/log-annotations/{log_id}")
 @app.post("/api/log-annotations/{log_id}")
-async def log_annotations(log_id: str, _: Request) -> JSONResponse:
+async def log_annotations(log_id: str, request: Request) -> JSONResponse:
     """Handle log annotations."""
+    payload = await request.json()
+    annotations = STATE.annotations.setdefault(str(log_id), {})
+    if isinstance(payload, dict):
+        remarks = payload.get("remarks")
+        tags = payload.get("tags")
+        if remarks:
+            annotations["remarks"] = remarks
+        if tags:
+            annotations["tags"] = tags
     return JSONResponse({"status": "ok", "logId": log_id})
 
 
