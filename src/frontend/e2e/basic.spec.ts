@@ -17,7 +17,9 @@ test.beforeEach(async ({ page }) => {
 test("home page loads", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByText("SKYBRIDGE").first()).toBeVisible();
-  await expect(page.getByRole("button", { name: /sign up \/ sign in/i })).toBeVisible();
+  await expect(
+    page.getByRole("main").getByRole("button", { name: /sign up \/ sign in/i })
+  ).toBeVisible();
 });
 
 test("imprint page loads", async ({ page }) => {
@@ -33,7 +35,9 @@ test("privacy page loads", async ({ page }) => {
 
 test("sign in updates status", async ({ page }) => {
   await page.goto("/");
-  const button = page.getByRole("button", { name: /sign up \/ sign in/i });
+  const button = page
+    .getByRole("main")
+    .getByRole("button", { name: /sign up \/ sign in/i });
   await button.click();
   await expect(page.getByText("Connect accounts").first()).toBeVisible();
   await expect(page.getByRole("button", { name: /connect and review/i })).toBeVisible();
@@ -42,6 +46,10 @@ test("sign in updates status", async ({ page }) => {
 test("edit import filters returns to connect step", async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
+    window.localStorage.setItem(
+      "skybridge_job_id",
+      "00000000-0000-0000-0000-000000000123"
+    );
   });
 
   const jobPayload = {
@@ -104,6 +112,10 @@ test("edit import filters returns to connect step", async ({ page }) => {
 
   await page.goto("/");
   await expect(page.getByText("Review ready").first()).toBeVisible();
+  const editButton = page.getByRole("button", { name: /edit import filters/i });
+  if (!(await editButton.isVisible())) {
+    await page.getByRole("button", { name: /review ready/i }).click();
+  }
   await page.getByRole("button", { name: /edit import filters/i }).click();
   await expect(page.getByText("Connect accounts").first()).toBeVisible();
   await expect(page.getByLabel("Email").first()).toBeEnabled();
