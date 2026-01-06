@@ -41,9 +41,8 @@ services:
       - "8000:8000"
     volumes:
       - ./:/app
-      - backend_data:/app/data/backend
     environment:
-      - BACKEND_DATA_DIR=/app/data/backend/jobs
+      - BACKEND_DATA_DIR=/tmp/backend/jobs
       - AUTH_MODE=oidc
       - AUTH_ISSUER_URL=https://auth.skybridge.localhost/realms/skybridge-dev
       - AUTH_JWKS_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/certs
@@ -95,9 +94,8 @@ services:
     command: ["python", "-m", "src.backend.worker"]
     volumes:
       - ./:/app
-      - backend_data:/app/data/backend
     environment:
-      - BACKEND_DATA_DIR=/app/data/backend/jobs
+      - BACKEND_DATA_DIR=/tmp/backend/jobs
       - AUTH_MODE=oidc
       - AUTH_ISSUER_URL=https://auth.skybridge.localhost/realms/skybridge-dev
       - AUTH_JWKS_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/certs
@@ -193,5 +191,4 @@ services:
       retries: 20
 
 volumes:
-  backend_data:
   keycloak_data:

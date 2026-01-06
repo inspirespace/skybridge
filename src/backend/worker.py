@@ -20,7 +20,7 @@ from .object_store import build_object_store_from_env
 from .service import JobService
 from .store import JobStore
 
-DATA_DIR = Path(os.environ.get("BACKEND_DATA_DIR", "data/backend/jobs"))
+DATA_DIR = Path(os.environ.get("BACKEND_DATA_DIR", "/tmp/backend/jobs"))
 _sqs_client = None
 
 

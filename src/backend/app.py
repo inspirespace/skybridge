@@ -40,7 +40,7 @@ from .store import JobStore
 from .web import landing_page
 from .rate_limit import RateLimiter
 
-DATA_DIR = Path(os.environ.get("BACKEND_DATA_DIR", "data/backend/jobs"))
+DATA_DIR = Path(os.environ.get("BACKEND_DATA_DIR", "/tmp/backend/jobs"))
 
 app = FastAPI(title="Skybridge Backend Dev API")
 
