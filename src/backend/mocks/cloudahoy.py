@@ -100,18 +100,36 @@ def _build_meta(item: dict[str, Any]) -> dict[str, Any]:
     if isinstance(metadata, dict):
         meta.update(metadata)
         if "from" not in meta:
-            meta["from"] = metadata.get("aircraft_from") or metadata.get("event_from")
+            meta["from"] = _coerce_location(
+                metadata.get("aircraft_from") or metadata.get("event_from")
+            )
         if "to" not in meta:
-            meta["to"] = metadata.get("aircraft_to") or metadata.get("event_to")
+            meta["to"] = _coerce_location(
+                metadata.get("aircraft_to") or metadata.get("event_to")
+            )
         if "e_from" not in meta:
-            meta["e_from"] = metadata.get("event_from")
+            meta["e_from"] = _coerce_location(metadata.get("event_from"))
         if "e_to" not in meta:
-            meta["e_to"] = metadata.get("event_to")
+            meta["e_to"] = _coerce_location(metadata.get("event_to"))
     if "tailNumber" not in meta and item.get("tail_number"):
         meta["tailNumber"] = item.get("tail_number")
     if "summary" not in meta and isinstance(metadata, dict) and metadata.get("summary"):
         meta["summary"] = metadata.get("summary")
     return meta
+
+
+def _coerce_location(value: object) -> str | None:
+    """Coerce origin/destination values to strings."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        code = value.get("c")
+        name = value.get("t")
+        if isinstance(code, str) and code:
+            return code
+        if isinstance(name, str) and name:
+            return name
+    return None
 
 
 def _cookie_html() -> str:
