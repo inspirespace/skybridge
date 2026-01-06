@@ -53,8 +53,10 @@ export function useOidcAuth({
   );
   const didExchangeRef = React.useRef(false);
   const refreshInFlight = React.useRef<Promise<void> | null>(null);
+  const authEpochRef = React.useRef(0);
 
   const clearAuth = React.useCallback(() => {
+    authEpochRef.current += 1;
     localStorage.removeItem(USER_ID_KEY);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(ID_TOKEN_KEY);
@@ -65,6 +67,7 @@ export function useOidcAuth({
     setAccessToken(null);
     setIdToken(null);
     setRefreshTokenValue(null);
+    refreshInFlight.current = null;
   }, []);
 
   const applyTokenResponse = React.useCallback(
@@ -92,9 +95,11 @@ export function useOidcAuth({
     if (!refreshTokenValue) return;
     if (refreshInFlight.current) return refreshInFlight.current;
     refreshInFlight.current = (async () => {
+      const refreshEpoch = authEpochRef.current;
       onLoadingChange?.(true);
       try {
         const token = await refreshToken({ refresh_token: refreshTokenValue });
+        if (authEpochRef.current !== refreshEpoch) return;
         applyTokenResponse(token);
       } catch (err) {
         clearAuth();
