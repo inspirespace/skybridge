@@ -12,6 +12,7 @@ class FlightSummary:
     aircraft_type: str | None
     tail_number: str | None
     cloudahoy_key: str | None = None
+    fd_id: str | None = None
 
 
 @dataclass(frozen=True)

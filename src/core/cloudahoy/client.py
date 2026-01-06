@@ -74,7 +74,8 @@ class CloudAhoyClient:
         seen: set[str] = set()
         for flight in flights[: limit or len(flights)]:
             flight_key = flight.get("key")
-            flight_id = flight_key or flight.get("fdID")
+            flight_fdid = flight.get("fdID")
+            flight_id = flight_key or flight_fdid
             if not flight_id or flight_id in seen:
                 continue
             seen.add(flight_id)
@@ -87,11 +88,12 @@ class CloudAhoyClient:
                     aircraft_type=flight.get("aircraft", {}).get("P", {}).get("typeAircraft"),
                     tail_number=flight.get("tailNumber") or flight.get("aircraft", {}).get("tailNumber"),
                     cloudahoy_key=flight_key if isinstance(flight_key, str) else None,
+                    fd_id=flight_fdid if isinstance(flight_fdid, str) else None,
                 )
             )
         return summaries
 
-    def fetch_flight(self, flight_id: str) -> FlightDetail:
+    def fetch_flight(self, flight_id: str, file_id: str | None = None) -> FlightDetail:
         """Handle fetch flight."""
         data = self._fetch_raw(flight_id)
 
@@ -104,20 +106,21 @@ class CloudAhoyClient:
         raw_path = None
         metadata = _extract_metadata(flt)
         self.exports_dir.mkdir(parents=True, exist_ok=True)
-        raw_path = self.exports_dir / f"{flight_id}.cloudahoy.json"
+        output_id = file_id or _extract_fdid_from_payload(data) or flight_id
+        raw_path = self.exports_dir / f"{output_id}.cloudahoy.json"
         raw_path.write_text(json.dumps(data, indent=2))
         if isinstance(points, list) and points:
             schema = build_points_schema(flt)
             if schema:
                 start_time, step_seconds = _infer_point_timing(flt, len(points))
-                file_path = self.exports_dir / f"{flight_id}.gpx"
+                file_path = self.exports_dir / f"{output_id}.gpx"
                 write_points_gpx(
                     points,
                     schema,
                     file_path,
                     start_time=start_time,
                     step_seconds=step_seconds,
-                    track_name=flight_id,
+                    track_name=output_id,
                 )
                 export_formats = (
                     [fmt.lower() for fmt in self.export_formats]
@@ -133,7 +136,7 @@ class CloudAhoyClient:
                     if fmt == "gpx":
                         continue
                     csv_suffix = _csv_suffix(fmt)
-                    csv_path = self.exports_dir / f"{flight_id}{csv_suffix}.csv"
+                    csv_path = self.exports_dir / f"{output_id}{csv_suffix}.csv"
                     if fmt == "foreflight":
                         write_points_foreflight_csv(
                             points,
@@ -220,11 +223,11 @@ class CloudAhoyClient:
         if not file_path:
             kml_text = _extract_kml(data)
             if kml_text:
-                file_path = self.exports_dir / f"{flight_id}.kml"
+                file_path = self.exports_dir / f"{output_id}.kml"
                 file_path.write_text(kml_text)
                 file_type = "kml"
         if metadata:
-            metadata_path = self.exports_dir / f"{flight_id}.meta.json"
+            metadata_path = self.exports_dir / f"{output_id}.meta.json"
             metadata_path.write_text(json.dumps(metadata, indent=2))
 
         return FlightDetail(
@@ -409,6 +412,22 @@ def _api_base(base_url: str) -> str:
     if "api.cloudahoy.com" in base_url:
         return "https://www.cloudahoy.com/api"
     return base_url.rstrip("/")
+
+
+def _extract_fdid_from_payload(payload: dict) -> str | None:
+    """Extract fdID from CloudAhoy payload when available."""
+    flt = payload.get("flt") if isinstance(payload, dict) else None
+    if not isinstance(flt, dict):
+        return None
+    meta = flt.get("Meta")
+    if isinstance(meta, dict):
+        fdid = meta.get("fdID")
+        if isinstance(fdid, str) and fdid:
+            return fdid
+    fdid = flt.get("fdID")
+    if isinstance(fdid, str) and fdid:
+        return fdid
+    return None
 
 
 def _extract_last_token(flights: list[dict]) -> str | None:
