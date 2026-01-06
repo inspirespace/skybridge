@@ -11,5 +11,6 @@ mkdir -p docker/https/certs
 mkcert -install
 mkcert -cert-file docker/https/certs/skybridge.localhost.pem -key-file docker/https/certs/skybridge.localhost-key.pem skybridge.localhost
 mkcert -cert-file docker/https/certs/auth.skybridge.localhost.pem -key-file docker/https/certs/auth.skybridge.localhost-key.pem auth.skybridge.localhost
+mkcert -cert-file docker/https/certs/storage.skybridge.localhost.pem -key-file docker/https/certs/storage.skybridge.localhost-key.pem storage.skybridge.localhost
 
 echo "Certificates written to docker/https/certs."

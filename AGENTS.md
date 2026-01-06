@@ -26,10 +26,13 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Backend dev auth uses Keycloak OIDC in Docker Compose (login with `demo` / `demo-password`); local runs should set `AUTH_MODE=oidc`, `AUTH_ISSUER_URL`, `AUTH_BROWSER_ISSUER_URL`, and `AUTH_CLIENT_ID`.
 - Dev backend queues jobs for the worker when `BACKEND_USE_WORKER=1` (credentials are claimed once via `BACKEND_WORKER_TOKEN`).
 - `./scripts/build-lambda.sh` — package the Lambda handlers to `infra/terraform/lambda/backend-handlers.zip`.
-- `python -m src.cli --review` — run locally (requires Python deps).
+- `python -m src.core.cli --review` — run locally (requires Python deps).
 - CLI supports `--start-date` / `--end-date` for targeted imports (YYYY-MM-DD or ISO8601).
 - Set `CLOUD_AHOY_G3X_INCLUDE_HDG=1` to include heading in G3X exports (TRK is always included; default omits HDG to preserve block-time detection).
 - `pytest` — run tests (if installed).
+- Use Devcontainer CLI for tests when available: `devcontainer exec --workspace-folder . pytest`.
+- Frontend unit tests: `devcontainer exec --workspace-folder . npm --prefix src/frontend run test`.
+- Frontend e2e tests: `devcontainer exec --workspace-folder . npm --prefix src/frontend run test:e2e` (requires Playwright browsers).
 - `terraform fmt -check -recursive` (run from `infra/terraform`) — format check for IaC.
 - Runbook + readiness docs are in `docs/backend-runbook.md`, `docs/backend-maintenance.md`, and `docs/backend-release-readiness.md`.
 - Run all CLI workflows through the devcontainer scripts (`./scripts/run*.sh`) so required dependencies and browser tooling are available.
@@ -59,7 +62,7 @@ Note: default `MODE=auto` uses API only and does not fall back to web automation
 
 ## Agent Update Policy
 - If you add or change developer workflows, commands, or project structure, update this file in the same change set.
-- Always update `CONTEXT.md` and any project tracker files (e.g., `PROJECT_PLAN.md`) when material progress or blockers occur, without waiting for a reminder.
+- Always update project tracker files (e.g., `PROJECT_PLAN.md`) when material progress or blockers occur, without waiting for a reminder.
 
 ## Security & Configuration Tips
 - Never commit secrets. Use `.env` files and add an `.env.example` template.

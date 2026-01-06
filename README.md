@@ -56,6 +56,7 @@ Optional:
 - `FLYSTO_API_VERSION` (optional; inferred from FlySto bundle if omitted)
 - `FLYSTO_MIN_REQUEST_INTERVAL` (optional seconds between FlySto API calls; default `0.1`)
 - `FLYSTO_MAX_REQUEST_RETRIES` (optional FlySto request retries; default `2`)
+- `BACKEND_RETENTION_DAYS` (optional; default `7`, auto-deletes job artifacts after retention)
 
 ### Run Artifacts
 When using `./scripts/run.sh`, artifacts are grouped under `data/runs/<RUN_ID>/`:
@@ -73,6 +74,10 @@ You can override the defaults with `RUN_ID`, `RUNS_DIR`, `REVIEW_PATH`, `IMPORT_
 - `MAX_FLIGHTS` (integer)
 Note: `CLOUD_AHOY_API_KEY` and `FLYSTO_API_KEY` are not used yet.
 
+### Migration Notes
+
+2026-01-04: CloudAhoy flight identifiers now use `fdID` (UUID) for `flight_id`. If you have cached review/import data or custom tooling that referenced the old `key` field, regenerate those artifacts with the new IDs. See `docs/migrations.md` for details.
+
 CLI options:
 - `--state-path` (default `data/migration.db`)
 - `--force` to re-upload already migrated flights
@@ -88,6 +93,10 @@ CLI options:
 ## Status
 
 The default path uses CloudAhoy JSON APIs for full-flight data and FlySto API upload.
+
+## Production
+
+See `docs/production.md` for the minimum infrastructure and configuration required for a multi-tenant deployment.
 
 ## Web Automation Notes
 
@@ -143,10 +152,10 @@ make install PREFIX=$HOME/.local
 Local execution without Docker is possible with:
 
 ```sh
-python -m src.cli --review
-python -m src.cli --approve-import
-python -m src.cli --approve-import --review-id <id> --wait-for-processing
-python -m src.cli --reconcile-import-report --wait-for-processing
+python -m src.core.cli --review
+python -m src.core.cli --approve-import
+python -m src.core.cli --approve-import --review-id <id> --wait-for-processing
+python -m src.core.cli --reconcile-import-report --wait-for-processing
 ```
 
 Development runs should use the devcontainer scripts (`./scripts/run*.sh`) to guarantee required dependencies (like `rich`) and browser tooling. Local execution is best reserved for one-off debugging.
@@ -188,6 +197,7 @@ docker compose up --build
 Open:
 - https://skybridge.localhost (UI + API)
 - https://auth.skybridge.localhost (Keycloak)
+- https://storage.skybridge.localhost (MinIO console + S3 API)
 
 
 ### Docker Compose (API + worker + local data stores)
@@ -200,11 +210,28 @@ Services:
 - `api` (FastAPI + UI) on http://localhost:8000
 - `worker` (dev worker loop)
 - `dynamodb` (local) on http://localhost:8001
-- `minio` (S3-compatible) on http://localhost:9000, console on http://localhost:9001
+- `minio` (S3-compatible) behind Caddy at https://storage.skybridge.localhost
 - `keycloak` (OIDC dev auth) on http://localhost:8080
-- `caddy` (HTTPS proxy) on https://skybridge.localhost and https://auth.skybridge.localhost
+- `caddy` (HTTPS proxy) on https://skybridge.localhost, https://auth.skybridge.localhost, and https://storage.skybridge.localhost
 
 The dev stack runs review/import via the worker (API queues jobs and issues one-time credential claims).
+
+Mock portal services (default in dev):
+- `DEV_USE_MOCKS=1` (default) routes CloudAhoy/FlySto calls to local mock services seeded from `tests/fixtures/run-20251228T185601Z`.
+- To use real portals, set `DEV_USE_MOCKS=0` and configure `CLOUD_AHOY_BASE_URL`/`FLYSTO_BASE_URL` (plus auth vars).
+
+Artifact storage (S3/MinIO):
+- When `BACKEND_S3_ENABLED=1`, review/import artifacts are uploaded to the configured S3 bucket.
+- The dev stack defaults to MinIO with bucket `skybridge-artifacts` and prefix `jobs/<job_id>/`.
+- Set `BACKEND_S3_DELETE_ON_CLEAR=1` to remove remote artifacts when deleting a job (privacy).
+- Jobs older than `BACKEND_RETENTION_DAYS` are deleted automatically (local + optional S3 cleanup).
+- Per-flight CloudAhoy raw JSON exports are also uploaded
+  (`cloudahoy_exports/*.cloudahoy.json`).
+
+Production orchestration (stateless API):
+- `BACKEND_DYNAMO_ENABLED=1` with `DYNAMO_JOBS_TABLE` for job metadata.
+- `DYNAMO_CREDENTIALS_TABLE` for short-lived credentials (TTL minutes).
+- `BACKEND_SQS_ENABLED=1` with `SQS_QUEUE_URL` to enqueue review/import work.
 
 Test the API:
 

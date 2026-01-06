@@ -2,14 +2,50 @@
   auto_https off
 }
 
+http://skybridge.localhost {
+  redir https://skybridge.localhost{uri}
+}
+
+http://auth.skybridge.localhost {
+  redir https://auth.skybridge.localhost{uri}
+}
+
+http://storage.skybridge.localhost {
+  redir https://storage.skybridge.localhost{uri}
+}
+
 https://skybridge.localhost {
   tls /etc/caddy/certs/skybridge.localhost.pem /etc/caddy/certs/skybridge.localhost-key.pem
   encode gzip
-  reverse_proxy api:8000
+  handle_path /api/* {
+    reverse_proxy api:8000
+  }
+  handle {
+    reverse_proxy frontend:5173
+  }
 }
 
 https://auth.skybridge.localhost {
   tls /etc/caddy/certs/auth.skybridge.localhost.pem /etc/caddy/certs/auth.skybridge.localhost-key.pem
   encode gzip
   reverse_proxy keycloak:8080
+}
+
+https://storage.skybridge.localhost {
+  tls /etc/caddy/certs/storage.skybridge.localhost.pem /etc/caddy/certs/storage.skybridge.localhost-key.pem
+  encode gzip
+  @root path /
+  redir @root /console/ 302
+  handle /api* {
+    reverse_proxy minio:9001
+  }
+  handle_path /console* {
+    reverse_proxy minio:9001
+  }
+  handle_path /minio* {
+    reverse_proxy minio:9001
+  }
+  handle {
+    reverse_proxy minio:9000
+  }
 }

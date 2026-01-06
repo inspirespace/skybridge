@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Skybridge Wireframe A v2 — Calm Single Page</title>
+    <style>
+      :root {
+        --ink: #1b1f25;
+        --muted: #6b7280;
+        --border: #d9dde3;
+        --panel: #ffffff;
+        --bg: #f5f6f8;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Sora", "Avenir Next", "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      .frame {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 40px 22px 80px;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .logo { font-weight: 700; letter-spacing: 0.08em; }
+      .stepper {
+        display: flex;
+        gap: 10px;
+        margin: 24px 0 18px;
+        flex-wrap: wrap;
+      }
+      .step {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 0.85rem;
+      }
+      .hero {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        padding: 20px 22px;
+        border-radius: 14px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 18px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+      }
+      .span-6 { grid-column: span 6; }
+      .span-4 { grid-column: span 4; }
+      .span-8 { grid-column: span 8; }
+      .span-12 { grid-column: span 12; }
+      .line { height: 10px; background: #e7e9ee; border-radius: 999px; margin: 10px 0; }
+      .cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        border-radius: 10px;
+        background: #111827;
+        color: #fff;
+        font-weight: 600;
+        border: none;
+      }
+      .ghost {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--muted);
+        padding: 10px 14px;
+        border-radius: 10px;
+      }
+      @media (max-width: 900px) {
+        .span-6, .span-4, .span-8 { grid-column: span 12; }
+        header { flex-direction: column; align-items: flex-start; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <header>
+        <div class="logo">SKYBRIDGE</div>
+        <div class="step">Status: Signed in</div>
+      </header>
+
+      <div class="stepper">
+        <div class="step">1. Connect</div>
+        <div class="step">2. Review</div>
+        <div class="step">3. Import</div>
+        <div class="step">4. Report</div>
+      </div>
+
+      <section class="hero">
+        <h2>Import flights from CloudAhoy to FlySto</h2>
+        <p class="line" style="width: 55%"></p>
+      </section>
+
+      <section class="grid">
+        <div class="card span-6">
+          <h3>Connect CloudAhoy</h3>
+          <div class="line"></div>
+          <div class="line" style="width: 70%"></div>
+        </div>
+        <div class="card span-6">
+          <h3>Connect FlySto</h3>
+          <div class="line"></div>
+          <div class="line" style="width: 70%"></div>
+        </div>
+        <div class="card span-4">
+          <h3>Filters (optional)</h3>
+          <div class="line"></div>
+          <div class="line" style="width: 60%"></div>
+        </div>
+        <div class="card span-8">
+          <h3>Review summary</h3>
+          <div class="line" style="width: 50%"></div>
+          <div class="line" style="width: 40%"></div>
+          <div class="line"></div>
+        </div>
+        <div class="card span-12">
+          <h3>Import progress</h3>
+          <div class="line"></div>
+          <div class="line" style="width: 30%"></div>
+          <div style="margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="cta">Run review</button>
+            <button class="ghost">Approve import</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

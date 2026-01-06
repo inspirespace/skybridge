@@ -1,12 +1,14 @@
+"""tests/test_guided_date_filter.py module."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from src.guided import _filter_summaries_by_date, _parse_date_bound
-from src.models import FlightSummary
+from src.core.guided import _filter_summaries_by_date, _parse_date_bound
+from src.core.models import FlightSummary
 
 
 def test_guided_parse_date_bound():
+    """Test guided parse date bound."""
     start = _parse_date_bound("2024-09-04", is_end=False)
     end = _parse_date_bound("2024-09-04", is_end=True)
     assert start == datetime(2024, 9, 4, 0, 0, 0, tzinfo=timezone.utc)
@@ -14,6 +16,7 @@ def test_guided_parse_date_bound():
 
 
 def test_guided_filter_summaries_by_date():
+    """Test guided filter summaries by date."""
     summaries = [
         FlightSummary("a", datetime(2024, 9, 3, 12, 0, tzinfo=timezone.utc), None, None, None),
         FlightSummary("b", datetime(2024, 9, 4, 12, 0, tzinfo=timezone.utc), None, None, None),

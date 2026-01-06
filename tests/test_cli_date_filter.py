@@ -1,12 +1,14 @@
+"""tests/test_cli_date_filter.py module."""
 from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from src.cli import _filter_summaries_by_date, _parse_date_bound
-from src.models import FlightSummary
+from src.core.cli import _filter_summaries_by_date, _parse_date_bound
+from src.core.models import FlightSummary
 
 
 def test_parse_date_bound_date_start_and_end():
+    """Test parse date bound date start and end."""
     start = _parse_date_bound("2024-09-04", is_end=False)
     end = _parse_date_bound("2024-09-04", is_end=True)
     assert start == datetime(2024, 9, 4, 0, 0, 0, tzinfo=timezone.utc)
@@ -14,6 +16,7 @@ def test_parse_date_bound_date_start_and_end():
 
 
 def test_filter_summaries_by_date_inclusive():
+    """Test filter summaries by date inclusive."""
     summaries = [
         FlightSummary("a", datetime(2024, 9, 3, 12, 0, tzinfo=timezone.utc), None, None, None),
         FlightSummary("b", datetime(2024, 9, 4, 12, 0, tzinfo=timezone.utc), None, None, None),

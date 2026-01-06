@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Skybridge Mockup — Minimal Tech</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --border: #e3e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #0ea5e9;
+      --accent-soft: #e0f2fe;
+      --success: #16a34a;
+      --shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+      color: var(--text);
+      background: #f6f8fc;
+    }
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header .logo {
+      font-weight: 600;
+      letter-spacing: 0.25em;
+      font-size: 12px;
+      color: #334155;
+    }
+    header .actions button {
+      margin-left: 8px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #fff;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    main {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 20px;
+      padding: 22px 28px 56px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .sidebar {
+      padding: 14px;
+    }
+    .sidebar h4 {
+      font-size: 11px;
+      letter-spacing: 0.3em;
+      margin: 0 0 10px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 12px;
+      border-radius: 8px;
+      background: #f8fafc;
+      margin-bottom: 8px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .step span.status {
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+    }
+    .accordion {
+      overflow: hidden;
+    }
+    .acc-item {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .acc-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      background: #f1f5f9;
+      color: var(--muted);
+    }
+    .pill.success { background: #dcfce7; color: #15803d; }
+    .acc-body {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .panel {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #bae6fd;
+      background: #f0f9ff;
+      color: #075985;
+      font-size: 12px;
+    }
+    .cta {
+      margin-top: 14px;
+      display: flex;
+      gap: 10px;
+    }
+    .cta button {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 8px 16px rgba(14, 165, 233, 0.25);
+    }
+    .cta button.secondary {
+      background: #fff;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      box-shadow: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">SKYBRIDGE</div>
+    <div class="actions">
+      <button>Start over</button>
+      <button>Sign out</button>
+    </div>
+  </header>
+  <main>
+    <aside class="card sidebar">
+      <h4>Progress</h4>
+      <div class="step">1 · Sign in <span class="status">Done</span></div>
+      <div class="step">2 · Connect <span class="status">Done</span></div>
+      <div class="step">3 · Review <span class="status">Active</span></div>
+      <div class="step">4 · Import <span class="status">Pending</span></div>
+    </aside>
+    <section class="card accordion">
+      <div class="acc-item">
+        <div class="acc-header">1 · Sign in <span class="pill success">Signed in</span></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header">2 · Connect accounts <span class="pill success">Connected</span></div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header">3 · Review <span class="pill">Review running</span></div>
+        <div class="acc-body">
+          Flights are fetched from CloudAhoy first so you can check them before running the actual import.
+          <div class="panel">Review in progress · Elapsed: 2m · Last update: just now</div>
+          <div class="cta">
+            <button>Accept and start import</button>
+            <button class="secondary">Edit import filters</button>
+          </div>
+        </div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-header">4 · Import <span class="pill">Waiting for review</span></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

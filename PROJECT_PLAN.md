@@ -1,164 +1,70 @@
-# Project Plan
+# Project Plan (Web App)
 
-## Status Snapshot
-- Added per-file aircraft assignment using FlySto log-list/log-summary to map filename to signature.
-- FlySto field ingestion experiment pending: CSV-only accepted, GPX+CSV/GPX+JSON failed; need log list endpoint to verify field visibility.
-- Review flow works for all flights; exports GPX from `flt.points` (CSV retained); metadata captured; 46 flights imported on 2025-12-22.
-- Upload to FlySto uses API (`/api/login`, `/api/log-upload`).
-- `migration.db` now stores file/metadata hashes for idempotent skips.
-- Review manifests include `review_id` and approve-import requires it.
-- FlySto API base URL defaults to `https://www.flysto.net`; API version inferred from JS bundle.
-- MODE defaults to `auto` and no longer falls back to web.
-- Blocker: FlySto "Other" aircraft model creation — UI reaches manual profile step but no create-aircraft request captured; direct /api/create-aircraft attempts return 500.
-- Crew import wiring added (create crew via `/api/new-crew`, assign via `/api/assign-crew`, map roles from `/api/user-crew-roles`) but requires validation against live API.
-- FlySto client adds basic rate limiting + retry to reduce request bursts and handle transient outages.
-- Crew extraction now forces PIC when CloudAhoy marks PIC or uses PIC role strings; FlySto role resolution prioritizes PIC candidates.
-- Crew mapping updated: CloudAhoy "safety pilot" maps to FlySto "copilot"; if CloudAhoy provides only "pilot" without PIC, it becomes PIC.
-- FlySto aircraft lookup now tolerates `tail-number` vs `tailNumber` keys for assignment.
-- Local 5-flight import via direct Python succeeded (review-id gating), pending UI verification of crew roles/aircraft assignment.
-- Aircraft assignment now retries longer and refreshes log summaries before giving up.
-- Regression: uploads using `@@@<tail>` in URL/zip entry do not appear as flights; legacy `@@@0` with plain filename does. Reverted to legacy upload while focusing on assignment API.
-- Playwright capture blocked on macOS due to Crashpad permission errors; need manual network capture or alternate environment.
-- Align assign-aircraft request with UI (text/plain JSON body + x-version).
-- Group uploads by tail number and assign unknown GPX groups per tail after uploads.
-- Prevent caching of unknown-group assignments (systemId=None) so each tail can be assigned.
-- Added offline unit tests for tail grouping and assign-aircraft caching behavior.
-- CloudAhoy remarks map to FlySto log annotations (with mojibake repair).
-- Imported logs now get `cloudahoy` + `cloudahoy:<timestamp>` tags using the import-run timestamp; CloudAhoy tags are ignored.
-- Import flow now writes `data/import_report.json` for verification (per-flight status + FlySto log resolution).
-- Verify-only mode and timestamped logging added to improve long-run visibility.
-- FlySto log annotations updates are write-only; tags are sent as-is.
-- FlySto log resolution now caches per filename within a run to avoid repeating long polling waits for crew/metadata after aircraft assignment.
-- Resolve FlySto log details once per flight after upload and reuse for aircraft/crew/metadata assignment to avoid extra polling.
-- Report FlySto processing queue size and pending log count to explain why UI may be empty during ingestion.
-- Add wait-for-processing option to block until FlySto ingestion finishes, then verify and reconcile aircraft.
-- Reconcile crew assignments after ingestion using stored report data or review metadata.
-- Run Docker detached in `scripts/run.sh` and stream logs to avoid truncated output for long runs.
-- Added `scripts/run-discovery.sh`/`src.discovery_cli` to keep discovery separate from the main CLI.
-- Added a VS Code devcontainer with Playwright + Python deps and Docker socket access for local development/testing.
-- Avoid duplicate exports during crew reconciliation by fetching CloudAhoy metadata only.
-- Use review manifests as the source of truth for import flight lists to keep runs deterministic.
-- Fix approve-import guard so matching review IDs proceed with imports.
-- Latest full import run (RUN_ID 20251225T111510Z) still reports pending=1/resolved=45 after verification; investigate FlySto log resolution mismatch.
-- FlySto log resolution now falls back to `type=all` log listings to eliminate missing file matches.
-- CLI now writes logs to `docker.log` directly for each run.
-- Added run checklist and verification script for consistent post-run validation.
-- Added GitHub Actions CI workflow to run pytest on pushes to main and pull requests.
-- CI now uses Python 3.12 and `uv sync --frozen --extra dev` before running pytest.
-- Implemented guided CLI flow with preflight checks, prompts, and rich progress output.
-- Added `cloudahoy2flysto` wrapper script as the primary user-facing guided command.
-- Added Makefile install/uninstall targets for the guided wrapper.
-- Devcontainer improvements: persistent shell history in a named volume, and permission fix on start.
-- Devcontainer updates: starship config to avoid prompt scan timeouts; VS Code pytest discovery settings added.
-- Migrated dependency management to `uv` with `pyproject.toml` and `uv.lock` (dev deps via `--extra dev`).
-- Devcontainer now uses the `base` Dockerfile stage (features handle extra tooling).
-- Devcontainer now points VS Code to `/opt/venv/bin/python` and enables pytest discovery.
-- Devcontainer mounts a named volume for Codex login persistence at `/home/vscode/.codex`.
-- Devcontainer PATH now includes `/home/vscode/.npm-global/bin` for the Codex CLI.
-- Added optional ForeFlight-style CSV export for CloudAhoy (`CLOUD_AHOY_EXPORT_FORMAT=foreflight`).
-- Added optional FlightRadar24 CSV export for CloudAhoy (`CLOUD_AHOY_EXPORT_FORMAT=flightradar24`).
-- Added optional MVP-50 CSV export for CloudAhoy (`CLOUD_AHOY_EXPORT_FORMAT=mvp50`).
-- Added optional Garmin G3X/G1000 CSV exports for CloudAhoy (`CLOUD_AHOY_EXPORT_FORMAT=g3x` / `g1000`).
-- Added multi-export support via `CLOUD_AHOY_EXPORT_FORMATS` (comma-separated, default `g3x,gpx`), with G3X preferred for upload.
-- CLI now prompts for missing API credentials in-memory when `.env` is absent.
-- Experiment: `CLOUD_AHOY_G3X_INCLUDE_HDG=1` opt-in to include heading in G3X exports; TRK is always included and HDG defaults off for block-time compatibility.
-- Use FlySto log-upload response signature hash/log id for aircraft assignment (stored in a dedicated upload cache and reported separately) before falling back to log-list resolution (helps G3X UnknownGarmin cases without poisoning resolution).
-- Default G3X/G1000 assignment to `UnknownGarmin` when FlySto does not report a format, keeping signature grouping consistent for aircraft assignment.
-- Reconcile aircraft using filename-based resolution when report signatures/formats are missing.
-- Add a dedicated TRK column to G3X exports while keeping HDG optional.
-- Align G3X `#airframe_info` header with Garmin format and set `system_id` from tail to help FlySto avoid UnknownGarmin grouping.
-- Fall back to `/api/log-metadata` to capture the UnknownGarmin `systemId` for aircraft assignment when log summaries don’t expose it.
-- Add a metadata reconciliation pass (tags/remarks) and run reconciliation in aircraft → crew → metadata order.
-- Ensure FlySto API requests include the `X-Version` header (parsed from the JS bundle) so crew assignments don’t 404.
-- Align FlySto crew assignment payloads to the web UI (text/plain JSON + numeric role IDs) and fall back to `/api/crew?type=all` when `/api/user-crew` returns empty.
-- Re-resolve FlySto log ids by filename during crew reconciliation to handle post-processing log id swaps.
-- Verify crew annotations after reconciliation and retry once if FlySto doesn’t persist crew immediately.
-- Reapply crew after guided reconciliation once FlySto processing drains to avoid late FlySto processing clearing crew.
-- Added tests for crew payload formatting/fallback, G3X HDG/TRK behavior, and reconciliation retry with log-id refresh.
-- Added tests for FlySto signature parsing/decoding, log-list resolution, log-metadata source extraction, and migration flow signature/system-id assignment.
-- Added tests for FlySto resolve update flows, log-source cache reuse, and import-report verify/reconcile paths.
-- Backend dev API now runs real review/import flows using API clients; web UI submits credentials per request, stores review/import artifacts under `data/backend/jobs/<job_id>/`, and updates job status via background tasks.
-- Dev web now uses OIDC (Keycloak) auth instead of `X-User-Id` headers, mirroring production JWT validation.
-- Added Caddy + mkcert HTTPS dev proxy for trusted local TLS on `https://skybridge.localhost`.
-- Devcontainer now installs Terraform for local `terraform fmt` checks.
-- Dev backend now queues review/import jobs for the worker, using one-time credential claims instead of storing credentials at rest.
-- Dev backend reconcile flow now mirrors the guided import: wait for FlySto processing, verify/report, reconcile aircraft/crew/metadata, then reapply crew after post-processing drains.
-- Dev web UI now clears stale saved job state automatically and exposes a manual clear action to unblock new runs.
-- Lambda handlers now guard invalid job IDs and missing artifacts, returning 404s instead of 502s.
-- Lambda build now bundles the full backend package and a handler shim so API Gateway handlers can import backend modules in Lambda.
+Goal: ship the production web UI for CloudAhoy → FlySto imports, using the wireframe as the single UI reference and default component styling.
 
-## Next Implementation Steps
-1) Capture FlySto create-aircraft request for "Other" model (complete UI wizard to final submit; identify endpoint/payload).
-2) Validate crew role mapping coverage (PIC/Student/Instructor/etc.) and verify crew assignment shows on logs.
-3) Confirm metadata mapping coverage (remarks/tail number) and aircraft assignment.
-4) Decide whether to persist raw CloudAhoy payloads for audit/replay.
-5) Output format mapping
-   - Confirm FlySto’s preferred structured format.
-   - Map `flt.points` to that format and add tests.
-6) Hardening & tests
-   - Add unit tests for pagination, parsing, and mapping.
-   - Add integration tests for a small flight sample (if allowed).
-   - Extend tests to cover crew mapping and metadata extraction edge cases.
-7) Remarks + import tagging
-   - Validate in UI that remarks/tags are visible on logs.
+## 0. Foundation (Done)
+- [x] 0.1 Backend architecture and workflow docs exist (review/import/report flow, artifacts, runbook).
+- [x] 0.2 CLI import workflow stabilized (review → approve → import; manifests + reports).
+- [x] 0.3 Auth/dev stack wired (OIDC/Keycloak in dev; devcontainer + local HTTPS).
+- [x] 0.4 CI and tooling set up (pytest in CI, uv deps, devcontainer toolchain).
+- [x] 0.5 Wireframe finalized as the single UI reference (`design/final/skybridge-import-flow-wireframe.html`).
+- [x] 0.6 Review step layout simplified (helper line in progress card + summary chips).
+- [x] 0.7 Copy clarified (review/import labels, CTA wording, helper text, status pills).
+- [x] 0.8 Layout rules captured (sticky left nav, accordion steps, progress cards, tables, footer; mobile top bar + bottom stepper).
+- [x] 0.9 Confirmed: use default component library styling wherever possible.
+- [x] 0.10 Confirmed: light/dark mode toggle required.
 
-## Backend Architecture Planning (in progress)
-Goal: Deliver a fully functional web application where any user can migrate CloudAhoy flights into FlySto. The architecture must be single-cloud, secure, maintainable, privacy-focused (no credential storage), and cost-friendly for early free-tier usage. The production path excludes Playwright.
+## 1. UI Inventory + State Model (Done)
+- [x] 1.0 Prerequisite: complete section 1 before moving to sections 2–4.
+- [x] 1.1 Define component inventory (accordion, stepper, progress card, chips, tables, CTA bar, info panels).
+- [x] 1.2 Define state machine for the flow (signed‑out → signed‑in → connected → review running → review complete → import running → import complete).
+- [x] 1.3 Document action rules (when CTAs are enabled, when steps are locked/readonly).
 
-Reference doc: `docs/backend-architecture.md` (authoritative architecture + milestone definitions).
+## 2. App Skeleton + Theming (Done)
+- [x] 2.1 Set up React + Vite + shadcn/ui with IBM Plex Sans (use the wireframe as the structure reference: `design/final/skybridge-import-flow-wireframe.html`).
+- [x] 2.2 Implement light/dark theme toggle (choose tokens strategy: CSS vars vs Tailwind config).
+- [x] 2.3 Build layout shell (header, sticky left nav, accordion stack, footer) using default components; avoid custom UI hacks to mimic the wireframe.
 
-- [x] 1) Define the target single-cloud baseline (AWS by default)
-  - [x] Confirm region strategy (single region for early stage).
-  - [x] Document core managed services (API Gateway, Lambda, Step Functions, DynamoDB, S3, CloudWatch, Cognito).
-  - [x] Decide if any container runtime is needed for API-only migrations (goal: Lambda-only).
-- [x] 2) Specify the data privacy model (no credential storage)
-  - [x] Describe in-memory credential handling (credentials accepted per job, used transiently, never stored).
-  - [x] Define encrypted-in-transit requirements (TLS, optional client-side encryption).
-  - [x] Clarify retention windows for job artifacts and logs (TTL policy).
-- [x] 3) Define job orchestration and data lifecycle
-  - [x] Document job states and transitions (created → running → completed/failed).
-  - [x] Define artifact storage paths and metadata schema (S3 keys, DynamoDB tables).
-  - [x] Add S3 lifecycle/TTL cleanup policy and DynamoDB TTL field usage.
-- [x] 4) API design and frontend integration
-  - [x] Draft minimal REST endpoints (create job, list jobs, job status, download artifacts).
-  - [x] Define authentication flow and session handling (Cognito).
-  - [x] Sketch the minimal UI pages (sign-in, job creation, job status).
-- [x] 5) Observability & auditability
-  - [x] Define structured logging format and correlation IDs.
-  - [x] List required metrics (job duration, failures, volume).
-  - [x] Document audit log retention policy.
-- [x] 6) Security posture & threat model
-  - [x] Enumerate threats (credential exposure, data leakage, unauthorized access).
-  - [x] Define mitigations (least privilege IAM, encryption at rest/in transit, short TTL).
-  - [x] Document incident response basics (revocation, log review).
-- [x] 7) Cost controls and free-tier strategy
-  - [x] Set quotas/limits per account (jobs/day, max flights).
-  - [x] Add guardrails for API usage and storage growth.
-  - [x] Define alerting thresholds for budget overages.
-- [x] 8) Implementation milestones (non-code planning)
-  - [x] Prepare an infra diagram description (single-cloud layout).
-  - [x] Produce a minimal runbook (how to run a job end-to-end).
-  - [x] Draft a maintenance checklist (dependencies, security updates).
-  - [x] Define a readiness checklist for a public web release (UX flow, auth, migrations working for any user).
-- [x] 9) Local development experience
-  - [x] Define a Docker Compose-based stack for local dev (UI + API + worker + local data stores).
-  - [x] Document local auth approach (Cognito emulator or dev-only JWT bypass).
+## 3. Step Components (Done)
+- [x] 3.1 Sign‑in step UI (trust/info panel + sign‑in buttons).
+- [x] 3.2 Connect step UI (credentials + import filters + connect CTA).
+- [x] 3.3 Review step UI (progress card, summary chips, table, actions).
+- [x] 3.4 Import step UI (progress card, results summary, conclusion).
 
-### Milestones & Review Cadence
-- Milestone 1: Backend architecture baseline documented (complete).
-  - Deliverables: architecture overview, data privacy model, job lifecycle, API + UI shape, observability, security, cost controls, runbook, maintenance, readiness checklist.
-  - Review/feedback: **Approved** — proceeding to Milestone 2.
-- Milestone 2: Infra-as-code baseline (in progress).
-  - Deliverables: CDK/Terraform skeleton with core services, CI hook, environment config.
-  - Status: Terraform baseline under `infra/terraform/` + GitHub Actions fmt check added, API Gateway → Lambda routes wired to handler zip.
-  - Review/feedback: to be scheduled once scaffolding exists.
-- Milestone 3: Dev workflow (in progress).
-  - Deliverables: basic auth, job orchestration, review → import flow, artifacts downloadable.
-  - Status: Dev FastAPI now executes real review/import flows using API clients, writes artifacts under `data/backend/jobs`, and the dev web UI polls job status while the background tasks run.
-- Milestone 4: Public beta readiness (in progress).
-  - Deliverables: runbook, maintenance checklist, readiness checklist, guardrails validated.
-  - Status: added `docs/backend-runbook.md`, `docs/backend-maintenance.md`, `docs/backend-release-readiness.md`.
+## 4. State + Mocked Data (Done)
+- [x] 4.1 Wire state model to components (locked/readonly behavior, CTA enablement).
+- [x] 4.2 Add mocked API layer and polling hooks for review/import progress.
+- [x] 4.3 Wire transitions between steps based on state.
 
-## Backlog / Ideas
-- Replace FlySto UI automation with API client.
-- Add pricing/billing foundation for the backend.
+## 5. API Integration (In Progress)
+- [x] 5.1 Auth integration (OIDC).
+- [x] 5.2 Review start + progress polling.
+- [x] 5.2.a Frontend wired to `/jobs` create + poll (dev header auth).
+- [x] 5.3 Import approval + progress polling.
+- [x] 5.3.a Frontend wired to `/jobs/{id}/review/accept` (dev header auth).
+- [x] 5.4 Report download + retention actions.
+- [x] 5.4.a Frontend wired to `/jobs/{id}/artifacts` download (dev header auth).
+- [x] 5.4.b Frontend wired to `/jobs/{id}` delete (retention action).
+- [x] 5.5 Error handling + retry UX for each step.
+- [ ] 5.6 Define dual‑issuer auth strategy (Keycloak for local dev, Cognito for prod) with env‑based config.
+  - [x] 5.6.1 Local: configure Keycloak realm + client for SPA (OIDC + PKCE).
+  - [x] 5.6.2 Local: configure Keycloak IdP brokers (Google, Apple, Facebook) with dev/test credentials.
+  - [x] 5.6.3 Prod: create Cognito User Pool + App Client (SPA) with Hosted UI.
+  - [x] 5.6.4 Prod: configure social IdPs (Google, Apple, Facebook) in Cognito.
+  - [ ] 5.6.5 Optional: configure enterprise SSO (OIDC/SAML) in both Keycloak and Cognito.
+  - [x] 5.6.6 Set callback/logout URLs for dev + prod environments.
+  - [x] 5.6.7 Frontend: implement provider buttons using `idp_hint` (Keycloak) and Cognito IdP routing.
+  - [x] 5.6.8 Backend: validate JWTs against env‑selected issuer/JWKS (Keycloak vs Cognito).
+  - [x] 5.6.9 Document env vars, secrets, and setup steps for dev + prod.
+
+## 6. QA + Release (Done)
+- [x] 6.1 Accessibility pass (focus order, ARIA, keyboard nav).
+- [x] 6.2 Responsive QA on mobile/tablet/desktop.
+- [x] 6.3 Visual QA against wireframe states (default component styling only).
+
+## Open Questions
+- [ ] Q1 Confirm API contracts for progress polling and report download.
+- [ ] Q2 Confirm theme token source (global CSS vs design‑system config).
+
+## Maintenance Notes
+- [x] Paginate DynamoDB job scans/queries in `JobStore` to avoid missing older jobs in dev worker mode.

@@ -1,26 +1,31 @@
+"""tests/test_flysto_resolve_update.py module."""
 from __future__ import annotations
 
 import json
 
-from src.flysto.client import FlyStoClient
+from src.core.flysto.client import FlyStoClient
 
 
 class DummyResponse:
     def __init__(self, text: str, status_code: int = 200) -> None:
+        """Internal helper for init  ."""
         self.text = text
         self.status_code = status_code
 
 
 class DummyFlyStoUpdate(FlyStoClient):
     def __init__(self) -> None:
+        """Internal helper for init  ."""
         super().__init__(api_key="", base_url="https://example.test")
         self.summary_calls: list[dict] = []
         self.list_calls = 0
 
     def _ensure_session(self, session):
+        """Internal helper for ensure session."""
         return None
 
     def _request(self, session, method: str, url: str, **kwargs):
+        """Internal helper for request."""
         if url.endswith("/api/log-list"):
             self.list_calls += 1
             return DummyResponse(text=json.dumps(["log-a"]))
@@ -47,6 +52,7 @@ class DummyFlyStoUpdate(FlyStoClient):
 
 
 def test_resolve_log_for_file_uses_update_true_after_empty():
+    """Test resolve log for file uses update true after empty."""
     client = DummyFlyStoUpdate()
     log_id, signature, log_format = client.resolve_log_for_file("flight.g3x.csv", retries=1)
     assert log_id == "log-a"

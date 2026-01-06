@@ -114,5 +114,5 @@ if [[ "${ONLINE_VERIFY}" == "1" ]]; then
   set -a
   source "${ROOT_DIR}/.env"
   set +a
-  python -m src.cli --verify-import-report --import-report "${REPORT_PATH}"
+  python -m src.core.cli --verify-import-report --import-report "${REPORT_PATH}"
 fi

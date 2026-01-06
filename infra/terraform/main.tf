@@ -19,7 +19,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
     status = "Enabled"
 
     expiration {
-      days = 30
+      days = 7
     }
   }
 }
@@ -44,10 +44,116 @@ resource "aws_dynamodb_table" "jobs" {
     attribute_name = "ttl_epoch"
     enabled        = true
   }
+
+  global_secondary_index {
+    name            = "job_id-index"
+    hash_key        = "job_id"
+    projection_type = "ALL"
+  }
+}
+
+resource "aws_dynamodb_table" "credentials" {
+  name         = "${local.name_prefix}-credentials"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "token"
+
+  attribute {
+    name = "token"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "ttl_epoch"
+    enabled        = true
+  }
+}
+
+resource "aws_sqs_queue" "job_queue" {
+  name                       = "${local.name_prefix}-job-queue"
+  visibility_timeout_seconds = 900
 }
 
 resource "aws_cognito_user_pool" "users" {
   name = "${local.name_prefix}-users"
+}
+
+resource "aws_cognito_user_pool_client" "web" {
+  name                                 = "${local.name_prefix}-web"
+  user_pool_id                         = aws_cognito_user_pool.users.id
+  generate_secret                      = false
+  allowed_oauth_flows                  = ["code"]
+  allowed_oauth_scopes                 = ["openid", "email", "profile"]
+  allowed_oauth_flows_user_pool_client = true
+  callback_urls                        = var.cognito_callback_urls
+  logout_urls                          = var.cognito_logout_urls
+  supported_identity_providers         = concat(["COGNITO"], var.cognito_identity_providers)
+  depends_on = [
+    aws_cognito_identity_provider.google,
+    aws_cognito_identity_provider.facebook,
+    aws_cognito_identity_provider.apple
+  ]
+}
+
+resource "aws_cognito_user_pool_domain" "hosted_ui" {
+  count        = var.cognito_domain == "" ? 0 : 1
+  domain       = var.cognito_domain
+  user_pool_id = aws_cognito_user_pool.users.id
+}
+
+resource "aws_cognito_identity_provider" "google" {
+  count         = var.google_client_id == "" ? 0 : 1
+  user_pool_id  = aws_cognito_user_pool.users.id
+  provider_name = "Google"
+  provider_type = "Google"
+
+  provider_details = {
+    client_id        = var.google_client_id
+    client_secret    = var.google_client_secret
+    authorize_scopes = "openid email profile"
+  }
+
+  attribute_mapping = {
+    email = "email"
+    name  = "name"
+  }
+}
+
+resource "aws_cognito_identity_provider" "facebook" {
+  count         = var.facebook_client_id == "" ? 0 : 1
+  user_pool_id  = aws_cognito_user_pool.users.id
+  provider_name = "Facebook"
+  provider_type = "Facebook"
+
+  provider_details = {
+    client_id        = var.facebook_client_id
+    client_secret    = var.facebook_client_secret
+    authorize_scopes = "email,public_profile"
+  }
+
+  attribute_mapping = {
+    email = "email"
+    name  = "name"
+  }
+}
+
+resource "aws_cognito_identity_provider" "apple" {
+  count         = var.apple_client_id == "" ? 0 : 1
+  user_pool_id  = aws_cognito_user_pool.users.id
+  provider_name = "SignInWithApple"
+  provider_type = "SignInWithApple"
+
+  provider_details = {
+    client_id        = var.apple_client_id
+    team_id          = var.apple_team_id
+    key_id           = var.apple_key_id
+    private_key      = var.apple_private_key
+    authorize_scopes = "openid email name"
+  }
+
+  attribute_mapping = {
+    email = "email"
+    name  = "name"
+  }
 }
 
 resource "aws_apigatewayv2_api" "http_api" {
@@ -126,6 +232,15 @@ resource "aws_lambda_function" "read_artifact" {
   timeout       = 30
 }
 
+resource "aws_lambda_function" "delete_job" {
+  function_name = "${local.name_prefix}-delete-job"
+  role          = aws_iam_role.lambda_exec.arn
+  handler       = "lambda_handlers.delete_job_handler"
+  runtime       = "python3.12"
+  filename      = "${path.module}/lambda/backend-handlers.zip"
+  timeout       = 30
+}
+
 resource "aws_apigatewayv2_integration" "create_job" {
   api_id                 = aws_apigatewayv2_api.http_api.id
   integration_type       = "AWS_PROXY"
@@ -174,6 +289,14 @@ resource "aws_apigatewayv2_integration" "read_artifact" {
   payload_format_version = "2.0"
 }
 
+resource "aws_apigatewayv2_integration" "delete_job" {
+  api_id                 = aws_apigatewayv2_api.http_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.delete_job.invoke_arn
+  integration_method     = "DELETE"
+  payload_format_version = "2.0"
+}
+
 resource "aws_apigatewayv2_route" "create_job" {
   api_id    = aws_apigatewayv2_api.http_api.id
   route_key = "POST /jobs"
@@ -208,6 +331,12 @@ resource "aws_apigatewayv2_route" "read_artifact" {
   api_id    = aws_apigatewayv2_api.http_api.id
   route_key = "GET /jobs/{job_id}/artifacts/{artifact_name}"
   target    = "integrations/${aws_apigatewayv2_integration.read_artifact.id}"
+}
+
+resource "aws_apigatewayv2_route" "delete_job" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "DELETE /jobs/{job_id}"
+  target    = "integrations/${aws_apigatewayv2_integration.delete_job.id}"
 }
 
 resource "aws_iam_role" "step_functions" {

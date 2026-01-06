@@ -1,8 +1,9 @@
+"""scripts/assign_aircraft_from_review.py module."""
 import json
 import os
 from pathlib import Path
 
-from src.flysto.client import FlyStoClient, _decode_flysto_payload
+from src.core.flysto.client import FlyStoClient, _decode_flysto_payload
 
 import requests
 

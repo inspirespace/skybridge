@@ -1,0 +1,287 @@
+"""src/core/web/cloudahoy.py module."""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
+
+from playwright.sync_api import Page
+
+from src.core.models import FlightDetail, FlightSummary
+from src.core.web.browser import BrowserOptions, BrowserSession
+
+
+@dataclass(frozen=True)
+class CloudAhoyWebConfig:
+    base_url: str
+    email: str | None
+    password: str | None
+    flights_url: str | None
+    export_url_template: str | None
+    storage_state_path: Path
+    downloads_dir: Path
+    headless: bool
+
+
+class CloudAhoyWebClient:
+    def __init__(self, config: CloudAhoyWebConfig) -> None:
+        """Internal helper for init  ."""
+        self._config = config
+
+    def list_flights(self, limit: int | None = None) -> list[FlightSummary]:
+        """Handle list flights."""
+        session = self._open_session()
+        page = session.open()
+        responses: list[dict[str, Any]] = []
+        session.on_response(lambda url, data: self._record_response(url, data, responses))
+
+        self._ensure_login(page)
+        flights_url = self._config.flights_url or self._guess_flights_url(page)
+        if not flights_url:
+            session.close()
+            raise RuntimeError(
+                "Unable to locate flights page. Set CLOUD_AHOY_FLIGHTS_URL."
+            )
+
+        page.goto(flights_url, wait_until="networkidle")
+        self._load_more_flights(page, responses, limit)
+
+        summaries = self._extract_flights(page, responses)
+        if limit:
+            summaries = summaries[:limit]
+
+        session.save_state()
+        session.close()
+        return summaries
+
+    def fetch_flight(self, flight_id: str) -> FlightDetail:
+        """Handle fetch flight."""
+        if not self._config.export_url_template:
+            raise RuntimeError(
+                "CLOUD_AHOY_EXPORT_URL_TEMPLATE is required for web export."
+            )
+
+        session = self._open_session()
+        page = session.open()
+        self._ensure_login(page)
+
+        export_url = self._config.export_url_template.format(flight_id=flight_id)
+        download_path = self._download_file(page, export_url)
+
+        session.save_state()
+        session.close()
+
+        return FlightDetail(
+            id=flight_id,
+            raw_payload={
+                "source": "cloudahoy",
+                "export_url": export_url,
+            },
+            file_path=str(download_path),
+            file_type=download_path.suffix.lstrip(".") or None,
+        )
+
+    def _open_session(self) -> BrowserSession:
+        """Internal helper for open session."""
+        options = BrowserOptions(
+            headless=self._config.headless,
+            storage_state_path=self._config.storage_state_path,
+        )
+        return BrowserSession(options)
+
+    def _ensure_login(self, page: Page) -> None:
+        """Internal helper for ensure login."""
+        page.goto(f"{self._config.base_url}/login.php", wait_until="networkidle")
+        if page.locator("form#ca_loginform").count() == 0:
+            return
+        if not self._config.email or not self._config.password:
+            raise RuntimeError(
+                "CloudAhoy login required. Set CLOUD_AHOY_EMAIL and CLOUD_AHOY_PASSWORD."
+            )
+        page.fill("input[name=email]", self._config.email)
+        page.fill("input[name=password]", self._config.password)
+        page.click("#btnlogin")
+        page.wait_for_load_state("load")
+
+    def _guess_flights_url(self, page: Page) -> str | None:
+        """Internal helper for guess flights url."""
+        links = page.locator("a")
+        for idx in range(min(links.count(), 50)):
+            href = links.nth(idx).get_attribute("href")
+            if not href:
+                continue
+            if "debrief" in href or "flight" in href:
+                if href.startswith("http"):
+                    return href
+                return f"{self._config.base_url}/{href.lstrip('/')}"
+        return None
+
+    def _record_response(
+        self, url: str, data: dict | list | None, responses: list[dict[str, Any]]
+    ) -> None:
+        """Internal helper for record response."""
+        if data is None:
+            return
+        if "flight" in url or "debrief" in url or "log" in url:
+            responses.append({"url": url, "data": data})
+
+    def _extract_flights(
+        self, page: Page, responses: list[dict[str, Any]]
+    ) -> list[FlightSummary]:
+        """Internal helper for extract flights."""
+        summaries: list[FlightSummary] = []
+
+        for payload in responses:
+            extracted = _extract_flight_items(payload.get("data"))
+            summaries.extend(extracted)
+
+        if summaries:
+            return summaries
+
+        dom_items = page.evaluate(
+            """
+            () => {
+                const items = [];
+                document.querySelectorAll('[data-flight-id], [data-debrief-id]').forEach((el) => {
+                    const id = el.getAttribute('data-flight-id') || el.getAttribute('data-debrief-id');
+                    if (id) {
+                        items.push({id});
+                    }
+                });
+                return items;
+            }
+            """
+        )
+
+        for item in dom_items:
+            summaries.append(
+                FlightSummary(
+                    id=str(item.get("id")),
+                    started_at=datetime.now(timezone.utc),
+                    duration_seconds=None,
+                    aircraft_type=None,
+                    tail_number=None,
+                )
+            )
+
+        if not summaries:
+            raise RuntimeError(
+                "No flights found. Provide CLOUD_AHOY_FLIGHTS_URL or export URL template."
+            )
+        return summaries
+
+    def _load_more_flights(
+        self, page: Page, responses: list[dict[str, Any]], limit: int | None
+    ) -> None:
+        """Internal helper for load more flights."""
+        stalled = 0
+        for _ in range(50):
+            current_count = self._count_flights_from_responses(responses)
+            if current_count == 0:
+                current_count = self._dom_flight_count(page)
+            if limit and current_count >= limit:
+                return
+
+            button = page.locator(
+                "button:has-text('Load more'), a:has-text('Load more'), "
+                "button[aria-label*='load' i], button[aria-label*='more' i]"
+            )
+            if button.count() == 0:
+                page.mouse.wheel(0, 2000)
+                page.wait_for_timeout(800)
+                new_count = self._count_flights_from_responses(responses)
+                if new_count == current_count:
+                    stalled += 1
+                else:
+                    stalled = 0
+                if stalled >= 2:
+                    return
+                continue
+
+            if button.first.is_disabled():
+                return
+            button.first.click()
+            page.wait_for_load_state("networkidle")
+            page.wait_for_timeout(800)
+            new_count = self._count_flights_from_responses(responses)
+            if new_count == current_count:
+                stalled += 1
+            else:
+                stalled = 0
+            if stalled >= 3:
+                return
+
+    def _dom_flight_count(self, page: Page) -> int:
+        """Internal helper for dom flight count."""
+        return page.locator("[data-flight-id], [data-debrief-id]").count()
+
+    def _count_flights_from_responses(self, responses: list[dict[str, Any]]) -> int:
+        """Internal helper for count flights from responses."""
+        count = 0
+        for payload in responses:
+            extracted = _extract_flight_items(payload.get("data"))
+            count += len(extracted)
+        return count
+
+    def _download_file(self, page: Page, export_url: str) -> Path:
+        """Internal helper for download file."""
+        self._config.downloads_dir.mkdir(parents=True, exist_ok=True)
+        with page.expect_download() as download_info:
+            page.goto(export_url, wait_until="networkidle")
+        download = download_info.value
+        filename = download.suggested_filename
+        if not filename:
+            filename = f"{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}.export"
+        destination = self._config.downloads_dir / filename
+        download.save_as(destination)
+        return destination
+
+
+
+def _extract_flight_items(data: Any) -> list[FlightSummary]:
+    """Internal helper for extract flight items."""
+    if not data:
+        return []
+    flights: list[FlightSummary] = []
+
+    def handle_item(item: dict) -> None:
+        """Handle handle item."""
+        flight_id = item.get("id") or item.get("flight_id") or item.get("debrief_id")
+        if not flight_id:
+            return
+        started_at_raw = item.get("started_at") or item.get("start_time") or item.get("date")
+        try:
+            started_at = (
+                datetime.fromisoformat(started_at_raw)
+                if isinstance(started_at_raw, str)
+                else datetime.now(timezone.utc)
+            )
+        except ValueError:
+            started_at = datetime.now(timezone.utc)
+        flights.append(
+            FlightSummary(
+                id=str(flight_id),
+                started_at=started_at,
+                duration_seconds=item.get("duration_seconds"),
+                aircraft_type=item.get("aircraft_type"),
+                tail_number=item.get("tail_number"),
+            )
+        )
+
+    if isinstance(data, list):
+        for item in data:
+            if isinstance(item, dict):
+                handle_item(item)
+        return flights
+
+    if isinstance(data, dict):
+        for key in ("flights", "debriefs", "items"):
+            value = data.get(key)
+            if isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        handle_item(item)
+        return flights
+
+    return flights

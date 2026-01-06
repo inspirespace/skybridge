@@ -1,9 +1,18 @@
+"""Short-lived credential store for worker jobs.
+
+Credentials are issued with a TTL and can be claimed once by the worker.
+Backed by in-memory dict (dev) or DynamoDB (prod).
+"""
 from __future__ import annotations
 
 import secrets
 import time
+import os
+import json
 from dataclasses import dataclass
 from typing import Optional
+
+import boto3
 
 
 @dataclass
@@ -17,9 +26,11 @@ class _Entry:
 
 class CredentialStore:
     def __init__(self) -> None:
+        """Internal helper for init  ."""
         self._entries: dict[str, _Entry] = {}
 
     def issue(self, job_id: str, purpose: str, credentials: dict, ttl_seconds: int) -> str:
+        """Handle issue."""
         token = secrets.token_urlsafe(32)
         self._entries[token] = _Entry(
             job_id=job_id,
@@ -30,6 +41,7 @@ class CredentialStore:
         return token
 
     def claim(self, token: str, job_id: str, purpose: str) -> Optional[dict]:
+        """Handle claim."""
         entry = self._entries.get(token)
         if not entry:
             return None
@@ -41,3 +53,59 @@ class CredentialStore:
         entry.used = True
         self._entries.pop(token, None)
         return entry.credentials
+
+
+class DynamoCredentialStore:
+    def __init__(self, table_name: str) -> None:
+        """Internal helper for init  ."""
+        endpoint_url = os.getenv("DYNAMO_ENDPOINT_URL")
+        region_name = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION")
+        resource = boto3.resource(
+            "dynamodb",
+            region_name=region_name,
+            endpoint_url=endpoint_url if endpoint_url else None,
+        )
+        self._table = resource.Table(table_name)
+
+    def issue(self, job_id: str, purpose: str, credentials: dict, ttl_seconds: int) -> str:
+        """Handle issue."""
+        token = secrets.token_urlsafe(32)
+        ttl_epoch = int(time.time() + ttl_seconds)
+        self._table.put_item(
+            Item={
+                "token": token,
+                "job_id": job_id,
+                "purpose": purpose,
+                "credentials": json.dumps(credentials),
+                "ttl_epoch": ttl_epoch,
+                "used": False,
+            }
+        )
+        return token
+
+    def claim(self, token: str, job_id: str, purpose: str) -> Optional[dict]:
+        """Handle claim."""
+        response = self._table.get_item(Key={"token": token})
+        item = response.get("Item") if isinstance(response, dict) else None
+        if not item:
+            return None
+        if item.get("used") or item.get("job_id") != job_id or item.get("purpose") != purpose:
+            return None
+        if time.time() > int(item.get("ttl_epoch") or 0):
+            self._table.delete_item(Key={"token": token})
+            return None
+        self._table.delete_item(Key={"token": token})
+        try:
+            return json.loads(item.get("credentials") or "{}")
+        except json.JSONDecodeError:
+            return None
+
+
+def build_credential_store() -> CredentialStore | DynamoCredentialStore:
+    """Build credential store."""
+    if (os.getenv("BACKEND_DYNAMO_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
+        table_name = os.getenv("DYNAMO_CREDENTIALS_TABLE") or ""
+        if not table_name:
+            raise RuntimeError("DYNAMO_CREDENTIALS_TABLE is required when BACKEND_DYNAMO_ENABLED=1")
+        return DynamoCredentialStore(table_name)
+    return CredentialStore()

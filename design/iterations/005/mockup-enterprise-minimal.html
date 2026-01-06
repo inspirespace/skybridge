@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Skybridge Mockup 005 — Enterprise Minimal</title>
+    <style>
+      :root {
+        --ink: #101828;
+        --muted: #667085;
+        --border: #e4e7ec;
+        --panel: #ffffff;
+        --bg: #f2f4f7;
+        --accent: #111827;
+        --accent-2: #0f172a;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Manrope", "Avenir Next", "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      .frame { max-width: 1180px; margin: 0 auto; padding: 36px 22px 80px; }
+      header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .logo { font-weight: 700; letter-spacing: 0.08em; }
+      .status { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); font-size: 0.85rem; color: var(--muted); }
+      .layout { display: grid; grid-template-columns: 260px 1fr; gap: 18px; margin-top: 18px; }
+      .nav { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px; height: fit-content; }
+      .nav .item { padding: 8px 10px; border-radius: 8px; margin-bottom: 6px; background: #f8f9fb; font-size: 0.9rem; }
+      .content { display: grid; gap: 16px; }
+      .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+      .line { height: 10px; background: #eef0f4; border-radius: 999px; margin: 10px 0; }
+      .cta-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+      .cta { padding: 10px 14px; border-radius: 10px; background: var(--accent); color: #fff; border: none; font-weight: 600; }
+      .cta.secondary { background: var(--accent-2); }
+      .ghost { padding: 10px 14px; border-radius: 10px; background: transparent; border: 1px solid var(--border); color: var(--muted); }
+      @media (max-width: 900px) {
+        .layout { grid-template-columns: 1fr; }
+        header { flex-direction: column; align-items: flex-start; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <header>
+        <div class="logo">SKYBRIDGE</div>
+        <div class="status">Signed in</div>
+      </header>
+
+      <div class="layout">
+        <aside class="nav">
+          <div class="item">Connect</div>
+          <div class="item">Review</div>
+          <div class="item">Import</div>
+          <div class="item">Report</div>
+        </aside>
+
+        <main class="content">
+          <section class="card">
+            <h2>Import flights</h2>
+            <div class="line" style="width: 60%"></div>
+          </section>
+          <section class="card">
+            <h3>Credentials</h3>
+            <div class="line"></div>
+            <div class="line" style="width: 70%"></div>
+          </section>
+          <section class="card">
+            <h3>Review summary</h3>
+            <div class="line" style="width: 50%"></div>
+            <div class="line" style="width: 40%"></div>
+          </section>
+          <section class="card">
+            <h3>Import</h3>
+            <div class="line"></div>
+            <div class="cta-row">
+              <button class="cta">Run review</button>
+              <button class="cta secondary">Approve import</button>
+              <button class="ghost">Clear job</button>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

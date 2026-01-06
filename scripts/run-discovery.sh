@@ -32,4 +32,4 @@ exec docker run --rm \
   -v "${ROOT_DIR}":/app \
   -w /app \
   "${IMAGE_NAME}" \
-  python -m src.discovery_cli "${HEADFUL_ARGS[@]}" "${ARGS[@]}" "$@"
+  python -m src.core.discovery_cli "${HEADFUL_ARGS[@]}" "${ARGS[@]}" "$@"

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Skybridge Wireframe B — Wizard Flow</title>
+    <style>
+      :root {
+        --ink: #16181b;
+        --muted: #6b7280;
+        --border: #d7dbe0;
+        --panel: #ffffff;
+        --bg: #f2f4f8;
+        --accent: #1b63f0;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: var(--bg);
+      }
+      .frame {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 32px 20px 80px;
+      }
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+      }
+      .logo { font-weight: 700; letter-spacing: 0.04em; }
+      .stepper {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin: 26px 0;
+      }
+      .step {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-size: 0.85rem;
+        text-align: center;
+      }
+      .panel {
+        background: var(--panel);
+        border: 2px dashed var(--border);
+        border-radius: 18px;
+        padding: 24px;
+      }
+      .line { height: 12px; background: #e5e7eb; border-radius: 999px; margin: 10px 0; }
+      .cta-row { display: flex; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
+      .cta { background: var(--accent); color: #fff; border: none; padding: 12px 18px; border-radius: 10px; font-weight: 600; }
+      .ghost { background: transparent; border: 2px dashed var(--border); padding: 10px 16px; border-radius: 10px; color: var(--muted); }
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+      .summary .card { border: 2px dashed var(--border); padding: 12px; border-radius: 12px; }
+      @media (max-width: 800px) {
+        .stepper { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .summary { grid-template-columns: 1fr; }
+        header { flex-direction: column; align-items: flex-start; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <header>
+        <div class="logo">SKYBRIDGE</div>
+        <div class="step">Step 1 of 4</div>
+      </header>
+
+      <div class="stepper">
+        <div class="step">Connect</div>
+        <div class="step">Review</div>
+        <div class="step">Import</div>
+        <div class="step">Report</div>
+      </div>
+
+      <section class="panel">
+        <h2>Connect your accounts</h2>
+        <p class="muted">We’ll run a review using these credentials only for this job.</p>
+        <div class="line"></div>
+        <div class="line" style="width: 80%"></div>
+        <div class="line"></div>
+        <div class="line" style="width: 80%"></div>
+        <div class="cta-row">
+          <button class="cta">Continue</button>
+          <button class="ghost">Save & exit</button>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-top: 22px;">
+        <h3>Preview of Step 2: Review</h3>
+        <div class="summary">
+          <div class="card">
+            <div class="line" style="width: 60%"></div>
+            <div class="line" style="width: 40%"></div>
+          </div>
+          <div class="card">
+            <div class="line" style="width: 50%"></div>
+            <div class="line" style="width: 70%"></div>
+          </div>
+          <div class="card">
+            <div class="line" style="width: 55%"></div>
+            <div class="line" style="width: 30%"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </body>
+</html>

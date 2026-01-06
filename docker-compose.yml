@@ -8,7 +8,29 @@ services:
       - ./docker/https/certs:/etc/caddy/certs:ro
     depends_on:
       - api
+      - frontend
       - keycloak
+
+  frontend:
+    image: node:24-alpine
+    working_dir: /app
+    volumes:
+      - ./src/frontend:/app
+    command: ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0 --port 5173"]
+    environment:
+      - VITE_API_BASE_URL=https://skybridge.localhost/api
+      - VITE_AUTH_MODE=oidc
+      - VITE_AUTH_ISSUER_URL=https://auth.skybridge.localhost/realms/skybridge-dev
+      - VITE_AUTH_CLIENT_ID=skybridge-dev
+      - VITE_AUTH_SCOPE=openid profile email
+      - VITE_AUTH_REDIRECT_PATH=/auth/callback
+      - VITE_AUTH_PROVIDER_PARAM=idp_hint
+      - VITE_AUTH_LOGOUT_URL=https://auth.skybridge.localhost/realms/skybridge-dev/protocol/openid-connect/logout
+      - VITE_DEV_PREFILL_CREDENTIALS=${DEV_PREFILL_CREDENTIALS}
+      - VITE_CLOUD_AHOY_EMAIL=${CLOUD_AHOY_EMAIL}
+      - VITE_CLOUD_AHOY_PASSWORD=${CLOUD_AHOY_PASSWORD}
+      - VITE_FLYSTO_EMAIL=${FLYSTO_EMAIL}
+      - VITE_FLYSTO_PASSWORD=${FLYSTO_PASSWORD}
 
   api:
     build:
@@ -19,36 +41,59 @@ services:
       - "8000:8000"
     volumes:
       - ./:/app
-      - backend_data:/app/data/backend
     environment:
-      - BACKEND_DATA_DIR=/app/data/backend/jobs
+      - BACKEND_DATA_DIR=/tmp/backend/jobs
       - AUTH_MODE=oidc
       - AUTH_ISSUER_URL=https://auth.skybridge.localhost/realms/skybridge-dev
       - AUTH_JWKS_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/certs
       - AUTH_BROWSER_ISSUER_URL=https://auth.skybridge.localhost/realms/skybridge-dev
       - AUTH_CLIENT_ID=skybridge-dev
       - AUTH_SCOPE=openid profile email
+      - AUTH_REDIRECT_PATH=/api/auth/callback
       - AUTH_TOKEN_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/token
       - AUTH_TOKEN_PROXY=true
       - BACKEND_USE_WORKER=true
+      - BACKEND_DYNAMO_ENABLED=1
+      - DYNAMO_JOBS_TABLE=skybridge-jobs
+      - DYNAMO_CREDENTIALS_TABLE=skybridge-credentials
+      - DYNAMO_ENDPOINT_URL=http://dynamodb:8000
       - BACKEND_WORKER_TOKEN=dev-worker-token
       - BACKEND_CREDENTIAL_TTL=900
       - BACKEND_RECONCILE=true
       - BACKEND_WAIT_FOR_PROCESSING=true
       - BACKEND_PROCESSING_INTERVAL=20
       - BACKEND_PROCESSING_TIMEOUT=3600
-      - DEV_PREFILL_CREDENTIALS=1
-      - CLOUD_AHOY_EMAIL=${CLOUD_AHOY_EMAIL}
-      - CLOUD_AHOY_PASSWORD=${CLOUD_AHOY_PASSWORD}
-      - FLYSTO_EMAIL=${FLYSTO_EMAIL}
-      - FLYSTO_PASSWORD=${FLYSTO_PASSWORD}
+      - AWS_REGION=eu-west-1
+      - AWS_ACCESS_KEY_ID=local
+      - AWS_SECRET_ACCESS_KEY=local
+      - DEV_USE_MOCKS=${DEV_USE_MOCKS:-1}
+      - MOCK_CLOUD_AHOY_BASE_URL=http://mock-cloudahoy:8081/api
+      - MOCK_FLYSTO_BASE_URL=http://mock-flysto:8082
+      - FLYSTO_API_VERSION=1
+      - BACKEND_S3_ENABLED=1
+      - BACKEND_S3_DELETE_ON_CLEAR=1
+      - S3_ENDPOINT_URL=http://minio:9000
+      - S3_BUCKET=skybridge-artifacts
+      - S3_PREFIX=jobs
+      - S3_REGION=eu-west-1
+      - S3_ACCESS_KEY=minioadmin
+      - S3_SECRET_KEY=minioadmin
+      - S3_USE_SSL=false
+      - S3_VERIFY_SSL=false
+      - S3_SSE=false
     depends_on:
       dynamodb:
         condition: service_started
+      dynamodb-init:
+        condition: service_completed_successfully
       minio:
         condition: service_started
       keycloak:
         condition: service_healthy
+      mock-cloudahoy:
+        condition: service_started
+      mock-flysto:
+        condition: service_started
 
   worker:
     build:
@@ -57,9 +102,8 @@ services:
     command: ["python", "-m", "src.backend.worker"]
     volumes:
       - ./:/app
-      - backend_data:/app/data/backend
     environment:
-      - BACKEND_DATA_DIR=/app/data/backend/jobs
+      - BACKEND_DATA_DIR=/tmp/backend/jobs
       - AUTH_MODE=oidc
       - AUTH_ISSUER_URL=https://auth.skybridge.localhost/realms/skybridge-dev
       - AUTH_JWKS_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/certs
@@ -69,19 +113,47 @@ services:
       - AUTH_TOKEN_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/token
       - AUTH_TOKEN_PROXY=true
       - BACKEND_USE_WORKER=true
+      - BACKEND_DYNAMO_ENABLED=1
+      - DYNAMO_JOBS_TABLE=skybridge-jobs
+      - DYNAMO_CREDENTIALS_TABLE=skybridge-credentials
+      - DYNAMO_ENDPOINT_URL=http://dynamodb:8000
       - BACKEND_WORKER_TOKEN=dev-worker-token
       - BACKEND_API_URL=http://api:8000
       - BACKEND_RECONCILE=true
       - BACKEND_WAIT_FOR_PROCESSING=true
       - BACKEND_PROCESSING_INTERVAL=20
       - BACKEND_PROCESSING_TIMEOUT=3600
+      - AWS_REGION=eu-west-1
+      - AWS_ACCESS_KEY_ID=local
+      - AWS_SECRET_ACCESS_KEY=local
+      - DEV_USE_MOCKS=${DEV_USE_MOCKS:-1}
+      - MOCK_CLOUD_AHOY_BASE_URL=http://mock-cloudahoy:8081/api
+      - MOCK_FLYSTO_BASE_URL=http://mock-flysto:8082
+      - FLYSTO_API_VERSION=1
+      - BACKEND_S3_ENABLED=1
+      - BACKEND_S3_DELETE_ON_CLEAR=1
+      - S3_ENDPOINT_URL=http://minio:9000
+      - S3_BUCKET=skybridge-artifacts
+      - S3_PREFIX=jobs
+      - S3_REGION=eu-west-1
+      - S3_ACCESS_KEY=minioadmin
+      - S3_SECRET_KEY=minioadmin
+      - S3_USE_SSL=false
+      - S3_VERIFY_SSL=false
+      - S3_SSE=false
     depends_on:
       dynamodb:
         condition: service_started
+      dynamodb-init:
+        condition: service_completed_successfully
       minio:
         condition: service_started
       keycloak:
         condition: service_healthy
+      mock-cloudahoy:
+        condition: service_started
+      mock-flysto:
+        condition: service_started
 
   dynamodb:
     image: amazon/dynamodb-local:2.5.0
@@ -89,15 +161,50 @@ services:
       - "8001:8000"
     command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
 
+  dynamodb-init:
+    image: amazon/aws-cli:2.15.40
+    entrypoint: ["/bin/sh", "/app/scripts/init-dynamodb-local.sh"]
+    depends_on:
+      dynamodb:
+        condition: service_started
+    volumes:
+      - ./:/app
+    environment:
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+      AWS_REGION: eu-west-1
+      DYNAMODB_ENDPOINT_URL: http://dynamodb:8000
+      DYNAMO_JOBS_TABLE: skybridge-jobs
+      DYNAMO_CREDENTIALS_TABLE: skybridge-credentials
+
   minio:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z
-    ports:
-      - "9000:9000"
-      - "9001:9001"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_BROWSER_REDIRECT_URL: https://storage.skybridge.localhost/console/
+      MINIO_SERVER_URL: http://minio:9000
     command: ["server", "/data", "--console-address", ":9001"]
+
+  mock-cloudahoy:
+    build:
+      context: .
+      dockerfile: docker/backend-dev/Dockerfile
+    command: ["python", "-m", "uvicorn", "src.backend.mocks.cloudahoy:app", "--host", "0.0.0.0", "--port", "8081"]
+    volumes:
+      - ./:/app
+    environment:
+      - MOCK_RUN_DIR=/app/tests/fixtures/run-20251228T185601Z
+
+  mock-flysto:
+    build:
+      context: .
+      dockerfile: docker/backend-dev/Dockerfile
+    command: ["python", "-m", "uvicorn", "src.backend.mocks.flysto:app", "--host", "0.0.0.0", "--port", "8082"]
+    volumes:
+      - ./:/app
+    environment:
+      - MOCK_RUN_DIR=/app/tests/fixtures/run-20251228T185601Z
 
   keycloak:
     image: quay.io/keycloak/keycloak:25.0.6
@@ -116,5 +223,4 @@ services:
       retries: 20
 
 volumes:
-  backend_data:
   keycloak_data:

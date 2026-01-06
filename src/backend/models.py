@@ -1,3 +1,4 @@
+"""Pydantic models for backend API payloads and job records."""
 from __future__ import annotations
 
 from datetime import datetime
@@ -19,6 +20,7 @@ JobStatus = Literal[
 
 
 class CredentialPayload(BaseModel):
+    """Represents CredentialPayload."""
     cloudahoy_username: str
     cloudahoy_password: str
     flysto_username: str
@@ -26,6 +28,7 @@ class CredentialPayload(BaseModel):
 
 
 class JobCreateRequest(BaseModel):
+    """Represents JobCreateRequest."""
     credentials: CredentialPayload
     start_date: Optional[str] = None
     end_date: Optional[str] = None
@@ -33,10 +36,12 @@ class JobCreateRequest(BaseModel):
 
 
 class JobAcceptRequest(BaseModel):
+    """Represents JobAcceptRequest."""
     credentials: CredentialPayload
 
 
 class FlightSummary(BaseModel):
+    """Represents FlightSummary."""
     flight_id: str
     date: str
     tail_number: Optional[str] = None
@@ -48,6 +53,7 @@ class FlightSummary(BaseModel):
 
 
 class ReviewSummary(BaseModel):
+    """Represents ReviewSummary."""
     flight_count: int
     total_hours: float
     earliest_date: Optional[str] = None
@@ -57,17 +63,32 @@ class ReviewSummary(BaseModel):
 
 
 class ImportReport(BaseModel):
+    """Represents ImportReport."""
     imported_count: int
     skipped_count: int
     failed_count: int
 
 
+class ProgressEvent(BaseModel):
+    """Represents ProgressEvent."""
+    phase: Literal["review", "import"]
+    stage: str
+    flight_id: Optional[str] = None
+    percent: Optional[int] = None
+    status: JobStatus
+    created_at: datetime
+
+
 class JobRecord(BaseModel):
+    """Represents JobRecord."""
     job_id: UUID
     user_id: str
     status: JobStatus
     created_at: datetime
     updated_at: datetime
+    progress_percent: Optional[int] = None
+    progress_stage: Optional[str] = None
+    progress_log: list[ProgressEvent] = Field(default_factory=list)
     review_id: Optional[str] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
@@ -78,8 +99,10 @@ class JobRecord(BaseModel):
 
 
 class JobListResponse(BaseModel):
+    """Represents JobListResponse."""
     jobs: list[JobRecord]
 
 
 class ArtifactListResponse(BaseModel):
+    """Represents ArtifactListResponse."""
     artifacts: list[str]

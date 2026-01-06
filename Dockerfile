@@ -12,4 +12,4 @@ COPY pyproject.toml uv.lock /app/
 RUN uv sync --frozen --no-dev
 COPY src/ /app/src/
 
-ENTRYPOINT ["python", "-m", "src.cli"]
+ENTRYPOINT ["python", "-m", "src.core.cli"]

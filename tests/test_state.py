@@ -1,13 +1,15 @@
+"""tests/test_state.py module."""
 import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
 
-from src.state import MigrationState
+from src.core.state import MigrationState
 
 
 class MigrationStateTests(unittest.TestCase):
     def test_upsert_and_get(self) -> None:
+        """Test upsert and get."""
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "state.db"
             state = MigrationState(db_path)
@@ -21,6 +23,7 @@ class MigrationStateTests(unittest.TestCase):
             self.assertEqual(record.status, "ok")
 
     def test_database_created(self) -> None:
+        """Test database created."""
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "state.db"
             MigrationState(db_path)

@@ -1,3 +1,4 @@
+"""scripts/diagnose_flysto_api.py module."""
 import os
 from pathlib import Path
 

@@ -1,3 +1,4 @@
+"""scripts/inspect_cloudahoy_pagination.py module."""
 import json
 import os
 from pathlib import Path

@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Skybridge Mockup 14 — Light Ambient Horizon</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --ink: #0d1422;
+        --muted: #5f6b7f;
+        --panel: rgba(255, 255, 255, 0.32);
+        --border: rgba(148, 163, 184, 0.18);
+        --accent: #0f172a;
+        --accent-strong: #2563eb;
+        --ok: #1f7a4a;
+        --radius: 8px;
+        --bg: #f3f6fb;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", sans-serif;
+        color: var(--ink);
+        background: var(--bg);
+      }
+
+      .app {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: linear-gradient(180deg, #f6f8fc 0%, #eef2f8 60%, #f6f8fc 100%);
+        position: relative;
+        overflow: hidden;
+      }
+      .app::after { content: none; }
+      .app::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          linear-gradient(180deg, rgba(10, 30, 64, 0.08), transparent 18%),
+          radial-gradient(520px 260px at 30% 92%, rgba(199, 48, 43, 0.18), transparent 65%),
+          radial-gradient(620px 260px at 60% 90%, rgba(246, 178, 77, 0.2), transparent 70%),
+          radial-gradient(820px 360px at 50% 80%, rgba(140, 202, 224, 0.22), transparent 70%),
+          radial-gradient(900px 400px at 80% 0%, rgba(56, 189, 248, 0.1), transparent 70%);
+        pointer-events: none;
+      }
+      .hud-lines {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+          linear-gradient(90deg, transparent 0%, rgba(37, 99, 235, 0.08) 45%, transparent 50%, rgba(37, 99, 235, 0.08) 55%, transparent 100%),
+          linear-gradient(180deg, transparent 0%, rgba(37, 99, 235, 0.08) 42%, transparent 46%, rgba(37, 99, 235, 0.08) 50%, transparent 100%);
+        opacity: 0.45;
+      }
+
+      header {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 32px;
+        background: linear-gradient(180deg, rgba(248, 250, 255, 0.98), rgba(240, 244, 252, 0.96));
+        border-radius: 0;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+        position: relative;
+        z-index: 2;
+      }
+      header::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -1px;
+        height: 3px;
+        background: linear-gradient(90deg, rgba(199, 48, 43, 0.4), rgba(246, 178, 77, 0.6), rgba(247, 247, 242, 0.7), rgba(140, 202, 224, 0.6), rgba(79, 127, 168, 0.5));
+        opacity: 0.8;
+      }
+      .logo {
+        font-weight: 700;
+        letter-spacing: 0.22em;
+        font-size: 0.9rem;
+        color: #1d4ed8;
+        text-transform: uppercase;
+      }
+      .actions { display: flex; gap: 10px; }
+      .chip {
+        padding: 7px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(29, 78, 216, 0.35);
+        background: rgba(219, 234, 254, 0.7);
+        color: #1e3a8a;
+        font-weight: 600;
+        font-size: 0.8rem;
+      }
+
+      .layout {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        gap: 22px;
+        padding: 22px 28px 84px;
+        position: relative;
+        z-index: 2;
+      }
+
+      .nav {
+        display: grid;
+        gap: 6px;
+        align-content: start;
+        position: sticky;
+        top: 16px;
+        padding: 14px;
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.45);
+        border: 1px solid rgba(29, 78, 216, 0.14);
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.04), 0 0 12px rgba(59, 130, 246, 0.06);
+        backdrop-filter: blur(10px);
+      }
+      .nav-title {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        color: rgba(75, 91, 112, 0.7);
+        margin-bottom: 6px;
+      }
+      .nav-item {
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--muted);
+        font-weight: 600;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        border: 1px solid rgba(148, 163, 184, 0.15);
+      }
+      .nav-item.active {
+        background: rgba(37, 99, 235, 0.1);
+        color: #0f172a;
+        border: 1px solid rgba(37, 99, 235, 0.28);
+        box-shadow: 0 8px 18px rgba(37, 99, 235, 0.16);
+      }
+      .nav-item .dot {
+        width: 18px;
+        height: 18px;
+        border-radius: 999px;
+        border: 1px solid rgba(31, 122, 74, 0.35);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        color: var(--ok);
+        background: rgba(31, 122, 74, 0.12);
+      }
+
+      .content { display: grid; gap: 18px; }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 22px;
+        display: grid;
+        gap: 14px;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05), 0 0 12px rgba(56, 189, 248, 0.04);
+        backdrop-filter: blur(10px);
+      }
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+      }
+      .pill {
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(31, 122, 74, 0.45);
+        color: #1f7a4a;
+        background: rgba(31, 122, 74, 0.12);
+        font-size: 0.78rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+      }
+      .pill.subtle {
+        border-color: rgba(31, 122, 74, 0.3);
+        color: #1f7a4a;
+        background: rgba(31, 122, 74, 0.08);
+      }
+      .pill.locked {
+        border-color: rgba(148, 163, 184, 0.35);
+        color: var(--muted);
+        background: rgba(148, 163, 184, 0.1);
+      }
+      .hero {
+        font-size: 1.08rem;
+        font-weight: 600;
+        line-height: 1.6;
+      }
+      .info {
+        background: rgba(37, 99, 235, 0.08);
+        border: 1px solid rgba(37, 99, 235, 0.2);
+        color: #1e3a8a;
+        border-radius: 10px;
+        padding: 12px 16px;
+      }
+      .info ul {
+        margin: 0;
+        padding-left: 18px;
+        display: grid;
+        gap: 6px;
+      }
+      .cta-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        padding: 12px 18px;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        background: #f8fafc;
+        color: #334155;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+      }
+      .btn.primary {
+        background: linear-gradient(135deg, #3b82f6 0%, #38bdf8 55%, #22d3ee 100%);
+        color: #03101e;
+        border-color: transparent;
+        box-shadow: 0 12px 26px rgba(37, 99, 235, 0.25), 0 0 18px rgba(34, 211, 238, 0.25);
+      }
+      .btn.primary.glow {
+        position: relative;
+      }
+      .btn.primary.glow::after {
+        content: "";
+        position: absolute;
+        inset: -6px;
+        border-radius: 999px;
+        background: radial-gradient(circle, rgba(94, 211, 255, 0.2), transparent 70%);
+        filter: blur(8px);
+        opacity: 0.6;
+        z-index: -1;
+      }
+      .preview {
+        border: 1px dashed rgba(148, 163, 184, 0.2);
+        border-radius: var(--radius);
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.32);
+        color: var(--muted);
+      }
+      .preview.completed {
+        border-style: solid;
+        border-color: rgba(148, 163, 184, 0.2);
+      }
+      .preview-line {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        font-weight: 600;
+      }
+      .progress-card {
+        border: 1px solid rgba(31, 122, 74, 0.28);
+        border-radius: 10px;
+        padding: 14px;
+        background: rgba(31, 122, 74, 0.08);
+        display: grid;
+        gap: 10px;
+      }
+      .progress-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.82rem;
+        color: #1f7a4a;
+      }
+      .progress-row strong { color: #1f7a4a; }
+      .progress {
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.3);
+        overflow: hidden;
+      }
+      .progress-bar {
+        height: 100%;
+        width: 100%;
+        background: linear-gradient(90deg, #1f7a4a, #5dd39e);
+      }
+      .progress-helper {
+        font-size: 0.8rem;
+        color: #1f7a4a;
+      }
+      .summary-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+      .summary-chip {
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(37, 99, 235, 0.25);
+        background: rgba(37, 99, 235, 0.08);
+        color: #1e3a8a;
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+      .summary-chip.warn {
+        border-color: rgba(220, 38, 38, 0.4);
+        color: #991b1b;
+        background: rgba(220, 38, 38, 0.08);
+      }
+      .table {
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 8px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.4);
+      }
+      .table .thead,
+      .table .trow {
+        display: grid;
+        grid-template-columns: 0.8fr 1.6fr 1fr 1fr 0.8fr 0.8fr;
+        gap: 8px;
+        padding: 10px 12px;
+        font-size: 0.78rem;
+        align-items: center;
+      }
+      .table .thead {
+        background: #f1f5f9;
+        color: #475569;
+        font-weight: 600;
+      }
+      .table .trow {
+        border-top: 1px solid rgba(148, 163, 184, 0.18);
+        color: #1f2937;
+      }
+      .table .trow:nth-child(odd) {
+        background: #ffffff;
+      }
+      .table .trow:nth-child(even) {
+        background: #f8fafc;
+      }
+      .table .trow:hover { background: rgba(56, 189, 248, 0.08); }
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        color: var(--muted);
+      }
+      .status-pill.ok {
+        border-color: rgba(31, 122, 74, 0.35);
+        background: rgba(31, 122, 74, 0.1);
+        color: #1f7a4a;
+      }
+      .status-pill.warn {
+        border-color: rgba(220, 38, 38, 0.45);
+        background: rgba(220, 38, 38, 0.1);
+        color: #991b1b;
+      }
+
+      @media (max-width: 960px) {
+        .layout { grid-template-columns: 1fr; }
+        .nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      }
+      @media (max-width: 640px) {
+        header { flex-direction: column; align-items: flex-start; gap: 12px; }
+        .nav { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="hud-lines"></div>
+      <header>
+        <div class="logo">SKYBRIDGE</div>
+        <div class="actions">
+          <div class="chip">Support</div>
+          <div class="chip">Docs</div>
+        </div>
+      </header>
+
+      <div class="layout">
+        <aside class="nav">
+          <div class="nav-title">Progress</div>
+          <div class="nav-item"><span class="dot">✓</span> 1 · Sign in</div>
+          <div class="nav-item"><span class="dot">✓</span> 2 · Connect</div>
+          <div class="nav-item active"><span class="dot">✓</span> 3 · Review</div>
+          <div class="nav-item"><span class="dot">✓</span> 4 · Import</div>
+        </aside>
+
+        <main class="content">
+          <section class="card preview completed">
+            <div class="preview-line">
+              <span>1 · Sign in</span>
+              <span class="pill subtle">Completed</span>
+            </div>
+          </section>
+          <section class="card preview completed">
+            <div class="preview-line">
+              <span>2 · Connect accounts</span>
+              <span class="pill subtle">Completed</span>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-header">
+              <div>3 · Review</div>
+              <div class="pill">Review complete</div>
+            </div>
+            <div class="progress-card">
+              <div class="progress-row">
+                <strong>Review complete</strong>
+                <span>Elapsed: 2m · Last update: just now</span>
+              </div>
+              <div class="progress"><div class="progress-bar"></div></div>
+              <div class="progress-helper">Flights are fetched from CloudAhoy first so you can check them before running the actual import.</div>
+            </div>
+            <div class="summary-chips">
+              <span class="summary-chip">Flights: 12</span>
+              <span class="summary-chip">Hours: 24.6</span>
+              <span class="summary-chip warn">Registration missing: 2</span>
+            </div>
+            <div class="table">
+              <div class="thead">
+                <div>Status</div><div>Flight ID</div><div>Date</div><div>Registration</div><div>Origin</div><div>Destination</div>
+              </div>
+              <div class="trow">
+                <div><span class="status-pill ok">OK</span></div>
+                <div>...inUjIKt47ulA</div>
+                <div>2025-11-21</div>
+                <div>N12SB</div>
+                <div>KPAO</div>
+                <div>KTVL</div>
+              </div>
+              <div class="trow">
+                <div><span class="status-pill warn">Needs review</span></div>
+                <div>...DW98Fd25R6JM</div>
+                <div>2025-11-23</div>
+                <div>—</div>
+                <div>KSJC</div>
+                <div>KSNS</div>
+              </div>
+              <div class="trow">
+                <div><span class="status-pill ok">OK</span></div>
+                <div>...c_U0DMhib1NA</div>
+                <div>2025-11-24</div>
+                <div>N12SB</div>
+                <div>KPAO</div>
+                <div>KSOL</div>
+              </div>
+            </div>
+            <div class="cta-row">
+              <button class="btn primary glow">Accept and start import</button>
+              <button class="btn">Edit import filters</button>
+            </div>
+          </section>
+
+          <section class="card preview">
+            <div class="preview-line">
+              <span>4 · Import</span>
+              <span class="pill locked">Locked</span>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

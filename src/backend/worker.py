@@ -1,9 +1,17 @@
+"""Worker process for queued review/import jobs.
+
+Consumes SQS messages in production and calls JobService with claimed
+credentials. In dev it can run inline without SQS.
+"""
 from __future__ import annotations
 
+import atexit
 import os
-import os
+import tempfile
 import time
+import json
 from datetime import datetime, timezone
+from shutil import rmtree
 from uuid import UUID
 
 import requests
@@ -11,21 +19,67 @@ import requests
 from .models import JobAcceptRequest, JobCreateRequest
 from pathlib import Path
 
+from .object_store import build_object_store_from_env
 from .service import JobService
 from .store import JobStore
 
-DATA_DIR = Path(os.environ.get("BACKEND_DATA_DIR", "data/backend/jobs"))
+if "BACKEND_DATA_DIR" in os.environ:
+    DATA_DIR = Path(os.environ["BACKEND_DATA_DIR"])
+else:
+    _tmp_dir = Path(tempfile.mkdtemp(prefix="skybridge-worker-"))
+    DATA_DIR = _tmp_dir / "jobs"
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    atexit.register(lambda: rmtree(_tmp_dir, ignore_errors=True))
+_sqs_client = None
 
 
 def _api_url() -> str:
+    """Internal helper for api url."""
     return (os.environ.get("BACKEND_API_URL") or "http://api:8000").rstrip("/")
 
 
 def _worker_token() -> str:
+    """Internal helper for worker token."""
     return os.environ.get("BACKEND_WORKER_TOKEN") or ""
 
 
+def _use_queue() -> bool:
+    """Internal helper for use queue."""
+    return (os.getenv("BACKEND_SQS_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}
+
+
+def _queue_url() -> str:
+    """Internal helper for queue url."""
+    return os.getenv("SQS_QUEUE_URL") or ""
+
+
+def _dynamo_jobs_table() -> str | None:
+    """Internal helper for dynamo jobs table."""
+    if (os.getenv("BACKEND_DYNAMO_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
+        table = os.getenv("DYNAMO_JOBS_TABLE") or None
+        if not table:
+            raise RuntimeError("DYNAMO_JOBS_TABLE is required when BACKEND_DYNAMO_ENABLED=1")
+        return table
+    return None
+
+
+def _sqs_region() -> str:
+    """Internal helper for sqs region."""
+    return os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION") or "us-east-1"
+
+
+def _get_sqs_client():
+    """Internal helper for get sqs client."""
+    global _sqs_client
+    if _sqs_client is None:
+        import boto3
+
+        _sqs_client = boto3.client("sqs", region_name=_sqs_region())
+    return _sqs_client
+
+
 def _claim_credentials(job_id: UUID, purpose: str, token: str) -> tuple[dict | None, bool]:
+    """Internal helper for claim credentials."""
     headers = {"Content-Type": "application/json", "X-Worker-Token": _worker_token()}
     response = requests.post(
         f"{_api_url()}/jobs/{job_id}/credentials/claim",
@@ -43,8 +97,84 @@ def _claim_credentials(job_id: UUID, purpose: str, token: str) -> tuple[dict | N
     return creds, False
 
 
+def _handle_job(store: JobStore, job_id: UUID, purpose: str, token: str | None) -> None:
+    """Internal helper for handle job."""
+    job = store.load_job(job_id)
+    token = token or store.read_token(job.job_id, purpose)
+    if not token:
+        job.status = "failed"
+        job.error_message = f"Missing {purpose} token"
+        job.updated_at = datetime.now(timezone.utc)
+        store.save_job(job)
+        return
+    creds, retry = _claim_credentials(job.job_id, purpose, token)
+    if retry:
+        return
+    store.clear_token(job.job_id, purpose)
+    if not creds:
+        job.status = "failed"
+        job.error_message = f"{purpose.title()} credentials expired"
+        job.updated_at = datetime.now(timezone.utc)
+        store.save_job(job)
+        return
+    if purpose == "review":
+        payload = JobCreateRequest(
+            credentials=creds,
+            start_date=job.start_date,
+            end_date=job.end_date,
+            max_flights=job.max_flights,
+        )
+        JobService(store).generate_review(job.job_id, payload)
+    elif purpose == "import":
+        payload = JobAcceptRequest(credentials=creds)
+        JobService(store).accept_review(job.job_id, payload)
+
+
 def run() -> None:
-    store = JobStore(DATA_DIR)
+    """Handle run."""
+    env = (os.getenv("ENV") or "dev").lower()
+    if env == "prod" and not _use_queue():
+        raise RuntimeError("Production requires BACKEND_SQS_ENABLED=1")
+    store = JobStore(DATA_DIR, build_object_store_from_env(), _dynamo_jobs_table())
+    if _use_queue():
+        queue_url = _queue_url()
+        if not queue_url:
+            raise RuntimeError("SQS_QUEUE_URL not configured")
+        while True:
+            response = _get_sqs_client().receive_message(
+                QueueUrl=queue_url,
+                MaxNumberOfMessages=1,
+                WaitTimeSeconds=10,
+                VisibilityTimeout=900,
+            )
+            messages = response.get("Messages") or []
+            if not messages:
+                continue
+            for message in messages:
+                receipt = message.get("ReceiptHandle")
+                try:
+                    payload = json.loads(message.get("Body") or "{}")
+                    job_id = UUID(payload.get("job_id"))
+                    purpose = payload.get("purpose")
+                    token = payload.get("token")
+                    if purpose not in {"review", "import"}:
+                        raise ValueError("Invalid purpose")
+                    _handle_job(store, job_id, purpose, token)
+                    if receipt:
+                        _get_sqs_client().delete_message(QueueUrl=queue_url, ReceiptHandle=receipt)
+                except Exception as exc:
+                    if receipt:
+                        _get_sqs_client().delete_message(QueueUrl=queue_url, ReceiptHandle=receipt)
+                    try:
+                        job = store.load_job(job_id)
+                        job.status = "failed"
+                        job.error_message = f"Worker failed: {exc}"
+                        job.updated_at = datetime.now(timezone.utc)
+                        store.save_job(job)
+                    except Exception:
+                        pass
+        return
+
     while True:
         jobs = store.list_all_jobs()
         now = datetime.now(timezone.utc).isoformat()
@@ -56,50 +186,9 @@ def run() -> None:
         for job in jobs:
             try:
                 if job.status == "review_queued":
-                    token = store.read_token(job.job_id, "review")
-                    if not token:
-                        job.status = "failed"
-                        job.error_message = "Missing review token"
-                        job.updated_at = datetime.now(timezone.utc)
-                        store.save_job(job)
-                        continue
-                    creds, retry = _claim_credentials(job.job_id, "review", token)
-                    if retry:
-                        continue
-                    store.clear_token(job.job_id, "review")
-                    if not creds:
-                        job.status = "failed"
-                        job.error_message = "Review credentials expired"
-                        job.updated_at = datetime.now(timezone.utc)
-                        store.save_job(job)
-                        continue
-                    payload = JobCreateRequest(
-                        credentials=creds,
-                        start_date=job.start_date,
-                        end_date=job.end_date,
-                        max_flights=job.max_flights,
-                    )
-                    JobService(store).generate_review(job.job_id, payload)
+                    _handle_job(store, job.job_id, "review", None)
                 elif job.status == "import_queued":
-                    token = store.read_token(job.job_id, "import")
-                    if not token:
-                        job.status = "failed"
-                        job.error_message = "Missing import token"
-                        job.updated_at = datetime.now(timezone.utc)
-                        store.save_job(job)
-                        continue
-                    creds, retry = _claim_credentials(job.job_id, "import", token)
-                    if retry:
-                        continue
-                    store.clear_token(job.job_id, "import")
-                    if not creds:
-                        job.status = "failed"
-                        job.error_message = "Import credentials expired"
-                        job.updated_at = datetime.now(timezone.utc)
-                        store.save_job(job)
-                        continue
-                    payload = JobAcceptRequest(credentials=creds)
-                    JobService(store).accept_review(job.job_id, payload)
+                    _handle_job(store, job.job_id, "import", None)
             except Exception as exc:
                 job.status = "failed"
                 job.error_message = f"Worker failed: {exc}"
