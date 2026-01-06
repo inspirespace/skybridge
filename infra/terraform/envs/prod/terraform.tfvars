@@ -1,9 +1,9 @@
 environment = "prod"
 
 # Cognito Hosted UI configuration
-cognito_domain = "skybridge-prod"
+cognito_domain        = "skybridge-prod"
 cognito_callback_urls = ["https://skybridge.example.com/auth/callback"]
-cognito_logout_urls = ["https://skybridge.example.com/"]
+cognito_logout_urls   = ["https://skybridge.example.com/"]
 
 # Enable IdPs by name (match Cognito provider names)
 # cognito_identity_providers = ["Google", "Facebook", "SignInWithApple"]
