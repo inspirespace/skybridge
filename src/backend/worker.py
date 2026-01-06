@@ -5,10 +5,13 @@ credentials. In dev it can run inline without SQS.
 """
 from __future__ import annotations
 
+import atexit
 import os
+import tempfile
 import time
 import json
 from datetime import datetime, timezone
+from shutil import rmtree
 from uuid import UUID
 
 import requests
@@ -20,7 +23,13 @@ from .object_store import build_object_store_from_env
 from .service import JobService
 from .store import JobStore
 
-DATA_DIR = Path(os.environ.get("BACKEND_DATA_DIR", "/tmp/backend/jobs"))
+if "BACKEND_DATA_DIR" in os.environ:
+    DATA_DIR = Path(os.environ["BACKEND_DATA_DIR"])
+else:
+    _tmp_dir = Path(tempfile.mkdtemp(prefix="skybridge-worker-"))
+    DATA_DIR = _tmp_dir / "jobs"
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    atexit.register(lambda: rmtree(_tmp_dir, ignore_errors=True))
 _sqs_client = None
 
 
