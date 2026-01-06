@@ -73,8 +73,8 @@ class CloudAhoyClient:
         summaries: list[FlightSummary] = []
         seen: set[str] = set()
         for flight in flights[: limit or len(flights)]:
-            flight_key = _normalize_cloudahoy_key(flight.get("key"))
-            flight_id = flight.get("fdID") or flight_key
+            flight_key = flight.get("key")
+            flight_id = flight_key or flight.get("fdID")
             if not flight_id or flight_id in seen:
                 continue
             seen.add(flight_id)
@@ -86,7 +86,7 @@ class CloudAhoyClient:
                     duration_seconds=flight.get("nSec"),
                     aircraft_type=flight.get("aircraft", {}).get("P", {}).get("typeAircraft"),
                     tail_number=flight.get("tailNumber") or flight.get("aircraft", {}).get("tailNumber"),
-                    cloudahoy_key=flight_key,
+                    cloudahoy_key=flight_key if isinstance(flight_key, str) else None,
                 )
             )
         return summaries
@@ -426,16 +426,6 @@ def _extract_last_token(flights: list[dict]) -> str | None:
     return f"zz14[d-mmm-yy HH:MM]{gmt_start}zz14"
 
 
-def _normalize_cloudahoy_key(value: object) -> str | None:
-    """Normalize CloudAhoy flight key values."""
-    if isinstance(value, str):
-        stripped = value.strip()
-        if not stripped:
-            return None
-        if stripped.isdigit() and len(stripped) < 8:
-            return None
-        return stripped
-    return None
 
 
 def _extract_metadata(flt: dict) -> dict:

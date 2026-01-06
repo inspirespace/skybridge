@@ -120,7 +120,7 @@ def prepare_review(
                 )
                 continue
 
-        detail = cloudahoy.fetch_flight(summary.cloudahoy_key or summary.id)
+        detail = cloudahoy.fetch_flight(summary.id)
         points_count, has_kml, schema, preview = _describe_detail(
             detail.raw_payload, detail.file_path
         )
