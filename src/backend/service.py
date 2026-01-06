@@ -623,6 +623,8 @@ def _flysto_base_url() -> str:
 
 def _maybe_wait_for_processing(flysto: FlyStoClient) -> None:
     """Internal helper for maybe wait for processing."""
+    if _use_mocks():
+        return
     if not _bool_env("BACKEND_WAIT_FOR_PROCESSING", True):
         return
     interval = _float_env("BACKEND_PROCESSING_INTERVAL", 5.0)
