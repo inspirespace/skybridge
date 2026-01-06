@@ -54,9 +54,12 @@ export function useOidcAuth({
   const didExchangeRef = React.useRef(false);
   const refreshInFlight = React.useRef<Promise<void> | null>(null);
   const authEpochRef = React.useRef(0);
+  const refreshAbortRef = React.useRef<AbortController | null>(null);
 
   const clearAuth = React.useCallback(() => {
     authEpochRef.current += 1;
+    refreshAbortRef.current?.abort();
+    refreshAbortRef.current = null;
     localStorage.removeItem(USER_ID_KEY);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(ID_TOKEN_KEY);
@@ -96,17 +99,29 @@ export function useOidcAuth({
     if (refreshInFlight.current) return refreshInFlight.current;
     refreshInFlight.current = (async () => {
       const refreshEpoch = authEpochRef.current;
+      const abortController = new AbortController();
+      refreshAbortRef.current?.abort();
+      refreshAbortRef.current = abortController;
       onLoadingChange?.(true);
       try {
-        const token = await refreshToken({ refresh_token: refreshTokenValue });
+        const token = await refreshToken(
+          { refresh_token: refreshTokenValue },
+          abortController.signal
+        );
         if (authEpochRef.current !== refreshEpoch) return;
         applyTokenResponse(token);
       } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
         clearAuth();
         onError?.(err instanceof Error ? err.message : "Auth refresh failed");
       } finally {
         onLoadingChange?.(false);
         refreshInFlight.current = null;
+        if (refreshAbortRef.current === abortController) {
+          refreshAbortRef.current = null;
+        }
       }
     })();
     return refreshInFlight.current;
