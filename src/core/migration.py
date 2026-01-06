@@ -781,7 +781,14 @@ def _migrate_single(
                 crew = _extract_crew_assignments(metadata)
         if progress:
             progress("flysto_upload_start", {"flight_id": detail.id})
-        upload_result = flysto.upload_flight(detail, dry_run=dry_run)
+        try:
+            upload_result = flysto.upload_flight(detail, dry_run=dry_run)
+        except RuntimeError as exc:
+            message = str(exc).lower()
+            if "already" in message or "duplicate" in message or "exists" in message:
+                upload_result = None
+            else:
+                raise
         if progress:
             progress("flysto_upload_done", {"flight_id": detail.id})
         resolved_log_id = None
