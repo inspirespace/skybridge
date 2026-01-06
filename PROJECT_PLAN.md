@@ -65,3 +65,6 @@ Goal: ship the production web UI for CloudAhoy → FlySto imports, using the wir
 ## Open Questions
 - [ ] Q1 Confirm API contracts for progress polling and report download.
 - [ ] Q2 Confirm theme token source (global CSS vs design‑system config).
+
+## Maintenance Notes
+- [x] Paginate DynamoDB job scans/queries in `JobStore` to avoid missing older jobs in dev worker mode.

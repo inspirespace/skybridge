@@ -86,14 +86,20 @@ class JobStore:
         """Handle list all jobs."""
         if self._dynamo_table:
             jobs: list[JobRecord] = []
-            response = self._dynamo_table.scan()
-            for item in response.get("Items", []):
-                job = _deserialize_item(item)
-                job = self._maybe_enrich_review_summary(job)
-                if self._is_expired(job):
-                    self.delete_job(job.job_id)
-                    continue
-                jobs.append(job)
+            scan_kwargs: dict[str, Any] = {}
+            while True:
+                response = self._dynamo_table.scan(**scan_kwargs)
+                for item in response.get("Items", []):
+                    job = _deserialize_item(item)
+                    job = self._maybe_enrich_review_summary(job)
+                    if self._is_expired(job):
+                        self.delete_job(job.job_id)
+                        continue
+                    jobs.append(job)
+                last_evaluated_key = response.get("LastEvaluatedKey")
+                if not last_evaluated_key:
+                    break
+                scan_kwargs["ExclusiveStartKey"] = last_evaluated_key
             return sorted(jobs, key=lambda job: job.created_at, reverse=True)
 
         jobs: list[JobRecord] = []
@@ -117,17 +123,23 @@ class JobStore:
     def list_jobs(self, user_id: str) -> list[JobRecord]:
         """Handle list jobs."""
         if self._dynamo_table:
-            response = self._dynamo_table.query(
-                KeyConditionExpression=Key("user_id").eq(user_id)
-            )
             jobs: list[JobRecord] = []
-            for item in response.get("Items", []):
-                job = _deserialize_item(item)
-                job = self._maybe_enrich_review_summary(job)
-                if self._is_expired(job):
-                    self.delete_job(job.job_id)
-                    continue
-                jobs.append(job)
+            query_kwargs: dict[str, Any] = {
+                "KeyConditionExpression": Key("user_id").eq(user_id)
+            }
+            while True:
+                response = self._dynamo_table.query(**query_kwargs)
+                for item in response.get("Items", []):
+                    job = _deserialize_item(item)
+                    job = self._maybe_enrich_review_summary(job)
+                    if self._is_expired(job):
+                        self.delete_job(job.job_id)
+                        continue
+                    jobs.append(job)
+                last_evaluated_key = response.get("LastEvaluatedKey")
+                if not last_evaluated_key:
+                    break
+                query_kwargs["ExclusiveStartKey"] = last_evaluated_key
             return sorted(jobs, key=lambda job: job.created_at, reverse=True)
 
         jobs: list[JobRecord] = []
