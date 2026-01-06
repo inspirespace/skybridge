@@ -356,7 +356,7 @@ def _build_cloudahoy_client(payload: JobCreateRequest | JobAcceptRequest, export
 def _build_flysto_client(payload: JobAcceptRequest) -> FlyStoClient:
     """Internal helper for build flysto client."""
     include_metadata = _bool_env("FLYSTO_INCLUDE_METADATA", False)
-    min_request_interval = _float_env("FLYSTO_MIN_REQUEST_INTERVAL", 0.1)
+    min_request_interval = _float_env("FLYSTO_MIN_REQUEST_INTERVAL", 0.01)
     max_request_retries = _int_env("FLYSTO_MAX_REQUEST_RETRIES", 2)
     return FlyStoClient(
         api_key=_env("FLYSTO_API_KEY") or "",
@@ -626,7 +626,7 @@ def _maybe_wait_for_processing(flysto: FlyStoClient) -> None:
     """Internal helper for maybe wait for processing."""
     if not _bool_env("BACKEND_WAIT_FOR_PROCESSING", True):
         return
-    interval = _float_env("BACKEND_PROCESSING_INTERVAL", 20.0)
+    interval = _float_env("BACKEND_PROCESSING_INTERVAL", 5.0)
     timeout = _float_env("BACKEND_PROCESSING_TIMEOUT", 3600.0)
     start = datetime.now(timezone.utc).timestamp()
     while True:

@@ -38,8 +38,8 @@ class FlyStoClient:
     assigned_avionics: set[tuple[str, str | None]] | None = None
     crew_cache: list[dict[str, Any]] | None = None
     crew_roles_cache: list[dict[str, Any]] | None = None
-    min_request_interval: float = 0.5
-    max_request_retries: int = 3
+    min_request_interval: float = 0.01
+    max_request_retries: int = 2
     _last_request_at: float | None = None
     log_cache: dict[str, tuple[str | None, str | None, str | None]] = field(
         default_factory=dict

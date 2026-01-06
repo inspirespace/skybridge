@@ -117,7 +117,7 @@ def load_config() -> Config:
     min_request_interval = (
         float(flysto_min_request_interval)
         if flysto_min_request_interval is not None
-        else 0.1
+        else 0.01
     )
     max_request_retries = (
         int(flysto_max_request_retries)

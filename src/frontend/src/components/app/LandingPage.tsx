@@ -57,26 +57,42 @@ export function LandingPage({
                 </Button>
               </div>
             </div>
-            <div className="rounded-xl border border-sky-200/80 bg-white/80 p-4 text-slate-900 shadow-[0_14px_28px_rgba(56,189,248,0.15)] dark:border-sky-800/70 dark:bg-slate-950/60 dark:text-slate-100 dark:shadow-[0_18px_30px_rgba(14,116,144,0.2)]">
-              <div className="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            <div className="rounded-xl border border-sky-200/80 bg-white/80 p-5 text-slate-900 shadow-[0_14px_28px_rgba(56,189,248,0.15)] dark:border-sky-800/70 dark:bg-slate-950/60 dark:text-slate-100 dark:shadow-[0_18px_30px_rgba(14,116,144,0.2)]">
+              <div className="text-base font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 What you can expect
               </div>
-              <ul className="mt-3 space-y-2 text-sm leading-relaxed">
-                <li className="flex gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
-                  Sign in to identify your job, protect your data, and resume later.
+              <ul className="mt-4 space-y-3 text-base leading-[1.65]">
+                <li className="flex items-start gap-3">
+                  <span className="mt-[3px] flex h-5 w-5 shrink-0 items-center justify-center text-emerald-500">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </span>
+                  <span className="leading-[1.7]">
+                    Sign in to identify your job, protect your data, and resume later.
+                  </span>
                 </li>
-                <li className="flex gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
-                  We import flights, times, routes, crew, trajectory data, and remarks.
+                <li className="flex items-start gap-3">
+                  <span className="mt-[3px] flex h-5 w-5 shrink-0 items-center justify-center text-emerald-500">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </span>
+                  <span className="leading-[1.7]">
+                    We import flights, times, routes, crew, trajectory data, and remarks.
+                  </span>
                 </li>
-                <li className="flex gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
-                  Credentials are used only for this job and never stored.
+                <li className="flex items-start gap-3">
+                  <span className="mt-[3px] flex h-5 w-5 shrink-0 items-center justify-center text-emerald-500">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </span>
+                  <span className="leading-[1.7]">
+                    Credentials are used only for this job and never stored.
+                  </span>
                 </li>
-                <li className="flex gap-2">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
-                  Results are retained for {retentionDays} days, then deleted.
+                <li className="flex items-start gap-3">
+                  <span className="mt-[3px] flex h-5 w-5 shrink-0 items-center justify-center text-emerald-500">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </span>
+                  <span className="leading-[1.7]">
+                    Results are retained for {retentionDays} days, then deleted.
+                  </span>
                 </li>
               </ul>
             </div>

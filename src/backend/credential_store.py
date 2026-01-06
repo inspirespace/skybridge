@@ -58,7 +58,14 @@ class CredentialStore:
 class DynamoCredentialStore:
     def __init__(self, table_name: str) -> None:
         """Internal helper for init  ."""
-        self._table = boto3.resource("dynamodb").Table(table_name)
+        endpoint_url = os.getenv("DYNAMO_ENDPOINT_URL")
+        region_name = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION")
+        resource = boto3.resource(
+            "dynamodb",
+            region_name=region_name,
+            endpoint_url=endpoint_url if endpoint_url else None,
+        )
+        self._table = resource.Table(table_name)
 
     def issue(self, job_id: str, purpose: str, credentials: dict, ttl_seconds: int) -> str:
         """Handle issue."""

@@ -40,11 +40,16 @@ class JobStore:
         """Internal helper for init  ."""
         self._base_path = base_path
         self._object_store = object_store
-        self._dynamo_table = (
-            boto3.resource("dynamodb").Table(dynamo_table_name)
-            if dynamo_table_name
-            else None
-        )
+        dynamo_endpoint = os.getenv("DYNAMO_ENDPOINT_URL")
+        dynamo_region = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION")
+        self._dynamo_table = None
+        if dynamo_table_name:
+            dynamo_resource = boto3.resource(
+                "dynamodb",
+                region_name=dynamo_region,
+                endpoint_url=dynamo_endpoint if dynamo_endpoint else None,
+            )
+            self._dynamo_table = dynamo_resource.Table(dynamo_table_name)
         self._base_path.mkdir(parents=True, exist_ok=True)
 
     def _job_dir(self, job_id: UUID) -> Path:
