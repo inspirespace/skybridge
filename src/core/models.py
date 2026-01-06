@@ -11,6 +11,7 @@ class FlightSummary:
     duration_seconds: int | None
     aircraft_type: str | None
     tail_number: str | None
+    cloudahoy_key: str | None = None
 
 
 @dataclass(frozen=True)

@@ -73,7 +73,8 @@ class CloudAhoyClient:
         summaries: list[FlightSummary] = []
         seen: set[str] = set()
         for flight in flights[: limit or len(flights)]:
-            flight_id = flight.get("fdID")
+            flight_key = flight.get("key")
+            flight_id = flight.get("fdID") or flight_key
             if not flight_id or flight_id in seen:
                 continue
             seen.add(flight_id)
@@ -85,6 +86,7 @@ class CloudAhoyClient:
                     duration_seconds=flight.get("nSec"),
                     aircraft_type=flight.get("aircraft", {}).get("P", {}).get("typeAircraft"),
                     tail_number=flight.get("tailNumber") or flight.get("aircraft", {}).get("tailNumber"),
+                    cloudahoy_key=flight_key,
                 )
             )
         return summaries

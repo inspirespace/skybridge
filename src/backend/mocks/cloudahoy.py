@@ -50,6 +50,7 @@ def _load_review() -> list[dict[str, Any]]:
         flights.append(
             {
                 "fdID": flight_id,
+                "key": flight_id,
                 "gmtStart": int(started_dt.timestamp()),
                 "adjTime": int(started_dt.timestamp()),
                 "nSec": item.get("duration_seconds") or 0,
