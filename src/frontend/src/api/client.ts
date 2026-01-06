@@ -229,6 +229,7 @@ export async function deleteJob(jobId: string, auth: AuthContext) {
 export type TokenExchangeResponse = {
   access_token: string;
   id_token?: string;
+  refresh_token?: string;
   expires_in?: number;
   token_type?: string;
   scope?: string;
@@ -239,6 +240,14 @@ export async function exchangeToken(payload: {
   code_verifier: string;
   redirect_uri: string;
 }) {
+  return requestJson<TokenExchangeResponse>("/auth/token", {
+    method: "POST",
+    body: payload,
+    skipAuth: true,
+  });
+}
+
+export async function refreshToken(payload: { refresh_token: string }) {
   return requestJson<TokenExchangeResponse>("/auth/token", {
     method: "POST",
     body: payload,

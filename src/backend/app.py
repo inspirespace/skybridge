@@ -186,18 +186,29 @@ def auth_token(payload: dict) -> dict:
     token_url = os.getenv("AUTH_TOKEN_URL") or ""
     if not token_url:
         raise HTTPException(status_code=500, detail="AUTH_TOKEN_URL not configured")
+    refresh_token = payload.get("refresh_token")
     code = payload.get("code")
     verifier = payload.get("code_verifier")
     redirect_uri = payload.get("redirect_uri")
-    if not code or not verifier or not redirect_uri:
-        raise HTTPException(status_code=400, detail="Missing code verifier or redirect")
-    data = {
-        "grant_type": "authorization_code",
-        "client_id": os.getenv("AUTH_CLIENT_ID") or "skybridge-dev",
-        "code": code,
-        "redirect_uri": redirect_uri,
-        "code_verifier": verifier,
-    }
+    client_id = os.getenv("AUTH_CLIENT_ID") or "skybridge-dev"
+    if refresh_token:
+        data = {
+            "grant_type": "refresh_token",
+            "client_id": client_id,
+            "refresh_token": refresh_token,
+        }
+    else:
+        if not code or not verifier or not redirect_uri:
+            raise HTTPException(
+                status_code=400, detail="Missing code verifier or redirect"
+            )
+        data = {
+            "grant_type": "authorization_code",
+            "client_id": client_id,
+            "code": code,
+            "redirect_uri": redirect_uri,
+            "code_verifier": verifier,
+        }
     try:
         response = requests.post(
             token_url,
