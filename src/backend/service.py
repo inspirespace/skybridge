@@ -182,7 +182,7 @@ class JobService:
             state = MigrationState(state_path)
 
             if not flysto.prepare():
-                raise RuntimeError("FlySto API unavailable; check credentials")
+                raise RuntimeError("FlySto login failed: check credentials")
 
             total_summaries = len(summaries)
             processed = 0
@@ -385,7 +385,7 @@ def validate_credentials(credentials: CredentialPayload) -> None:
 
     flysto = _build_flysto_client(JobAcceptRequest(credentials=credentials))
     if not flysto.prepare():
-        raise RuntimeError("FlySto API unavailable; check credentials")
+        raise RuntimeError("FlySto login failed: check credentials")
 
 
 def _summaries_for_range(
