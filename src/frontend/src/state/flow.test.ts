@@ -32,6 +32,19 @@ describe("deriveFlowState", () => {
     const state = deriveFlowState(true, baseJob("import_queued"));
     expect(state.importStatus).toBe("running");
   });
+
+  it("keeps review complete when failed after review", () => {
+    const job = baseJob("failed");
+    job.review_summary = {
+      flight_count: 1,
+      total_hours: 1,
+      missing_tail_numbers: 0,
+      flights: [],
+    };
+    const state = deriveFlowState(true, job);
+    expect(state.reviewStatus).toBe("complete");
+    expect(state.importStatus).toBe("idle");
+  });
 });
 
 describe("getOpenStep", () => {
