@@ -8,6 +8,7 @@ Responsibilities:
 from __future__ import annotations
 
 import os
+import time
 from urllib.parse import urlparse
 import tempfile
 import zipfile
@@ -30,13 +31,15 @@ from .auth import user_id_from_request
 from .credential_store import build_credential_store
 from .models import (
     ArtifactListResponse,
+    CredentialValidationRequest,
+    CredentialValidationResponse,
     JobAcceptRequest,
     JobCreateRequest,
     JobListResponse,
     JobRecord,
 )
 from .object_store import build_object_store_from_env
-from .service import JobService
+from .service import JobService, validate_credentials
 from .store import JobStore
 from .web import landing_page
 from .rate_limit import RateLimiter
@@ -59,6 +62,10 @@ _jobs_rate_limiter = RateLimiter(
 _accept_rate_limiter = RateLimiter(
     window_seconds=int(os.getenv("BACKEND_RATE_WINDOW") or "60"),
     max_events=int(os.getenv("BACKEND_RATE_ACCEPT_PER_MIN") or "5"),
+)
+_validate_rate_limiter = RateLimiter(
+    window_seconds=int(os.getenv("BACKEND_RATE_WINDOW") or "60"),
+    max_events=int(os.getenv("BACKEND_RATE_VALIDATE_PER_MIN") or "10"),
 )
 def _dynamo_jobs_table() -> str | None:
     """Internal helper for dynamo jobs table."""
@@ -233,6 +240,23 @@ def auth_token(payload: dict) -> dict:
     return response.json()
 
 
+@app.post("/credentials/validate", response_model=CredentialValidationResponse)
+def validate_credentials_endpoint(
+    payload: CredentialValidationRequest,
+    x_user_id: Optional[str] = Header(default=None),
+    authorization: Optional[str] = Header(default=None),
+) -> CredentialValidationResponse:
+    """Validate account credentials."""
+    user_id = user_id_from_request(authorization, x_user_id)
+    if not _validate_rate_limiter.allow(f"{user_id}:validate"):
+        raise HTTPException(status_code=429, detail="Too many requests. Try again soon.")
+    try:
+        validate_credentials(payload.credentials)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+    return CredentialValidationResponse(ok=True)
+
+
 @app.post("/jobs", response_model=JobRecord)
 def create_job(
     payload: JobCreateRequest,
@@ -313,6 +337,7 @@ async def job_events(
     async def event_stream():
         """Handle event stream."""
         last_payload = None
+        last_emit = time.monotonic()
         while True:
             if await request.is_disconnected():
                 break
@@ -321,6 +346,10 @@ async def job_events(
             if payload != last_payload:
                 yield f"data: {payload}\n\n"
                 last_payload = payload
+                last_emit = time.monotonic()
+            elif time.monotonic() - last_emit >= 5:
+                yield "event: heartbeat\ndata: {\"type\":\"heartbeat\"}\n\n"
+                last_emit = time.monotonic()
             if job.status in {"review_ready", "completed", "failed"}:
                 break
             await asyncio.sleep(2)

@@ -92,6 +92,11 @@ export type JobAcceptPayload = {
   credentials: CredentialsPayload;
 };
 
+/** Type CredentialValidationResponse. */
+export type CredentialValidationResponse = {
+  ok: boolean;
+};
+
 export const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ?? "https://skybridge.localhost/api";
 
@@ -156,7 +161,19 @@ async function requestJson<T>(
   });
 
   if (!response.ok) {
-    const message = await response.text();
+    const rawMessage = await response.text();
+    let message = rawMessage;
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      try {
+        const parsed = JSON.parse(rawMessage) as { detail?: string };
+        if (parsed?.detail) {
+          message = parsed.detail;
+        }
+      } catch (parseError) {
+        console.debug("Failed to parse error payload.", parseError);
+      }
+    }
     const errorMessage =
       message?.trim() || `Request failed (${response.status})`;
     const error = new Error(errorMessage);
@@ -169,6 +186,17 @@ async function requestJson<T>(
 
 export async function createJob(payload: JobCreatePayload, auth: AuthContext) {
   return requestJson<JobRecord>("/jobs", {
+    method: "POST",
+    body: payload,
+    auth,
+  });
+}
+
+export async function validateCredentials(
+  payload: { credentials: CredentialsPayload },
+  auth: AuthContext
+) {
+  return requestJson<CredentialValidationResponse>("/credentials/validate", {
     method: "POST",
     body: payload,
     auth,

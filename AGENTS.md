@@ -20,6 +20,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `./scripts/run.sh --approve-import` — writes artifacts under `data/runs/<RUN_ID>/` (review, report, exports, logs, state).
 - `./scripts/run.sh --verify-import-report --import-report data/runs/<RUN_ID>/import_report.json` — verify report entries against FlySto.
 - `./scripts/run-backend-dev.sh` — run the backend dev web (FastAPI API + UI) locally.
+- `./scripts/run-sse-smoke.sh` — run a quick SSE smoke test against the dev backend.
 - `./scripts/setup-dev-https.sh` — install mkcert CA and generate trusted dev certs for HTTPS (Caddy).
 - `docker compose up --build` — run the backend dev stack (API, worker, DynamoDB Local, MinIO).
 - Set `DEV_PREFILL_CREDENTIALS=1` with `CLOUD_AHOY_EMAIL`/`CLOUD_AHOY_PASSWORD` and `FLYSTO_EMAIL`/`FLYSTO_PASSWORD` to prefill dev web inputs.
