@@ -21,6 +21,7 @@ import { Progress } from "@/components/ui/progress";
 import { ImportResults } from "@/components/import-results";
 import { cn } from "@/lib/utils";
 import type { JobRecord } from "@/api/client";
+import { Loader2 } from "lucide-react";
 
 /** Render ImportSection component. */
 export function ImportSection({
@@ -42,6 +43,7 @@ export function ImportSection({
   reviewSummaryMissing,
   retentionDays,
   onDownloadFiles,
+  downloadLoading,
   onDeleteResults,
   actionLoading,
   importError,
@@ -70,6 +72,7 @@ export function ImportSection({
   reviewSummaryMissing: number;
   retentionDays: number;
   onDownloadFiles: () => void;
+  downloadLoading: boolean;
   onDeleteResults: () => void;
   actionLoading: boolean;
   importError?: string | null;
@@ -198,12 +201,24 @@ export function ImportSection({
                     Open FlySto
                   </a>
                 </Button>
-                <Button variant="outline" onClick={onDownloadFiles} disabled={actionLoading}>
-                  Download files
+                <Button
+                  variant="outline"
+                  onClick={onDownloadFiles}
+                  disabled={actionLoading || downloadLoading}
+                  aria-busy={downloadLoading}
+                >
+                  <span className="flex items-center gap-2">
+                    {downloadLoading && (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    )}
+                    <span>{downloadLoading ? "Preparing download" : "Download files"}</span>
+                  </span>
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="destructive">Delete results now</Button>
+                    <Button variant="destructive" disabled={actionLoading || downloadLoading}>
+                      Delete results now
+                    </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
@@ -218,7 +233,7 @@ export function ImportSection({
                       <AlertDialogAction
                         onClick={onDeleteResults}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        disabled={actionLoading}
+                        disabled={actionLoading || downloadLoading}
                       >
                         Delete results
                       </AlertDialogAction>
