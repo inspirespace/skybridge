@@ -216,7 +216,9 @@ export function ImportSection({
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="destructive">Delete results now</Button>
+                    <Button variant="destructive" disabled={actionLoading || downloadLoading}>
+                      Delete results now
+                    </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
@@ -231,7 +233,7 @@ export function ImportSection({
                       <AlertDialogAction
                         onClick={onDeleteResults}
                         className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        disabled={actionLoading}
+                        disabled={actionLoading || downloadLoading}
                       >
                         Delete results
                       </AlertDialogAction>

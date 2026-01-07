@@ -426,6 +426,7 @@ export default function App() {
 
   /** Handle handleStartOverConfirm. */
   const handleStartOverConfirm = async () => {
+    if (downloadLoading) return;
     if (!jobId) {
       clearLocalState();
       return;
@@ -556,7 +557,7 @@ export default function App() {
 
   /** Handle handleDeleteResults. */
   const handleDeleteResults = async () => {
-    if (!jobId) return;
+    if (!jobId || downloadLoading) return;
     setActionLoading(true);
     setActionError(null);
     setActionNotice(null);
@@ -658,7 +659,11 @@ export default function App() {
             {flow.connected && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="outline" size="sm" disabled={!canStartOver(flow)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!canStartOver(flow) || actionLoading || downloadLoading}
+                  >
                     Start over
                   </Button>
                 </AlertDialogTrigger>
@@ -692,7 +697,7 @@ export default function App() {
                     <AlertDialogAction
                       onClick={handleStartOverConfirm}
                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      disabled={actionLoading}
+                      disabled={actionLoading || downloadLoading}
                     >
                       Delete and start over
                     </AlertDialogAction>
