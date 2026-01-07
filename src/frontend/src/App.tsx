@@ -36,6 +36,7 @@ import {
 import { canStartOver, deriveFlowState, getOpenStep } from "@/state/flow";
 import { useJobSnapshot } from "@/hooks/use-job-snapshot";
 import type { DateRange } from "react-day-picker";
+import { Loader2 } from "lucide-react";
 import {
   formatDate,
   formatDateRange,
@@ -96,6 +97,7 @@ export default function App() {
     message: string;
   } | null>(null);
   const [actionLoading, setActionLoading] = React.useState(false);
+  const [downloadLoading, setDownloadLoading] = React.useState(false);
   const {
     accessToken,
     startLogin: startOidcLogin,
@@ -520,8 +522,8 @@ export default function App() {
 
   /** Handle handleDownloadFiles. */
   const handleDownloadFiles = async () => {
-    if (!jobId) return;
-    setActionLoading(true);
+    if (!jobId || downloadLoading) return;
+    setDownloadLoading(true);
     setActionError(null);
     try {
       const blob = await downloadArtifactsZip(jobId, auth);
@@ -548,7 +550,7 @@ export default function App() {
         message: err instanceof Error ? err.message : "Failed to download files",
       });
     } finally {
-      setActionLoading(false);
+      setDownloadLoading(false);
     }
   };
 
@@ -672,9 +674,17 @@ export default function App() {
                     <Button
                       variant="outline"
                       onClick={handleDownloadFiles}
-                      disabled={!jobId || actionLoading}
+                      disabled={!jobId || actionLoading || downloadLoading}
+                      aria-busy={downloadLoading}
                     >
-                      Download files
+                      <span className="flex items-center gap-2">
+                        {downloadLoading && (
+                          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        )}
+                        <span>
+                          {downloadLoading ? "Preparing download" : "Download files"}
+                        </span>
+                      </span>
                     </Button>
                   </div>
                   <AlertDialogFooter>
@@ -848,6 +858,7 @@ export default function App() {
                 reviewSummaryMissing={reviewSummary?.missing_tail_numbers ?? 0}
                 retentionDays={retentionDays}
                 onDownloadFiles={handleDownloadFiles}
+                downloadLoading={downloadLoading}
                 onDeleteResults={handleDeleteResults}
                 actionLoading={actionLoading}
                 importError={importError}
