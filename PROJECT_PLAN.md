@@ -70,3 +70,5 @@ Goal: ship the production web UI for CloudAhoy → FlySto imports, using the wir
 ## Maintenance Notes
 - [x] Paginate DynamoDB job scans/queries in `JobStore` to avoid missing older jobs in dev worker mode.
 - [x] Show download preparation progress and lock download actions while artifacts are fetched.
+- [x] Treat duplicate uploads as skipped in import reports.
+- [x] Block import approval when review failed without a ready manifest; align UI state with backend review-ready checks.

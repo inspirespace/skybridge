@@ -379,9 +379,15 @@ export default function App() {
         handleTokenExpired();
         return;
       }
+      let message = err instanceof Error ? err.message : "Failed to start import";
+      if (message.includes("Review not ready")) {
+        message =
+          "Review not ready yet. The review may still be running or was canceled before it finished. " +
+          "Please wait for “Review ready”, or use “Edit import filters” to restart the review.";
+      }
       setActionError({
         scope: "review",
-        message: err instanceof Error ? err.message : "Failed to start import",
+        message,
       });
     } finally {
       setActionLoading(false);
@@ -619,7 +625,7 @@ export default function App() {
 
   const visibleFlights = showAllFlights ? flights : flights.slice(0, 3);
   const canApprove =
-    reviewComplete && !importRunning && !importComplete && !actionLoading;
+    reviewComplete && flow.importStatus === "idle" && !actionLoading;
   const canEditFiltersNow =
     reviewComplete && !importRunning && !importComplete && !actionLoading;
 

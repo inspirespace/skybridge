@@ -681,7 +681,7 @@ def migrate_flights(
             results.append(result)
             if result.status == "ok":
                 succeeded += 1
-            else:
+            elif result.status != "skipped":
                 failed += 1
 
             if state:
@@ -784,11 +784,15 @@ def _migrate_single(
         try:
             upload_result = flysto.upload_flight(detail, dry_run=dry_run)
         except RuntimeError as exc:
-            message = str(exc).lower()
-            if "already" in message or "duplicate" in message or "exists" in message:
-                upload_result = None
-            else:
-                raise
+            message = str(exc)
+            message_lower = message.lower()
+            if "already" in message_lower or "duplicate" in message_lower or "exists" in message_lower:
+                return MigrationResult(
+                    flight_id=detail.id,
+                    status="skipped",
+                    message=message,
+                )
+            raise
         if progress:
             progress("flysto_upload_done", {"flight_id": detail.id})
         resolved_log_id = None

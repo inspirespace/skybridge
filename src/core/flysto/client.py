@@ -88,9 +88,10 @@ class FlyStoClient:
         )
 
         if response.status_code >= 300:
-            raise RuntimeError(
-                f"FlySto upload failed: {response.status_code} {response.text[:300]}"
-            )
+            error_message = f"FlySto upload failed: {response.status_code} {response.text[:300]}"
+            if _is_duplicate_upload_error(response.status_code, response.text):
+                raise RuntimeError(f"duplicate upload: {error_message}")
+            raise RuntimeError(error_message)
         result = _parse_upload_response(response.text, file_path.name)
         # Keep upload metadata for later reporting without poisoning resolve_log_for_file.
         if result:
@@ -989,6 +990,17 @@ def _parse_upload_response(text: str, filename: str) -> UploadResult | None:
         log_format=log_format,
         signature_hash=signature_hash,
     )
+
+
+def _is_duplicate_upload_error(status_code: int, payload: str | None) -> bool:
+    """Return True when upload errors indicate a duplicate upload."""
+    if status_code == 409:
+        return True
+    if not payload:
+        return False
+    normalized = payload.lower()
+    duplicate_markers = ("already", "duplicate", "exists", "conflict")
+    return any(marker in normalized for marker in duplicate_markers)
 
 
 def _parse_signature_field(value: str, filename: str) -> tuple[str | None, str | None, str | None]:

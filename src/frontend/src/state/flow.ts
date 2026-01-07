@@ -25,6 +25,7 @@ const REVIEW_COMPLETE_STATUSES: JobStatus[] = [
   "import_queued",
   "import_running",
   "completed",
+  "failed",
 ];
 
 const REVIEW_RUNNING_STATUSES: JobStatus[] = ["review_queued", "review_running"];
