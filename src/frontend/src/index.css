@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    color-scheme: light;
     --background: 214 50% 98%;
     --foreground: 216 33% 15%;
     --card: 0 0% 100%;
@@ -32,6 +33,7 @@
   }
 
   .dark {
+    color-scheme: dark;
     --background: 222 47% 7%;
     --foreground: 210 40% 98%;
     --card: 222 47% 10%;
@@ -65,15 +67,6 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
-}
-
-.dark input[type="number"] {
-  color-scheme: dark;
-}
-
-.dark input[type="number"]::-webkit-inner-spin-button,
-.dark input[type="number"]::-webkit-outer-spin-button {
-  filter: invert(1) brightness(1.2);
 }
 
 @media (prefers-reduced-motion: no-preference) {
