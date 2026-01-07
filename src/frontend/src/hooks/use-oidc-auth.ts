@@ -1,16 +1,18 @@
 import * as React from "react";
 
-import { exchangeToken } from "@/api/client";
+import { exchangeToken, refreshToken } from "@/api/client";
 import {
   generateCodeChallenge,
   generateCodeVerifier,
   generateState,
+  getJwtExpiry,
   isJwtExpired,
   parseJwt,
 } from "@/lib/auth-helpers";
 
 const TOKEN_KEY = "skybridge_access_token";
 const ID_TOKEN_KEY = "skybridge_id_token";
+const REFRESH_TOKEN_KEY = "skybridge_refresh_token";
 const CODE_VERIFIER_KEY = "skybridge_code_verifier";
 const AUTH_STATE_KEY = "skybridge_auth_state";
 const USER_ID_KEY = "skybridge_user_id";
@@ -43,28 +45,104 @@ export function useOidcAuth({
   const [idToken, setIdToken] = React.useState<string | null>(() =>
     localStorage.getItem(ID_TOKEN_KEY)
   );
+  const [refreshTokenValue, setRefreshTokenValue] = React.useState<string | null>(() =>
+    localStorage.getItem(REFRESH_TOKEN_KEY)
+  );
   const [userId, setUserId] = React.useState<string | null>(() =>
     localStorage.getItem(USER_ID_KEY)
   );
   const didExchangeRef = React.useRef(false);
+  const refreshInFlight = React.useRef<Promise<void> | null>(null);
+  const authEpochRef = React.useRef(0);
+  const refreshAbortRef = React.useRef<AbortController | null>(null);
 
   const clearAuth = React.useCallback(() => {
+    authEpochRef.current += 1;
+    refreshAbortRef.current?.abort();
+    refreshAbortRef.current = null;
     localStorage.removeItem(USER_ID_KEY);
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(ID_TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
     sessionStorage.removeItem(CODE_VERIFIER_KEY);
     sessionStorage.removeItem(AUTH_STATE_KEY);
     setUserId(null);
     setAccessToken(null);
     setIdToken(null);
+    setRefreshTokenValue(null);
+    refreshInFlight.current = null;
   }, []);
+
+  const applyTokenResponse = React.useCallback(
+    (token: Awaited<ReturnType<typeof exchangeToken>>) => {
+      localStorage.setItem(TOKEN_KEY, token.access_token);
+      setAccessToken(token.access_token);
+      if (token.refresh_token) {
+        localStorage.setItem(REFRESH_TOKEN_KEY, token.refresh_token);
+        setRefreshTokenValue(token.refresh_token);
+      }
+      if (token.id_token) {
+        localStorage.setItem(ID_TOKEN_KEY, token.id_token);
+        setIdToken(token.id_token);
+        const claims = parseJwt(token.id_token);
+        if (claims?.email) {
+          localStorage.setItem(USER_ID_KEY, claims.email);
+          setUserId(claims.email);
+        }
+      }
+    },
+    []
+  );
+
+  const refreshAccessToken = React.useCallback(async () => {
+    if (!refreshTokenValue) return;
+    if (refreshInFlight.current) return refreshInFlight.current;
+    refreshInFlight.current = (async () => {
+      const refreshEpoch = authEpochRef.current;
+      const abortController = new AbortController();
+      refreshAbortRef.current?.abort();
+      refreshAbortRef.current = abortController;
+      onLoadingChange?.(true);
+      try {
+        const token = await refreshToken(
+          { refresh_token: refreshTokenValue },
+          abortController.signal
+        );
+        if (authEpochRef.current !== refreshEpoch) return;
+        applyTokenResponse(token);
+      } catch (err) {
+        if (err instanceof Error && err.name === "AbortError") {
+          return;
+        }
+        clearAuth();
+        onError?.(err instanceof Error ? err.message : "Auth refresh failed");
+      } finally {
+        onLoadingChange?.(false);
+        refreshInFlight.current = null;
+        if (refreshAbortRef.current === abortController) {
+          refreshAbortRef.current = null;
+        }
+      }
+    })();
+    return refreshInFlight.current;
+  }, [
+    refreshTokenValue,
+    applyTokenResponse,
+    clearAuth,
+    onError,
+    onLoadingChange,
+  ]);
 
   React.useEffect(() => {
     if (!enabled) return;
     if (accessToken && isJwtExpired(accessToken)) {
-      clearAuth();
+      if (refreshTokenValue) {
+        void refreshAccessToken();
+      } else {
+        clearAuth();
+      }
     }
-  }, [enabled, accessToken, clearAuth]);
+  }, [enabled, accessToken, refreshTokenValue, refreshAccessToken, clearAuth]);
 
   React.useEffect(() => {
     if (!enabled) return;
@@ -96,17 +174,7 @@ export function useOidcAuth({
           code_verifier: verifier,
           redirect_uri: redirectUri,
         });
-        localStorage.setItem(TOKEN_KEY, token.access_token);
-        setAccessToken(token.access_token);
-        if (token.id_token) {
-          localStorage.setItem(ID_TOKEN_KEY, token.id_token);
-          setIdToken(token.id_token);
-          const claims = parseJwt(token.id_token);
-          if (claims?.email) {
-            localStorage.setItem(USER_ID_KEY, claims.email);
-            setUserId(claims.email);
-          }
-        }
+        applyTokenResponse(token);
         sessionStorage.removeItem(CODE_VERIFIER_KEY);
         sessionStorage.removeItem(AUTH_STATE_KEY);
         window.history.replaceState({}, document.title, "/");
@@ -124,7 +192,21 @@ export function useOidcAuth({
     scope,
     onError,
     onLoadingChange,
+    applyTokenResponse,
   ]);
+
+  React.useEffect(() => {
+    if (!enabled || !accessToken || !refreshTokenValue) return;
+    const exp = getJwtExpiry(accessToken);
+    if (!exp) return;
+    const now = Math.floor(Date.now() / 1000);
+    const refreshAt = exp - 90;
+    const delayMs = Math.max((refreshAt - now) * 1000, 0);
+    const timeout = window.setTimeout(() => {
+      void refreshAccessToken();
+    }, delayMs);
+    return () => window.clearTimeout(timeout);
+  }, [enabled, accessToken, refreshTokenValue, refreshAccessToken]);
 
   const startLogin = React.useCallback(
     async (provider?: string) => {

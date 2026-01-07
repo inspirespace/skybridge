@@ -57,7 +57,8 @@ const AUTH_ISSUER =
   import.meta.env.VITE_AUTH_BROWSER_ISSUER_URL ??
   "";
 const AUTH_CLIENT_ID = import.meta.env.VITE_AUTH_CLIENT_ID ?? "skybridge-dev";
-const AUTH_SCOPE = import.meta.env.VITE_AUTH_SCOPE ?? "openid profile email";
+const AUTH_SCOPE =
+  import.meta.env.VITE_AUTH_SCOPE ?? "openid profile email offline_access";
 const AUTH_REDIRECT_PATH = import.meta.env.VITE_AUTH_REDIRECT_PATH ?? "/auth/callback";
 const AUTH_PROVIDER_PARAM = import.meta.env.VITE_AUTH_PROVIDER_PARAM ?? "kc_idp_hint";
 const AUTH_LOGOUT_URL = import.meta.env.VITE_AUTH_LOGOUT_URL ?? "";

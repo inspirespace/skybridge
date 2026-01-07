@@ -8,6 +8,7 @@ Responsibilities:
 from __future__ import annotations
 
 import os
+from urllib.parse import urlparse
 import tempfile
 import zipfile
 from datetime import datetime, timezone
@@ -186,24 +187,45 @@ def auth_token(payload: dict) -> dict:
     token_url = os.getenv("AUTH_TOKEN_URL") or ""
     if not token_url:
         raise HTTPException(status_code=500, detail="AUTH_TOKEN_URL not configured")
+    refresh_token = payload.get("refresh_token")
     code = payload.get("code")
     verifier = payload.get("code_verifier")
     redirect_uri = payload.get("redirect_uri")
-    if not code or not verifier or not redirect_uri:
-        raise HTTPException(status_code=400, detail="Missing code verifier or redirect")
-    data = {
-        "grant_type": "authorization_code",
-        "client_id": os.getenv("AUTH_CLIENT_ID") or "skybridge-dev",
-        "code": code,
-        "redirect_uri": redirect_uri,
-        "code_verifier": verifier,
-    }
+    client_id = os.getenv("AUTH_CLIENT_ID") or "skybridge-dev"
+    if refresh_token:
+        data = {
+            "grant_type": "refresh_token",
+            "client_id": client_id,
+            "refresh_token": refresh_token,
+        }
+    else:
+        if not code or not verifier or not redirect_uri:
+            raise HTTPException(
+                status_code=400, detail="Missing code verifier or redirect"
+            )
+        data = {
+            "grant_type": "authorization_code",
+            "client_id": client_id,
+            "code": code,
+            "redirect_uri": redirect_uri,
+            "code_verifier": verifier,
+        }
+    issuer_url = os.getenv("AUTH_BROWSER_ISSUER_URL") or os.getenv("AUTH_ISSUER_URL") or ""
+    forward_headers: dict[str, str] = {}
+    if issuer_url:
+        parsed = urlparse(issuer_url)
+        if parsed.hostname:
+            forward_host = parsed.hostname
+            if parsed.port:
+                forward_host = f"{forward_host}:{parsed.port}"
+            forward_headers["X-Forwarded-Host"] = forward_host
+        if parsed.scheme:
+            forward_headers["X-Forwarded-Proto"] = parsed.scheme
+        port = parsed.port or (443 if parsed.scheme == "https" else 80 if parsed.scheme == "http" else None)
+        if port:
+            forward_headers["X-Forwarded-Port"] = str(port)
     try:
-        response = requests.post(
-            token_url,
-            data=data,
-            timeout=15,
-        )
+        response = requests.post(token_url, data=data, headers=forward_headers, timeout=15)
     except requests.RequestException as exc:
         raise HTTPException(status_code=502, detail=f"Token exchange failed: {exc}") from exc
     if not response.ok:

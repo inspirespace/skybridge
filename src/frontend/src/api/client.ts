@@ -133,11 +133,13 @@ async function requestJson<T>(
     method = "GET",
     body,
     auth,
+    signal,
     skipAuth = false,
   }: {
     method?: string;
     body?: unknown;
     auth?: AuthContext;
+    signal?: AbortSignal;
     skipAuth?: boolean;
   } = {}
 ): Promise<T> {
@@ -149,6 +151,7 @@ async function requestJson<T>(
   const response = await fetch(`${apiBaseUrl}${path}`, {
     method,
     headers,
+    signal,
     body: body ? JSON.stringify(body) : undefined,
   });
 
@@ -229,6 +232,7 @@ export async function deleteJob(jobId: string, auth: AuthContext) {
 export type TokenExchangeResponse = {
   access_token: string;
   id_token?: string;
+  refresh_token?: string;
   expires_in?: number;
   token_type?: string;
   scope?: string;
@@ -242,6 +246,15 @@ export async function exchangeToken(payload: {
   return requestJson<TokenExchangeResponse>("/auth/token", {
     method: "POST",
     body: payload,
+    skipAuth: true,
+  });
+}
+
+export async function refreshToken(payload: { refresh_token: string }, signal?: AbortSignal) {
+  return requestJson<TokenExchangeResponse>("/auth/token", {
+    method: "POST",
+    body: payload,
+    signal,
     skipAuth: true,
   });
 }

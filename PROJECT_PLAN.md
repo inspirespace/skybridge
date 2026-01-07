@@ -38,6 +38,7 @@ Goal: ship the production web UI for CloudAhoy → FlySto imports, using the wir
 
 ## 5. API Integration (In Progress)
 - [x] 5.1 Auth integration (OIDC).
+- [x] 5.1.a Background refresh for OIDC access tokens.
 - [x] 5.2 Review start + progress polling.
 - [x] 5.2.a Frontend wired to `/jobs` create + poll (dev header auth).
 - [x] 5.3 Import approval + progress polling.
