@@ -92,6 +92,11 @@ export type JobAcceptPayload = {
   credentials: CredentialsPayload;
 };
 
+/** Type JobListResponse. */
+export type JobListResponse = {
+  jobs: JobRecord[];
+};
+
 /** Type CredentialValidationResponse. */
 export type CredentialValidationResponse = {
   ok: boolean;
