@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import {
   acceptReview,
   createJob,
+  validateCredentials,
   listJobs,
   deleteJob,
   downloadArtifactsZip,
@@ -169,6 +170,10 @@ export default function App() {
   const [now, setNow] = React.useState(() => new Date());
   const jobErrorMessage =
     jobError && !isAuthExpiredError(jobError) ? jobError.message : null;
+  const jobFailureMessage =
+    job?.status === "failed" ? job.error_message ?? "Job failed." : null;
+  const reviewFailureMessage = !hasImportEvents ? jobFailureMessage : null;
+  const importFailureMessage = hasImportEvents ? jobFailureMessage : null;
   const signInError =
     actionError?.scope === "sign-in" || actionError?.scope === "global"
       ? actionError.message
@@ -181,12 +186,12 @@ export default function App() {
   const reviewError = flow.connected
     ? actionError?.scope === "review" || actionError?.scope === "global"
       ? actionError.message
-      : jobErrorMessage
+      : reviewFailureMessage ?? jobErrorMessage
     : null;
   const importError = flow.connected
     ? actionError?.scope === "import" || actionError?.scope === "global"
       ? actionError.message
-      : jobErrorMessage
+      : importFailureMessage ?? jobErrorMessage
     : null;
 
   const reviewProgress =
@@ -339,6 +344,7 @@ export default function App() {
         end_date: dateRange?.to ? formatISODate(dateRange.to) : null,
         max_flights: maxFlights ? Number(maxFlights) : null,
       };
+      await validateCredentials({ credentials: payload.credentials }, auth);
       const createdJob = await createJob(payload, auth);
       localStorage.setItem(JOB_ID_KEY, createdJob.job_id);
       setJobId(createdJob.job_id);

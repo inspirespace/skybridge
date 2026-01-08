@@ -27,6 +27,16 @@ class CredentialPayload(BaseModel):
     flysto_password: str
 
 
+class CredentialValidationRequest(BaseModel):
+    """Represents CredentialValidationRequest."""
+    credentials: CredentialPayload
+
+
+class CredentialValidationResponse(BaseModel):
+    """Represents CredentialValidationResponse."""
+    ok: bool
+
+
 class JobCreateRequest(BaseModel):
     """Represents JobCreateRequest."""
     credentials: CredentialPayload

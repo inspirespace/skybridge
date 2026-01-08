@@ -72,3 +72,4 @@ Goal: ship the production web UI for CloudAhoy → FlySto imports, using the wir
 - [x] Show download preparation progress and lock download actions while artifacts are fetched.
 - [x] Treat duplicate uploads as skipped in import reports.
 - [x] Block import approval when review failed without a ready manifest; align UI state with backend review-ready checks.
+- [x] Add credential validation endpoint, SSE heartbeats, and surface job failure errors in the UI to avoid stalled flows.

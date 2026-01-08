@@ -81,7 +81,7 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
         setStreamFailed(false);
         lastEventAtRef.current = Date.now();
         silentTimer = window.setInterval(() => {
-          if (Date.now() - lastEventAtRef.current > 6000) {
+          if (Date.now() - lastEventAtRef.current > 15000) {
             setStreamFailed(true);
             controller.abort();
           }
@@ -94,17 +94,31 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
           const parts = buffer.split("\n\n");
           buffer = parts.pop() ?? "";
           for (const part of parts) {
-            const dataLine = part
-              .split("\n")
+            const lines = part.split("\n");
+            const eventName = lines
+              .find((line) => line.startsWith("event:"))
+              ?.replace(/^event:\s?/, "")
+              .trim();
+            const dataLine = lines
               .filter((line) => line.startsWith("data:"))
               .map((line) => line.replace(/^data:\s?/, ""))
               .join("\n")
               .trim();
-            if (!dataLine) continue;
-            const payload = JSON.parse(dataLine) as JobRecord;
+            if (!eventName && !dataLine) continue;
             receivedAny = true;
             lastEventAtRef.current = Date.now();
-            setData(payload);
+            if (!dataLine) continue;
+            try {
+              const payload = JSON.parse(dataLine) as Partial<JobRecord> & { type?: string };
+              if (payload?.type === "heartbeat") {
+                continue;
+              }
+              if (payload?.job_id && payload?.status) {
+                setData(payload as JobRecord);
+              }
+            } catch (parseError) {
+              console.debug("Failed to parse SSE payload.", parseError);
+            }
           }
         }
         if (!receivedAny) {

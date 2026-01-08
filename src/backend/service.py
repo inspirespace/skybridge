@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 import time
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -33,6 +34,7 @@ from .models import (
     ProgressEvent,
     ReviewSummary,
     FlightSummary,
+    CredentialPayload,
 )
 from .store import JobStore
 
@@ -180,7 +182,7 @@ class JobService:
             state = MigrationState(state_path)
 
             if not flysto.prepare():
-                raise RuntimeError("FlySto API unavailable; check credentials")
+                raise RuntimeError("FlySto login failed: check credentials")
 
             total_summaries = len(summaries)
             processed = 0
@@ -369,6 +371,21 @@ def _build_flysto_client(payload: JobAcceptRequest) -> FlyStoClient:
         min_request_interval=min_request_interval,
         max_request_retries=max_request_retries,
     )
+
+
+def validate_credentials(credentials: CredentialPayload) -> None:
+    """Validate CloudAhoy and FlySto credentials."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        exports_dir = Path(temp_dir) / "cloudahoy_exports"
+        cloudahoy = _build_cloudahoy_client(
+            JobCreateRequest(credentials=credentials),
+            exports_dir,
+        )
+        cloudahoy.list_flights(limit=1)
+
+    flysto = _build_flysto_client(JobAcceptRequest(credentials=credentials))
+    if not flysto.prepare():
+        raise RuntimeError("FlySto login failed: check credentials")
 
 
 def _summaries_for_range(

@@ -20,6 +20,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `./scripts/run.sh --approve-import` — writes artifacts under `data/runs/<RUN_ID>/` (review, report, exports, logs, state).
 - `./scripts/run.sh --verify-import-report --import-report data/runs/<RUN_ID>/import_report.json` — verify report entries against FlySto.
 - `./scripts/run-backend-dev.sh` — run the backend dev web (FastAPI API + UI) locally.
+- `./scripts/run-sse-smoke.sh` — run a quick SSE smoke test against the dev backend.
 - `./scripts/setup-dev-https.sh` — install mkcert CA and generate trusted dev certs for HTTPS (Caddy).
 - `docker compose up --build` — run the backend dev stack (API, worker, DynamoDB Local, MinIO).
 - Set `DEV_PREFILL_CREDENTIALS=1` with `CLOUD_AHOY_EMAIL`/`CLOUD_AHOY_PASSWORD` and `FLYSTO_EMAIL`/`FLYSTO_PASSWORD` to prefill dev web inputs.
@@ -57,6 +58,7 @@ Note: default `MODE=auto` uses API only and does not fall back to web automation
 ## Commit & Pull Request Guidelines
 - Use Conventional Commits (`feat:`, `fix:`, `chore:`).
 - PRs should include: a concise description, linked issue (if applicable), test results, and screenshots for UI changes.
+- Follow CONTRIBUTING.md PR format (Goal / Scope / Testing / Risk / Screenshots) when creating or editing PRs.
 - Work in feature branches for non-trivial changes (e.g., `feature/...`, `fix/...`), then merge into `main`.
 - After merging, delete merged feature branches and prune remotes (use `./scripts/cleanup-merged-branches.sh`).
 

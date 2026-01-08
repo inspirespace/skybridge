@@ -287,7 +287,7 @@ def _login(base_url: str, email: str, password: str) -> tuple[requests.Session, 
         "EMAIL3": _extract_cookie(response.text, "EMAIL3"),
     }
     if not all(auth.values()):
-        raise RuntimeError("CloudAhoy login failed: session cookies not found.")
+        raise RuntimeError("CloudAhoy login failed: check credentials")
     domain = urlparse(api_base).hostname or "www.cloudahoy.com"
     for key, value in auth.items():
         session.cookies.set(key, value, domain=domain, path="/")
