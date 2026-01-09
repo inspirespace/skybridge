@@ -68,7 +68,7 @@ echo "Open ${url}"
 
 if [ -n "${VSCODE_PID:-}" ] || [ -n "${VSCODE_IPC_HOOK_CLI:-}" ]; then
   if command -v code >/dev/null 2>&1; then
-    code --open-url "$url" >/dev/null 2>&1 || true
+    code --reuse-window --open-url "$url" >/dev/null 2>&1 || true
   fi
   if command -v xdg-open >/dev/null 2>&1; then
     xdg-open "$url" >/dev/null 2>&1 || true
