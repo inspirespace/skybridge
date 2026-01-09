@@ -47,8 +47,7 @@ Stop VNC manually with `./scripts/stop-e2e-vnc.sh` (no devcontainer post-stop ho
 For VS Code Testing (Playwright Test UI), the devcontainer now auto-starts
 the VNC/noVNC server on `DISPLAY=:99` when `DEVCONTAINER_E2E_VNC=1`.
 Playwright also invokes `src/frontend/e2e/setup.ts` to ensure the server is up
-when tests are launched from the Testing UI. To auto-open the noVNC URL from
-VS Code, set `NOVNC_AUTO_OPEN=1`.
+when tests are launched from the Testing UI, and will auto-open the noVNC URL.
 
 ## State Model
 See `src/state/flow.ts` for flow state, open-step logic, and CTA rules.

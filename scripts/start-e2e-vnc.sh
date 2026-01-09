@@ -66,10 +66,7 @@ echo "E2E VNC ensured on DISPLAY ${display}."
 url="http://localhost:${webport}/vnc_auto.html?autoconnect=1&resize=remote"
 echo "Open ${url}"
 
-if [ "${NOVNC_AUTO_OPEN:-0}" = "1" ] && ([ -n "${VSCODE_PID:-}" ] || [ -n "${VSCODE_IPC_HOOK_CLI:-}" ]); then
-  if command -v code >/dev/null 2>&1; then
-    code --reuse-window --open-url "$url" >/dev/null 2>&1 || true
-  fi
+if [ -n "${VSCODE_PID:-}" ] || [ -n "${VSCODE_IPC_HOOK_CLI:-}" ]; then
   if command -v xdg-open >/dev/null 2>&1; then
     xdg-open "$url" >/dev/null 2>&1 || true
   fi
