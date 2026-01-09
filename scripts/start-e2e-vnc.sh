@@ -63,4 +63,17 @@ else
 fi
 
 echo "E2E VNC ensured on DISPLAY ${display}."
-echo "Open http://localhost:${webport}/vnc_auto.html?autoconnect=1&resize=remote"
+url="http://localhost:${webport}/vnc_auto.html?autoconnect=1&resize=remote"
+echo "Open ${url}"
+
+if [ -n "${VSCODE_PID:-}" ] || [ -n "${VSCODE_IPC_HOOK_CLI:-}" ]; then
+  if command -v code >/dev/null 2>&1; then
+    code --open-url "$url" >/dev/null 2>&1 || true
+  fi
+  if command -v xdg-open >/dev/null 2>&1; then
+    xdg-open "$url" >/dev/null 2>&1 || true
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -m webbrowser "$url" >/dev/null 2>&1 || true
+  fi
+fi
