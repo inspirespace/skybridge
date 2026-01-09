@@ -103,4 +103,5 @@ Goal: ship the production web UI for CloudAhoy → FlySto imports, using the wir
 - [x] Auto-start Xvfb/VNC/noVNC on devcontainer start for VS Code Testing compatibility.
 - [x] Ensure Playwright global setup starts VNC server when launched from VS Code Testing UI.
 - [x] Fix noVNC web UI serving (use novnc_proxy/websockify --web).
+- [x] Auto-open noVNC auto-connect URL when running Playwright from VS Code.
 - [x] Exclude discovery modules from coverage targets and remove discovery-specific tests.

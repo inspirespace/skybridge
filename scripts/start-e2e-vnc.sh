@@ -63,3 +63,4 @@ else
 fi
 
 echo "E2E VNC ensured on DISPLAY ${display}."
+echo "Open http://localhost:${webport}/vnc_auto.html?autoconnect=1&resize=remote"

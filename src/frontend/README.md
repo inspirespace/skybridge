@@ -35,8 +35,9 @@ Run inside the devcontainer:
 1) `./scripts/setup-e2e-vnc.sh`
 2) `./scripts/run-e2e-vnc.sh`
 
-This starts Xvfb + a lightweight WM + VNC + noVNC. Open `http://localhost:6080/`
-via the forwarded port to see the browser (try `/vnc.html` if the root page is blank).
+This starts Xvfb + a lightweight WM + VNC + noVNC. Open
+`http://localhost:6080/vnc_auto.html?autoconnect=1&resize=remote`
+via the forwarded port to see the browser (try `/vnc.html` if needed).
 (No passwords, default screen 1280x720.)
 
 To auto-install VNC deps when the devcontainer starts, set:
@@ -45,7 +46,8 @@ To auto-install VNC deps when the devcontainer starts, set:
 For VS Code Testing (Playwright Test UI), the devcontainer now auto-starts
 the VNC/noVNC server on `DISPLAY=:99` when `DEVCONTAINER_E2E_VNC=1`.
 Playwright also invokes `src/frontend/e2e/setup.ts` to ensure the server is up
-when tests are launched from the Testing UI.
+when tests are launched from the Testing UI, and will attempt to open the
+noVNC URL automatically.
 
 ## State Model
 See `src/state/flow.ts` for flow state, open-step logic, and CTA rules.
