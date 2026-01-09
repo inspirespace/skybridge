@@ -27,7 +27,9 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `./scripts/start-e2e-vnc.sh` — start the VNC/noVNC server (used for VS Code Testing).
 - `./scripts/stop-e2e-vnc.sh` — stop the VNC/noVNC server.
 - Set `DEVCONTAINER_E2E_VNC=1` to auto-install VNC deps on devcontainer start.
+- Stop VNC manually with `./scripts/stop-e2e-vnc.sh` (no devcontainer post-stop hook).
 - noVNC auto-connect URL: `http://localhost:6080/vnc_auto.html?autoconnect=1&resize=remote`.
+- Set `NOVNC_AUTO_OPEN=1` to auto-open the URL from VS Code (disabled by default to avoid new windows).
 - `./scripts/setup-dev-https.sh` — install mkcert CA and generate trusted dev certs for HTTPS (Caddy).
 - `docker compose up --build` — run the backend dev stack (API, worker, DynamoDB Local, MinIO).
 - Set `DEV_PREFILL_CREDENTIALS=1` with `CLOUD_AHOY_EMAIL`/`CLOUD_AHOY_PASSWORD` and `FLYSTO_EMAIL`/`FLYSTO_PASSWORD` to prefill dev web inputs.
