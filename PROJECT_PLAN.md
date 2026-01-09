@@ -73,3 +73,34 @@ Goal: ship the production web UI for CloudAhoy → FlySto imports, using the wir
 - [x] Treat duplicate uploads as skipped in import reports.
 - [x] Block import approval when review failed without a ready manifest; align UI state with backend review-ready checks.
 - [x] Add credential validation endpoint, SSE heartbeats, and surface job failure errors in the UI to avoid stalled flows.
+- [x] Expand automated test coverage across backend helpers, storage enrichment, auth, and frontend API/state/UI flows.
+- [x] Add Python and frontend coverage reporting commands/config.
+- [x] Add backend API/service tests plus frontend App/hook tests to raise coverage.
+- [x] Extend coverage for auth helpers, OIDC hook, CLI run flows, and artifacts zip/auth token routes.
+- [x] Expand coverage for App UI flows, CLI reconcile path, and credential claim route.
+- [x] Add coverage for worker/lambda handlers and browser session helpers.
+- [x] Add coverage for CloudAhoy client helpers, backend dev web config, and web client helpers (CloudAhoy/FlySto).
+- [x] Add coverage for backend mock CloudAhoy/FlySto services and state handling.
+- [x] Expand coverage for backend auth/JWKS handling and credential stores.
+- [x] Add extra web client coverage paths for CloudAhoy/FlySto uploads and navigation.
+- [x] Add FlySto helper coverage for tag normalization, duplicate detection, and upload URL building.
+- [x] Expand coverage for backend job store enrichment, artifact/object store paths, and worker credential handling.
+- [x] Expand guided flow coverage with run orchestration and preflight paths.
+- [x] Expand FlySto client coverage for prepare/upload flows and request retry handling.
+- [x] Add CI test reporting with JUnit + coverage artifacts for backend and frontend (Vitest/Playwright).
+- [x] Expand backend app coverage for SSE job events and failed-review import acceptance.
+- [x] Add additional frontend e2e coverage (review running, review failure, download expiry).
+- [x] Expand backend app coverage for rate limits, delete flows, and worker-queued review accept path.
+- [x] Add e2e coverage for delete results success flow.
+- [x] Add FlySto client tests for crew/roles/metadata error handling and log source parsing.
+- [x] Add e2e coverage for successful download flow.
+- [x] Add backend app coverage for auth token errors, credential claim errors, and rate-limit validation.
+- [x] Add e2e coverage for review table expansion (show more flights).
+- [x] Add e2e coverage for connect enablement, credential validation errors, and import confirmation.
+- [x] Add macOS devcontainer headed e2e helper for XQuartz black-window mitigation.
+- [x] Add devcontainer-only Xvfb/VNC/noVNC helper scripts for headed e2e without host config.
+- [x] Allow auto-install of VNC deps at devcontainer start via `DEVCONTAINER_E2E_VNC`.
+- [x] Auto-start Xvfb/VNC/noVNC on devcontainer start for VS Code Testing compatibility.
+- [x] Ensure Playwright global setup starts VNC server when launched from VS Code Testing UI.
+- [x] Fix noVNC web UI serving (use novnc_proxy/websockify --web).
+- [x] Exclude discovery modules from coverage targets and remove discovery-specific tests.

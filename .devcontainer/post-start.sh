@@ -9,6 +9,12 @@ bash .devcontainer/setup-copilot.sh
 bash .devcontainer/setup-zsh-autosuggestions.sh
 UV_CACHE_DIR=/tmp/uv-cache uv sync --frozen --extra dev
 
+# Optional: install VNC/noVNC deps for headed Playwright inside the container.
+if [ "${DEVCONTAINER_E2E_VNC:-0}" = "1" ]; then
+  bash ./scripts/setup-e2e-vnc.sh
+  bash ./scripts/start-e2e-vnc.sh
+fi
+
 # Ensure frontend deps match Linux platform for Playwright/Vite.
 if [ -d "src/frontend" ]; then
   arch="$(uname -m)"

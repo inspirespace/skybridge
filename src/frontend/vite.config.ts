@@ -17,5 +17,11 @@ export default defineConfig({
     css: true,
     include: ["src/**/*.test.{ts,tsx}"],
     exclude: ["e2e/**", "node_modules/**"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "lcov"],
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: ["src/**/*.test.{ts,tsx}", "src/test/**"],
+    },
   },
 });
