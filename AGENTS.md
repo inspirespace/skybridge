@@ -21,6 +21,14 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `./scripts/run.sh --verify-import-report --import-report data/runs/<RUN_ID>/import_report.json` — verify report entries against FlySto.
 - `./scripts/run-backend-dev.sh` — run the backend dev web (FastAPI API + UI) locally.
 - `./scripts/run-sse-smoke.sh` — run a quick SSE smoke test against the dev backend.
+- `./scripts/run-e2e-headed.sh` — run Playwright e2e tests in headed mode (macOS devcontainer/XQuartz helper).
+- `./scripts/setup-e2e-vnc.sh` — install in-container Xvfb + VNC + noVNC dependencies for headed e2e.
+- `./scripts/run-e2e-vnc.sh` — run Playwright e2e tests with in-container Xvfb + VNC/noVNC (no host setup).
+- `./scripts/start-e2e-vnc.sh` — start the VNC/noVNC server (used for VS Code Testing).
+- `./scripts/stop-e2e-vnc.sh` — stop the VNC/noVNC server.
+- Set `DEVCONTAINER_E2E_VNC=1` to auto-install VNC deps on devcontainer start.
+- Stop VNC manually with `./scripts/stop-e2e-vnc.sh` (no devcontainer post-stop hook).
+- noVNC auto-connect URL: `http://localhost:6080/vnc_auto.html?autoconnect=1&resize=remote`.
 - `./scripts/setup-dev-https.sh` — install mkcert CA and generate trusted dev certs for HTTPS (Caddy).
 - `docker compose up --build` — run the backend dev stack (API, worker, DynamoDB Local, MinIO).
 - Set `DEV_PREFILL_CREDENTIALS=1` with `CLOUD_AHOY_EMAIL`/`CLOUD_AHOY_PASSWORD` and `FLYSTO_EMAIL`/`FLYSTO_PASSWORD` to prefill dev web inputs.
@@ -31,9 +39,15 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - CLI supports `--start-date` / `--end-date` for targeted imports (YYYY-MM-DD or ISO8601).
 - Set `CLOUD_AHOY_G3X_INCLUDE_HDG=1` to include heading in G3X exports (TRK is always included; default omits HDG to preserve block-time detection).
 - `pytest` — run tests (if installed).
+- `pytest --cov=src --cov-report=term-missing` — run Python coverage report (requires `pytest-cov`).
+- `uv run pytest --junitxml=test-results/pytest/results.xml --cov=src --cov-report=xml:coverage/coverage.xml --cov-report=term-missing` — run backend tests with JUnit + coverage artifacts (CI-style).
 - Use Devcontainer CLI for tests when available: `devcontainer exec --workspace-folder . pytest`.
 - Frontend unit tests: `devcontainer exec --workspace-folder . npm --prefix src/frontend run test`.
+- Frontend coverage: `devcontainer exec --workspace-folder . npm --prefix src/frontend run test:coverage`.
+- Frontend CI unit tests: `devcontainer exec --workspace-folder . npm --prefix src/frontend run test:ci` (JUnit + coverage artifacts).
 - Frontend e2e tests: `devcontainer exec --workspace-folder . npm --prefix src/frontend run test:e2e` (requires Playwright browsers).
+- Frontend CI e2e tests: `devcontainer exec --workspace-folder . npm --prefix src/frontend run test:e2e:ci` (JUnit output).
+- Playwright headed runs in devcontainers can be flaky with XQuartz; default is headless unless `HEADFUL=1`. If using headful, keep `--use-gl=swiftshader` and `--disable-gpu` launch args (configured in `src/frontend/playwright.config.ts`).
 - `terraform fmt -check -recursive` (run from `infra/terraform`) — format check for IaC.
 - Runbook + readiness docs are in `docs/backend-runbook.md`, `docs/backend-maintenance.md`, and `docs/backend-release-readiness.md`.
 - Run all CLI workflows through the devcontainer scripts (`./scripts/run*.sh`) so required dependencies and browser tooling are available.

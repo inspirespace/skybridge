@@ -45,6 +45,27 @@ describe("deriveFlowState", () => {
     expect(state.reviewStatus).toBe("complete");
     expect(state.importStatus).toBe("idle");
   });
+
+  it("marks import failed when import events exist", () => {
+    const job = baseJob("failed");
+    job.review_summary = {
+      flight_count: 1,
+      total_hours: 1,
+      missing_tail_numbers: 0,
+      flights: [],
+    };
+    job.progress_log = [
+      {
+        phase: "import",
+        stage: "Uploading",
+        status: "import_running",
+        created_at: "2026-01-01T10:05:00Z",
+      },
+    ];
+    const state = deriveFlowState(true, job);
+    expect(state.reviewStatus).toBe("complete");
+    expect(state.importStatus).toBe("failed");
+  });
 });
 
 describe("getOpenStep", () => {
@@ -52,6 +73,12 @@ describe("getOpenStep", () => {
     expect(
       getOpenStep({ signedIn: false, connected: false, reviewStatus: "idle", importStatus: "idle" })
     ).toBe("connect");
+  });
+
+  it("opens import when import running", () => {
+    expect(
+      getOpenStep({ signedIn: true, connected: true, reviewStatus: "complete", importStatus: "running" })
+    ).toBe("import");
   });
 });
 

@@ -108,6 +108,8 @@ def prepare_review(
                         file_hash=None,
                         csv_path=None,
                         csv_hash=None,
+                        raw_path=None,
+                        export_paths=None,
                         points_count=None,
                         points_schema=[],
                         points_preview=[],
