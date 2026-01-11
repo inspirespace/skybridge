@@ -69,6 +69,7 @@ Note: default `MODE=auto` uses API only and does not fall back to web automation
 - Prefer a dedicated test framework appropriate to the language (e.g., `pytest`, `jest`, `go test`).
 - Name tests with a clear suffix/prefix (example: `*_test.py`, `*.spec.ts`).
 - Keep unit tests close to modules or in `tests/` with mirrored structure.
+- Always run frontend tests via the devcontainer (`devcontainer exec --workspace-folder . npm --prefix src/frontend run test`) before reporting changes.
 
 ## Commit & Pull Request Guidelines
 - Use Conventional Commits (`feat:`, `fix:`, `chore:`).
