@@ -14,10 +14,48 @@
       property="og:description"
       content="Move your CloudAhoy history into FlySto with a guided, review-first import."
     />
+    <link rel="canonical" href="https://skybridge.localhost/" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="en_US" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="keywords"
+      content="CloudAhoy import, FlySto import, pilot logbook migration, flight data transfer, Skybridge"
+    />
+    <meta name="theme-color" content="#f7f9fc" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b1120" media="(prefers-color-scheme: dark)" />
     <link rel="stylesheet" href="/src/index.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Skybridge",
+        "url": "https://skybridge.localhost/",
+        "inLanguage": "en-US",
+        "description": "Move your CloudAhoy history into FlySto with a guided, review-first import."
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Inspirespace e.U.",
+        "url": "https://skybridge.localhost/"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "CloudAhoy to FlySto import",
+        "serviceType": "Flight log migration",
+        "provider": {
+          "@type": "Organization",
+          "name": "Inspirespace e.U."
+        },
+        "areaServed": "Worldwide"
+      }
+    </script>
   </head>
   <body>
     <div class="app-shell min-h-screen flex flex-col bg-gradient-to-b from-[#f7f9fc] to-[#eef3f8] text-[#1c2430] dark:bg-gradient-to-b dark:from-[#0b1120] dark:to-[#0f172a] dark:text-slate-100">
@@ -40,7 +78,7 @@
                   <p class="text-base leading-relaxed text-muted-foreground">
                     Skybridge connects both accounts, builds a clean summary, and lets you review
                     everything before approving the import. No scripts or CSV juggling—just a guided,
-                    review‑first workflow built for pilots and operators.
+                    review‑first workflow built for pilots, operators, and flight logbook teams.
                   </p>
                   <div class="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
                     <span class="rounded-full border border-sky-200/60 bg-white/70 px-3 py-1 dark:border-sky-900/60 dark:bg-slate-950/60">
@@ -166,7 +204,14 @@
             </div>
           </div>
 
-          <div class="grid gap-4 lg:grid-cols-3">
+          <section class="space-y-3" aria-labelledby="how-it-works">
+            <h2
+              id="how-it-works"
+              class="text-sm font-semibold uppercase tracking-[0.28em] text-slate-500 dark:text-slate-400"
+            >
+              How Skybridge works
+            </h2>
+            <div class="grid gap-4 lg:grid-cols-3">
             <div class="rounded-lg border bg-card text-card-foreground shadow-sm rounded-xl border border-[#d1dbea] bg-white/80 p-5 shadow-[0_10px_24px_rgba(22,32,44,0.06)] dark:border-sky-900/60 dark:bg-slate-950/60 dark:shadow-none">
               <div class="flex items-start justify-between">
                 <div>
@@ -237,6 +282,7 @@
               </div>
             </div>
           </div>
+          </section>
         </section>
       </main>
 
