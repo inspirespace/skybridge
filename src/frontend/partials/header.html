@@ -1,0 +1,35 @@
+<header class="sticky top-0 z-40 border-b border-[#d9e1ec] bg-white/95 backdrop-blur dark:border-sky-900/60 dark:bg-slate-950/90">
+  <div class="absolute inset-x-0 top-0 h-1 bg-[#f1f4f8] dark:bg-slate-900/70"></div>
+  <div class="container flex h-14 items-center justify-between sm:h-16">
+    <div class="text-xs font-semibold tracking-[0.28em] text-[#5b6775] dark:text-slate-300">
+      SKYBRIDGE
+    </div>
+    <div class="flex items-center gap-2 sm:gap-4">
+      <button
+        type="button"
+        data-go-app
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 hover:shadow-md hover:shadow-primary/20 dark:bg-primary dark:text-primary-foreground h-9 rounded-md px-3"
+      >
+        Sign up / Sign in
+      </button>
+      <div class="flex items-center gap-2 text-xs text-muted-foreground">
+        <span>Light</span>
+        <button
+          id="theme-switch"
+          type="button"
+          role="switch"
+          aria-checked="false"
+          data-state="unchecked"
+          class="peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input"
+        >
+          <span
+            data-thumb
+            data-state="unchecked"
+            class="pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
+          ></span>
+        </button>
+        <span>Dark</span>
+      </div>
+    </div>
+  </div>
+</header>

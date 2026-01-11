@@ -1,0 +1,60 @@
+<footer class="mt-auto border-t bg-background/80">
+  <div class="container flex flex-wrap items-center justify-between gap-3 pb-20 pt-6 text-sm text-muted-foreground lg:py-6">
+    <div>© 2026 Inspirespace e.U.</div>
+    <div class="flex flex-wrap gap-4">
+      <a class="hover:text-foreground" href="/imprint/">Imprint</a>
+      <a class="hover:text-foreground" href="/privacy/">Privacy</a>
+      <a
+        class="hover:text-foreground"
+        href="https://github.com/inspirespace/skybridge/issues"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Support
+      </a>
+    </div>
+  </div>
+</footer>
+<script>
+  (function () {
+    var storageKey = "skybridge-theme";
+    var root = document.documentElement;
+    var toggle = document.getElementById("theme-switch");
+    var thumb = document.querySelector("[data-thumb]");
+    var stored = localStorage.getItem(storageKey);
+    if (stored === "dark") {
+      root.classList.add("dark");
+      if (toggle) toggle.setAttribute("aria-checked", "true");
+      if (toggle) toggle.setAttribute("data-state", "checked");
+      if (thumb) thumb.setAttribute("data-state", "checked");
+    }
+    if (toggle) {
+      toggle.addEventListener("click", function () {
+        var isDark = root.classList.toggle("dark");
+        localStorage.setItem(storageKey, isDark ? "dark" : "light");
+        toggle.setAttribute("aria-checked", isDark ? "true" : "false");
+        toggle.setAttribute("data-state", isDark ? "checked" : "unchecked");
+        if (thumb) thumb.setAttribute("data-state", isDark ? "checked" : "unchecked");
+      });
+    }
+    var appButtons = document.querySelectorAll("[data-go-app]");
+    appButtons.forEach(function (button) {
+      button.addEventListener("click", function () {
+        var forceLogin = localStorage.getItem("skybridge_force_login") === "1";
+        var target = forceLogin ? "/app/?signin=1&force=1" : "/app/?signin=1";
+        window.location.assign(target);
+      });
+    });
+    var backLinks = document.querySelectorAll("[data-back-link]");
+    if (backLinks.length) {
+      var isSignedIn = Boolean(
+        localStorage.getItem("skybridge_access_token") ||
+          localStorage.getItem("skybridge_user_id")
+      );
+      backLinks.forEach(function (link) {
+        link.setAttribute("href", isSignedIn ? "/app/" : "/");
+        link.textContent = isSignedIn ? "Back to app" : "Back to landing page";
+      });
+    }
+  })();
+</script>

@@ -23,13 +23,13 @@ test("home page loads", async ({ page }) => {
 });
 
 test("imprint page loads", async ({ page }) => {
-  await page.goto("/imprint");
+  await page.goto("/imprint/");
   await expect(page.getByRole("heading", { name: /imprint/i })).toBeVisible();
   await expect(page.getByText("Inspirespace e.U.", { exact: true }).first()).toBeVisible();
 });
 
 test("privacy page loads", async ({ page }) => {
-  await page.goto("/privacy");
+  await page.goto("/privacy/");
   await expect(page.getByRole("heading", { name: /privacy/i })).toBeVisible();
 });
 
@@ -110,7 +110,7 @@ test("edit import filters returns to connect step", async ({ page }) => {
     await route.continue();
   });
 
-  await page.goto("/");
+  await page.goto("/app/");
   await expect(page.getByText("Review ready").first()).toBeVisible();
   const editButton = page.getByRole("button", { name: /edit import filters/i });
   if (!(await editButton.isVisible())) {
@@ -172,7 +172,7 @@ test("import completed shows results summary", async ({ page }) => {
     }
   );
 
-  await page.goto("/");
+  await page.goto("/app/");
   await expect(page.getByText("Import results")).toBeVisible();
   await expect(page.getByText("Total processed")).toBeVisible();
   await expect(page.getByRole("button", { name: /download files/i })).toBeVisible();
@@ -215,7 +215,7 @@ test("review running shows progress and disables approval", async ({ page }) => 
     }
   );
 
-  await page.goto("/");
+  await page.goto("/app/");
   await expect(page.getByText("Review running").first()).toBeVisible();
   await expect(page.getByText("Fetching flights").first()).toBeVisible();
   await expect(page.getByRole("button", { name: /accept and start import/i })).toBeDisabled();
@@ -257,7 +257,7 @@ test("review failure shows retry option", async ({ page }) => {
     }
   );
 
-  await page.goto("/");
+  await page.goto("/app/");
   await expect(page.getByText("Something went wrong")).toBeVisible();
   await expect(page.getByRole("button", { name: /retry/i })).toBeVisible();
 });
@@ -314,7 +314,7 @@ test("download files shows expired message on 404", async ({ page }) => {
     });
   });
 
-  await page.goto("/");
+  await page.goto("/app/");
   await page.getByRole("button", { name: /download files/i }).click();
   await expect(
     page.getByText(/Files are no longer available/i)
@@ -373,7 +373,7 @@ test("delete results shows success notice", async ({ page }) => {
     }
   );
 
-  await page.goto("/");
+  await page.goto("/app/");
   await page.getByRole("button", { name: /delete results now/i }).click();
   await page.getByRole("button", { name: /delete results/i }).click();
   await expect(page.getByText("Results deleted")).toBeVisible();
@@ -431,7 +431,7 @@ test("download files succeeds and triggers download", async ({ page }) => {
     });
   });
 
-  await page.goto("/");
+  await page.goto("/app/");
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("button", { name: /download files/i }).click();
   const download = await downloadPromise;
@@ -483,7 +483,7 @@ test("show more flights expands review table", async ({ page }) => {
     }
   );
 
-  await page.goto("/");
+  await page.goto("/app/");
   await expect(page.getByText("Show more flights")).toBeVisible();
   await page.getByRole("button", { name: /show more flights/i }).click();
   await expect(page.getByText("All flights shown")).toBeVisible();
@@ -494,7 +494,7 @@ test("connect review enables after credentials are filled", async ({ page }) => 
     window.localStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
   });
 
-  await page.goto("/");
+  await page.goto("/app/");
   const connectButton = page.getByRole("button", { name: /connect and review/i });
   await expect(connectButton).toBeDisabled();
 
@@ -519,7 +519,7 @@ test("connect review surfaces credential validation errors", async ({ page }) =>
     });
   });
 
-  await page.goto("/");
+  await page.goto("/app/");
   const signInButton = page.getByRole("button", { name: /sign up \/ sign in/i });
   if (await signInButton.count()) {
     await signInButton.click();
@@ -595,7 +595,7 @@ test("accept review requires confirmation before starting import", async ({ page
     }
   );
 
-  await page.goto("/");
+  await page.goto("/app/");
   const acceptButton = page.getByRole("button", { name: /accept and start import/i });
   if (!(await acceptButton.isVisible())) {
     await page.getByRole("button", { name: /review ready/i }).click();

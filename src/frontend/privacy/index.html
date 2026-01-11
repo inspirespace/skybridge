@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy Policy | Skybridge</title>
+    <meta
+      name="description"
+      content="Skybridge privacy policy, covering data processing, retention, and contact information."
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="stylesheet" href="/src/index.css" />
+  </head>
+  <body>
+    <div class="app-shell min-h-screen flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <!-- @partial header -->
+      <main class="container flex-1 py-10">
+        <div class="max-w-3xl space-y-6">
+          <div class="space-y-2">
+            <h1 class="text-2xl font-semibold">Privacy policy</h1>
+            <p class="text-sm text-muted-foreground">This policy applies to Skybridge (Austria / EU).</p>
+          </div>
+          <div class="space-y-4 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
+            <section class="space-y-2">
+              <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Controller</h2>
+              <p>
+                Inspirespace e.U., Golfplatzstrasse 32/5, 4048 Puchenau, Austria,
+                hello@inspirespace.co.
+              </p>
+            </section>
+            <section class="space-y-2">
+              <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Purpose of processing</h2>
+              <p>
+                Skybridge enables the import of flight data from CloudAhoy to FlySto. We process
+                credentials only to execute the specific import requested by you and to display the
+                review before import.
+              </p>
+            </section>
+            <section class="space-y-2">
+              <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">
+                Data we process (minimal by design)
+              </h2>
+              <ul class="list-disc space-y-1 pl-5">
+                <li>Account identifiers (e.g., email address).</li>
+                <li>CloudAhoy / FlySto credentials (used only for the current job; not stored).</li>
+                <li>Flight data including times, routes, crew, trajectory data, and remarks.</li>
+                <li>Basic technical logs (e.g., IP address, request metadata) for security and troubleshooting.</li>
+              </ul>
+            </section>
+            <section class="space-y-2">
+              <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Legal basis</h2>
+              <ul class="list-disc space-y-1 pl-5">
+                <li>Art. 6(1)(b) GDPR (contract performance).</li>
+                <li>Art. 6(1)(f) GDPR (security and fault analysis).</li>
+              </ul>
+            </section>
+            <section class="space-y-2">
+              <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Hosting and processors</h2>
+              <p>
+                Production hosting is on AWS (EU). Authentication uses Amazon Cognito. For data
+                transfer and import, CloudAhoy and FlySto are used as external services. If data is
+                transferred outside the EU/EEA, appropriate safeguards (e.g., SCCs) are used.
+              </p>
+            </section>
+            <section class="space-y-2">
+              <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Retention</h2>
+              <p>
+                Import artifacts are retained for {{RETENTION_DAYS}} days and then automatically deleted. You can
+                delete results earlier from the app. Access logs are kept only as long as necessary
+                for security and diagnostics.
+              </p>
+            </section>
+            <section class="space-y-2">
+              <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Your rights</h2>
+              <p>
+                You have the right of access, rectification, deletion, restriction of processing,
+                data portability, and objection. You may also lodge a complaint with your
+                supervisory authority.
+              </p>
+            </section>
+            <section class="space-y-2">
+              <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Contact</h2>
+              <p>For privacy requests, contact hello@inspirespace.co.</p>
+            </section>
+          </div>
+          <div>
+            <a class="text-sm text-sky-600 hover:underline" href="/" data-back-link>
+              Back to landing page
+            </a>
+          </div>
+        </div>
+      </main>
+      <!-- @partial footer -->
+    </div>
+  </body>
+</html>

@@ -63,6 +63,10 @@ Goal: ship the production web UI for CloudAhoy → FlySto imports, using the wir
 - [x] 6.2 Responsive QA on mobile/tablet/desktop.
 - [x] 6.3 Visual QA against wireframe states (default component styling only).
 
+## 7. SEO Landing (Done)
+- [x] 7.1 Split static landing page from SPA app for better crawlability.
+- [x] 7.2 Add static imprint/privacy pages outside the SPA.
+
 ## Open Questions
 - [ ] Q1 Confirm API contracts for progress polling and report download.
 - [ ] Q2 Confirm theme token source (global CSS vs design‑system config).

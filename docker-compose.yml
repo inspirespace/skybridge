@@ -23,7 +23,7 @@ services:
       - VITE_AUTH_ISSUER_URL=https://auth.skybridge.localhost/realms/skybridge-dev
       - VITE_AUTH_CLIENT_ID=skybridge-dev
       - VITE_AUTH_SCOPE=openid profile email
-      - VITE_AUTH_REDIRECT_PATH=/auth/callback
+      - VITE_AUTH_REDIRECT_PATH=/app/auth/callback
       - VITE_AUTH_PROVIDER_PARAM=idp_hint
       - VITE_AUTH_LOGOUT_URL=https://auth.skybridge.localhost/realms/skybridge-dev/protocol/openid-connect/logout
       - VITE_DEV_PREFILL_CREDENTIALS=${DEV_PREFILL_CREDENTIALS}

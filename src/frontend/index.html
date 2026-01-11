@@ -4,10 +4,289 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Skybridge</title>
+    <title>Skybridge | CloudAhoy → FlySto import</title>
+    <meta
+      name="description"
+      content="Move your CloudAhoy history into FlySto with a guided, review-first import. Connect accounts, review the summary, then approve the import."
+    />
+    <meta property="og:title" content="Skybridge | CloudAhoy → FlySto import" />
+    <meta
+      property="og:description"
+      content="Move your CloudAhoy history into FlySto with a guided, review-first import."
+    />
+    <link rel="canonical" href="https://skybridge.localhost/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="keywords"
+      content="CloudAhoy import, FlySto import, pilot logbook migration, flight data transfer, Skybridge"
+    />
+    <meta name="theme-color" content="#f7f9fc" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b1120" media="(prefers-color-scheme: dark)" />
+    <link rel="stylesheet" href="/src/index.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Skybridge",
+        "url": "https://skybridge.localhost/",
+        "inLanguage": "en-US",
+        "description": "Move your CloudAhoy history into FlySto with a guided, review-first import."
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Inspirespace e.U.",
+        "url": "https://skybridge.localhost/"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        "name": "CloudAhoy to FlySto import",
+        "serviceType": "Flight log migration",
+        "provider": {
+          "@type": "Organization",
+          "name": "Inspirespace e.U."
+        },
+        "areaServed": "Worldwide"
+      }
+    </script>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div class="app-shell min-h-screen flex flex-col bg-gradient-to-b from-[#f7f9fc] to-[#eef3f8] text-[#1c2430] dark:bg-gradient-to-b dark:from-[#0b1120] dark:to-[#0f172a] dark:text-slate-100">
+      <!-- @partial header -->
+
+      <main class="container flex-1 pb-16 pt-5 lg:pb-8">
+        <section class="space-y-6">
+          <div class="rounded-lg border bg-card text-card-foreground shadow-sm relative overflow-hidden rounded-3xl border border-[#d1dbea] bg-white shadow-[0_18px_50px_rgba(22,32,44,0.12)] dark:border-sky-900/60 dark:bg-slate-950/75 dark:shadow-none">
+            <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_55%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.24),_transparent_55%)]"></div>
+            <div class="pointer-events-none absolute -right-32 top-20 h-72 w-72 rounded-full bg-sky-200/40 blur-3xl dark:bg-sky-500/20"></div>
+            <div class="p-6 pt-0 relative space-y-8 p-6 sm:p-10">
+              <div class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors border-transparent bg-secondary text-secondary-foreground dark:border-sky-900/60 dark:bg-sky-950/50 dark:text-sky-100 w-fit border border-sky-200/50 text-slate-700 dark:border-sky-900/60 dark:bg-sky-950/60 dark:text-slate-200">
+                CloudAhoy → FlySto
+              </div>
+              <div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+                <div class="space-y-4">
+                  <h1 class="text-3xl font-semibold leading-snug text-foreground sm:text-4xl lg:text-[2.75rem] lg:leading-[1.1]">
+                    Move your CloudAhoy history into FlySto with complete confidence.
+                  </h1>
+                  <p class="text-base leading-relaxed text-muted-foreground">
+                    Skybridge connects both accounts, builds a clean summary, and lets you review
+                    everything before approving the import. No scripts or CSV juggling—just a guided,
+                    review‑first workflow built for pilots, operators, and flight logbook teams.
+                  </p>
+                  <div class="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+                    <span class="rounded-full border border-sky-200/60 bg-white/70 px-3 py-1 dark:border-sky-900/60 dark:bg-slate-950/60">
+                      Review before import
+                    </span>
+                    <span class="rounded-full border border-sky-200/60 bg-white/70 px-3 py-1 dark:border-sky-900/60 dark:bg-slate-950/60">
+                      Credentials never stored
+                    </span>
+                    <span class="rounded-full border border-sky-200/60 bg-white/70 px-3 py-1 dark:border-sky-900/60 dark:bg-slate-950/60">
+                      Results retained {{RETENTION_DAYS}} days
+                    </span>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      data-go-app
+                      class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 hover:shadow-md hover:shadow-primary/20 dark:bg-primary dark:text-primary-foreground h-11 rounded-md px-6 px-6 shadow-[0_12px_24px_rgba(56,189,248,0.2)] dark:shadow-[0_14px_30px_rgba(56,189,248,0.22)]"
+                    >
+                      Sign up / Sign in
+                    </button>
+                  </div>
+                </div>
+                <div class="rounded-xl border border-sky-200/80 bg-white/80 p-5 text-slate-900 shadow-[0_14px_28px_rgba(56,189,248,0.15)] dark:border-sky-800/70 dark:bg-slate-950/60 dark:text-slate-100 dark:shadow-[0_18px_30px_rgba(14,116,144,0.2)]">
+                  <div class="text-base font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    What you can expect
+                  </div>
+                  <ul class="mt-4 space-y-3 text-base">
+                    <li class="grid grid-cols-[20px_1fr] items-start gap-3">
+                      <svg
+                        viewBox="0 0 24 24"
+                        class="mt-[2px] h-5 w-5 text-emerald-500"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="m9 12 2 2 4-4"></path>
+                      </svg>
+                      <span class="leading-[1.65]">
+                        Sign in to identify your job, protect your data, and resume later.
+                      </span>
+                    </li>
+                    <li class="grid grid-cols-[20px_1fr] items-start gap-3">
+                      <svg
+                        viewBox="0 0 24 24"
+                        class="mt-[2px] h-5 w-5 text-emerald-500"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="m9 12 2 2 4-4"></path>
+                      </svg>
+                      <span class="leading-[1.65]">
+                        We import flights, times, routes, crew, trajectory data, and remarks.
+                      </span>
+                    </li>
+                    <li class="grid grid-cols-[20px_1fr] items-start gap-3">
+                      <svg
+                        viewBox="0 0 24 24"
+                        class="mt-[2px] h-5 w-5 text-emerald-500"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="m9 12 2 2 4-4"></path>
+                      </svg>
+                      <span class="leading-[1.65]">
+                        Credentials are used only for this job and never stored.
+                      </span>
+                    </li>
+                    <li class="grid grid-cols-[20px_1fr] items-start gap-3">
+                      <svg
+                        viewBox="0 0 24 24"
+                        class="mt-[2px] h-5 w-5 text-emerald-500"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="m9 12 2 2 4-4"></path>
+                      </svg>
+                      <span class="leading-[1.65]">
+                        Results are retained for 7 days, then deleted.
+                      </span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              <div class="grid gap-3 sm:grid-cols-3">
+                <div class="rounded-lg border border-sky-100 bg-white/70 p-3 text-sm text-muted-foreground dark:border-sky-900/60 dark:bg-slate-950/50">
+                  <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Avg. setup
+                  </div>
+                  <div class="mt-1 text-lg font-semibold text-foreground">2 minutes</div>
+                </div>
+                <div class="rounded-lg border border-sky-100 bg-white/70 p-3 text-sm text-muted-foreground dark:border-sky-900/60 dark:bg-slate-950/50">
+                  <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Review first
+                  </div>
+                  <div class="mt-1 text-lg font-semibold text-foreground">Always</div>
+                </div>
+                <div class="rounded-lg border border-sky-100 bg-white/70 p-3 text-sm text-muted-foreground dark:border-sky-900/60 dark:bg-slate-950/50">
+                  <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    Stored for
+                  </div>
+                  <div class="mt-1 text-lg font-semibold text-foreground">{{RETENTION_DAYS}} days</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <section class="space-y-3" aria-labelledby="how-it-works">
+            <h2
+              id="how-it-works"
+              class="text-sm font-semibold uppercase tracking-[0.28em] text-slate-500 dark:text-slate-400"
+            >
+              How Skybridge works
+            </h2>
+            <div class="grid gap-4 lg:grid-cols-3">
+            <div class="rounded-lg border bg-card text-card-foreground shadow-sm rounded-xl border border-[#d1dbea] bg-white/80 p-5 shadow-[0_10px_24px_rgba(22,32,44,0.06)] dark:border-sky-900/60 dark:bg-slate-950/60 dark:shadow-none">
+              <div class="flex items-start justify-between">
+                <div>
+                  <div class="text-sm font-semibold text-foreground">Connect accounts</div>
+                  <p class="mt-2 text-sm text-muted-foreground">
+                    Authenticate CloudAhoy and FlySto, then set your optional import filters.
+                  </p>
+                </div>
+                <svg
+                  viewBox="0 0 24 24"
+                  class="h-4 w-4 text-slate-400"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="m5 12 14 0"></path>
+                  <path d="m13 6 6 6-6 6"></path>
+                </svg>
+              </div>
+            </div>
+            <div class="rounded-lg border bg-card text-card-foreground shadow-sm rounded-xl border border-[#d1dbea] bg-white/80 p-5 shadow-[0_10px_24px_rgba(22,32,44,0.06)] dark:border-sky-900/60 dark:bg-slate-950/60 dark:shadow-none">
+              <div class="flex items-start justify-between">
+                <div>
+                  <div class="text-sm font-semibold text-foreground">Review the summary</div>
+                  <p class="mt-2 text-sm text-muted-foreground">
+                    Preview flights, hours, and missing registrations before any changes are made.
+                  </p>
+                </div>
+                <svg
+                  viewBox="0 0 24 24"
+                  class="h-4 w-4 text-slate-400"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="m5 12 14 0"></path>
+                  <path d="m13 6 6 6-6 6"></path>
+                </svg>
+              </div>
+            </div>
+            <div class="rounded-lg border bg-card text-card-foreground shadow-sm rounded-xl border border-[#d1dbea] bg-white/80 p-5 shadow-[0_10px_24px_rgba(22,32,44,0.06)] dark:border-sky-900/60 dark:bg-slate-950/60 dark:shadow-none">
+              <div class="flex items-start justify-between">
+                <div>
+                  <div class="text-sm font-semibold text-foreground">Approve import</div>
+                  <p class="mt-2 text-sm text-muted-foreground">
+                    Start the import when you are ready, then download the results as a bundle.
+                  </p>
+                </div>
+                <svg
+                  viewBox="0 0 24 24"
+                  class="h-4 w-4 text-slate-400"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="m5 12 14 0"></path>
+                  <path d="m13 6 6 6-6 6"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+          </section>
+        </section>
+      </main>
+
+      <!-- @partial footer -->
+    </div>
   </body>
 </html>
