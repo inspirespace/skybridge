@@ -10,15 +10,15 @@ export function AppFooter() {
         <div className="flex flex-wrap gap-4">
           <a
             className="hover:text-foreground"
-            href="/imprint"
-            onClick={(event) => navigateWithFade(event, "/imprint")}
+            href="/imprint/"
+            onClick={(event) => navigateWithFade(event, "/imprint/")}
           >
             Imprint
           </a>
           <a
             className="hover:text-foreground"
-            href="/privacy"
-            onClick={(event) => navigateWithFade(event, "/privacy")}
+            href="/privacy/"
+            onClick={(event) => navigateWithFade(event, "/privacy/")}
           >
             Privacy
           </a>

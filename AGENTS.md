@@ -6,6 +6,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Place application/source code under `src/`.
 - Put tests under `tests/` or `test/` (match your framework).
 - Keep scripts in `scripts/`, assets in `assets/`, and config files at the repo root.
+- Frontend entry points: landing page in `src/frontend/index.html`, SPA app in `src/frontend/app/index.html`, static legal pages in `src/frontend/privacy/index.html` and `src/frontend/imprint/index.html`.
 - Keycloak dev realm import lives in `docker/keycloak/`.
 - Infrastructure-as-code lives under `infra/terraform/`.
 - If you adopt a different layout, document it here with concrete paths (example: `cmd/`, `internal/`, `pkg/` for Go).

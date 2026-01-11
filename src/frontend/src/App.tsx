@@ -17,8 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { AppFooter } from "@/components/app/AppFooter";
-import { StaticPage } from "@/components/app/StaticPage";
-import { LandingPage } from "@/components/app/LandingPage";
 import { ConnectSection } from "@/components/app/ConnectSection";
 import { ReviewSection } from "@/components/app/ReviewSection";
 import { ImportSection } from "@/components/app/ImportSection";
@@ -53,6 +51,7 @@ import { useOidcAuth } from "@/hooks/use-oidc-auth";
 const USER_ID_KEY = "skybridge_user_id";
 const JOB_ID_KEY = "skybridge_job_id";
 const OPEN_STEP_KEY = "skybridge_open_step";
+const FORCE_LOGIN_KEY = "skybridge_force_login";
 const AUTH_MODE = import.meta.env.VITE_AUTH_MODE ?? "header";
 const AUTH_ISSUER =
   import.meta.env.VITE_AUTH_ISSUER_URL ??
@@ -61,7 +60,7 @@ const AUTH_ISSUER =
 const AUTH_CLIENT_ID = import.meta.env.VITE_AUTH_CLIENT_ID ?? "skybridge-dev";
 const AUTH_SCOPE =
   import.meta.env.VITE_AUTH_SCOPE ?? "openid profile email offline_access";
-const AUTH_REDIRECT_PATH = import.meta.env.VITE_AUTH_REDIRECT_PATH ?? "/auth/callback";
+const AUTH_REDIRECT_PATH = import.meta.env.VITE_AUTH_REDIRECT_PATH ?? "/app/auth/callback";
 const AUTH_PROVIDER_PARAM = import.meta.env.VITE_AUTH_PROVIDER_PARAM ?? "kc_idp_hint";
 const AUTH_LOGOUT_URL = import.meta.env.VITE_AUTH_LOGOUT_URL ?? "";
 const DEV_PREFILL =
@@ -75,12 +74,6 @@ const retentionDays = Number.isFinite(RETENTION_DAYS) ? RETENTION_DAYS : 7;
 
 /** Render App component. */
 export default function App() {
-  const pathname =
-    typeof window !== "undefined"
-      ? window.location.pathname.replace(/\/+$/, "") || "/"
-      : "/";
-  const staticPage =
-    pathname === "/imprint" ? "imprint" : pathname === "/privacy" ? "privacy" : null;
 
   const [userId, setUserId] = React.useState<string | null>(() =>
     localStorage.getItem(USER_ID_KEY)
@@ -313,7 +306,7 @@ export default function App() {
   };
 
   /** Handle handleSignIn. */
-  const handleSignIn = () => {
+  const handleSignIn = React.useCallback(() => {
     setActionError(null);
     if (AUTH_MODE === "oidc") {
       startOidcLogin();
@@ -325,7 +318,45 @@ export default function App() {
     setActionError(null);
     const stored = localStorage.getItem(OPEN_STEP_KEY) ?? undefined;
     setManualOpen(stored ?? "connect");
-  };
+  }, [startOidcLogin, setUserId, setManualOpen]);
+
+  const isSignInRedirect =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("signin") === "1";
+  const isAuthCallback =
+    typeof window !== "undefined" &&
+    (() => {
+      const url = new URL(window.location.href);
+      const redirectPathTrimmed = AUTH_REDIRECT_PATH.endsWith("/")
+        ? AUTH_REDIRECT_PATH.slice(0, -1)
+        : AUTH_REDIRECT_PATH;
+      const currentPath = url.pathname.endsWith("/")
+        ? url.pathname.slice(0, -1)
+        : url.pathname;
+      return currentPath.endsWith(redirectPathTrimmed);
+    })();
+
+  React.useEffect(() => {
+    if (flow.signedIn || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("signin") !== "1") return;
+    handleSignIn();
+    if (AUTH_MODE !== "oidc") {
+      params.delete("signin");
+      const nextSearch = params.toString();
+      window.history.replaceState(
+        {},
+        document.title,
+        `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}`
+      );
+    }
+  }, [flow.signedIn, handleSignIn]);
+
+  React.useEffect(() => {
+    if (flow.signedIn || typeof window === "undefined") return;
+    if (isSignInRedirect || isAuthCallback) return;
+    window.location.replace("/");
+  }, [flow.signedIn, isSignInRedirect, isAuthCallback]);
 
   /** Handle handleConnectReview. */
   const handleConnectReview = async () => {
@@ -478,6 +509,8 @@ export default function App() {
     setShowAllFlights(false);
     setActionError(null);
     if (AUTH_MODE === "oidc") {
+      sessionStorage.setItem(FORCE_LOGIN_KEY, "1");
+      localStorage.setItem(FORCE_LOGIN_KEY, "1");
       signOutOidc();
       return;
     }
@@ -650,8 +683,10 @@ export default function App() {
         ? "Import"
         : "All steps completed";
 
-  if (staticPage) {
-    return <StaticPage page={staticPage} retentionDays={retentionDays} />;
+  const isRedirectScreen = !flow.signedIn && (isSignInRedirect || isAuthCallback);
+
+  if (isRedirectScreen) {
+    return <div className="min-h-screen bg-background" />;
   }
 
   return (
@@ -728,12 +763,8 @@ export default function App() {
       </header>
 
       <main className="container flex-1 pb-16 pt-5 lg:pb-8">
-        {!flow.signedIn && (
-          <LandingPage
-            onSignIn={handleSignIn}
-            signInError={signInError}
-            retentionDays={retentionDays}
-          />
+        {!flow.signedIn && (isSignInRedirect || isAuthCallback) && (
+          <div className="min-h-[60vh]" />
         )}
 
         {flow.signedIn && (

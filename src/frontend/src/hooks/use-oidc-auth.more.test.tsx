@@ -41,7 +41,7 @@ describe("useOidcAuth sign out", () => {
         issuer: "https://issuer.example",
         clientId: "client",
         scope: "openid",
-        redirectPath: "/auth/callback",
+        redirectPath: "/app/auth/callback",
         providerParam: "kc_idp_hint",
         logoutUrl: "https://issuer.example/logout",
       })

@@ -16,6 +16,7 @@ const REFRESH_TOKEN_KEY = "skybridge_refresh_token";
 const CODE_VERIFIER_KEY = "skybridge_code_verifier";
 const AUTH_STATE_KEY = "skybridge_auth_state";
 const USER_ID_KEY = "skybridge_user_id";
+const FORCE_LOGIN_KEY = "skybridge_force_login";
 
 /** Hook for oidcauth. */
 export function useOidcAuth({
@@ -177,7 +178,8 @@ export function useOidcAuth({
         applyTokenResponse(token);
         sessionStorage.removeItem(CODE_VERIFIER_KEY);
         sessionStorage.removeItem(AUTH_STATE_KEY);
-        window.history.replaceState({}, document.title, "/");
+        const postAuthPath = redirectPath.replace(/\/auth\/callback\/?$/, "/") || "/";
+        window.history.replaceState({}, document.title, postAuthPath);
       } catch (err) {
         onError?.(err instanceof Error ? err.message : "Auth failed");
       } finally {
@@ -215,6 +217,11 @@ export function useOidcAuth({
         onError?.("Auth issuer is not configured.");
         return;
       }
+      const currentUrl = new URL(window.location.href);
+      const forceLogin =
+        currentUrl.searchParams.get("force") === "1" ||
+        sessionStorage.getItem(FORCE_LOGIN_KEY) === "1" ||
+        localStorage.getItem(FORCE_LOGIN_KEY) === "1";
       const redirectUri = `${window.location.origin}${redirectPath}`;
       const verifier = generateCodeVerifier();
       sessionStorage.setItem(CODE_VERIFIER_KEY, verifier);
@@ -230,6 +237,12 @@ export function useOidcAuth({
       authUrl.searchParams.set("code_challenge", challenge);
       authUrl.searchParams.set("code_challenge_method", "S256");
       authUrl.searchParams.set("state", state);
+      if (forceLogin) {
+        authUrl.searchParams.set("prompt", "login");
+        authUrl.searchParams.set("max_age", "0");
+        sessionStorage.removeItem(FORCE_LOGIN_KEY);
+        localStorage.removeItem(FORCE_LOGIN_KEY);
+      }
       if (provider) {
         authUrl.searchParams.set(providerParam, provider);
       }
@@ -239,17 +252,22 @@ export function useOidcAuth({
   );
 
   const signOut = React.useCallback(() => {
-    const currentIdToken = idToken;
+    const currentIdToken = idToken ?? localStorage.getItem(ID_TOKEN_KEY);
     clearAuth();
+    if (enabled) {
+      sessionStorage.setItem(FORCE_LOGIN_KEY, "1");
+      localStorage.setItem(FORCE_LOGIN_KEY, "1");
+    }
     if (enabled && logoutUrl && currentIdToken) {
       const url = new URL(logoutUrl);
       url.searchParams.set("client_id", clientId);
       url.searchParams.set("id_token_hint", currentIdToken);
-      url.searchParams.set(
-        "post_logout_redirect_uri",
-        window.location.origin + redirectPath
-      );
+      url.searchParams.set("post_logout_redirect_uri", `${window.location.origin}/`);
       window.location.assign(url.toString());
+      return;
+    }
+    if (enabled) {
+      window.location.replace("/");
     }
   }, [enabled, logoutUrl, clientId, redirectPath, idToken, clearAuth]);
 

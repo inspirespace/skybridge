@@ -41,7 +41,7 @@ describe("useOidcAuth", () => {
         issuer: "",
         clientId: "client",
         scope: "openid",
-        redirectPath: "/auth/callback",
+        redirectPath: "/app/auth/callback",
         providerParam: "kc_idp_hint",
         logoutUrl: "",
         onError,
@@ -67,7 +67,7 @@ describe("useOidcAuth", () => {
         issuer: "https://issuer.example",
         clientId: "client",
         scope: "openid",
-        redirectPath: "/auth/callback",
+        redirectPath: "/app/auth/callback",
         providerParam: "kc_idp_hint",
         logoutUrl: "",
       })
@@ -92,7 +92,7 @@ describe("useOidcAuth", () => {
 
     sessionStorage.setItem(AUTH_STATE_KEY, "state");
     sessionStorage.setItem(CODE_VERIFIER_KEY, "verifier");
-    window.history.replaceState({}, "", "/auth/callback?code=abc&state=state");
+    window.history.replaceState({}, "", "/app/auth/callback?code=abc&state=state");
 
     renderHook(() =>
       useOidcAuth({
@@ -100,7 +100,7 @@ describe("useOidcAuth", () => {
         issuer: "https://issuer.example",
         clientId: "client",
         scope: "openid",
-        redirectPath: "/auth/callback",
+        redirectPath: "/app/auth/callback",
         providerParam: "kc_idp_hint",
         logoutUrl: "",
       })
@@ -131,7 +131,7 @@ describe("useOidcAuth", () => {
         issuer: "https://issuer.example",
         clientId: "client",
         scope: "openid",
-        redirectPath: "/auth/callback",
+        redirectPath: "/app/auth/callback",
         providerParam: "kc_idp_hint",
         logoutUrl: "",
       })
