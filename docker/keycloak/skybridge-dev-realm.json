@@ -21,7 +21,8 @@
       "rootUrl": "https://skybridge.localhost/app/",
       "baseUrl": "https://skybridge.localhost/app/",
       "attributes": {
-        "pkce.code.challenge.method": "S256"
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "https://skybridge.localhost/"
       }
     }
   ],

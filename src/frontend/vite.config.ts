@@ -19,9 +19,11 @@ export default defineConfig({
           path.resolve(__dirname, "partials/footer.html"),
           "utf-8"
         );
+        const retentionDays = process.env.VITE_RETENTION_DAYS || "7";
         return html
           .replace("<!-- @partial header -->", header)
-          .replace("<!-- @partial footer -->", footer);
+          .replace("<!-- @partial footer -->", footer)
+          .replace(/\{\{RETENTION_DAYS\}\}/g, retentionDays);
       },
     },
     {
