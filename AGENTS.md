@@ -76,6 +76,7 @@ Note: default `MODE=auto` uses API only and does not fall back to web automation
 - Use Conventional Commits (`feat:`, `fix:`, `chore:`).
 - PRs should include: a concise description, linked issue (if applicable), test results, and screenshots for UI changes.
 - Follow CONTRIBUTING.md PR format (Goal / Scope / Testing / Risk / Screenshots) when creating or editing PRs.
+- Never use escaped newline sequences (`\n`) in PR bodies; always use real line breaks.
 - Work in feature branches for non-trivial changes (e.g., `feature/...`, `fix/...`), then merge into `main`.
 - After merging, delete merged feature branches and prune remotes (use `./scripts/cleanup-merged-branches.sh`).
 
