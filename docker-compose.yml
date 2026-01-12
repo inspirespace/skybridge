@@ -161,6 +161,16 @@ services:
       - "8001:8000"
     command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
 
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin:latest
+    ports:
+      - "8002:8001"
+    environment:
+      DYNAMO_ENDPOINT: http://dynamodb:8000
+    depends_on:
+      dynamodb:
+        condition: service_started
+
   dynamodb-init:
     image: amazon/aws-cli:2.15.40
     entrypoint: ["/bin/sh", "/app/scripts/init-dynamodb-local.sh"]

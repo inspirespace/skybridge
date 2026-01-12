@@ -1,9 +1,27 @@
 <footer class="mt-auto border-t bg-background/80">
   <div class="container flex flex-wrap items-center justify-between gap-3 pb-20 pt-6 text-sm text-muted-foreground lg:py-6">
-    <div>© 2026 Inspirespace e.U.</div>
+    <div>
+      © 2026
+      <a
+        class="hover:text-foreground"
+        href="https://www.inspirespace.co"
+        target="_blank"
+        rel="noreferrer"
+      >
+        Inspirespace e.U.
+      </a>
+    </div>
     <div class="flex flex-wrap gap-4">
       <a class="hover:text-foreground" href="/imprint/">Imprint</a>
       <a class="hover:text-foreground" href="/privacy/">Privacy</a>
+      <a
+        class="hover:text-foreground"
+        href="https://github.com/inspirespace/skybridge"
+        target="_blank"
+        rel="noreferrer"
+      >
+        GitHub
+      </a>
       <a
         class="hover:text-foreground"
         href="https://github.com/inspirespace/skybridge/issues"
@@ -45,15 +63,20 @@
         window.location.assign(target);
       });
     });
+    var isSignedIn = Boolean(
+      localStorage.getItem("skybridge_access_token") || localStorage.getItem("skybridge_user_id")
+    );
     var backLinks = document.querySelectorAll("[data-back-link]");
     if (backLinks.length) {
-      var isSignedIn = Boolean(
-        localStorage.getItem("skybridge_access_token") ||
-          localStorage.getItem("skybridge_user_id")
-      );
       backLinks.forEach(function (link) {
         link.setAttribute("href", isSignedIn ? "/app/" : "/");
         link.textContent = isSignedIn ? "Back to app" : "Back to landing page";
+      });
+    }
+    var homeLinks = document.querySelectorAll("[data-home-link]");
+    if (homeLinks.length) {
+      homeLinks.forEach(function (link) {
+        link.setAttribute("href", isSignedIn ? "/app/" : "/");
       });
     }
   })();

@@ -27,7 +27,7 @@ def _event(user_id: str | None, body: dict | None = None, job_id: str | None = N
 
 
 def _job(status: str, job_id=None):
-    now = datetime(2026, 1, 5, 10, 0, tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
     return JobRecord(
         job_id=job_id or uuid4(),
         user_id="pilot",

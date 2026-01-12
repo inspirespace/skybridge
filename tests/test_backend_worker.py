@@ -37,7 +37,7 @@ class DummyService:
 
 
 def _job(status: str) -> JobRecord:
-    now = datetime(2026, 1, 5, 10, 0, tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
     return JobRecord(
         job_id=uuid4(),
         user_id="pilot",

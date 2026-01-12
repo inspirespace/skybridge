@@ -22,6 +22,7 @@ import { ReviewSection } from "@/components/app/ReviewSection";
 import { ImportSection } from "@/components/app/ImportSection";
 import { StepStatus } from "@/components/app/StepStatus";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { navigateWithFade } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import {
   acceptReview,
@@ -694,9 +695,13 @@ export default function App() {
       <header className="sticky top-0 z-40 border-b border-[#d9e1ec] bg-white/95 backdrop-blur dark:border-sky-900/60 dark:bg-slate-950/90">
         <div className="absolute inset-x-0 top-0 h-1 bg-[#f1f4f8] dark:bg-slate-900/70" />
         <div className="container flex h-14 items-center justify-between sm:h-16">
-          <div className="text-xs font-semibold tracking-[0.28em] text-[#5b6775] dark:text-slate-300">
+          <a
+            className="text-xs font-semibold tracking-[0.28em] text-[#5b6775] hover:text-foreground dark:text-slate-300"
+            href={flow.signedIn ? "/app/" : "/"}
+            onClick={(event) => navigateWithFade(event, flow.signedIn ? "/app/" : "/")}
+          >
             SKYBRIDGE
-          </div>
+          </a>
           <div className="flex items-center gap-2 sm:gap-4">
             {!flow.signedIn && (
               <Button size="sm" onClick={handleSignIn}>

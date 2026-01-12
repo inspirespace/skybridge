@@ -60,7 +60,7 @@ def test_jobstore_enrich_review_summary_from_raw_payload() -> None:
         base_path = Path(tmpdir)
         store = JobStore(base_path)
         job_id = uuid4()
-        now = datetime(2026, 1, 5, 10, 0, tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
         review_summary = ReviewSummary(
             flight_count=1,
             total_hours=1.0,

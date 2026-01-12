@@ -1,6 +1,7 @@
 # Skybridge
 
 A Dockerized CLI that migrates flights from CloudAhoy to FlySto. This repo is intentionally minimal so local dev only needs Docker.
+This project is 100% written with AI.
 
 ## Quickstart
 

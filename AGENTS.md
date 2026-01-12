@@ -32,6 +32,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - noVNC auto-connect URL: `http://localhost:6080/vnc_auto.html?autoconnect=1&resize=remote`.
 - `./scripts/setup-dev-https.sh` — install mkcert CA and generate trusted dev certs for HTTPS (Caddy).
 - `docker compose up --build` — run the backend dev stack (API, worker, DynamoDB Local, MinIO).
+- `docker compose up --build` now also starts DynamoDB Admin UI at `http://localhost:8002`.
 - Set `DEV_PREFILL_CREDENTIALS=1` with `CLOUD_AHOY_EMAIL`/`CLOUD_AHOY_PASSWORD` and `FLYSTO_EMAIL`/`FLYSTO_PASSWORD` to prefill dev web inputs.
 - Backend dev auth uses Keycloak OIDC in Docker Compose (login with `demo` / `demo-password`); local runs should set `AUTH_MODE=oidc`, `AUTH_ISSUER_URL`, `AUTH_BROWSER_ISSUER_URL`, and `AUTH_CLIENT_ID`.
 - Dev backend queues jobs for the worker when `BACKEND_USE_WORKER=1` (credentials are claimed once via `BACKEND_WORKER_TOKEN`).
@@ -75,6 +76,7 @@ Note: default `MODE=auto` uses API only and does not fall back to web automation
 - Use Conventional Commits (`feat:`, `fix:`, `chore:`).
 - PRs should include: a concise description, linked issue (if applicable), test results, and screenshots for UI changes.
 - Follow CONTRIBUTING.md PR format (Goal / Scope / Testing / Risk / Screenshots) when creating or editing PRs.
+- Never use escaped newline sequences (`\n`) in PR bodies; always use real line breaks.
 - Work in feature branches for non-trivial changes (e.g., `feature/...`, `fix/...`), then merge into `main`.
 - After merging, delete merged feature branches and prune remotes (use `./scripts/cleanup-merged-branches.sh`).
 

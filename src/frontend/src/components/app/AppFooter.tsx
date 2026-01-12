@@ -6,7 +6,17 @@ export function AppFooter() {
   return (
     <footer className="border-t bg-background/80">
       <div className="container flex flex-wrap items-center justify-between gap-3 pb-20 pt-6 text-sm text-muted-foreground lg:py-6">
-        <div>© {new Date().getFullYear()} Inspirespace e.U.</div>
+        <div>
+          © {new Date().getFullYear()}{" "}
+          <a
+            className="hover:text-foreground"
+            href="https://www.inspirespace.co"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Inspirespace e.U.
+          </a>
+        </div>
         <div className="flex flex-wrap gap-4">
           <a
             className="hover:text-foreground"
@@ -21,6 +31,14 @@ export function AppFooter() {
             onClick={(event) => navigateWithFade(event, "/privacy/")}
           >
             Privacy
+          </a>
+          <a
+            className="hover:text-foreground"
+            href="https://github.com/inspirespace/skybridge"
+            target="_blank"
+            rel="noreferrer"
+          >
+            GitHub
           </a>
           <a
             className="hover:text-foreground"
