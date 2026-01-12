@@ -8,6 +8,7 @@ This directory provides the initial Terraform baseline for the Skybridge backend
 - `outputs.tf`: key resource outputs.
 - `envs/`: environment-specific tfvars.
 - `backend.tf`: S3 backend (requires `backend.hcl` at init time).
+- `backend.hcl.template`: backend config template (copy to `backend.hcl`).
 
 ## Cognito Hosted UI (Prod)
 Configure the SPA client and social IdPs via variables:
