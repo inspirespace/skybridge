@@ -38,7 +38,7 @@ def client(tmp_path, monkeypatch):
 
 
 def _make_job(job_id, user_id, status):
-    now = datetime(2026, 1, 5, 12, 0, tzinfo=timezone.utc)
+    now = datetime.now(timezone.utc)
     return JobRecord(
         job_id=job_id,
         user_id=user_id,
