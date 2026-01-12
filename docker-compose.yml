@@ -209,18 +209,28 @@ services:
 
   sqs-init:
     image: amazon/aws-cli:2.15.40
-    entrypoint: ["/bin/sh", "/app/scripts/init-sqs-local.sh"]
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        attempts=0
+        until aws --endpoint-url http://localstack:4566 sqs list-queues >/dev/null 2>&1; do
+          attempts=$$((attempts + 1))
+          if [ "$$attempts" -ge 30 ]; then
+            echo "LocalStack SQS not ready after $$attempts attempts" >&2
+            exit 1
+          fi
+          sleep 1
+        done
+        aws --endpoint-url http://localstack:4566 sqs create-queue --queue-name skybridge-job-queue >/dev/null
     depends_on:
       localstack:
         condition: service_started
-    volumes:
-      - ./:/app
     environment:
       AWS_ACCESS_KEY_ID: local
       AWS_SECRET_ACCESS_KEY: local
       AWS_REGION: eu-west-1
-      SQS_ENDPOINT_URL: http://localstack:4566
-      SQS_QUEUE_NAME: skybridge-job-queue
 
   minio:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z

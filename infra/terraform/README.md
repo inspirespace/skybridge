@@ -8,7 +8,6 @@ This directory provides the initial Terraform baseline for the Skybridge backend
 - `outputs.tf`: key resource outputs.
 - `envs/`: environment-specific tfvars.
 - `backend.tf`: S3 backend (requires `backend.hcl` at init time).
-- `backend.hcl.template`: backend config template (copy to `backend.hcl`).
 
 ## Cognito Hosted UI (Prod)
 Configure the SPA client and social IdPs via variables:
@@ -62,6 +61,3 @@ credentials for queued jobs. Artifact retention is enforced via S3 lifecycle rul
 - ACM for CloudFront lives in `us-east-1`; certificate validation can take a few minutes after DNS changes.
 - Once ACM validates, the CloudFront distribution will serve the domain.
 - Add a CNAME for `skybridge` → `<cloudfront_domain_name>` in Namecheap.
-
-## Repeatable deployment
-- `SKYBRIDGE_AUTO_APPROVE=1 ./scripts/deploy-prod.sh` builds Lambdas, applies Terraform, builds the frontend, syncs to S3, and invalidates CloudFront.

@@ -5,8 +5,6 @@ This folder contains the architecture notes, runbooks, and references for Skybri
 ## Core docs
 - `docs/codebase-overview.md` — Repository layout, high-level flow, and links.
 - `docs/production.md` — Production requirements, environment variables, and deployment notes.
-- `docs/deployment-aws.md` — AWS deployment guide (free-tier oriented).
-- `docs/production-launch-checklist.md` — Step-by-step launch checklist.
 - `docs/testing.md` — Test strategy and commands (backend + frontend).
 
 ## Architecture & operations

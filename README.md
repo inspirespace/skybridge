@@ -161,23 +161,15 @@ python -m src.core.cli --reconcile-import-report --wait-for-processing
 
 Development runs should use the devcontainer scripts (`./scripts/run*.sh`) to guarantee required dependencies (like `rich`) and browser tooling. Local execution is best reserved for one-off debugging.
 
-## Backend dev API (local dev)
+## Local dev (serverless parity)
 
-Run the local API Gateway emulator for Lambda handlers:
-
-```sh
-./scripts/run-backend-dev.sh
-```
-
-Then run the frontend dev server separately:
+Use Docker Compose or the devcontainer. No extra scripts are required for local dev.
 
 ```sh
-npm --prefix src/frontend run dev
+docker compose up --build
 ```
 
-Open http://localhost:5173 for the UI and ensure `VITE_API_BASE_URL` points at the local API (default: `http://localhost:8000`).
-
-Note: local Lambda-style dev requires SQS. Set `SQS_QUEUE_URL` (and `SQS_ENDPOINT_URL` if using LocalStack) before running the API emulator.
+Open https://skybridge.localhost for the UI.
 
 Local auth uses OIDC (Keycloak). Start Keycloak with Docker Compose or a separate container and sign in with the dev credentials:
 - user: `demo`

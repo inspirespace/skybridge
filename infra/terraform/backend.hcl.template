@@ -1,4 +1,0 @@
-bucket         = "skybridge-terraform-state"
-key            = "prod/terraform.tfstate"
-region         = "eu-west-1"
-dynamodb_table = "skybridge-terraform-locks"
