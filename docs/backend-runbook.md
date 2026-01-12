@@ -25,7 +25,6 @@ Provide the minimal operational steps to run a migration job and validate outcom
 - **Crew missing in FlySto:** wait for processing to finish; the worker now runs verify + reconcile after imports when `BACKEND_RECONCILE=true`.
 - **HTTPS login fails:** ensure `./scripts/setup-dev-https.sh` was run and Caddy is up (https://auth.skybridge.localhost).
 - **Auth provider not ready:** wait for Keycloak health to pass; the API returns `503` with `Retry-After` until JWKS is reachable.
-- **Safari login fails:** enable the `/auth/token` proxy (`AUTH_TOKEN_PROXY=true`) to avoid CORS/ITP issues.
 
 ## Escalation
 - Capture job id, user id, and correlation id.

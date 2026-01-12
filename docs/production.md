@@ -14,8 +14,10 @@ This checklist captures the minimum configuration required for a multi-tenant pr
 - `ENV=prod`
 - `AUTH_MODE=oidc`
 - `AUTH_ISSUER_URL=<issuer>`
+- `AUTH_BROWSER_ISSUER_URL=<issuer>` (optional, for browser-facing issuer)
 - `AUTH_CLIENT_ID=<client_id>`
 - `AUTH_AUDIENCE=<audience>` (optional if issuer uses `azp`, recommended)
+- `AUTH_TOKEN_URL=<token_url>` (required for SPA auth token exchange)
 - `BACKEND_USE_WORKER=1`
 - `BACKEND_SQS_ENABLED=1`
 - `SQS_QUEUE_URL=<queue_url>`
@@ -45,3 +47,12 @@ This checklist captures the minimum configuration required for a multi-tenant pr
 - Ensure API and worker share the same `AUTH_ISSUER_URL` and signing keys.
 - `BACKEND_USE_WORKER=1` and `BACKEND_SQS_ENABLED=1` are required in production.
 - Use HTTPS for all ingress; route `/api` to the backend and `/` to the frontend.
+
+## Frontend build configuration
+- `VITE_API_BASE_URL` should point at the API Gateway base URL (e.g. `https://<api-id>.execute-api.<region>.amazonaws.com`).
+- `VITE_AUTH_MODE=oidc`
+- `VITE_AUTH_ISSUER_URL` should match `AUTH_ISSUER_URL`.
+- `VITE_AUTH_CLIENT_ID` should match the Cognito app client id.
+- `VITE_AUTH_PROVIDER_PARAM=identity_provider` for Cognito social IdPs.
+- `VITE_AUTH_REDIRECT_PATH=/app/auth/callback`
+- `VITE_AUTH_LOGOUT_URL=https://<cognito-domain>.auth.<region>.amazoncognito.com/logout`

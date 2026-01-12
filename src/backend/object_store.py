@@ -126,7 +126,13 @@ class ObjectStore:
         params: dict[str, Any] = {"Bucket": self.bucket}
         if self._config.region and self._config.region != "us-east-1":
             params["CreateBucketConfiguration"] = {"LocationConstraint": self._config.region}
-        self._client.create_bucket(**params)
+        try:
+            self._client.create_bucket(**params)
+        except ClientError as exc:
+            code = exc.response.get("Error", {}).get("Code")
+            if code in {"BucketAlreadyOwnedByYou", "BucketAlreadyExists"}:
+                return
+            raise
 
 
 def build_object_store_from_env() -> ObjectStore | None:

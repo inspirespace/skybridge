@@ -17,4 +17,4 @@ COPY scripts ./scripts
 ENV PATH="/venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1
 
-CMD ["python", "-m", "uvicorn", "src.backend.app:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "src.backend.lambda_api_local"]

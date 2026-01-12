@@ -36,7 +36,7 @@ services:
     build:
       context: .
       dockerfile: docker/backend-dev/Dockerfile
-    command: ["python", "-m", "uvicorn", "src.backend.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    command: ["python", "-m", "src.backend.lambda_api_local"]
     ports:
       - "8000:8000"
     volumes:
@@ -51,8 +51,10 @@ services:
       - AUTH_SCOPE=openid profile email
       - AUTH_REDIRECT_PATH=/api/auth/callback
       - AUTH_TOKEN_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/token
-      - AUTH_TOKEN_PROXY=true
       - BACKEND_USE_WORKER=true
+      - BACKEND_SQS_ENABLED=1
+      - SQS_ENDPOINT_URL=http://localstack:4566
+      - SQS_QUEUE_URL=http://localstack:4566/000000000000/skybridge-job-queue
       - BACKEND_DYNAMO_ENABLED=1
       - DYNAMO_JOBS_TABLE=skybridge-jobs
       - DYNAMO_CREDENTIALS_TABLE=skybridge-credentials
@@ -86,6 +88,10 @@ services:
         condition: service_started
       dynamodb-init:
         condition: service_completed_successfully
+      localstack:
+        condition: service_started
+      sqs-init:
+        condition: service_completed_successfully
       minio:
         condition: service_started
       keycloak:
@@ -99,7 +105,7 @@ services:
     build:
       context: .
       dockerfile: docker/backend-dev/Dockerfile
-    command: ["python", "-m", "src.backend.worker"]
+    command: ["python", "-m", "src.backend.worker_lambda"]
     volumes:
       - ./:/app
     environment:
@@ -111,8 +117,10 @@ services:
       - AUTH_CLIENT_ID=skybridge-dev
       - AUTH_SCOPE=openid profile email
       - AUTH_TOKEN_URL=http://keycloak:8080/realms/skybridge-dev/protocol/openid-connect/token
-      - AUTH_TOKEN_PROXY=true
       - BACKEND_USE_WORKER=true
+      - BACKEND_SQS_ENABLED=1
+      - SQS_ENDPOINT_URL=http://localstack:4566
+      - SQS_QUEUE_URL=http://localstack:4566/000000000000/skybridge-job-queue
       - BACKEND_DYNAMO_ENABLED=1
       - DYNAMO_JOBS_TABLE=skybridge-jobs
       - DYNAMO_CREDENTIALS_TABLE=skybridge-credentials
@@ -145,6 +153,10 @@ services:
       dynamodb:
         condition: service_started
       dynamodb-init:
+        condition: service_completed_successfully
+      localstack:
+        condition: service_started
+      sqs-init:
         condition: service_completed_successfully
       minio:
         condition: service_started
@@ -186,6 +198,29 @@ services:
       DYNAMODB_ENDPOINT_URL: http://dynamodb:8000
       DYNAMO_JOBS_TABLE: skybridge-jobs
       DYNAMO_CREDENTIALS_TABLE: skybridge-credentials
+
+  localstack:
+    image: localstack/localstack:3.3
+    environment:
+      SERVICES: sqs
+      AWS_DEFAULT_REGION: eu-west-1
+    ports:
+      - "4566:4566"
+
+  sqs-init:
+    image: amazon/aws-cli:2.15.40
+    entrypoint: ["/bin/sh", "/app/scripts/init-sqs-local.sh"]
+    depends_on:
+      localstack:
+        condition: service_started
+    volumes:
+      - ./:/app
+    environment:
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+      AWS_REGION: eu-west-1
+      SQS_ENDPOINT_URL: http://localstack:4566
+      SQS_QUEUE_NAME: skybridge-job-queue
 
   minio:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z

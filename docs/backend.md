@@ -7,21 +7,21 @@ Location: `src/backend/`
 - **Prod**: uses DynamoDB for job metadata + S3 for artifacts; work is queued in SQS.
 
 ## Key modules
-- `app.py`: FastAPI API (jobs, artifacts, SSE events, auth exchange).
 - `service.py`: Job orchestration – review generation and import execution.
-- `worker.py`: SQS-driven worker entrypoint.
+- `lambda_handlers.py`: Lambda handlers for API + SQS worker.
+- `lambda_api_local.py`: Local API Gateway emulator for Lambda handlers.
+- `worker_lambda.py`: Local SQS poller that invokes the Lambda SQS handler.
 - `store.py`: Job persistence layer (filesystem + DynamoDB + S3).
 - `credential_store.py`: Short-lived encrypted credentials (memory or DynamoDB).
 - `object_store.py`: S3 object storage adapter.
 
 ## API surface
 - `POST /auth/token` – OIDC code exchange (PKCE flow).
+- `POST /credentials/validate` – validate CloudAhoy/FlySto credentials.
 - `GET /jobs` – list jobs for current user.
 - `POST /jobs` – create job and enqueue review.
 - `GET /jobs/{id}` – fetch job status + summary.
 - `DELETE /jobs/{id}` – delete a specific job (and artifacts).
-- `DELETE /jobs` – delete all jobs for user (single-run cleanup).
-- `GET /jobs/{id}/events` – SSE updates.
 - `POST /jobs/{id}/review/accept` – accept review, enqueue import.
 - `GET /jobs/{id}/artifacts.zip` – download all artifacts.
 
@@ -42,9 +42,8 @@ Location: `src/backend/`
    - Import report stored as `import_report.json`
    - Status: `completed`
 
-## SSE progress
-- `GET /jobs/{id}/events` streams job updates.
-- UI subscribes while job is running; polling is fallback.
+## Progress updates
+- In production, the UI polls for job updates (Lambda does not support SSE).
 
 ## Auth & user isolation
 - Requests are authenticated via OIDC in prod or a dev header in local mode.

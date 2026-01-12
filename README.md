@@ -161,15 +161,23 @@ python -m src.core.cli --reconcile-import-report --wait-for-processing
 
 Development runs should use the devcontainer scripts (`./scripts/run*.sh`) to guarantee required dependencies (like `rich`) and browser tooling. Local execution is best reserved for one-off debugging.
 
-## Backend dev web (local dev)
+## Backend dev API (local dev)
 
-Run the dev web locally (API + UI):
+Run the local API Gateway emulator for Lambda handlers:
 
 ```sh
 ./scripts/run-backend-dev.sh
 ```
 
-Then open http://localhost:8000 to use the dev web UI.
+Then run the frontend dev server separately:
+
+```sh
+npm --prefix src/frontend run dev
+```
+
+Open http://localhost:5173 for the UI and ensure `VITE_API_BASE_URL` points at the local API (default: `http://localhost:8000`).
+
+Note: local Lambda-style dev requires SQS. Set `SQS_QUEUE_URL` (and `SQS_ENDPOINT_URL` if using LocalStack) before running the API emulator.
 
 Local auth uses OIDC (Keycloak). Start Keycloak with Docker Compose or a separate container and sign in with the dev credentials:
 - user: `demo`
@@ -208,14 +216,15 @@ docker compose up --build
 ```
 
 Services:
-- `api` (FastAPI + UI) on http://localhost:8000
-- `worker` (dev worker loop)
+- `api` (Lambda API emulator) on http://localhost:8000
+- `worker` (Lambda-style SQS worker)
 - `dynamodb` (local) on http://localhost:8001
+- `localstack` (SQS emulator) on http://localhost:4566
 - `minio` (S3-compatible) behind Caddy at https://storage.skybridge.localhost
 - `keycloak` (OIDC dev auth) on http://localhost:8080
 - `caddy` (HTTPS proxy) on https://skybridge.localhost, https://auth.skybridge.localhost, and https://storage.skybridge.localhost
 
-The dev stack runs review/import via the worker (API queues jobs and issues one-time credential claims).
+The dev stack runs review/import via SQS + Lambda-style worker (API queues jobs and issues one-time credential claims).
 
 Mock portal services (default in dev):
 - `DEV_USE_MOCKS=1` (default) routes CloudAhoy/FlySto calls to local mock services seeded from `tests/fixtures/run-20251228T185601Z`.

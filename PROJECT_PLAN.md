@@ -67,9 +67,58 @@ Goal: ship the production web UI for CloudAhoy → FlySto imports, using the wir
 - [x] 7.1 Split static landing page from SPA app for better crawlability.
 - [x] 7.2 Add static imprint/privacy pages outside the SPA.
 
+## 8. AWS Free-Tier Launch (Planned)
+Objective: ship a production-ready, EU-hosted, serverless deployment on AWS free-tier where possible, with Cognito + social IdPs and Lambda-based workers.
+
+### 8.1 Target Architecture + Region
+- [ ] 8.1.1 Confirm EU region for launch (prefer eu-central-1 for DE data residency; eu-west-1 for broader AWS service parity).
+- [ ] 8.1.2 Confirm DNS + TLS strategy for `skybridge.inspirespace.co` (Route 53 vs external DNS).
+- [ ] 8.1.3 Confirm Cognito Hosted UI + social IdPs (Google/Apple/Facebook) as primary auth.
+
+### 8.2 Terraform: Production Wiring
+- [x] 8.2.1 Add API Gateway stage + deployment outputs (API base URL).
+- [x] 8.2.2 Add JWT authorizer (Cognito User Pool) + attach to routes.
+- [x] 8.2.3 Add CORS config for SPA origin(s).
+- [x] 8.2.4 Add Lambda invoke permissions for API Gateway.
+- [x] 8.2.5 Add Lambda environment variables from Terraform outputs.
+- [x] 8.2.6 Add IAM policies for Lambda: DynamoDB, S3, SQS, CloudWatch Logs.
+- [x] 8.2.7 Add CloudWatch log groups with retention.
+- [x] 8.2.8 Add SQS trigger for worker Lambda (review/import job execution).
+
+### 8.3 Backend Runtime: Lambda + SQS Worker
+- [x] 8.3.1 Update `src/backend/lambda_handlers.py` to use DynamoDB + S3 + SQS (no local filesystem).
+- [x] 8.3.2 Add Lambda SQS worker handler (single-message processing) and wire to JobService.
+- [x] 8.3.3 Ensure `BACKEND_WORKER_TOKEN` and credential-claim flow work in Lambda mode.
+- [x] 8.3.4 Remove long-running FastAPI/worker code paths; use Lambda API emulator + local SQS in dev.
+- [ ] 8.3.4 Ensure rate limits, TTL, and artifact retention are enforced in prod mode.
+
+### 8.4 Frontend Hosting + Auth
+- [ ] 8.4.1 Deploy SPA + static pages to S3.
+- [x] 8.4.2 Add CloudFront + ACM cert for `skybridge.inspirespace.co`.
+- [ ] 8.4.3 Configure Cognito callback/logout URLs for production domain.
+- [ ] 8.4.4 Update frontend env config for prod (OIDC issuer/client id, API base URL).
+
+### 8.5 Operations + Cost Controls
+- [ ] 8.5.1 Configure AWS Budgets + SNS alerts (low thresholds).
+- [ ] 8.5.2 Validate S3 lifecycle + DynamoDB TTL in prod.
+- [ ] 8.5.3 Add API Gateway throttling / quotas aligned with BACKEND limits.
+- [x] 8.5.4 Add deploy automation (script + GitHub Actions workflow).
+- [ ] 8.5.5 Run runbook + readiness checklist using production stack.
+
+## Acceptance Criteria (AWS Launch Autonomy)
+- [ ] Deployed stack in EU region with working HTTPS at `https://skybridge.inspirespace.co`.
+- [ ] Cognito Hosted UI sign-in works with Google/Apple/Facebook and returns JWTs accepted by the API.
+- [ ] Frontend can create a job, review completes, and import completes end-to-end against real providers.
+- [ ] Artifacts stored in S3, listed via API, and expire automatically after 7 days.
+- [ ] DynamoDB TTL cleans credential entries; no credentials persist beyond TTL.
+- [ ] SQS-backed Lambda worker processes review/import jobs without manual intervention.
+- [ ] CloudWatch logs available for API + worker; budgets/alerts configured.
+- [ ] Runbook and release readiness checklists completed for the prod stack.
+
 ## Open Questions
 - [ ] Q1 Confirm API contracts for progress polling and report download.
 - [ ] Q2 Confirm theme token source (global CSS vs design‑system config).
+- [ ] Q3 Confirm whether CloudAhoy/FlySto require fixed egress IP allowlisting (may require NAT).
 
 ## Maintenance Notes
 - [x] Paginate DynamoDB job scans/queries in `JobStore` to avoid missing older jobs in dev worker mode.

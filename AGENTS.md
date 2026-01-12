@@ -21,8 +21,10 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `./scripts/run.sh --approve-import` — writes artifacts under `data/runs/<RUN_ID>/` (review, report, exports, logs, state).
 - `./scripts/run.sh --verify-import-report --import-report data/runs/<RUN_ID>/import_report.json` — verify report entries against FlySto.
 - `./scripts/run-backend-dev.sh` — run the backend dev web (FastAPI API + UI) locally.
-- `./scripts/run-sse-smoke.sh` — run a quick SSE smoke test against the dev backend.
+- `./scripts/run-backend-dev.sh` — run the backend dev API via the Lambda-style local gateway emulator (requires `SQS_QUEUE_URL`).
 - `./scripts/run-e2e-headed.sh` — run Playwright e2e tests in headed mode (macOS devcontainer/XQuartz helper).
+- `./scripts/run-lambda-worker-local.sh` — run the Lambda-style worker locally (process SQS messages using the Lambda handler logic).
+- `./scripts/init-sqs-local.sh` — initialize the local SQS queue (LocalStack).
 - `./scripts/setup-e2e-vnc.sh` — install in-container Xvfb + VNC + noVNC dependencies for headed e2e.
 - `./scripts/run-e2e-vnc.sh` — run Playwright e2e tests with in-container Xvfb + VNC/noVNC (no host setup).
 - `./scripts/start-e2e-vnc.sh` — start the VNC/noVNC server (used for VS Code Testing).
@@ -37,6 +39,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Backend dev auth uses Keycloak OIDC in Docker Compose (login with `demo` / `demo-password`); local runs should set `AUTH_MODE=oidc`, `AUTH_ISSUER_URL`, `AUTH_BROWSER_ISSUER_URL`, and `AUTH_CLIENT_ID`.
 - Dev backend queues jobs for the worker when `BACKEND_USE_WORKER=1` (credentials are claimed once via `BACKEND_WORKER_TOKEN`).
 - `./scripts/build-lambda.sh` — package the Lambda handlers to `infra/terraform/lambda/backend-handlers.zip`.
+- `./scripts/deploy-prod.sh` — build + deploy Terraform, build frontend, sync to S3, and invalidate CloudFront (CI-friendly).
 - `python -m src.core.cli --review` — run locally (requires Python deps).
 - CLI supports `--start-date` / `--end-date` for targeted imports (YYYY-MM-DD or ISO8601).
 - Set `CLOUD_AHOY_G3X_INCLUDE_HDG=1` to include heading in G3X exports (TRK is always included; default omits HDG to preserve block-time detection).

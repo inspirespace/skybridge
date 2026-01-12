@@ -15,6 +15,42 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
+variable "api_cors_origins" {
+  description = "Allowed CORS origins for the HTTP API."
+  type        = list(string)
+  default     = []
+}
+
+variable "frontend_domain" {
+  description = "Primary frontend domain for CloudFront (e.g. skybridge.example.com)."
+  type        = string
+  default     = ""
+}
+
+variable "frontend_aliases" {
+  description = "Additional frontend domain aliases for CloudFront."
+  type        = list(string)
+  default     = []
+}
+
+variable "frontend_price_class" {
+  description = "CloudFront price class."
+  type        = string
+  default     = "PriceClass_100"
+}
+
+variable "backend_worker_token" {
+  description = "Shared token for API/worker credential claims."
+  type        = string
+  sensitive   = true
+}
+
+variable "log_retention_days" {
+  description = "CloudWatch log retention in days."
+  type        = number
+  default     = 14
+}
+
 variable "tags" {
   description = "Tags applied to all supported resources."
   type        = map(string)

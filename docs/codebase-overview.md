@@ -3,12 +3,12 @@
 Skybridge is split into three major parts:
 
 - `src/core/`: Python CLI + migration logic (CloudAhoy → FlySto), shared by backend/worker.
-- `src/backend/`: FastAPI API + worker orchestration and storage adapters.
+- `src/backend/`: Lambda handlers, local API Gateway emulator, and storage adapters.
 - `src/frontend/`: React/Vite UI implementing the wireframe.
 
 ## Repository layout
 - `src/core/` – core migration logic and CLI entrypoints.
-- `src/backend/` – FastAPI API, worker loop, storage adapters.
+- `src/backend/` – Lambda handlers + local emulator + storage adapters.
 - `src/frontend/` – Vite app + shadcn/ui components.
 - `tests/` – backend/core tests (pytest).
 - `design/` – wireframes and mockups (UI reference).
@@ -18,16 +18,16 @@ Skybridge is split into three major parts:
 ## High-level flow
 1. User signs in (OIDC in prod, header-based in dev).
 2. UI posts `/jobs` with credentials + filters.
-3. Backend stores job + credentials, queues work (SQS) or runs locally.
+3. Backend stores job + credentials, queues work (SQS).
 4. Worker generates review summary + artifacts.
 5. User accepts import → `/jobs/{id}/review/accept`.
 6. Worker imports to FlySto, writes reports + artifacts.
-7. UI streams job updates via SSE `/jobs/{id}/events` (poll fallback).
+7. UI polls job updates in serverless mode.
 
 ## Dev stack
 - `frontend` Vite dev server.
-- `api` FastAPI (auth + jobs).
-- `worker` for review/import.
+- `api` local API Gateway emulator for Lambda handlers.
+- `worker` local Lambda-style SQS poller.
 - `keycloak` for dev OIDC.
 - `minio` for local artifact storage.
 - `mock-cloudahoy` + `mock-flysto` for dev portal mocks (when enabled).

@@ -19,7 +19,7 @@ tokens for layout polish.
 - **Single-run model**: The UI always operates on one active job per user.
 - **State machine**: `src/frontend/src/state/flow.ts` derives the step state from
   the current job status and gates navigation accordingly.
-- **SSE updates**: `useJobSnapshot` tries SSE first and falls back to polling.
+- **Job updates**: `useJobSnapshot` polls for updates in serverless mode.
 - **Mock mode**: Dev uses `DEV_USE_MOCKS=1` to simulate CloudAhoy/FlySto flows.
 
 ## Main modules
@@ -32,7 +32,7 @@ tokens for layout polish.
 - `src/frontend/src/state/mock-api.ts`
   - Mocked responses for the full flow
 - `src/frontend/src/hooks/use-job-snapshot.ts`
-  - SSE subscription + polling fallback
+  - Polling-based job updates
 - `src/frontend/src/components/app/*`
   - Step sections + reusable layout pieces
 - `src/frontend/src/components/ui/*`

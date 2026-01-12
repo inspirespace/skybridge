@@ -24,61 +24,30 @@ function makeJob(status: string) {
   };
 }
 
-function sseStream(payload: object) {
-  const encoder = new TextEncoder();
-  const body = `data: ${JSON.stringify(payload)}\n\n`;
-  return new ReadableStream({
-    start(controller) {
-      controller.enqueue(encoder.encode(body));
-      controller.close();
-    },
-  });
-}
-
-beforeEach(() => {
-  vi.stubGlobal("fetch", vi.fn());
-});
-
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.resetAllMocks();
 });
 
 describe("useJobSnapshot", () => {
-  it("updates data from SSE payload", async () => {
+  it("loads initial job data", async () => {
     const { getJob, useJobSnapshot } = await load();
     (getJob as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeJob("review_running")
-    );
-
-    const updated = makeJob("review_ready");
-    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockImplementation(() =>
-      Promise.resolve(
-        new Response(sseStream(updated), {
-          status: 200,
-          headers: { "content-type": "text/event-stream" },
-        })
-      )
     );
 
     const auth = { userId: "pilot" };
     const { result } = renderHook(() => useJobSnapshot("job-123", auth));
 
-    await Promise.resolve();
-    await Promise.resolve();
-
     await waitFor(() => {
-      expect(result.current.data?.status).toBe("review_ready");
+      expect(result.current.data?.status).toBe("review_running");
     });
   });
 
-  it("falls back to polling after silent SSE", async () => {
+  it("polls while job is running", async () => {
     const { getJob, useJobSnapshot } = await load();
     (getJob as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
       makeJob("review_running")
-    );
-    (global.fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(
-      new Error("stream failed")
     );
 
     const auth = { userId: "pilot" };
@@ -90,6 +59,23 @@ describe("useJobSnapshot", () => {
     });
 
     unmount();
+    intervalSpy.mockRestore();
+  });
+
+  it("does not poll when job is completed", async () => {
+    const { getJob, useJobSnapshot } = await load();
+    (getJob as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+      makeJob("completed")
+    );
+
+    const auth = { userId: "pilot" };
+    const intervalSpy = vi.spyOn(window, "setInterval");
+    renderHook(() => useJobSnapshot("job-123", auth));
+
+    await waitFor(() => {
+      expect(intervalSpy).not.toHaveBeenCalled();
+    });
+
     intervalSpy.mockRestore();
   });
 });
