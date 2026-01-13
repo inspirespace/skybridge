@@ -163,6 +163,12 @@ store = JobStore(DATA_DIR, build_object_store_from_env(), _dynamo_jobs_table())
 service = JobService(store)
 credential_store = build_credential_store()
 _sqs_client = None
+_ACTIVE_JOB_STATUSES = {
+    "review_queued",
+    "review_running",
+    "import_queued",
+    "import_running",
+}
 
 
 def create_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
@@ -173,6 +179,9 @@ def create_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
             return _response(401, {"detail": "Missing authentication"})
         body = json.loads(event.get("body") or "{}")
         payload = JobCreateRequest.model_validate(body)
+        existing_jobs = store.list_jobs(user_id)
+        if any(job.status in _ACTIVE_JOB_STATUSES for job in existing_jobs):
+            return _response(429, {"detail": "Job already in progress"})
         store.delete_jobs_for_user(user_id)
         job = service.create_job(user_id)
         job.start_date = payload.start_date
@@ -317,6 +326,8 @@ def read_artifact_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
             return _response(404, {"detail": "Job not found"})
         data = store.load_artifact(job.job_id, artifact_name)
         return _response(200, data)
+    except (FileNotFoundError, ValueError):
+        return _response(404, {"detail": "Artifact not found"})
     except Exception as exc:
         return _handle_error(exc)
 
