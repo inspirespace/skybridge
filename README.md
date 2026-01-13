@@ -50,3 +50,7 @@ mkcert -cert-file docker/https/certs/skybridge.pem -key-file docker/https/certs/
 - [Frontend architecture](docs/frontend.md)
 - [Testing](docs/testing.md)
 - [Production](docs/production.md)
+
+## License
+
+Apache-2.0. See [LICENSE](LICENSE).
