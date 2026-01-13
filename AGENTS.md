@@ -41,6 +41,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Follow CONTRIBUTING.md PR format (Goal / Scope / Testing / Risk / Screenshots) when creating or editing PRs.
 - Never use escaped newline sequences (`\n`) in PR bodies; always use real line breaks.
 - Work in feature branches for non-trivial changes (e.g., `feature/...`, `fix/...`), then merge into `main`.
+ - When asked to open a PR, prepare the full PR (title + body) without further prompts, using the CONTRIBUTING.md format and including tests/scope/risk as applicable.
 
 ## Agent Update Policy
 - If you add or change developer workflows, commands, or project structure, update this file in the same change set.
