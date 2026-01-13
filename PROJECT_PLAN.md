@@ -3,7 +3,7 @@
 Goal: ship the production web UI for CloudAhoy → FlySto imports, using the wireframe as the single UI reference and default component styling.
 
 ## 0. Foundation (Done)
-- [x] 0.1 Backend architecture and workflow docs exist (review/import/report flow, artifacts, runbook).
+- [x] 0.1 Docs trimmed to essentials (README + production requirements).
 - [x] 0.2 CLI import workflow stabilized (review → approve → import; manifests + reports).
 - [x] 0.3 Auth/dev stack wired (OIDC/Keycloak in dev; devcontainer + local HTTPS).
 - [x] 0.4 CI and tooling set up (pytest in CI, uv deps, devcontainer toolchain).
@@ -103,7 +103,7 @@ Objective: ship a production-ready, EU-hosted, serverless deployment on AWS free
 - [ ] 8.5.2 Validate S3 lifecycle + DynamoDB TTL in prod.
 - [ ] 8.5.3 Add API Gateway throttling / quotas aligned with BACKEND limits.
 - [x] 8.5.4 Add deploy automation (script + GitHub Actions workflow).
-- [ ] 8.5.5 Run runbook + readiness checklist using production stack.
+- [ ] 8.5.5 Run a production smoke checklist on the deployed stack.
 
 ## Acceptance Criteria (AWS Launch Autonomy)
 - [ ] Deployed stack in EU region with working HTTPS at `https://skybridge.inspirespace.co`.
@@ -113,7 +113,7 @@ Objective: ship a production-ready, EU-hosted, serverless deployment on AWS free
 - [ ] DynamoDB TTL cleans credential entries; no credentials persist beyond TTL.
 - [ ] SQS-backed Lambda worker processes review/import jobs without manual intervention.
 - [ ] CloudWatch logs available for API + worker; budgets/alerts configured.
-- [ ] Runbook and release readiness checklists completed for the prod stack.
+- [ ] Production smoke checklist completed for the prod stack.
 
 ## Open Questions
 - [ ] Q1 Confirm API contracts for progress polling and report download.

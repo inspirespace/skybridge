@@ -1,50 +1,31 @@
 # Codebase Overview
 
-Skybridge is split into three major parts:
-
-- `src/core/`: Python CLI + migration logic (CloudAhoy → FlySto), shared by backend/worker.
-- `src/backend/`: Lambda handlers, local API Gateway emulator, and storage adapters.
-- `src/frontend/`: React/Vite UI implementing the wireframe.
+This is the quickest onboarding map: where things live, how to run the stack, and the main entry points.
 
 ## Repository layout
-- `src/core/` – core migration logic and CLI entrypoints.
-- `src/backend/` – Lambda handlers + local emulator + storage adapters.
-- `src/frontend/` – Vite app + shadcn/ui components.
-- `tests/` – backend/core tests (pytest).
-- `design/` – wireframes and mockups (UI reference).
-- `docs/` – architecture/runbooks/production/testing.
-- `docker/` – Keycloak realm import, TLS setup, Caddy config.
+- `src/` — application code
+- `src/core/` — core migration logic + CLI
+- `src/backend/` — Lambda handlers + job/queue orchestration
+- `src/frontend/` — Vite SPA + static pages
+- `tests/` — backend tests
+- `infra/terraform/` — AWS infrastructure
+- `docker/` — local infra configs (Keycloak realm)
+- `tools/inspector/` — dev-only inspection/probing scripts
 
-## High-level flow
-1. User signs in (OIDC in prod, header-based in dev).
-2. UI posts `/jobs` with credentials + filters.
-3. Backend stores job + credentials, queues work (SQS).
-4. Worker generates review summary + artifacts.
-5. User accepts import → `/jobs/{id}/review/accept`.
-6. Worker imports to FlySto, writes reports + artifacts.
-7. UI polls job updates in serverless mode.
+## Local dev (fast path)
+Requirements:
+- Docker + Docker Compose
+- VS Code (optional) + Dev Containers extension (optional)
+- `mkcert` for local HTTPS certificates
 
-## Dev stack
-- `frontend` Vite dev server.
-- `api` local API Gateway emulator for Lambda handlers.
-- `worker` local Lambda-style SQS poller.
-- `keycloak` for dev OIDC.
-- `minio` for local artifact storage.
-- `mock-cloudahoy` + `mock-flysto` for dev portal mocks (when enabled).
-- `caddy` for HTTPS + routing.
+1) `docker compose up --build` (starts API, worker, Keycloak, DynamoDB, SQS, MinIO)
+2) Open https://skybridge.localhost
+3) Sign in with `demo` / `demo-password`
+4) If the domains do not resolve, add hosts entries for `skybridge.localhost`, `auth.skybridge.localhost`, and `storage.skybridge.localhost` → `127.0.0.1` (macOS already resolves `*.localhost`).
+5) Generate local HTTPS certs with `mkcert` (see README).
 
-## Data storage & retention
-- Local dev: JSON files under `data/backend/jobs/<job_id>/`.
-- Prod: S3 for artifacts (user-scoped prefix), DynamoDB for job metadata.
-- Retention: 7-day TTL (S3 lifecycle in prod; TTL column in DynamoDB).
-- Single-run model: one active job per user; new runs replace older results.
-
-## Documentation index
-- `docs/backend-architecture.md` – backend architecture overview.
-- `docs/backend-runbook.md` – operational guide.
-- `docs/production.md` – production deployment notes.
-- `docs/cloudahoy-api.md` / `docs/flysto-api.md` – API notes.
-- `docs/core-cli.md` – CLI and core logic.
-- `docs/frontend.md` – UI architecture.
-- `docs/backend.md` – API/worker/store details.
-- `docs/testing.md` – test strategy and commands.
+## Key entrypoints
+- CLI entrypoint: `./cloudahoy2flysto` (interactive, guided migration flow).
+- Lambda API: `src/backend/lambda_handlers.py`
+- Lambda local API emulator: `src/backend/lambda_api_local.py`
+- Lambda worker: `src/backend/worker_lambda.py`

@@ -1,4 +1,4 @@
-"""scripts/inspect_flysto_logs_requests.py module."""
+"""tools/inspector/inspect_flysto_logs_requests.py module."""
 import json
 import os
 from pathlib import Path

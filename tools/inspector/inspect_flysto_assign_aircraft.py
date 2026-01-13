@@ -1,4 +1,4 @@
-"""scripts/inspect_flysto_assign_aircraft.py module."""
+"""tools/inspector/inspect_flysto_assign_aircraft.py module."""
 import json
 import os
 from pathlib import Path
@@ -10,7 +10,6 @@ OUTPUT_PATH = Path("data/discovery/flysto_assign_requests.json")
 SCREENSHOT_PATH = Path("data/discovery/flysto_assign_screen.png")
 DIALOG_HTML_PATH = Path("data/discovery/flysto_aircraft_dialog.html")
 DIALOG_PAGE_PATH = Path("data/discovery/flysto_page.html")
-CAPTURE_SCRIPT_PATH = Path("scripts/auto_assign.js")
 
 
 def main() -> None:

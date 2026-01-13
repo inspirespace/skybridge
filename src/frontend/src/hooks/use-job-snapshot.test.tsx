@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, renderHook } from "@testing-library/react";
 
 vi.mock("@/api/client", () => ({
   apiBaseUrl: "http://test.local/api",
@@ -24,8 +24,14 @@ function makeJob(status: string) {
   };
 }
 
+async function flushUpdates() {
+  await act(async () => {
+    await Promise.resolve();
+  });
+}
+
 afterEach(() => {
-  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   vi.resetAllMocks();
 });
 
@@ -39,9 +45,10 @@ describe("useJobSnapshot", () => {
     const auth = { userId: "pilot" };
     const { result } = renderHook(() => useJobSnapshot("job-123", auth));
 
-    await waitFor(() => {
-      expect(result.current.data?.status).toBe("review_running");
-    });
+    await flushUpdates();
+    await flushUpdates();
+
+    expect(result.current.data?.status).toBe("review_running");
   });
 
   it("polls while job is running", async () => {
@@ -51,15 +58,27 @@ describe("useJobSnapshot", () => {
     );
 
     const auth = { userId: "pilot" };
-    const intervalSpy = vi.spyOn(window, "setInterval");
-    const { unmount } = renderHook(() => useJobSnapshot("job-123", auth));
-
-    await waitFor(() => {
-      expect(intervalSpy).toHaveBeenCalled();
+    let intervalCallback: TimerHandler | null = null;
+    vi.spyOn(window, "setInterval").mockImplementation((callback) => {
+      intervalCallback = callback;
+      return 1 as unknown as number;
     });
+    vi.spyOn(window, "clearInterval").mockImplementation(() => undefined);
 
-    unmount();
-    intervalSpy.mockRestore();
+    renderHook(() => useJobSnapshot("job-123", auth));
+    await flushUpdates();
+
+    expect(getJob).toHaveBeenCalledTimes(1);
+    expect(intervalCallback).not.toBeNull();
+
+    if (typeof intervalCallback === "function") {
+      await act(async () => {
+        intervalCallback();
+      });
+    }
+    await flushUpdates();
+
+    expect(getJob).toHaveBeenCalledTimes(2);
   });
 
   it("does not poll when job is completed", async () => {
@@ -69,13 +88,18 @@ describe("useJobSnapshot", () => {
     );
 
     const auth = { userId: "pilot" };
-    const intervalSpy = vi.spyOn(window, "setInterval");
-    renderHook(() => useJobSnapshot("job-123", auth));
-
-    await waitFor(() => {
-      expect(intervalSpy).not.toHaveBeenCalled();
+    let intervalCallback: TimerHandler | null = null;
+    vi.spyOn(window, "setInterval").mockImplementation((callback) => {
+      intervalCallback = callback;
+      return 1 as unknown as number;
     });
+    vi.spyOn(window, "clearInterval").mockImplementation(() => undefined);
 
-    intervalSpy.mockRestore();
+    renderHook(() => useJobSnapshot("job-123", auth));
+    await flushUpdates();
+    await flushUpdates();
+
+    expect(getJob).toHaveBeenCalledTimes(1);
+    expect(intervalCallback).toBeNull();
   });
 });

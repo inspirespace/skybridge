@@ -1,7 +1,9 @@
-"""scripts/probe_cloudahoy_debrief.py module."""
+"""tools/inspector/inspect_cloudahoy_debrief.py module."""
+import json
 import os
 import re
 import time
+from pathlib import Path
 
 import requests
 
@@ -33,7 +35,6 @@ def main() -> None:
         session.cookies.set(k, v, domain="www.cloudahoy.com", path="/")
 
     bi = f"CLI{int(time.time())}"
-
     flights_payload = {
         "userName": False,
         "initialCall": True,
@@ -45,18 +46,18 @@ def main() -> None:
         "PH": {"n": [], "t": []},
         "wlh": "https://www.cloudahoy.com/flights/",
     }
-    flights = session.post(
+    flights_resp = session.post(
         "https://www.cloudahoy.com/api/t-flights.cgi",
         json=flights_payload,
         timeout=60,
-    ).json().get("flights", [])
-
+    )
+    flights = flights_resp.json().get("flights", [])
     if not flights:
         raise SystemExit("No flights returned")
 
-    flight = flights[0]
-    key = flight.get("key")
-    debrief_payload = {
+    key = flights[0]["key"]
+
+    payload = {
         "flight": key,
         "EMAIL3": email3,
         "SID3": sid3,
@@ -66,13 +67,15 @@ def main() -> None:
         "PH": {"n": [], "t": []},
         "wlh": "https://www.cloudahoy.com/debrief/",
     }
-
     resp = session.post(
         "https://www.cloudahoy.com/api/t-debrief.cgi",
-        json=debrief_payload,
+        json=payload,
         timeout=60,
     )
-    print(resp.status_code, resp.text[:200])
+    data = resp.json()
+    output = Path("data/discovery/cloudahoy_debrief_response.json")
+    output.write_text(json.dumps(data, indent=2))
+    print("wrote", output)
 
 
 if __name__ == "__main__":

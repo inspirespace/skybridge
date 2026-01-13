@@ -1,266 +1,52 @@
 # Skybridge
 
-A Dockerized CLI that migrates flights from CloudAhoy to FlySto. This repo is intentionally minimal so local dev only needs Docker.
-This project is 100% written with AI.
+Skybridge migrates CloudAhoy flight history into FlySto.
+This repository is 100% AI written.
 
-## Quickstart
+## CLI guide
 
-Build the image:
-
-```sh
-docker build -t skybridge .
-```
-
-Run a review (generates GPX exports from `flt.points`, retains CSV sidecars, and creates FlySto aircraft by tail number):
+The CLI is the interactive, guided migration tool. It walks you through review → approve → import from the terminal.
 
 ```sh
-docker run --rm \
-  --env-file .env \
-  skybridge --review --max-flights 5
-
-docker run --rm \
-  --env-file .env \
-  skybridge --approve-import --max-flights 5
-```
-
-Or use the wrapper scripts:
-
-```sh
-./scripts/run-review.sh
-./scripts/run-import.sh
-./scripts/run.sh --approve-import --max-flights 10
-./scripts/run.sh --approve-import --review-id <id> --wait-for-processing
-./scripts/run.sh --reconcile-import-report --wait-for-processing
-./scripts/verify-run.sh <RUN_ID>
 ./cloudahoy2flysto
 ```
 
-## Configuration
+## Local dev
 
-Create a `.env` file from `.env.example` and fill in your credentials. The CLI infers upload URLs and API version automatically.
+Prerequisites: Docker + Docker Compose, VS Code (Dev Containers recommended), and the Dev Containers CLI (required for automation).
+Install the Dev Containers CLI with:
 
-Optional:
-- `CLOUD_AHOY_BASE_URL` (default `https://www.cloudahoy.com/api`)
-- `CLOUD_AHOY_WEB_BASE_URL` (default `https://www.cloudahoy.com`)
-- `CLOUD_AHOY_EMAIL` / `CLOUD_AHOY_PASSWORD` (web mode login)
-- `CLOUD_AHOY_FLIGHTS_URL` (direct flights page URL if auto-detect fails)
-- `CLOUD_AHOY_EXPORT_URL_TEMPLATE` (example: `https://www.cloudahoy.com/api/export.cgi?id={flight_id}`)
-- `CLOUD_AHOY_EXPORT_FORMAT` (`gpx`, `foreflight`, `flightradar24`, `mvp50`, `g3x`, or `g1000`, default `g3x`)
-- `CLOUD_AHOY_EXPORT_FORMATS` (comma-separated list, default `g3x,gpx`; first supported format is used for upload)
-- `FLYSTO_BASE_URL` (default `https://www.flysto.net`)
-- `FLYSTO_WEB_BASE_URL` (default `https://www.flysto.net`)
-- `FLYSTO_EMAIL` / `FLYSTO_PASSWORD` (web mode login)
-- `FLYSTO_UPLOAD_URL` (direct upload page URL if auto-detect fails)
-- `FLYSTO_SESSION_COOKIE` (optional API auth cookie value for `USER_SESSION`; if omitted, email/password login is used)
-- `FLYSTO_LOG_UPLOAD_URL` (optional override for API endpoint; defaults to `https://www.flysto.net/api/log-upload`)
-- `FLYSTO_INCLUDE_METADATA` (`true`/`false`, attach metadata when using API)
-- `FLYSTO_API_VERSION` (optional; inferred from FlySto bundle if omitted)
-- `FLYSTO_MIN_REQUEST_INTERVAL` (optional seconds between FlySto API calls; default `0.1`)
-- `FLYSTO_MAX_REQUEST_RETRIES` (optional FlySto request retries; default `2`)
-- `BACKEND_RETENTION_DAYS` (optional; default `7`, auto-deletes job artifacts after retention)
-
-### Run Artifacts
-When using `./scripts/run.sh`, artifacts are grouped under `data/runs/<RUN_ID>/`:
-- `review.json`
-- `import_report.json`
-- `cloudahoy_exports/`
-- `migration.db`
-- `docker.log`
-`./scripts/run.sh` now runs the container detached and streams logs into `docker.log` to avoid truncation on long runs.
-
-You can override the defaults with `RUN_ID`, `RUNS_DIR`, `REVIEW_PATH`, `IMPORT_REPORT`, `EXPORTS_DIR`, `STATE_PATH`, and `LOG_PATH`.
-- `MODE` (`auto`, `web`, `hybrid`, or `api`, default `auto`; auto uses API only)
-- `BROWSER_HEADLESS` (`true`/`false`)
-- `DRY_RUN` (`true`/`false`)
-- `MAX_FLIGHTS` (integer)
-Note: `CLOUD_AHOY_API_KEY` and `FLYSTO_API_KEY` are not used yet.
-
-### Migration Notes
-
-2026-01-04: CloudAhoy flight identifiers now use `fdID` (UUID) for `flight_id`. If you have cached review/import data or custom tooling that referenced the old `key` field, regenerate those artifacts with the new IDs. See `docs/migrations.md` for details.
-
-CLI options:
-- `--state-path` (default `data/migration.db`)
-- `--force` to re-upload already migrated flights
-- `--start-date` / `--end-date` to import a specific UTC date or range (YYYY-MM-DD or ISO8601)
-- `--mode` to select `web` or `api`
-- `--headful` to run browser non-headless
-- `--cloudahoy-state-path` / `--flysto-state-path` for browser storage state
-- `--exports-dir` for downloaded CloudAhoy exports
-- `--discover` to run endpoint discovery into `data/discovery/discovery.json`
-- `--discovery-dir` to control discovery output directory
-- `--discovery-upload-file` to use a specific file for FlySto upload discovery
-
-## Status
-
-The default path uses CloudAhoy JSON APIs for full-flight data and FlySto API upload.
-
-## Production
-
-See `docs/production.md` for the minimum infrastructure and configuration required for a multi-tenant deployment.
-
-## Web Automation Notes
-
-The web mode uses Playwright to log in and export/upload flights when no official APIs are available. Provide `CLOUD_AHOY_EXPORT_URL_TEMPLATE` and `FLYSTO_UPLOAD_URL` to bypass UI discovery if needed. For interactive debugging, run with `--headful` and watch the browser session. FlySto uploads are driven through the `Load logs` → `Browse files` flow on `/logs`. The CloudAhoy flights list uses the web UI and auto-clicks `Load more` to fetch additional pages when available. Auto mode does not fall back to web automation.
-
-Review manifests include a `points_schema` and `points_preview` derived from `flt.points` so you can validate the trajectory fields before import.
-Approved imports require a review ID; `./scripts/run-import.sh` reads it from `data/review.json` automatically.
-
-## Run Checklist
-
-See `docs/run-checklist.md` for the step-by-step run procedure and verification steps.
-
-
-Discovery mode is only needed when the web apps change or an endpoint breaks; it logs in and records endpoint hints to `data/discovery/discovery.json`.
-
-## Backend Roadmap (draft)
-
-- MVP: single-user CLI + Docker
-- Phase 2: hosted worker that runs scheduled migrations per account
-- Phase 3: multi-tenant backend with billing (per-flight + bundles), admin dashboard, and audit logs
-
-## Development
-
-Preferred devcontainer usage without the devcontainer CLI:
-
-```sh
-docker build --target base -t skybridge-dev .
-docker run --rm -it \
-  -v "$PWD":/workspaces/skybridge \
-  -w /workspaces/skybridge \
-  skybridge-dev pytest
 ```
-
-Devcontainer notes:
-- Shell history is persisted in a named Docker volume (`/var/devcontainer/history`).
-- Codex login is persisted via a named volume at `/home/vscode/.codex` and port 1455 is forwarded for the callback.
-- Python deps are managed via `uv` (`pyproject.toml` + `uv.lock`), dev deps via `--extra dev`.
-- Oh My Zsh includes `zsh-autosuggestions` by default for shell hinting.
-
-Install the guided command globally (default `/usr/local/bin`):
-
-```sh
-make install
-make uninstall
+npm install -g @devcontainers/cli
 ```
-
-Override the install path:
-
-```sh
-make install PREFIX=$HOME/.local
-```
-
-Local execution without Docker is possible with:
-
-```sh
-python -m src.core.cli --review
-python -m src.core.cli --approve-import
-python -m src.core.cli --approve-import --review-id <id> --wait-for-processing
-python -m src.core.cli --reconcile-import-report --wait-for-processing
-```
-
-Development runs should use the devcontainer scripts (`./scripts/run*.sh`) to guarantee required dependencies (like `rich`) and browser tooling. Local execution is best reserved for one-off debugging.
-
-## Local dev (serverless parity)
-
-Use Docker Compose or the devcontainer. No extra scripts are required for local dev.
 
 ```sh
 docker compose up --build
 ```
 
-Open https://skybridge.localhost for the UI.
+Open https://skybridge.localhost and sign in with `demo` / `demo-password`.
+On macOS, `.localhost` already resolves to `127.0.0.1`, so no hosts file change is needed. If your OS does not resolve `*.localhost`, add these entries to `/etc/hosts`:
 
-Local auth uses OIDC (Keycloak). Start Keycloak with Docker Compose or a separate container and sign in with the dev credentials:
-- user: `demo`
-- password: `demo-password`
-
-Optional dev convenience: set `DEV_PREFILL_CREDENTIALS=1` and provide
-`CLOUD_AHOY_EMAIL`, `CLOUD_AHOY_PASSWORD`, `FLYSTO_EMAIL`, `FLYSTO_PASSWORD`
-to prefill the web UI inputs.
-
-For a standalone Keycloak instance:
-
-```sh
-docker compose up --build keycloak
+```
+127.0.0.1 skybridge.localhost
+127.0.0.1 auth.skybridge.localhost
+127.0.0.1 storage.skybridge.localhost
 ```
 
-### HTTPS dev setup (recommended on macOS)
+Local HTTPS is terminated by the Caddy container using the certificates in `docker/https/certs`. Run `mkcert` once to generate them:
 
-This uses Caddy + mkcert for trusted local HTTPS.
-
-```sh
+```
 brew install mkcert
-./scripts/setup-dev-https.sh
-docker compose up --build
+mkcert -install
+mkdir -p docker/https/certs
+mkcert -cert-file docker/https/certs/skybridge.pem -key-file docker/https/certs/skybridge-key.pem skybridge.localhost auth.skybridge.localhost storage.skybridge.localhost
 ```
 
-Open:
-- https://skybridge.localhost (UI + API)
-- https://auth.skybridge.localhost (Keycloak)
-- https://storage.skybridge.localhost (MinIO console + S3 API)
+## Docs
 
-
-### Docker Compose (API + worker + local data stores)
-
-```sh
-docker compose up --build
-```
-
-Services:
-- `api` (Lambda API emulator) on http://localhost:8000
-- `worker` (Lambda-style SQS worker)
-- `dynamodb` (local) on http://localhost:8001
-- `localstack` (SQS emulator) on http://localhost:4566
-- `minio` (S3-compatible) behind Caddy at https://storage.skybridge.localhost
-- `keycloak` (OIDC dev auth) on http://localhost:8080
-- `caddy` (HTTPS proxy) on https://skybridge.localhost, https://auth.skybridge.localhost, and https://storage.skybridge.localhost
-
-The dev stack runs review/import via SQS + Lambda-style worker (API queues jobs and issues one-time credential claims).
-
-Mock portal services (default in dev):
-- `DEV_USE_MOCKS=1` (default) routes CloudAhoy/FlySto calls to local mock services seeded from `tests/fixtures/run-20251228T185601Z`.
-- To use real portals, set `DEV_USE_MOCKS=0` and configure `CLOUD_AHOY_BASE_URL`/`FLYSTO_BASE_URL` (plus auth vars).
-
-Artifact storage (S3/MinIO):
-- When `BACKEND_S3_ENABLED=1`, review/import artifacts are uploaded to the configured S3 bucket.
-- The dev stack defaults to MinIO with bucket `skybridge-artifacts` and prefix `jobs/<job_id>/`.
-- Set `BACKEND_S3_DELETE_ON_CLEAR=1` to remove remote artifacts when deleting a job (privacy).
-- Jobs older than `BACKEND_RETENTION_DAYS` are deleted automatically (local + optional S3 cleanup).
-- Per-flight CloudAhoy raw JSON exports are also uploaded
-  (`cloudahoy_exports/*.cloudahoy.json`).
-
-Production orchestration (stateless API):
-- `BACKEND_DYNAMO_ENABLED=1` with `DYNAMO_JOBS_TABLE` for job metadata.
-- `DYNAMO_CREDENTIALS_TABLE` for short-lived credentials (TTL minutes).
-- `BACKEND_SQS_ENABLED=1` with `SQS_QUEUE_URL` to enqueue review/import work.
-
-Test the API:
-
-```sh
-TOKEN="<paste access_token from Keycloak>"
-curl -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -d '{"credentials":{"cloudahoy_username":"user","cloudahoy_password":"pass","flysto_username":"user","flysto_password":"pass"}}' \
-  http://localhost:8000/jobs
-```
-
-Stop the stack:
-
-```sh
-docker compose down -v
-```
-
-Create a job and accept the review (requires an `Authorization` bearer token):
-
-```sh
-TOKEN="<paste access_token from Keycloak>"
-curl -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \\
-  -d '{"credentials":{"cloudahoy_username":"user","cloudahoy_password":"pass","flysto_username":"user","flysto_password":"pass"}}' \\
-  http://localhost:8000/jobs
-
-curl -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \\
-  -d '{"credentials":{"cloudahoy_username":"user","cloudahoy_password":"pass","flysto_username":"user","flysto_password":"pass"}}' \\
-  http://localhost:8000/jobs/<job_id>/review/accept
-```
-
-Artifacts are stored under `data/backend/jobs/<job_id>/` while the dev web uses local storage.
+- [Documentation index](docs/_index.md)
+- [Backend architecture](docs/backend-architecture.md)
+- [Codebase overview](docs/codebase-overview.md)
+- [Frontend architecture](docs/frontend.md)
+- [Testing](docs/testing.md)
+- [Production](docs/production.md)

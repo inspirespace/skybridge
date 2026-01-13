@@ -12,7 +12,6 @@ RUN apt-get update \
     && uv sync --frozen
 
 COPY src ./src
-COPY scripts ./scripts
 
 ENV PATH="/venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1

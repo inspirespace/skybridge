@@ -1,4 +1,4 @@
-"""scripts/inspect_cloudahoy_api.py module."""
+"""tools/inspector/inspect_cloudahoy_api.py module."""
 import json
 import os
 from pathlib import Path

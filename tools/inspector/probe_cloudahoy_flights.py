@@ -1,4 +1,4 @@
-"""scripts/probe_cloudahoy_flights.py module."""
+"""tools/inspector/probe_cloudahoy_flights.py module."""
 import json
 import os
 import re

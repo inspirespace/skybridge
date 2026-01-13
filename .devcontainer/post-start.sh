@@ -8,6 +8,10 @@ bash .devcontainer/setup-completion.sh
 bash .devcontainer/setup-copilot.sh
 bash .devcontainer/setup-zsh-autosuggestions.sh
 UV_CACHE_DIR=/tmp/uv-cache uv sync --frozen --extra dev
+if ! command -v pytest >/dev/null 2>&1; then
+  echo "pytest missing; reinstalling dev dependencies..."
+  UV_CACHE_DIR=/tmp/uv-cache uv sync --frozen --extra dev
+fi
 
 # Optional: install VNC/noVNC deps for headed Playwright inside the container.
 if [ "${DEVCONTAINER_E2E_VNC:-0}" = "1" ]; then

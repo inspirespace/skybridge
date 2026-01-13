@@ -1,4 +1,4 @@
-"""scripts/inspect_flysto_logs_dom.py module."""
+"""tools/inspector/inspect_flysto_logs_dom.py module."""
 import os
 from playwright.sync_api import sync_playwright
 

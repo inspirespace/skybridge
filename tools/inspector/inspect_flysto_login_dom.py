@@ -1,4 +1,4 @@
-"""scripts/inspect_flysto_login_dom.py module."""
+"""tools/inspector/inspect_flysto_login_dom.py module."""
 import json
 from pathlib import Path
 

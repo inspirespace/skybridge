@@ -1,4 +1,4 @@
-"""scripts/inspect_flysto_aircraft_ui.py module."""
+"""tools/inspector/inspect_flysto_aircraft_ui.py module."""
 import os
 import json
 from pathlib import Path

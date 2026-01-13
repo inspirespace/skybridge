@@ -215,6 +215,8 @@ def validate_credentials_handler(event: dict[str, Any], _context: Any) -> dict[s
         payload = CredentialValidationRequest.model_validate(body)
         validate_credentials(payload.credentials)
         return _response(200, {"ok": True})
+    except RuntimeError as exc:
+        return _response(400, {"detail": str(exc)})
     except Exception as exc:
         return _handle_error(exc)
 
