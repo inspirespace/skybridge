@@ -10,19 +10,24 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - VNC helpers for Playwright live in `scripts/` (devcontainer use only).
 - `scripts/cleanup-merged-branches.sh` is the only user-facing script (branch cleanup).
 - Frontend entry points: landing page in `src/frontend/index.html`, SPA app in `src/frontend/app/index.html`, static legal pages in `src/frontend/privacy/index.html` and `src/frontend/imprint/index.html`.
-- Keycloak dev realm import lives in `docker/keycloak/`.
-- Infrastructure-as-code lives under `infra/terraform/`.
+- Infrastructure-as-code is not tracked in this repository (Firebase-only deployment).
+- Firebase emulators are configured by `firebase.json` and `.firebaserc`.
+- Firebase Functions entrypoints live in `functions/`.
+- `docker-compose.yml` runs the Firebase emulators + Functions for local dev.
 - If you adopt a different layout, document it here with concrete paths (example: `cmd/`, `internal/`, `pkg/` for Go).
 
 ## Build, Test, and Development Commands
-- `docker compose up --build` — run the local dev stack (API, worker, DynamoDB Local, MinIO, Keycloak, SQS).
+- `docker compose up --build` — run the local dev stack (Firebase emulators, API, worker, frontend, HTTPS proxy, mocks).
+- VS Code launch configs: `Stack: Start (Docker Compose)`, `Stack: Stop (Docker Compose)`, `Stack: Build (Docker Compose)` in `.vscode/launch.json`.
+- VS Code tasks: `Compose: Up (detached)`, `Compose: Down`, `Compose: Build` in `.vscode/tasks.json`.
+- Firebase deploy workflow lives in `.github/workflows/firebase-deploy.yml` and requires `FIREBASE_PROJECT_ID` + `FIREBASE_SERVICE_ACCOUNT` secrets.
+- Local dev runs behind `http://skybridge.localhost` with emulator subdomains (`auth.skybridge.localhost`, `firestore.skybridge.localhost`, `ui.skybridge.localhost`) instead of localhost ports.
 - `python -m src.core.cli --review` — run the CLI locally (requires Python deps).
 - CLI supports `--start-date` / `--end-date` for targeted imports (YYYY-MM-DD or ISO8601).
 - `pytest` — run backend tests (if installed).
 - `devcontainer exec --workspace-folder . pytest` — run backend tests in the devcontainer.
 - `devcontainer exec --workspace-folder . npm --prefix src/frontend run test` — run frontend unit tests in the devcontainer.
 - `devcontainer exec --workspace-folder . npm --prefix src/frontend run test:e2e` — run frontend e2e tests in the devcontainer.
-- `terraform fmt -check -recursive` (run from `infra/terraform`) — format check for IaC.
 
 ## Coding Style & Naming Conventions
 - Indentation: 2 spaces by default; follow language-specific conventions where standard (e.g., Python 4 spaces).

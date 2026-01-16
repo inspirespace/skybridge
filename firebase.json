@@ -1,0 +1,54 @@
+{
+  "functions": {
+    "source": "functions",
+    "runtime": "python311",
+    "ignore": [
+      ".git",
+      "node_modules",
+      ".venv",
+      ".pytest_cache",
+      "__pycache__"
+    ]
+  },
+  "hosting": {
+    "public": "src/frontend/dist",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "/assets/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
+        ]
+      }
+    ],
+    "rewrites": [
+      { "source": "/api/**", "function": "api" },
+      { "source": "/app/**", "destination": "/app/index.html" },
+      { "source": "/privacy/**", "destination": "/privacy/index.html" },
+      { "source": "/imprint/**", "destination": "/imprint/index.html" },
+      { "source": "**", "destination": "/index.html" }
+    ]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "emulators": {
+    "auth": { "host": "0.0.0.0", "port": 9099 },
+    "firestore": { "host": "0.0.0.0", "port": 8080 },
+    "pubsub": { "host": "0.0.0.0", "port": 8085 },
+    "storage": { "host": "0.0.0.0", "port": 9199 },
+    "functions": { "host": "0.0.0.0", "port": 5001 },
+    "hosting": { "host": "0.0.0.0", "port": 5002 },
+    "ui": { "enabled": true, "host": "0.0.0.0", "port": 4000 }
+  }
+}

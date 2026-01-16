@@ -69,6 +69,13 @@ def test_user_id_from_request_oidc_valid_token(monkeypatch: pytest.MonkeyPatch) 
     assert auth.user_id_from_request("Bearer abc", None) == "pilot"
 
 
+def test_user_id_from_request_firebase_valid_token(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test firebase mode behaves like OIDC."""
+    monkeypatch.setenv("AUTH_MODE", "firebase")
+    monkeypatch.setattr(auth, "_verify_token", lambda token: {"email": "pilot@example.com"})
+    assert auth.user_id_from_request("Bearer abc", None) == "pilot@example.com"
+
+
 def test_user_id_from_request_oidc_invalid_subject(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test OIDC mode rejects empty subjects."""
     monkeypatch.setenv("AUTH_MODE", "oidc")

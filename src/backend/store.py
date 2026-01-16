@@ -2,8 +2,8 @@
 
 Supports:
 - Local filesystem storage (dev)
-- DynamoDB for job metadata (prod)
-- S3 via ObjectStore for artifacts (prod)
+- Firestore for job metadata (GCP)
+- GCS via ObjectStore for artifacts (GCP)
 """
 from __future__ import annotations
 
@@ -17,12 +17,8 @@ from shutil import rmtree
 from typing import Any, Callable
 from uuid import UUID
 
-import boto3
-from botocore.exceptions import ClientError
-from boto3.dynamodb.conditions import Key
-
 from .models import FlightSummary, ImportReport, JobRecord, ReviewSummary
-from .object_store import ObjectStore
+from .object_store import ObjectStoreProtocol
 
 
 @dataclass
@@ -35,22 +31,20 @@ class JobStore:
     def __init__(
         self,
         base_path: Path,
-        object_store: ObjectStore | None = None,
-        dynamo_table_name: str | None = None,
+        object_store: ObjectStoreProtocol | None = None,
+        firestore_collection: str | None = None,
+        firestore_project: str | None = None,
     ) -> None:
         """Internal helper for init  ."""
         self._base_path = base_path
         self._object_store = object_store
-        dynamo_endpoint = os.getenv("DYNAMO_ENDPOINT_URL")
-        dynamo_region = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION")
-        self._dynamo_table = None
-        if dynamo_table_name:
-            dynamo_resource = boto3.resource(
-                "dynamodb",
-                region_name=dynamo_region,
-                endpoint_url=dynamo_endpoint if dynamo_endpoint else None,
-            )
-            self._dynamo_table = dynamo_resource.Table(dynamo_table_name)
+        self._firestore = None
+        self._firestore_collection = None
+        if firestore_collection:
+            from google.cloud import firestore
+
+            self._firestore = firestore.Client(project=firestore_project or None)
+            self._firestore_collection = self._firestore.collection(firestore_collection)
         self._base_path.mkdir(parents=True, exist_ok=True)
 
     def _job_dir(self, job_id: UUID) -> Path:
@@ -58,7 +52,7 @@ class JobStore:
         return self._base_path / str(job_id)
 
     @property
-    def object_store(self) -> ObjectStore | None:
+    def object_store(self) -> ObjectStoreProtocol | None:
         """Handle object store."""
         return self._object_store
 
@@ -84,25 +78,24 @@ class JobStore:
 
     def list_all_jobs(self) -> list[JobRecord]:
         """Handle list all jobs."""
-        if self._dynamo_table:
+        if self._firestore_collection:
             jobs: list[JobRecord] = []
-            scan_kwargs: dict[str, Any] = {}
-            while True:
-                response = self._dynamo_table.scan(**scan_kwargs)
-                for item in response.get("Items", []):
-                    job = _deserialize_item(item)
-                    job = self._maybe_enrich_review_summary(job)
-                    if self._is_expired(job):
-                        self.delete_job(job.job_id)
-                        continue
-                    jobs.append(job)
-                last_evaluated_key = response.get("LastEvaluatedKey")
-                if not last_evaluated_key:
-                    break
-                scan_kwargs["ExclusiveStartKey"] = last_evaluated_key
+            for doc in self._firestore_collection.stream():
+                payload = doc.to_dict() or {}
+                job_payload = payload.get("payload")
+                if isinstance(job_payload, str):
+                    job_payload = json.loads(job_payload)
+                if not isinstance(job_payload, dict):
+                    continue
+                job = JobRecord.model_validate(job_payload)
+                job = self._maybe_enrich_review_summary(job)
+                if self._is_expired(job):
+                    self.delete_job(job.job_id)
+                    continue
+                jobs.append(job)
             return sorted(jobs, key=lambda job: job.created_at, reverse=True)
 
-        jobs: list[JobRecord] = []
+        jobs = []
         for job_dir in self._base_path.iterdir():
             job_file = job_dir / "job.json"
             if not job_file.exists():
@@ -122,27 +115,25 @@ class JobStore:
 
     def list_jobs(self, user_id: str) -> list[JobRecord]:
         """Handle list jobs."""
-        if self._dynamo_table:
+        if self._firestore_collection:
             jobs: list[JobRecord] = []
-            query_kwargs: dict[str, Any] = {
-                "KeyConditionExpression": Key("user_id").eq(user_id)
-            }
-            while True:
-                response = self._dynamo_table.query(**query_kwargs)
-                for item in response.get("Items", []):
-                    job = _deserialize_item(item)
-                    job = self._maybe_enrich_review_summary(job)
-                    if self._is_expired(job):
-                        self.delete_job(job.job_id)
-                        continue
-                    jobs.append(job)
-                last_evaluated_key = response.get("LastEvaluatedKey")
-                if not last_evaluated_key:
-                    break
-                query_kwargs["ExclusiveStartKey"] = last_evaluated_key
+            query = self._firestore_collection.where("user_id", "==", user_id)
+            for doc in query.stream():
+                payload = doc.to_dict() or {}
+                job_payload = payload.get("payload")
+                if isinstance(job_payload, str):
+                    job_payload = json.loads(job_payload)
+                if not isinstance(job_payload, dict):
+                    continue
+                job = JobRecord.model_validate(job_payload)
+                job = self._maybe_enrich_review_summary(job)
+                if self._is_expired(job):
+                    self.delete_job(job.job_id)
+                    continue
+                jobs.append(job)
             return sorted(jobs, key=lambda job: job.created_at, reverse=True)
 
-        jobs: list[JobRecord] = []
+        jobs = []
         for job_dir in self._base_path.iterdir():
             job_file = job_dir / "job.json"
             if not job_file.exists():
@@ -169,15 +160,17 @@ class JobStore:
 
     def load_job(self, job_id: UUID) -> JobRecord:
         """Handle load job."""
-        if self._dynamo_table:
-            response = self._dynamo_table.query(
-                IndexName="job_id-index",
-                KeyConditionExpression=Key("job_id").eq(str(job_id)),
-            )
-            items = response.get("Items", [])
-            if not items:
+        if self._firestore_collection:
+            doc = self._firestore_collection.document(str(job_id)).get()
+            if not doc.exists:
                 raise FileNotFoundError("Job not found")
-            job = _deserialize_item(items[0])
+            payload = doc.to_dict() or {}
+            job_payload = payload.get("payload")
+            if isinstance(job_payload, str):
+                job_payload = json.loads(job_payload)
+            if not isinstance(job_payload, dict):
+                raise FileNotFoundError("Job not found")
+            job = JobRecord.model_validate(job_payload)
             if self._is_expired(job):
                 self.delete_job(job.job_id)
                 raise FileNotFoundError("Job expired")
@@ -193,23 +186,17 @@ class JobStore:
 
     def delete_job(self, job_id: UUID, *, user_id: str | None = None) -> None:
         """Delete job."""
-        if self._dynamo_table:
+        if self._firestore_collection:
             try:
                 job = self.load_job(job_id)
-                self._dynamo_table.delete_item(
-                    Key={"user_id": job.user_id, "job_id": str(job.job_id)}
-                )
+                self._firestore_collection.document(str(job_id)).delete()
                 user_id = user_id or job.user_id
             except FileNotFoundError:
-                pass
-            except ClientError as exc:
-                if exc.response.get("Error", {}).get("Code") != "ResourceNotFoundException":
-                    raise
                 pass
         job_dir = self._job_dir(job_id)
         if job_dir.exists():
             rmtree(job_dir)
-        if self._object_store and _bool_env("BACKEND_S3_DELETE_ON_CLEAR", False):
+        if self._object_store and _bool_env("BACKEND_OBJECT_STORE_DELETE_ON_CLEAR", False):
             prefix = self._object_prefix_for_job(job_id, user_id=user_id)
             if prefix:
                 try:
@@ -225,17 +212,19 @@ class JobStore:
         job_dir.mkdir(parents=True, exist_ok=True)
         job_file = job_dir / "job.json"
         job_file.write_text(json.dumps(_serialize(job), indent=2))
-        if self._dynamo_table:
+        if self._firestore_collection:
             ttl_epoch = _ttl_epoch(job.created_at)
+            ttl_at = datetime.fromtimestamp(ttl_epoch, tz=timezone.utc)
             item = {
                 "user_id": job.user_id,
                 "job_id": str(job.job_id),
-                "payload": json.dumps(_serialize(job)),
-                "created_at": job.created_at.isoformat(),
-                "updated_at": job.updated_at.isoformat(),
+                "payload": _serialize(job),
+                "created_at": job.created_at,
+                "updated_at": job.updated_at,
                 "ttl_epoch": ttl_epoch,
+                "ttl_at": ttl_at,
             }
-            self._dynamo_table.put_item(Item=item)
+            self._firestore_collection.document(str(job.job_id)).set(item)
 
     def write_artifact(self, job_id: UUID, name: str, payload: dict[str, Any]) -> None:
         """Handle write artifact."""
@@ -318,31 +307,26 @@ class JobStore:
         """Handle write token."""
         token_file = self._token_file(job_id, purpose)
         token_file.write_text(token)
-        if self._dynamo_table:
+        if self._firestore_collection:
             job = self.load_job(job_id)
             field = f"{purpose}_token"
-            self._dynamo_table.update_item(
-                Key={"user_id": job.user_id, "job_id": str(job.job_id)},
-                UpdateExpression=f"SET {field} = :token",
-                ExpressionAttributeValues={":token": token},
-            )
+            self._firestore_collection.document(str(job.job_id)).update({field: token})
 
     def read_token(self, job_id: UUID, purpose: str) -> str | None:
         """Handle read token."""
         token_file = self._token_file(job_id, purpose)
         if not token_file.exists():
-            if self._dynamo_table:
+            if self._firestore_collection:
                 try:
                     job = self.load_job(job_id)
                 except FileNotFoundError:
                     return None
                 field = f"{purpose}_token"
-                response = self._dynamo_table.get_item(
-                    Key={"user_id": job.user_id, "job_id": str(job.job_id)},
-                    ProjectionExpression=field,
-                )
-                item = response.get("Item") if isinstance(response, dict) else None
-                return item.get(field) if item else None
+                doc = self._firestore_collection.document(str(job.job_id)).get()
+                if not doc.exists:
+                    return None
+                payload = doc.to_dict() or {}
+                return payload.get(field)
             return None
         return token_file.read_text().strip()
 
@@ -418,16 +402,13 @@ class JobStore:
         token_file = self._token_file(job_id, purpose)
         if token_file.exists():
             token_file.unlink()
-        if self._dynamo_table:
+        if self._firestore_collection:
             try:
                 job = self.load_job(job_id)
             except FileNotFoundError:
                 return
             field = f"{purpose}_token"
-            self._dynamo_table.update_item(
-                Key={"user_id": job.user_id, "job_id": str(job.job_id)},
-                UpdateExpression=f"REMOVE {field}",
-            )
+            self._firestore_collection.document(str(job.job_id)).update({field: None})
 
     def _is_expired(self, job: JobRecord) -> bool:
         """Internal helper for is expired."""
@@ -536,13 +517,6 @@ def _extract_metadata_from_raw(raw_payload: dict[str, Any]) -> dict[str, Any]:
         "destination": meta.get("destination"),
     }
     return {key: value for key, value in fields.items() if value not in (None, "", [])}
-
-
-def _deserialize_item(item: dict[str, Any]) -> JobRecord:
-    """Internal helper for deserialize item."""
-    payload = item.get("payload") or "{}"
-    data = json.loads(payload)
-    return JobRecord.model_validate(data)
 
 
 def _serialize(job: JobRecord) -> dict[str, Any]:

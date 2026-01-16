@@ -59,13 +59,10 @@ def _load_job(job_id: str, user_id: str):
     return job
 
 
-def _dynamo_jobs_table() -> str | None:
-    """Internal helper for dynamo jobs table."""
-    if (os.getenv("BACKEND_DYNAMO_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
-        table = os.getenv("DYNAMO_JOBS_TABLE") or None
-        if not table:
-            raise RuntimeError("DYNAMO_JOBS_TABLE is required when BACKEND_DYNAMO_ENABLED=1")
-        return table
+def _firestore_jobs_collection() -> str | None:
+    """Internal helper for Firestore jobs collection."""
+    if (os.getenv("BACKEND_FIRESTORE_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
+        return os.getenv("FIRESTORE_JOBS_COLLECTION") or "skybridge-jobs"
     return None
 
 
@@ -76,38 +73,30 @@ def _credential_ttl() -> int:
 
 def _use_queue() -> bool:
     """Internal helper for use queue."""
-    return (os.getenv("BACKEND_SQS_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}
+    return (os.getenv("BACKEND_PUBSUB_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}
 
 
-def _sqs_queue_url() -> str:
-    """Internal helper for sqs queue url."""
-    return os.getenv("SQS_QUEUE_URL") or ""
+def _pubsub_topic() -> str:
+    """Internal helper for pubsub topic."""
+    topic = os.getenv("PUBSUB_TOPIC") or ""
+    if not topic:
+        return ""
+    if topic.startswith("projects/"):
+        return topic
+    project_id = os.getenv("GCP_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT") or ""
+    if not project_id:
+        return ""
+    return f"projects/{project_id}/topics/{topic}"
 
 
-def _sqs_region() -> str:
-    """Internal helper for sqs region."""
-    return os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION") or "us-east-1"
+def _get_pubsub_client():
+    """Internal helper for pubsub client."""
+    global _pubsub_client
+    if _pubsub_client is None:
+        from google.cloud import pubsub_v1
 
-def _sqs_endpoint_url() -> str | None:
-    """Internal helper for sqs endpoint url."""
-    value = os.getenv("SQS_ENDPOINT_URL")
-    if value is None or value.strip() == "":
-        return None
-    return value.strip()
-
-
-def _get_sqs_client():
-    """Internal helper for get sqs client."""
-    global _sqs_client
-    if _sqs_client is None:
-        import boto3
-
-        _sqs_client = boto3.client(
-            "sqs",
-            region_name=_sqs_region(),
-            endpoint_url=_sqs_endpoint_url(),
-        )
-    return _sqs_client
+        _pubsub_client = pubsub_v1.PublisherClient()
+    return _pubsub_client
 
 
 class LambdaHttpError(Exception):
@@ -123,13 +112,11 @@ def _enqueue_job(job_id: UUID, purpose: str, token: str) -> None:
     """Internal helper for enqueue job."""
     if not _use_queue():
         return
-    queue_url = _sqs_queue_url()
-    if not queue_url:
-        raise LambdaHttpError(500, "SQS_QUEUE_URL not configured")
-    _get_sqs_client().send_message(
-        QueueUrl=queue_url,
-        MessageBody=json.dumps({"job_id": str(job_id), "purpose": purpose, "token": token}),
-    )
+    payload = json.dumps({"job_id": str(job_id), "purpose": purpose, "token": token}).encode("utf-8")
+    topic = _pubsub_topic()
+    if not topic:
+        raise LambdaHttpError(500, "PUBSUB_TOPIC not configured")
+    _get_pubsub_client().publish(topic, payload).result(timeout=10)
 
 
 def _set_queued(job, *, phase: str) -> None:
@@ -159,10 +146,15 @@ def _handle_error(exc: Exception) -> dict[str, Any]:
 
 
 DATA_DIR = Path(os.environ.get("BACKEND_DATA_DIR", "/tmp/backend/jobs"))
-store = JobStore(DATA_DIR, build_object_store_from_env(), _dynamo_jobs_table())
+store = JobStore(
+    DATA_DIR,
+    build_object_store_from_env(),
+    firestore_collection=_firestore_jobs_collection(),
+    firestore_project=os.getenv("GCP_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT"),
+)
 service = JobService(store)
 credential_store = build_credential_store()
-_sqs_client = None
+_pubsub_client = None
 _ACTIVE_JOB_STATUSES = {
     "review_queued",
     "review_running",
@@ -461,54 +453,62 @@ def download_artifacts_zip_handler(event: dict[str, Any], _context: Any) -> dict
         return _handle_error(exc)
 
 
-def sqs_worker_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
-    """Process queued review/import jobs from SQS."""
-    records = event.get("Records") or []
-    for record in records:
-        body = record.get("body") or "{}"
-        try:
-            payload = json.loads(body)
-        except json.JSONDecodeError:
-            continue
-        job_id = payload.get("job_id")
-        purpose = payload.get("purpose")
-        token = payload.get("token")
-        if not job_id or purpose not in {"review", "import"}:
-            continue
-        try:
-            job_uuid = UUID(job_id)
-        except ValueError:
-            continue
-        try:
-            job = store.load_job(job_uuid)
-        except FileNotFoundError:
-            continue
-        creds = None
-        if token:
-            creds = credential_store.claim(token, str(job_uuid), purpose)
-        if not creds:
-            if job.status in {"review_running", "review_ready", "import_running", "completed"}:
-                continue
-            job.status = "failed"
-            job.error_message = f"{purpose.title()} credentials expired"
-            job.updated_at = datetime.now(timezone.utc)
-            store.save_job(job)
-            continue
-        try:
-            if purpose == "review":
-                payload = JobCreateRequest(
-                    credentials=creds,
-                    start_date=job.start_date,
-                    end_date=job.end_date,
-                    max_flights=job.max_flights,
-                )
-                service.generate_review(job_uuid, payload)
-            else:
-                payload = JobAcceptRequest(credentials=creds)
-                service.accept_review(job_uuid, payload)
-        except Exception as exc:
-            job.status = "failed"
-            job.error_message = f"Worker failed: {exc}"
-            job.updated_at = datetime.now(timezone.utc)
-            store.save_job(job)
+def _process_queue_payload(payload: dict[str, Any]) -> None:
+    """Shared worker logic for Pub/Sub payloads."""
+    job_id = payload.get("job_id")
+    purpose = payload.get("purpose")
+    token = payload.get("token")
+    if not job_id or purpose not in {"review", "import"}:
+        return
+    try:
+        job_uuid = UUID(job_id)
+    except ValueError:
+        return
+    try:
+        job = store.load_job(job_uuid)
+    except FileNotFoundError:
+        return
+    creds = None
+    if token:
+        creds = credential_store.claim(token, str(job_uuid), purpose)
+    if not creds:
+        if job.status in {"review_running", "review_ready", "import_running", "completed"}:
+            return
+        job.status = "failed"
+        job.error_message = f"{purpose.title()} credentials expired"
+        job.updated_at = datetime.now(timezone.utc)
+        store.save_job(job)
+        return
+    try:
+        if purpose == "review":
+            request = JobCreateRequest(
+                credentials=creds,
+                start_date=job.start_date,
+                end_date=job.end_date,
+                max_flights=job.max_flights,
+            )
+            service.generate_review(job_uuid, request)
+        else:
+            request = JobAcceptRequest(credentials=creds)
+            service.accept_review(job_uuid, request)
+    except Exception as exc:
+        job.status = "failed"
+        job.error_message = f"Worker failed: {exc}"
+        job.updated_at = datetime.now(timezone.utc)
+        store.save_job(job)
+
+
+def pubsub_worker_handler(event: dict[str, Any], _context: Any = None) -> dict[str, Any]:
+    """Process queued review/import jobs from Pub/Sub."""
+    message = event.get("message") or {}
+    data = message.get("data")
+    if not data:
+        return {"ok": False}
+    import base64
+
+    try:
+        payload = json.loads(base64.b64decode(data).decode("utf-8"))
+    except Exception:
+        return {"ok": False}
+    _process_queue_payload(payload)
     return {"ok": True}

@@ -29,7 +29,7 @@ def user_id_from_request(authorization: Optional[str], x_user_id: Optional[str])
         if not x_user_id:
             raise HTTPException(status_code=401, detail="Missing X-User-Id header")
         return x_user_id
-    if mode != "oidc":
+    if mode not in {"oidc", "firebase"}:
         raise HTTPException(status_code=500, detail=f"Unsupported auth mode: {mode}")
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="Missing Authorization bearer token")
@@ -57,6 +57,20 @@ def user_id_from_event(event: dict[str, Any]) -> str:
 
 def _verify_token(token: str) -> dict[str, Any]:
     """Internal helper for verify token."""
+    if _env("FIREBASE_AUTH_EMULATOR_HOST"):
+        try:
+            payload = jwt.decode(
+                token,
+                options={
+                    "verify_signature": False,
+                    "verify_aud": False,
+                    "verify_iss": False,
+                },
+            )
+        except jwt.PyJWTError as exc:
+            raise HTTPException(status_code=401, detail=f"Invalid token: {exc}") from exc
+        return payload
+
     issuer = _env("AUTH_ISSUER_URL")
     if not issuer:
         raise HTTPException(status_code=500, detail="AUTH_ISSUER_URL not configured")
@@ -123,7 +137,7 @@ def _load_jwks(issuer: str) -> list[dict[str, Any]]:
         response.raise_for_status()
         payload = response.json()
     except requests.RequestException as exc:
-        # Keycloak may still be booting; surface a retryable error instead of 500.
+    # Auth provider may still be booting; surface a retryable error instead of 500.
         raise HTTPException(
             status_code=503,
             detail="Auth provider not ready, retry in a few seconds.",
@@ -150,7 +164,7 @@ def _jwks_uri_for_issuer(issuer: str) -> str:
     data = response.json()
     jwks_uri = data.get("jwks_uri")
     if not jwks_uri:
-        raise HTTPException(status_code=500, detail="OIDC config missing jwks_uri")
+        raise HTTPException(status_code=500, detail="Auth config missing jwks_uri")
     _JWKS_CACHE.jwks_uri = jwks_uri
     return jwks_uri
 

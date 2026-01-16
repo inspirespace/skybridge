@@ -1,28 +1,30 @@
 # Backend Architecture (Serverless)
 
 ## Overview
-The backend is serverless. An API Lambda receives requests, enqueues work in SQS, and a worker Lambda processes review/import jobs. State is in DynamoDB and artifacts go to S3.
+The backend is serverless. In production, the stack targets Firebase (Functions 2nd gen + Firestore + Storage + Auth) with Pub/Sub for queueing. The API receives requests, enqueues work, and a worker processes review/import jobs. State lives in Firestore and artifacts go to Storage.
 
 ## Components
-- **API Lambda** (`src/backend/lambda_handlers.py`): REST endpoints for auth, job creation, polling, and artifacts.
-- **Worker Lambda** (`src/backend/worker_lambda.py`): processes SQS messages for review/import jobs.
-- **Queue** (SQS): decouples API from long-running work.
-- **State** (DynamoDB): job metadata + credential claims.
-- **Artifacts** (S3): review/import outputs and logs.
+- **API (Functions 2nd gen)** (`functions/main.py`): HTTP function that maps requests to Lambda handlers.
+- **Worker (Functions 2nd gen)** (`functions/main.py`): Pub/Sub-triggered function for review/import jobs.
+- **Queue** (Pub/Sub): decouples API from long-running work.
+- **State** (Firestore): job metadata + credential claims.
+- **Artifacts** (Cloud Storage): review/import outputs and logs.
 
 ## Local parity
-`docker-compose.yml` runs local equivalents of production services so the flow matches AWS.
-- Lambda API emulator (HTTP)
-- Lambda worker process
-- LocalStack (SQS)
-- DynamoDB Local
-- MinIO (S3)
-- Keycloak (OIDC dev auth)
+`docker-compose.yml` runs local equivalents of production services so the flow matches Firebase.
+- Firebase Functions emulator (HTTP API + worker)
+- Firebase emulators (Auth, Firestore, Pub/Sub, Storage)
 
-This mirrors production behavior: API enqueues jobs, worker processes them, state lives in DynamoDB, artifacts in S3.
+This mirrors the Firebase flow for local dev: API publishes Pub/Sub messages, worker processes them, state lives in Firestore, artifacts in Storage.
 
-## Runtime flow
-1) UI starts a review job → API Lambda writes job state and enqueues SQS message.
-2) Worker Lambda consumes SQS → runs the migration pipeline.
-3) Worker updates DynamoDB and uploads artifacts to S3.
+## Runtime flow (Firebase)
+1) UI starts a review job → Functions API writes job state and publishes Pub/Sub message.
+2) Functions worker consumes Pub/Sub → runs the migration pipeline.
+3) Worker updates Firestore and uploads artifacts to Storage.
+4) UI polls job status and downloads artifacts when ready.
+
+## Runtime flow (Local)
+1) UI starts a review job → API writes job state and publishes Pub/Sub message.
+2) Worker consumes Pub/Sub → runs the migration pipeline.
+3) Worker updates Firestore and uploads artifacts to Storage emulator.
 4) UI polls job status and downloads artifacts when ready.

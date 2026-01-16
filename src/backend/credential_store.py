@@ -1,19 +1,16 @@
 """Short-lived credential store for worker jobs.
 
 Credentials are issued with a TTL and can be claimed once by the worker.
-Backed by in-memory dict (dev) or DynamoDB (prod).
+Backed by in-memory dict (dev) or Firestore (GCP).
 """
 from __future__ import annotations
 
 import secrets
 import time
 import os
-import json
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from typing import Optional
-
-import boto3
-
 
 @dataclass
 class _Entry:
@@ -55,29 +52,27 @@ class CredentialStore:
         return entry.credentials
 
 
-class DynamoCredentialStore:
-    def __init__(self, table_name: str) -> None:
+class FirestoreCredentialStore:
+    def __init__(self, collection: str, project_id: str | None = None) -> None:
         """Internal helper for init  ."""
-        endpoint_url = os.getenv("DYNAMO_ENDPOINT_URL")
-        region_name = os.getenv("AWS_REGION") or os.getenv("AWS_DEFAULT_REGION")
-        resource = boto3.resource(
-            "dynamodb",
-            region_name=region_name,
-            endpoint_url=endpoint_url if endpoint_url else None,
-        )
-        self._table = resource.Table(table_name)
+        from google.cloud import firestore
+
+        self._client = firestore.Client(project=project_id or None)
+        self._collection = self._client.collection(collection)
 
     def issue(self, job_id: str, purpose: str, credentials: dict, ttl_seconds: int) -> str:
         """Handle issue."""
         token = secrets.token_urlsafe(32)
         ttl_epoch = int(time.time() + ttl_seconds)
-        self._table.put_item(
-            Item={
+        ttl_at = datetime.fromtimestamp(ttl_epoch, tz=timezone.utc)
+        self._collection.document(token).set(
+            {
                 "token": token,
                 "job_id": job_id,
                 "purpose": purpose,
-                "credentials": json.dumps(credentials),
+                "credentials": credentials,
                 "ttl_epoch": ttl_epoch,
+                "ttl_at": ttl_at,
                 "used": False,
             }
         )
@@ -85,27 +80,32 @@ class DynamoCredentialStore:
 
     def claim(self, token: str, job_id: str, purpose: str) -> Optional[dict]:
         """Handle claim."""
-        response = self._table.get_item(Key={"token": token})
-        item = response.get("Item") if isinstance(response, dict) else None
-        if not item:
-            return None
-        if item.get("used") or item.get("job_id") != job_id or item.get("purpose") != purpose:
-            return None
-        if time.time() > int(item.get("ttl_epoch") or 0):
-            self._table.delete_item(Key={"token": token})
-            return None
-        self._table.delete_item(Key={"token": token})
-        try:
-            return json.loads(item.get("credentials") or "{}")
-        except json.JSONDecodeError:
-            return None
+        from google.cloud import firestore
+
+        doc_ref = self._collection.document(token)
+
+        @firestore.transactional
+        def _claim(txn):
+            snapshot = doc_ref.get(transaction=txn)
+            if not snapshot.exists:
+                return None
+            item = snapshot.to_dict() or {}
+            if item.get("used") or item.get("job_id") != job_id or item.get("purpose") != purpose:
+                return None
+            if time.time() > int(item.get("ttl_epoch") or 0):
+                txn.delete(doc_ref)
+                return None
+            txn.delete(doc_ref)
+            return item.get("credentials")
+
+        transaction = self._client.transaction()
+        return _claim(transaction)
 
 
-def build_credential_store() -> CredentialStore | DynamoCredentialStore:
+def build_credential_store() -> CredentialStore | FirestoreCredentialStore:
     """Build credential store."""
-    if (os.getenv("BACKEND_DYNAMO_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
-        table_name = os.getenv("DYNAMO_CREDENTIALS_TABLE") or ""
-        if not table_name:
-            raise RuntimeError("DYNAMO_CREDENTIALS_TABLE is required when BACKEND_DYNAMO_ENABLED=1")
-        return DynamoCredentialStore(table_name)
+    if (os.getenv("BACKEND_FIRESTORE_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
+        collection = os.getenv("FIRESTORE_CREDENTIALS_COLLECTION") or "skybridge-credentials"
+        project_id = os.getenv("GCP_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT")
+        return FirestoreCredentialStore(collection, project_id)
     return CredentialStore()

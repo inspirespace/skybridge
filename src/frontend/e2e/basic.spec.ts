@@ -18,7 +18,7 @@ test("home page loads", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByText("SKYBRIDGE").first()).toBeVisible();
   await expect(
-    page.getByRole("main").getByRole("button", { name: /sign up \/ sign in/i })
+    page.getByRole("main").getByRole("link", { name: /sign up \/ sign in/i })
   ).toBeVisible();
 });
 
@@ -37,7 +37,7 @@ test("sign in updates status", async ({ page }) => {
   await page.goto("/");
   const button = page
     .getByRole("main")
-    .getByRole("button", { name: /sign up \/ sign in/i });
+    .getByRole("link", { name: /sign up \/ sign in/i });
   await button.click();
   await expect(page.getByText("Connect accounts").first()).toBeVisible();
   await expect(page.getByRole("button", { name: /connect and review/i })).toBeVisible();

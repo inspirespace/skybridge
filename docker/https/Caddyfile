@@ -2,50 +2,128 @@
   auto_https off
 }
 
-http://skybridge.localhost {
-  redir https://skybridge.localhost{uri}
+http://skybridge.localhost, http://*.skybridge.localhost {
+  redir https://{host}{uri}
 }
 
-http://auth.skybridge.localhost {
-  redir https://auth.skybridge.localhost{uri}
-}
-
-http://storage.skybridge.localhost {
-  redir https://storage.skybridge.localhost{uri}
-}
-
-https://skybridge.localhost {
+https://skybridge.localhost, https://*.skybridge.localhost {
   tls /etc/caddy/certs/skybridge.localhost.pem /etc/caddy/certs/skybridge.localhost-key.pem
   encode gzip
-  handle_path /api/* {
-    reverse_proxy api:8000
-  }
-  handle {
-    reverse_proxy frontend:5173
-  }
-}
 
-https://auth.skybridge.localhost {
-  tls /etc/caddy/certs/auth.skybridge.localhost.pem /etc/caddy/certs/auth.skybridge.localhost-key.pem
-  encode gzip
-  reverse_proxy keycloak:8080
-}
+  handle_errors {
+    @auth_error host auth.skybridge.localhost
+    @firestore_error host firestore.skybridge.localhost
+    handle @auth_error {
+      header {
+        -Access-Control-Allow-Origin
+        -Access-Control-Allow-Credentials
+        -Access-Control-Allow-Headers
+        -Access-Control-Allow-Methods
+        Access-Control-Allow-Origin "{http.request.header.Origin}"
+        Access-Control-Allow-Credentials "true"
+        Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        Access-Control-Allow-Headers "Content-Type, Authorization, X-Firebase-Locale, X-Client-Version, X-Firebase-Client, X-Firebase-gmpid, X-Goog-Api-Client, X-Goog-AuthUser, X-Goog-Api-Key"
+      }
+      respond "{http.error.status_code}" {http.error.status_code}
+    }
+    handle @firestore_error {
+      header {
+        -Access-Control-Allow-Origin
+        -Access-Control-Allow-Credentials
+        -Access-Control-Allow-Headers
+        -Access-Control-Allow-Methods
+        Access-Control-Allow-Origin "{http.request.header.Origin}"
+        Access-Control-Allow-Credentials "true"
+        Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        Access-Control-Allow-Headers "Content-Type, Authorization, X-Firebase-Locale, X-Client-Version, X-Firebase-Client, X-Firebase-gmpid, X-Goog-Api-Client, X-Goog-AuthUser, X-Goog-Api-Key"
+      }
+      respond "{http.error.status_code}" {http.error.status_code}
+    }
+  }
 
-https://storage.skybridge.localhost {
-  tls /etc/caddy/certs/storage.skybridge.localhost.pem /etc/caddy/certs/storage.skybridge.localhost-key.pem
-  encode gzip
-  @root path /
-  redir @root /console/ 302
-  handle /api* {
-    reverse_proxy minio:9001
+  @auth host auth.skybridge.localhost
+  @firestore host firestore.skybridge.localhost
+  @storage host storage.skybridge.localhost
+  @functions host functions.skybridge.localhost
+  @hosting host hosting.skybridge.localhost
+  @emulator host emulator.skybridge.localhost
+  @app host skybridge.localhost
+
+  @cors_auth host auth.skybridge.localhost
+  header @cors_auth {
+    -Access-Control-Allow-Origin
+    -Access-Control-Allow-Credentials
+    -Access-Control-Allow-Headers
+    -Access-Control-Allow-Methods
+    Access-Control-Allow-Origin "{http.request.header.Origin}"
+    Access-Control-Allow-Credentials "true"
+    Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    Access-Control-Allow-Headers "Content-Type, Authorization, X-Firebase-Locale, X-Client-Version, X-Firebase-Client, X-Firebase-gmpid, X-Goog-Api-Client, X-Goog-AuthUser, X-Goog-Api-Key"
   }
-  handle_path /console* {
-    reverse_proxy minio:9001
+
+  @cors_firestore host firestore.skybridge.localhost
+  header @cors_firestore {
+    -Access-Control-Allow-Origin
+    -Access-Control-Allow-Credentials
+    -Access-Control-Allow-Headers
+    -Access-Control-Allow-Methods
+    Access-Control-Allow-Origin "{http.request.header.Origin}"
+    Access-Control-Allow-Credentials "true"
+    Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    Access-Control-Allow-Headers "Content-Type, Authorization, X-Firebase-Locale, X-Client-Version, X-Firebase-Client, X-Firebase-gmpid, X-Goog-Api-Client, X-Goog-AuthUser, X-Goog-Api-Key"
   }
-  handle_path /minio* {
-    reverse_proxy minio:9001
+
+  handle @auth {
+    @auth_options method OPTIONS
+    handle @auth_options {
+      respond 204
+    }
+    reverse_proxy firebase-emulator:9099
   }
-  handle {
-    reverse_proxy minio:9000
+
+  handle @firestore {
+    @firestore_options method OPTIONS
+    handle @firestore_options {
+      respond 204
+    }
+    reverse_proxy firebase-emulator:8080
+  }
+
+  handle @storage {
+    reverse_proxy firebase-emulator:9199
+  }
+
+  handle @functions {
+    reverse_proxy firebase-emulator:5001
+  }
+
+  handle @hosting {
+    reverse_proxy firebase-emulator:5002
+  }
+
+  handle @emulator {
+    reverse_proxy firebase-emulator:4000
+  }
+
+  handle @app {
+    handle /identitytoolkit.googleapis.com/* {
+      reverse_proxy firebase-emulator:9099
+    }
+    handle /securetoken.googleapis.com/* {
+      reverse_proxy firebase-emulator:9099
+    }
+    handle /emulator/* {
+      reverse_proxy firebase-emulator:9099
+    }
+    handle /google.firestore.v1.Firestore/* {
+      reverse_proxy firebase-emulator:8080
+    }
+    handle_path /api/* {
+      rewrite * /skybridge-dev/us-central1/api{uri}
+      reverse_proxy firebase-emulator:5001
+    }
+    handle {
+      reverse_proxy frontend:5173
+    }
   }
 }

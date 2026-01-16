@@ -14,7 +14,13 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { AppFooter } from "@/components/app/AppFooter";
 import { ConnectSection } from "@/components/app/ConnectSection";
@@ -36,7 +42,7 @@ import {
 import { canStartOver, deriveFlowState, getOpenStep } from "@/state/flow";
 import { useJobSnapshot } from "@/hooks/use-job-snapshot";
 import type { DateRange } from "react-day-picker";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail, UserRound, ShieldCheck, ArrowRight } from "lucide-react";
 import {
   formatDate,
   formatDateRange,
@@ -48,6 +54,7 @@ import {
 } from "@/lib/format";
 import { isAuthExpiredError } from "@/lib/auth-helpers";
 import { useOidcAuth } from "@/hooks/use-oidc-auth";
+import { useFirebaseAuth } from "@/hooks/use-firebase-auth";
 
 const USER_ID_KEY = "skybridge_user_id";
 const JOB_ID_KEY = "skybridge_job_id";
@@ -64,6 +71,15 @@ const AUTH_SCOPE =
 const AUTH_REDIRECT_PATH = import.meta.env.VITE_AUTH_REDIRECT_PATH ?? "/app/auth/callback";
 const AUTH_PROVIDER_PARAM = import.meta.env.VITE_AUTH_PROVIDER_PARAM ?? "kc_idp_hint";
 const AUTH_LOGOUT_URL = import.meta.env.VITE_AUTH_LOGOUT_URL ?? "";
+const FIREBASE_API_KEY = import.meta.env.VITE_FIREBASE_API_KEY ?? "";
+const FIREBASE_AUTH_DOMAIN = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? "";
+const FIREBASE_PROJECT_ID = import.meta.env.VITE_FIREBASE_PROJECT_ID ?? "";
+const FIREBASE_APP_ID = import.meta.env.VITE_FIREBASE_APP_ID ?? "";
+const FIREBASE_EMULATOR_HOST = import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_HOST ?? "";
+const FIREBASE_USE_EMULATOR =
+  (import.meta.env.VITE_FIREBASE_USE_EMULATOR ?? "") === "1";
+const FIRESTORE_LISTEN_ENABLED =
+  (import.meta.env.VITE_FIRESTORE_LISTEN ?? "") === "1";
 const DEV_PREFILL =
   import.meta.env.DEV && (import.meta.env.VITE_DEV_PREFILL_CREDENTIALS ?? "") === "1";
 const DEV_CLOUD_AHOY_EMAIL = import.meta.env.VITE_CLOUD_AHOY_EMAIL ?? "";
@@ -73,14 +89,97 @@ const DEV_FLYSTO_PASSWORD = import.meta.env.VITE_FLYSTO_PASSWORD ?? "";
 const RETENTION_DAYS = Number.parseInt(import.meta.env.VITE_RETENTION_DAYS ?? "7", 10);
 const retentionDays = Number.isFinite(RETENTION_DAYS) ? RETENTION_DAYS : 7;
 
+const ProviderIcon = ({ name }: { name: string }) => {
+  switch (name) {
+    case "google":
+      return (
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-black/5">
+          <svg aria-hidden viewBox="0 0 48 48" className="h-4 w-4">
+            <path
+              fill="#EA4335"
+              d="M24 9.5c3.2 0 6 .9 8.2 2.7l6.1-6.1C34.7 2.6 29.7 0 24 0 14.6 0 6.5 5.4 2.4 13.2l7.3 5.7C11.4 13 17.1 9.5 24 9.5z"
+            />
+            <path
+              fill="#4285F4"
+              d="M46.1 24.5c0-1.6-.1-2.8-.4-4.1H24v7.8h12.5c-.5 2.7-2.1 5.1-4.7 6.7l7.2 5.6c4.2-3.9 6.6-9.6 6.6-16z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M9.7 28.9c-1-2.7-1-5.7 0-8.4l-7.3-5.7c-3.1 6.2-3.1 13.6 0 19.8l7.3-5.7z"
+            />
+            <path
+              fill="#34A853"
+              d="M24 48c5.7 0 10.6-1.9 14.1-5.1l-7.2-5.6c-2 1.4-4.6 2.2-6.9 2.2-6.9 0-12.6-3.5-14.3-9.4l-7.3 5.7C6.5 42.6 14.6 48 24 48z"
+            />
+          </svg>
+        </span>
+      );
+    case "apple":
+      return (
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-white">
+          <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4">
+            <path
+              fill="currentColor"
+              d="M16.3 1.5c0 1-.4 2-1 2.7-.7.9-1.9 1.6-3 1.5-.1-1 .4-2 .9-2.7.7-.8 1.9-1.5 3.1-1.5ZM19.7 17.4c-.4.9-.6 1.3-1.1 2.1-.7 1-1.6 2.2-2.8 2.2-1.1 0-1.4-.7-2.9-.7-1.5 0-1.9.7-3 .7-1.2 0-2-1.1-2.7-2.1-1.5-2.2-2.6-6.1-1.1-8.8.8-1.4 2.2-2.3 3.7-2.3 1.2 0 2.3.8 3 .8.7 0 2.1-.9 3.5-.8.6 0 2.3.2 3.4 1.7-2.9 1.6-2.4 5.7 1 7.2Z"
+            />
+          </svg>
+        </span>
+      );
+    case "facebook":
+      return (
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#1877F2] text-white">
+          <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4">
+            <path
+              fill="currentColor"
+              d="M22 12a10 10 0 1 0-11.6 9.9v-7H8v-2.9h2.4V9.8c0-2.4 1.4-3.7 3.6-3.7 1 0 2.1.2 2.1.2v2.3h-1.2c-1.2 0-1.6.7-1.6 1.5v1.9h2.7l-.4 2.9h-2.3v7A10 10 0 0 0 22 12Z"
+            />
+          </svg>
+        </span>
+      );
+    case "microsoft":
+      return (
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-black/5">
+          <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4">
+            <path fill="#F25022" d="M1 1h10v10H1z" />
+            <path fill="#7FBA00" d="M13 1h10v10H13z" />
+            <path fill="#00A4EF" d="M1 13h10v10H1z" />
+            <path fill="#FFB900" d="M13 13h10v10H13z" />
+          </svg>
+        </span>
+      );
+    case "email":
+      return (
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-sky-700">
+          <Mail className="h-4 w-4" aria-hidden />
+        </span>
+      );
+    case "guest":
+      return (
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-slate-700">
+          <UserRound className="h-4 w-4" aria-hidden />
+        </span>
+      );
+    default:
+      return null;
+  }
+};
+
+const AuthDivider = () => (
+  <div className="relative my-3 flex items-center">
+    <div className="h-px w-full bg-slate-200 dark:bg-slate-800" />
+    <span className="absolute left-1/2 -translate-x-1/2 bg-white px-3 text-xs uppercase tracking-[0.3em] text-slate-400 dark:bg-slate-950 dark:text-slate-600">
+      Or
+    </span>
+  </div>
+);
+
 /** Render App component. */
 export default function App() {
-
-  const [userId, setUserId] = React.useState<string | null>(() =>
-    localStorage.getItem(USER_ID_KEY)
-  );
   const [jobId, setJobId] = React.useState<string | null>(() =>
     localStorage.getItem(JOB_ID_KEY)
+  );
+  const [headerUserId, setHeaderUserId] = React.useState<string | null>(() =>
+    localStorage.getItem(USER_ID_KEY)
   );
   const [showAllFlights, setShowAllFlights] = React.useState(false);
   const [actionError, setActionError] = React.useState<{
@@ -109,6 +208,30 @@ export default function App() {
     onError: (message) => setActionError({ scope: "sign-in", message }),
     onLoadingChange: setActionLoading,
   });
+  const {
+    accessToken: firebaseToken,
+    startLogin: startFirebaseLogin,
+    startEmailLink: startFirebaseEmailLink,
+    isAnonymous: firebaseAnonymous,
+    emulatorProvider: firebaseEmulatorProvider,
+    emulatorReady: firebaseEmulatorReady,
+    signOut: signOutFirebase,
+    clearAuth: clearFirebaseAuth,
+  } = useFirebaseAuth({
+    enabled: AUTH_MODE === "firebase",
+    apiKey: FIREBASE_API_KEY,
+    authDomain: FIREBASE_AUTH_DOMAIN,
+    projectId: FIREBASE_PROJECT_ID,
+    appId: FIREBASE_APP_ID || undefined,
+    emulatorHost: FIREBASE_EMULATOR_HOST || undefined,
+    useEmulator: FIREBASE_USE_EMULATOR,
+    onError: (message) => setActionError({ scope: "sign-in", message }),
+    onLoadingChange: setActionLoading,
+  });
+  const [showAuthDialog, setShowAuthDialog] = React.useState(false);
+  const [emailAddress, setEmailAddress] = React.useState("");
+  const [emailLinkNotice, setEmailLinkNotice] = React.useState<string | null>(null);
+  const [emailLinkUrl, setEmailLinkUrl] = React.useState<string | null>(null);
 
   const [cloudahoyEmail, setCloudahoyEmail] = React.useState("");
   const [cloudahoyPassword, setCloudahoyPassword] = React.useState("");
@@ -117,13 +240,30 @@ export default function App() {
   const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
   const [maxFlights, setMaxFlights] = React.useState("");
 
-  const isSignedIn = AUTH_MODE === "oidc" ? Boolean(accessToken) : Boolean(userId);
+  const activeAccessToken = AUTH_MODE === "firebase" ? firebaseToken : accessToken;
+  const isSignedIn =
+    AUTH_MODE === "oidc" || AUTH_MODE === "firebase"
+      ? Boolean(activeAccessToken)
+      : Boolean(headerUserId);
+  const isAnonymous =
+    AUTH_MODE === "firebase" &&
+    firebaseAnonymous &&
+    !(FIREBASE_USE_EMULATOR && firebaseEmulatorProvider && firebaseEmulatorProvider !== "anonymous");
   const auth = React.useMemo<AuthContext>(
-    () => (AUTH_MODE === "oidc" ? { token: accessToken } : { userId }),
-    [accessToken, userId]
+    () =>
+      AUTH_MODE === "oidc" || AUTH_MODE === "firebase"
+        ? { token: activeAccessToken }
+        : { userId: headerUserId },
+    [activeAccessToken, headerUserId]
   );
 
-  const { data: job, error: jobError, refresh } = useJobSnapshot(
+  const {
+    data: job,
+    error: jobError,
+    refresh,
+    listenerFailed,
+    listenerActive,
+  } = useJobSnapshot(
     isSignedIn ? jobId : null,
     auth
   );
@@ -135,6 +275,7 @@ export default function App() {
   const [manualOpen, setManualOpen] = React.useState<string | undefined>(() =>
     typeof window !== "undefined" ? localStorage.getItem(OPEN_STEP_KEY) ?? undefined : undefined
   );
+  const backendResetCheckRef = React.useRef(false);
   const openStep = React.useMemo(() => {
     if (flow.importStatus === "running" || flow.importStatus === "complete") return "import";
     if (flow.reviewStatus === "running") return "review";
@@ -162,12 +303,21 @@ export default function App() {
   const showReviewProgress = reviewRunning || reviewComplete;
   const showImportProgress = importRunning || importComplete;
   const [now, setNow] = React.useState(() => new Date());
+  const jobErrorStatus = (jobError as Error & { status?: number })?.status;
   const jobErrorMessage =
-    jobError && !isAuthExpiredError(jobError) ? jobError.message : null;
+    jobError && !isAuthExpiredError(jobError)
+      ? jobErrorStatus && [502, 503, 504].includes(jobErrorStatus)
+        ? null
+        : jobError.message
+      : null;
   const jobFailureMessage =
     job?.status === "failed" ? job.error_message ?? "Job failed." : null;
   const reviewFailureMessage = !hasImportEvents ? jobFailureMessage : null;
   const importFailureMessage = hasImportEvents ? jobFailureMessage : null;
+  const showLiveUpdatesNotice =
+    AUTH_MODE === "firebase" && FIRESTORE_LISTEN_ENABLED && flow.signedIn;
+  const authButtonsDisabled =
+    actionLoading || (AUTH_MODE === "firebase" && FIREBASE_USE_EMULATOR && !firebaseEmulatorReady);
   const signInError =
     actionError?.scope === "sign-in" || actionError?.scope === "global"
       ? actionError.message
@@ -313,13 +463,41 @@ export default function App() {
       startOidcLogin();
       return;
     }
+    if (AUTH_MODE === "firebase") {
+      setShowAuthDialog(true);
+      return;
+    }
     const nextUserId = "pilot@skybridge.dev";
     localStorage.setItem(USER_ID_KEY, nextUserId);
-    setUserId(nextUserId);
+    setHeaderUserId(nextUserId);
     setActionError(null);
     const stored = localStorage.getItem(OPEN_STEP_KEY) ?? undefined;
     setManualOpen(stored ?? "connect");
-  }, [startOidcLogin, setUserId, setManualOpen]);
+  }, [startOidcLogin, startFirebaseLogin, setHeaderUserId, setManualOpen]);
+
+  const handleFirebaseLogin = React.useCallback(
+    (provider: Parameters<typeof startFirebaseLogin>[0], options?: Parameters<typeof startFirebaseLogin>[1]) => {
+      setActionError(null);
+      void startFirebaseLogin(provider, options);
+    },
+    [startFirebaseLogin]
+  );
+
+  const handleEmailLink = React.useCallback(async () => {
+    setActionError(null);
+    setEmailLinkNotice(null);
+    setEmailLinkUrl(null);
+    const email = emailAddress.trim();
+    if (!email) {
+      setActionError({ scope: "sign-in", message: "Enter a valid email address." });
+      return;
+    }
+    const link = await startFirebaseEmailLink(email);
+    setEmailLinkNotice(`We sent a sign-in link to ${email}.`);
+    if (link) {
+      setEmailLinkUrl(link);
+    }
+  }, [emailAddress, startFirebaseEmailLink]);
 
   const isSignInRedirect =
     typeof window !== "undefined" &&
@@ -341,7 +519,11 @@ export default function App() {
     if (flow.signedIn || typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("signin") !== "1") return;
-    handleSignIn();
+    if (AUTH_MODE === "firebase") {
+      setShowAuthDialog(true);
+    } else {
+      handleSignIn();
+    }
     if (AUTH_MODE !== "oidc") {
       params.delete("signin");
       const nextSearch = params.toString();
@@ -354,10 +536,10 @@ export default function App() {
   }, [flow.signedIn, handleSignIn]);
 
   React.useEffect(() => {
-    if (flow.signedIn || typeof window === "undefined") return;
-    if (isSignInRedirect || isAuthCallback) return;
-    window.location.replace("/");
-  }, [flow.signedIn, isSignInRedirect, isAuthCallback]);
+    if (flow.signedIn) {
+      setShowAuthDialog(false);
+    }
+  }, [flow.signedIn]);
 
   /** Handle handleConnectReview. */
   const handleConnectReview = async () => {
@@ -515,21 +697,28 @@ export default function App() {
       signOutOidc();
       return;
     }
+    if (AUTH_MODE === "firebase") {
+      void signOutFirebase();
+      return;
+    }
     localStorage.removeItem(USER_ID_KEY);
-    setUserId(null);
+    setHeaderUserId(null);
   };
 
   const handleTokenExpired = React.useCallback(() => {
     localStorage.removeItem(USER_ID_KEY);
     localStorage.removeItem(JOB_ID_KEY);
-    setUserId(null);
+    setHeaderUserId(null);
     setJobId(null);
     if (AUTH_MODE === "oidc") {
       clearOidcAuth();
     }
+    if (AUTH_MODE === "firebase") {
+      clearFirebaseAuth();
+    }
     setShowAllFlights(false);
     setActionError(null);
-  }, [AUTH_MODE, clearOidcAuth]);
+  }, [AUTH_MODE, clearOidcAuth, clearFirebaseAuth, setHeaderUserId]);
 
   React.useEffect(() => {
     if (!jobError || !isSignedIn) return;
@@ -542,6 +731,43 @@ export default function App() {
       clearLocalState();
     }
   }, [jobError, isSignedIn, handleTokenExpired, clearLocalState]);
+
+  React.useEffect(() => {
+    if (!isSignedIn || !jobId || job) return;
+    const status = jobErrorStatus;
+    if (!status || ![502, 503, 504].includes(status)) return;
+    if (backendResetCheckRef.current) return;
+    backendResetCheckRef.current = true;
+    (async () => {
+      try {
+        const response = await listJobs(auth);
+        const jobs = response.jobs ?? [];
+        if (jobs.length === 0) {
+          clearLocalState();
+          return;
+        }
+        const current = jobs.find((item) => item.job_id === jobId);
+        if (!current && jobs[0]?.job_id) {
+          localStorage.setItem(JOB_ID_KEY, jobs[0].job_id);
+          setJobId(jobs[0].job_id);
+        }
+      } catch (err) {
+        if (isAuthExpiredError(err)) {
+          handleTokenExpired();
+        }
+      } finally {
+        backendResetCheckRef.current = false;
+      }
+    })();
+  }, [
+    isSignedIn,
+    jobId,
+    job,
+    jobErrorStatus,
+    auth,
+    clearLocalState,
+    handleTokenExpired,
+  ]);
 
   React.useEffect(() => {
     if (!isSignedIn) return;
@@ -684,7 +910,8 @@ export default function App() {
         ? "Import"
         : "All steps completed";
 
-  const isRedirectScreen = !flow.signedIn && (isSignInRedirect || isAuthCallback);
+  const isRedirectScreen =
+    !flow.signedIn && AUTH_MODE === "oidc" && (isSignInRedirect || isAuthCallback);
 
   if (isRedirectScreen) {
     return <div className="min-h-screen bg-background" />;
@@ -703,10 +930,98 @@ export default function App() {
             SKYBRIDGE
           </a>
           <div className="flex items-center gap-2 sm:gap-4">
-            {!flow.signedIn && (
+            {!flow.signedIn && AUTH_MODE !== "firebase" && (
               <Button size="sm" onClick={handleSignIn}>
                 Sign up / Sign in
               </Button>
+            )}
+            {!flow.signedIn && AUTH_MODE === "firebase" && (
+              <AlertDialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm">Sign up / Sign in</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Continue with</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Choose a provider to sign in or continue as a guest.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <div className="space-y-2">
+                    <Button
+                      className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
+                      onClick={() => handleFirebaseLogin("google")}
+                      disabled={actionLoading}
+                    >
+                      <ProviderIcon name="google" />
+                      Continue with Google
+                    </Button>
+                    <Button
+                      className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
+                      onClick={() => handleFirebaseLogin("apple")}
+                      disabled={actionLoading}
+                    >
+                      <ProviderIcon name="apple" />
+                      Continue with Apple
+                    </Button>
+                    <Button
+                      className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
+                      onClick={() => handleFirebaseLogin("facebook")}
+                      disabled={actionLoading}
+                    >
+                      <ProviderIcon name="facebook" />
+                      Continue with Facebook
+                    </Button>
+                    <Button
+                      className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
+                      onClick={() => handleFirebaseLogin("microsoft")}
+                      disabled={actionLoading}
+                    >
+                      <ProviderIcon name="microsoft" />
+                      Continue with Microsoft
+                    </Button>
+                    <Button
+                      className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
+                      onClick={() => handleFirebaseLogin("anonymous")}
+                      disabled={actionLoading}
+                    >
+                      <ProviderIcon name="guest" />
+                      Continue as guest
+                    </Button>
+                    <AuthDivider />
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-slate-500">
+                        Email link (passwordless)
+                      </label>
+                      <div className="flex w-full max-w-xl gap-2">
+                        <input
+                          className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none"
+                          placeholder="you@example.com"
+                          value={emailAddress}
+                          onChange={(event) => setEmailAddress(event.target.value)}
+                        />
+                        <Button variant="outline" className="h-11 px-4" onClick={handleEmailLink}>
+                          Send link
+                        </Button>
+                      </div>
+                      {emailLinkUrl && (
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                          Emulator link (click to sign in):
+                          <a
+                            className="ml-1 break-all text-sky-600 hover:underline"
+                            href={emailLinkUrl}
+                          >
+                            {emailLinkUrl}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
             {flow.connected && (
               <AlertDialog>
@@ -768,12 +1083,194 @@ export default function App() {
       </header>
 
       <main className="container flex-1 pb-16 pt-5 lg:pb-8">
-        {!flow.signedIn && (isSignInRedirect || isAuthCallback) && (
+        {!flow.signedIn &&
+          AUTH_MODE === "oidc" &&
+          (isSignInRedirect || isAuthCallback) && (
           <div className="min-h-[60vh]" />
         )}
 
+        {!flow.signedIn &&
+          !(AUTH_MODE === "oidc" && (isSignInRedirect || isAuthCallback)) && (
+            <div className="mx-auto max-w-3xl space-y-4">
+              <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
+                <CardHeader className="space-y-2">
+                  <CardTitle>Sign in to start your import</CardTitle>
+                  <CardDescription>
+                    Identify your job and keep your progress in sync across devices.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {signInError && (
+                    <Alert className="border-rose-200 bg-rose-50/70 text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-100">
+                      <AlertTitle>Sign-in failed</AlertTitle>
+                      <AlertDescription>{signInError}</AlertDescription>
+                    </Alert>
+                  )}
+                  {AUTH_MODE !== "firebase" && (
+                    <Button onClick={handleSignIn} disabled={actionLoading}>
+                      Sign up / Sign in
+                    </Button>
+                  )}
+                  {AUTH_MODE === "firebase" && (
+                    <div className="space-y-2">
+                      {FIREBASE_USE_EMULATOR && !firebaseEmulatorReady && (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-900">
+                          Auth emulator is starting up. Sign-in will be available shortly.
+                        </div>
+                      )}
+                      <Button
+                        className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => handleFirebaseLogin("google")}
+                        disabled={authButtonsDisabled}
+                      >
+                        <ProviderIcon name="google" />
+                        Continue with Google
+                      </Button>
+                      <Button
+                        className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => handleFirebaseLogin("apple")}
+                        disabled={authButtonsDisabled}
+                      >
+                        <ProviderIcon name="apple" />
+                        Continue with Apple
+                      </Button>
+                      <Button
+                        className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => handleFirebaseLogin("facebook")}
+                        disabled={authButtonsDisabled}
+                      >
+                        <ProviderIcon name="facebook" />
+                        Continue with Facebook
+                      </Button>
+                      <Button
+                        className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => handleFirebaseLogin("microsoft")}
+                        disabled={authButtonsDisabled}
+                      >
+                        <ProviderIcon name="microsoft" />
+                        Continue with Microsoft
+                      </Button>
+                      <Button
+                        className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => handleFirebaseLogin("anonymous")}
+                        disabled={authButtonsDisabled}
+                      >
+                        <ProviderIcon name="guest" />
+                        Continue as guest
+                      </Button>
+                      <AuthDivider />
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-slate-500">
+                          Email link (passwordless)
+                        </label>
+                        <div className="flex w-full max-w-xl gap-2">
+                          <input
+                            className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none"
+                            placeholder="you@example.com"
+                            value={emailAddress}
+                            onChange={(event) => setEmailAddress(event.target.value)}
+                          />
+                          <Button
+                            variant="outline"
+                            className="h-11 px-4"
+                            onClick={handleEmailLink}
+                          >
+                            Send link
+                          </Button>
+                        </div>
+                        {emailLinkNotice && (
+                          <p className="text-xs text-slate-500">{emailLinkNotice}</p>
+                        )}
+                        {emailLinkUrl && (
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                            Emulator link (click to sign in):
+                            <a
+                              className="ml-1 break-all text-sky-600 hover:underline"
+                              href={emailLinkUrl}
+                            >
+                              {emailLinkUrl}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {AUTH_MODE === "firebase" && FIREBASE_USE_EMULATOR && (
+                    <p className="text-xs text-muted-foreground">
+                      Local auth emulator is enabled. Provider selection is simulated.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
         {flow.signedIn && (
           <>
+            {AUTH_MODE === "firebase" && isAnonymous && (
+              <Card className="mb-4 rounded-xl border border-amber-200 bg-amber-50/60 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100">
+                <CardHeader className="space-y-1">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <ShieldCheck className="h-4 w-4" aria-hidden />
+                    Upgrade your guest session
+                  </CardTitle>
+                  <CardDescription className="text-amber-800/80 dark:text-amber-100/70">
+                    Link a provider to keep your import history across devices.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      className="h-11 justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
+                      onClick={() => handleFirebaseLogin("google", { link: true })}
+                      disabled={actionLoading}
+                    >
+                      <ProviderIcon name="google" />
+                      Link Google
+                    </Button>
+                    <Button
+                      className="h-11 justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
+                      onClick={() => handleFirebaseLogin("apple", { link: true })}
+                      disabled={actionLoading}
+                    >
+                      <ProviderIcon name="apple" />
+                      Link Apple
+                    </Button>
+                    <Button
+                      className="h-11 justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
+                      onClick={() => handleFirebaseLogin("microsoft", { link: true })}
+                      disabled={actionLoading}
+                    >
+                      <ProviderIcon name="microsoft" />
+                      Link Microsoft
+                    </Button>
+                    <Button
+                      className="h-11 justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
+                      onClick={() => handleFirebaseLogin("facebook", { link: true })}
+                      disabled={actionLoading}
+                    >
+                      <ProviderIcon name="facebook" />
+                      Link Facebook
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-amber-800/80 dark:text-amber-100/70">
+                    <ArrowRight className="h-3 w-3" aria-hidden />
+                    You can also link an email address below.
+                  </div>
+                  <div className="flex w-full max-w-xl gap-2">
+                    <input
+                      className="h-11 w-full rounded-lg border border-amber-200 bg-white px-3 text-sm text-amber-900 shadow-sm focus:border-amber-300 focus:outline-none"
+                      placeholder="you@example.com"
+                      value={emailAddress}
+                      onChange={(event) => setEmailAddress(event.target.value)}
+                    />
+                    <Button variant="outline" className="h-11 px-4" onClick={handleEmailLink}>
+                      Link email
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             <div className="mb-4 lg:hidden">
               <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
                 <CardContent className="space-y-2 py-3">
@@ -822,6 +1319,35 @@ export default function App() {
                   active={reviewComplete && !importComplete}
                   done={importComplete}
                 />
+                {showLiveUpdatesNotice && (
+                  <div
+                    className={cn(
+                      "mt-2 rounded-lg border px-2.5 py-2 text-[11px] font-medium",
+                      listenerFailed
+                        ? "border-amber-200 bg-amber-50 text-amber-900"
+                        : "border-emerald-200 bg-emerald-50 text-emerald-900"
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span>
+                        {listenerFailed
+                          ? "Live updates paused. Polling every 4s."
+                          : listenerActive
+                            ? "Live updates connected."
+                            : "Connecting live updates..."}
+                      </span>
+                      {listenerFailed && (
+                        <button
+                          type="button"
+                          onClick={() => refresh()}
+                          className="rounded-md border border-amber-200 bg-white/70 px-2 py-0.5 text-[10px] font-semibold text-amber-900 transition hover:bg-white"
+                        >
+                          Refresh
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </aside>

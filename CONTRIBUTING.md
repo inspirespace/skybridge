@@ -18,7 +18,6 @@ Thanks for helping improve Skybridge! This guide keeps PRs consistent, reviewabl
 ## Testing expectations
 - Frontend: `npm test`, `npm run lint`, and e2e where applicable.
 - Backend: `pytest` (or targeted tests).
-- Infrastructure: `terraform fmt -check -recursive` when touching IaC.
 
 ## UI changes
 - Verify mobile + desktop.

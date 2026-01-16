@@ -58,9 +58,9 @@ describe("useJobSnapshot", () => {
     );
 
     const auth = { userId: "pilot" };
-    let intervalCallback: TimerHandler | null = null;
+    let intervalCallback: (() => void) | null = null;
     vi.spyOn(window, "setInterval").mockImplementation((callback) => {
-      intervalCallback = callback;
+      intervalCallback = callback as () => void;
       return 1 as unknown as number;
     });
     vi.spyOn(window, "clearInterval").mockImplementation(() => undefined);
@@ -71,9 +71,9 @@ describe("useJobSnapshot", () => {
     expect(getJob).toHaveBeenCalledTimes(1);
     expect(intervalCallback).not.toBeNull();
 
-    if (typeof intervalCallback === "function") {
+    if (intervalCallback) {
       await act(async () => {
-        intervalCallback();
+        (intervalCallback as () => void)();
       });
     }
     await flushUpdates();

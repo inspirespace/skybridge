@@ -37,6 +37,9 @@ dist/
 data/
 docker/https/certs/
 /data/
+.firebase-emulator/
+functions/venv/
+functions/.env
 
 # Lambda packages
 infra/terraform/lambda/*.zip

@@ -24,13 +24,15 @@ npm install -g @devcontainers/cli
 docker compose up --build
 ```
 
-Open https://skybridge.localhost and sign in with `demo` / `demo-password`.
+Open https://skybridge.localhost and sign in using the Firebase Auth emulator popup (Google/Apple/Facebook buttons). The emulator UI is available at https://emulator.skybridge.localhost.
+The Firebase Functions/Hosting emulators run inside the `firebase-emulator` service.
 On macOS, `.localhost` already resolves to `127.0.0.1`, so no hosts file change is needed. If your OS does not resolve `*.localhost`, add these entries to `/etc/hosts`:
 
 ```
 127.0.0.1 skybridge.localhost
 127.0.0.1 auth.skybridge.localhost
-127.0.0.1 storage.skybridge.localhost
+127.0.0.1 firestore.skybridge.localhost
+127.0.0.1 emulator.skybridge.localhost
 ```
 
 Local HTTPS is terminated by the Caddy container using the certificates in `docker/https/certs`. Run `mkcert` once to generate them:
@@ -39,8 +41,24 @@ Local HTTPS is terminated by the Caddy container using the certificates in `dock
 brew install mkcert
 mkcert -install
 mkdir -p docker/https/certs
-mkcert -cert-file docker/https/certs/skybridge.pem -key-file docker/https/certs/skybridge-key.pem skybridge.localhost auth.skybridge.localhost storage.skybridge.localhost
+mkcert -cert-file docker/https/certs/skybridge.localhost.pem -key-file docker/https/certs/skybridge.localhost-key.pem skybridge.localhost "*.skybridge.localhost"
 ```
+
+## Deploy (Firebase)
+
+CI deploys live from `main` via GitHub Actions (`.github/workflows/firebase-deploy.yml`).
+Required repository secrets:
+- `FIREBASE_PROJECT_ID` (Firebase project id)
+- `FIREBASE_SERVICE_ACCOUNT` (service account JSON)
+
+Manual deploy:
+
+```sh
+npm --prefix src/frontend run build
+firebase deploy --only functions,hosting --project <project_id>
+```
+
+Production checklist is in `docs/production.md`.
 
 ## Docs
 

@@ -1,0 +1,10 @@
+firebase-functions==0.5.0
+firebase-admin==7.1.0
+fastapi==0.128.0
+pydantic==2.12.5
+requests==2.32.5
+pyjwt==2.10.1
+cryptography==46.0.3
+google-cloud-firestore==2.23.0
+google-cloud-storage==3.8.0
+google-cloud-pubsub==2.34.0

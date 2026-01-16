@@ -20,7 +20,6 @@ def _route(method: str, pattern: str, handler: Callable) -> None:
 
 def _register_routes() -> None:
     """Register route mappings to Lambda handlers."""
-    _route("POST", r"^/auth/token$", lambda_handlers.auth_token_handler)
     _route("POST", r"^/credentials/validate$", lambda_handlers.validate_credentials_handler)
     _route("POST", r"^/jobs$", lambda_handlers.create_job_handler)
     _route("GET", r"^/jobs$", lambda_handlers.list_jobs_handler)
@@ -143,3 +142,4 @@ def run(host: str = "0.0.0.0", port: int = 8000) -> None:
 
 if __name__ == "__main__":
     run()
+    _route("POST", r"^/auth/token$", lambda_handlers.auth_token_handler)

@@ -53,7 +53,7 @@ def test_object_prefix_without_store(tmp_path: Path):
 def test_delete_job_handles_object_store_errors(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     store = JobStore(tmp_path, object_store=ErrorObjectStore())
     job = _job(store)
-    monkeypatch.setenv("BACKEND_S3_DELETE_ON_CLEAR", "1")
+    monkeypatch.setenv("BACKEND_OBJECT_STORE_DELETE_ON_CLEAR", "1")
     store.delete_job(job.job_id, user_id=job.user_id)
 
 

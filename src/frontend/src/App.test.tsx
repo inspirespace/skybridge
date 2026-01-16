@@ -8,7 +8,23 @@ vi.mock("@/hooks/use-job-snapshot", () => ({
 vi.mock("@/hooks/use-oidc-auth", () => ({
   useOidcAuth: vi.fn(() => ({
     accessToken: null,
+    idToken: null,
+    userId: null,
+    setUserId: vi.fn(),
+    setAccessToken: vi.fn(),
+    setIdToken: vi.fn(),
     startLogin: vi.fn(),
+    signOut: vi.fn(),
+    clearAuth: vi.fn(),
+  })),
+}));
+
+vi.mock("@/hooks/use-firebase-auth", () => ({
+  useFirebaseAuth: vi.fn(() => ({
+    accessToken: null,
+    startLogin: vi.fn(),
+    startEmailLink: vi.fn(),
+    isAnonymous: false,
     signOut: vi.fn(),
     clearAuth: vi.fn(),
   })),

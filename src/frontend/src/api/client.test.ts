@@ -29,6 +29,14 @@ describe("buildAuthHeaders", () => {
     expect(() => buildAuthHeaders({})).toThrow(/missing user session/i);
   });
 
+  it("uses bearer token in firebase mode", async () => {
+    vi.stubEnv("VITE_AUTH_MODE", "firebase");
+    const { buildAuthHeaders } = await import("@/api/client");
+    expect(buildAuthHeaders({ token: "token" })).toEqual({
+      Authorization: "Bearer token",
+    });
+  });
+
   it("uses bearer token in oidc mode", async () => {
     vi.stubEnv("VITE_AUTH_MODE", "oidc");
     const { buildAuthHeaders } = await import("@/api/client");
@@ -83,11 +91,11 @@ describe("request helpers", () => {
     const result = await createJob(payload, { userId: "pilot" });
     expect(result.job_id).toBe(responsePayload.job_id);
 
-    const [url, options] = fetchMock.mock.calls[0];
+    const [url, options] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toContain("/jobs");
-    expect(options.method).toBe("POST");
-    expect(options.body).toBe(JSON.stringify(payload));
-    expect(options.headers["X-User-Id"]).toBe("pilot");
+    expect(options?.method).toBe("POST");
+    expect(options?.body).toBe(JSON.stringify(payload));
+    expect((options?.headers as Record<string, string>)?.["X-User-Id"]).toBe("pilot");
   });
 
   it("returns JSON payload for listJobs", async () => {
@@ -100,5 +108,28 @@ describe("request helpers", () => {
 
     const result = await listJobs({ userId: "pilot" });
     expect(result.jobs).toEqual([]);
+  });
+
+  it("retries transient errors for GET requests", async () => {
+    vi.stubEnv("VITE_AUTH_MODE", "header");
+    vi.stubEnv("VITE_API_RETRY_ATTEMPTS", "2");
+    vi.stubEnv("VITE_API_RETRY_DELAY_MS", "1");
+    const { listJobs } = await import("@/api/client");
+
+    const payload = { jobs: [] };
+    const fetchMock = vi
+      .fn()
+      .mockImplementationOnce(() => errorResponse(502, "Bad gateway", "text/plain"))
+      .mockImplementationOnce(() => okResponse(payload));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.useFakeTimers();
+
+    const promise = listJobs({ userId: "pilot" });
+    await vi.advanceTimersByTimeAsync(5);
+    const result = await promise;
+
+    expect(result.jobs).toEqual([]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
   });
 });

@@ -2,38 +2,60 @@
 
 This is a checklist of what production needs, not a step-by-step deployment guide.
 
-## Required AWS resources
-- **S3 bucket** for job artifacts (add a lifecycle rule; 7 days suggested).
-- **DynamoDB** tables:
-  - Jobs table: partition key `user_id`, sort key `job_id`, GSI on `job_id`.
-  - Credentials table: partition key `token` with TTL enabled.
-- **SQS** queue for review/import jobs.
-- **OIDC provider** (Cognito or equivalent) for auth.
+## Required Firebase resources
+- **Firebase Auth** with Google/Apple/Facebook providers.
+- **Firestore** collections:
+  - Jobs collection: documents keyed by `job_id`, with `user_id` field indexed.
+  - Credentials collection: documents keyed by `token` with TTL configured.
+- **Firebase Storage** bucket for job artifacts (add a lifecycle rule; 7 days suggested).
+- **Pub/Sub** topic for review/import jobs (Functions 2nd gen trigger).
+- **Firebase Hosting** for SPA + API rewrites.
+  - `/api/**` rewrites to the `api` function (see `firebase.json`).
 
-## Required backend environment
+## Required backend environment (Firebase Functions)
 - `ENV=prod`
-- `AUTH_MODE=oidc`
-- `AUTH_ISSUER_URL=<issuer>`
-- `AUTH_BROWSER_ISSUER_URL=<issuer>` (optional)
-- `AUTH_CLIENT_ID=<client_id>`
-- `AUTH_TOKEN_URL=<token_url>`
+- `AUTH_MODE=firebase`
+- `AUTH_ISSUER_URL=https://securetoken.google.com/<project_id>`
+- `AUTH_JWKS_URL=https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com`
+- `AUTH_AUDIENCE=<project_id>`
 - `BACKEND_USE_WORKER=1`
-- `BACKEND_SQS_ENABLED=1`
-- `SQS_QUEUE_URL=<queue_url>`
-- `BACKEND_WORKER_TOKEN=<shared_token>`
-- `BACKEND_DYNAMO_ENABLED=1`
-- `DYNAMO_JOBS_TABLE=<jobs_table>`
-- `DYNAMO_CREDENTIALS_TABLE=<credentials_table>`
-- `BACKEND_S3_ENABLED=1`
-- `S3_BUCKET=<bucket>`
-- `S3_PREFIX=jobs`
-- `S3_REGION=<region>`
-- `AWS_REGION=<region>`
+- `BACKEND_PUBSUB_ENABLED=1`
+- `PUBSUB_TOPIC=<topic name>`
+- `BACKEND_FIRESTORE_ENABLED=1`
+- `FIRESTORE_JOBS_COLLECTION=skybridge-jobs`
+- `FIRESTORE_CREDENTIALS_COLLECTION=skybridge-credentials`
+- `BACKEND_GCS_ENABLED=1`
+- `GCS_BUCKET=<bucket>`
+- `GCS_PREFIX=jobs`
+- `GCS_LOCATION=<region>`
+- `GCP_PROJECT_ID=<project_id>`
+- `CORS_ALLOW_ORIGINS=<comma separated origins or *>`
 
-## Frontend build configuration
-- `VITE_API_BASE_URL` points at the API Gateway base URL.
-- `VITE_AUTH_MODE=oidc`
-- `VITE_AUTH_ISSUER_URL` matches `AUTH_ISSUER_URL`.
-- `VITE_AUTH_CLIENT_ID` matches the OIDC client id.
-- `VITE_AUTH_REDIRECT_PATH=/app/auth/callback`
-- `VITE_AUTH_LOGOUT_URL` points at the IdP logout endpoint.
+## Frontend build configuration (Firebase)
+- `VITE_API_BASE_URL` points at your Firebase Hosting domain.
+- `VITE_AUTH_MODE=firebase`
+- `VITE_FIREBASE_API_KEY=<web api key>`
+- `VITE_FIREBASE_AUTH_DOMAIN=<project-id>.firebaseapp.com`
+- `VITE_FIREBASE_PROJECT_ID=<project_id>`
+- `VITE_FIREBASE_APP_ID=<web app id>`
+## Deploy
+- `npm --prefix src/frontend run build`
+- `firebase deploy --only functions,hosting`
+Functions source lives in `functions/` and uses `functions/requirements.txt` for dependencies.
+
+## Storage lifecycle rule
+Job artifacts must expire automatically. Apply a lifecycle rule to your storage bucket:
+- Example JSON: `docs/firebase-storage-lifecycle.json`
+- Apply with gcloud:
+  - `gcloud storage buckets update gs://<bucket> --lifecycle-file=docs/firebase-storage-lifecycle.json`
+
+## Production smoke test checklist
+- Sign in with each enabled provider (Google/Apple/Facebook/Microsoft) and anonymous.
+- Start a review, confirm progress updates without reload.
+- Approve import, confirm progress updates without reload.
+- Download artifacts zip from the results screen.
+- Delete results; verify job disappears on reload.
+
+## Firebase Auth setup notes
+- Enable Google/Apple/Facebook providers in the Firebase console.
+- Apple sign-in requires an Apple Developer Program membership and a Services ID.
