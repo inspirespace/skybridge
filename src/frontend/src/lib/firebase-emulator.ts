@@ -63,4 +63,13 @@ export const patchFirebaseEmulatorRequests = () => {
     }
     return originalFetch(input as RequestInfo, init);
   }) as typeof window.fetch;
+
+  if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+    const originalBeacon = navigator.sendBeacon.bind(navigator);
+    navigator.sendBeacon = ((url: string | URL, data?: BodyInit | null) => {
+      const raw = typeof url === "string" ? url : url.toString();
+      const nextUrl = rewriteEmulatorUrl(raw);
+      return originalBeacon(nextUrl, data);
+    }) as typeof navigator.sendBeacon;
+  }
 };
