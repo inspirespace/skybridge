@@ -985,6 +985,17 @@ export default function App() {
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <div className="space-y-2">
+                    {signInError && (
+                      <Alert className="border-rose-200 bg-rose-50/70 text-rose-900">
+                        <AlertTitle>Sign-in failed</AlertTitle>
+                        <AlertDescription>{signInError}</AlertDescription>
+                      </Alert>
+                    )}
+                    {FIREBASE_USE_EMULATOR && !firebaseEmulatorReady && (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-900">
+                        Auth emulator is starting up. Sign-in will be available shortly.
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <label className="text-xs font-medium text-slate-500">
                         Email link (passwordless)
@@ -996,10 +1007,18 @@ export default function App() {
                           value={emailAddress}
                           onChange={(event) => setEmailAddress(event.target.value)}
                         />
-                        <Button variant="outline" className="h-11 px-4" onClick={handleEmailLink}>
+                        <Button
+                          variant="outline"
+                          className="h-11 px-4"
+                          onClick={handleEmailLink}
+                          disabled={authButtonsDisabled}
+                        >
                           Send link
                         </Button>
                       </div>
+                      {emailLinkNotice && (
+                        <p className="text-xs text-slate-500">{emailLinkNotice}</p>
+                      )}
                       {emailLinkUrl && (
                         <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
                           Emulator link (click to sign in):
@@ -1175,21 +1194,22 @@ export default function App() {
                         <label className="text-xs font-medium text-slate-500">
                           {hasOptionalProviders ? "Email link (passwordless)" : "Passwordless email link"}
                         </label>
-                        <div className="flex w-full max-w-xl gap-2">
-                          <input
-                            className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none"
-                            placeholder="you@example.com"
-                            value={emailAddress}
-                            onChange={(event) => setEmailAddress(event.target.value)}
-                          />
-                          <Button
-                            variant="outline"
-                            className="h-11 px-4"
-                            onClick={handleEmailLink}
-                          >
-                            Send link
-                          </Button>
-                        </div>
+                      <div className="flex w-full max-w-xl gap-2">
+                        <input
+                          className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none"
+                          placeholder="you@example.com"
+                          value={emailAddress}
+                          onChange={(event) => setEmailAddress(event.target.value)}
+                        />
+                        <Button
+                          variant="outline"
+                          className="h-11 px-4"
+                          onClick={handleEmailLink}
+                          disabled={authButtonsDisabled}
+                        >
+                          Send link
+                        </Button>
+                      </div>
                         {emailLinkNotice && (
                           <p className="text-xs text-slate-500">{emailLinkNotice}</p>
                         )}
