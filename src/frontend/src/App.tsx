@@ -27,7 +27,12 @@ import { ConnectSection } from "@/components/app/ConnectSection";
 import { ReviewSection } from "@/components/app/ReviewSection";
 import { ImportSection } from "@/components/app/ImportSection";
 import { StepStatus } from "@/components/app/StepStatus";
+import { FirebaseAuthCard } from "@/components/app/auth/FirebaseAuthCard";
+import { FirebaseAuthDialog } from "@/components/app/auth/FirebaseAuthDialog";
+import { GuestUpgradeCard } from "@/components/app/auth/GuestUpgradeCard";
+import type { ProviderFlags } from "@/components/app/auth/FirebaseProviderButtons";
 import { ThemeToggle } from "@/components/theme-toggle";
+import type { ProviderName } from "@/components/app/auth/shared";
 import { navigateWithFade } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import {
@@ -41,7 +46,7 @@ import {
 } from "@/api/client";
 import { canStartOver, deriveFlowState, getOpenStep } from "@/state/flow";
 import { useJobSnapshot } from "@/hooks/use-job-snapshot";
-import { Loader2, Mail, UserRound, ShieldCheck, ArrowRight } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import {
   formatDate,
   formatFlightId,
@@ -53,140 +58,38 @@ import {
 import { isAuthExpiredError } from "@/lib/auth-helpers";
 import { useOidcAuth } from "@/hooks/use-oidc-auth";
 import { useFirebaseAuth } from "@/hooks/use-firebase-auth";
+import {
+  AUTH_CLIENT_ID,
+  AUTH_ISSUER,
+  AUTH_LOGOUT_URL,
+  AUTH_MODE,
+  AUTH_PROVIDER_PARAM,
+  AUTH_REDIRECT_PATH,
+  AUTH_SCOPE,
+  DEV_CLOUD_AHOY_EMAIL,
+  DEV_CLOUD_AHOY_PASSWORD,
+  DEV_FLYSTO_EMAIL,
+  DEV_FLYSTO_PASSWORD,
+  DEV_PREFILL,
+  FIREBASE_API_KEY,
+  FIREBASE_APP_ID,
+  FIREBASE_AUTH_DOMAIN,
+  FIREBASE_EMULATOR_HOST,
+  FIREBASE_ENABLE_APPLE,
+  FIREBASE_ENABLE_FACEBOOK,
+  FIREBASE_ENABLE_GOOGLE,
+  FIREBASE_ENABLE_GUEST,
+  FIREBASE_ENABLE_MICROSOFT,
+  FIREBASE_PROJECT_ID,
+  FIREBASE_USE_EMULATOR,
+  retentionDays,
+} from "@/lib/app-config";
+import { parseISODateInput } from "@/lib/date-input";
 
 const USER_ID_KEY = "skybridge_user_id";
 const JOB_ID_KEY = "skybridge_job_id";
 const OPEN_STEP_KEY = "skybridge_open_step";
 const FORCE_LOGIN_KEY = "skybridge_force_login";
-const AUTH_MODE = import.meta.env.VITE_AUTH_MODE ?? "header";
-const AUTH_ISSUER =
-  import.meta.env.VITE_AUTH_ISSUER_URL ??
-  import.meta.env.VITE_AUTH_BROWSER_ISSUER_URL ??
-  "";
-const AUTH_CLIENT_ID = import.meta.env.VITE_AUTH_CLIENT_ID ?? "skybridge-dev";
-const AUTH_SCOPE =
-  import.meta.env.VITE_AUTH_SCOPE ?? "openid profile email offline_access";
-const AUTH_REDIRECT_PATH = import.meta.env.VITE_AUTH_REDIRECT_PATH ?? "/app/auth/callback";
-const AUTH_PROVIDER_PARAM = import.meta.env.VITE_AUTH_PROVIDER_PARAM ?? "kc_idp_hint";
-const AUTH_LOGOUT_URL = import.meta.env.VITE_AUTH_LOGOUT_URL ?? "";
-const FIREBASE_API_KEY = import.meta.env.VITE_FIREBASE_API_KEY ?? "";
-const FIREBASE_AUTH_DOMAIN = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? "";
-const FIREBASE_PROJECT_ID = import.meta.env.VITE_FIREBASE_PROJECT_ID ?? "";
-const FIREBASE_APP_ID = import.meta.env.VITE_FIREBASE_APP_ID ?? "";
-const FIREBASE_EMULATOR_HOST = import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_HOST ?? "";
-const FIREBASE_USE_EMULATOR =
-  (import.meta.env.VITE_FIREBASE_USE_EMULATOR ?? "") === "1";
-const FIREBASE_ENABLE_GOOGLE =
-  (import.meta.env.VITE_FIREBASE_ENABLE_GOOGLE ?? "") === "1";
-const FIREBASE_ENABLE_APPLE =
-  (import.meta.env.VITE_FIREBASE_ENABLE_APPLE ?? "") === "1";
-const FIREBASE_ENABLE_FACEBOOK =
-  (import.meta.env.VITE_FIREBASE_ENABLE_FACEBOOK ?? "") === "1";
-const FIREBASE_ENABLE_MICROSOFT =
-  (import.meta.env.VITE_FIREBASE_ENABLE_MICROSOFT ?? "") === "1";
-const FIREBASE_ENABLE_GUEST =
-  (import.meta.env.VITE_FIREBASE_ENABLE_GUEST ?? "") === "1";
-const DEV_PREFILL =
-  import.meta.env.DEV && (import.meta.env.VITE_DEV_PREFILL_CREDENTIALS ?? "") === "1";
-const DEV_CLOUD_AHOY_EMAIL = import.meta.env.VITE_CLOUD_AHOY_EMAIL ?? "";
-const DEV_CLOUD_AHOY_PASSWORD = import.meta.env.VITE_CLOUD_AHOY_PASSWORD ?? "";
-const DEV_FLYSTO_EMAIL = import.meta.env.VITE_FLYSTO_EMAIL ?? "";
-const DEV_FLYSTO_PASSWORD = import.meta.env.VITE_FLYSTO_PASSWORD ?? "";
-const RETENTION_DAYS = Number.parseInt(import.meta.env.VITE_RETENTION_DAYS ?? "7", 10);
-const retentionDays = Number.isFinite(RETENTION_DAYS) ? RETENTION_DAYS : 7;
-
-const parseISODateInput = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
-  const date = new Date(`${trimmed}T00:00:00Z`);
-  if (Number.isNaN(date.getTime())) return null;
-  return formatISODate(date) === trimmed ? date : null;
-};
-
-const ProviderIcon = ({ name }: { name: string }) => {
-  switch (name) {
-    case "google":
-      return (
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-black/5">
-          <svg aria-hidden viewBox="0 0 48 48" className="h-4 w-4">
-            <path
-              fill="#EA4335"
-              d="M24 9.5c3.2 0 6 .9 8.2 2.7l6.1-6.1C34.7 2.6 29.7 0 24 0 14.6 0 6.5 5.4 2.4 13.2l7.3 5.7C11.4 13 17.1 9.5 24 9.5z"
-            />
-            <path
-              fill="#4285F4"
-              d="M46.1 24.5c0-1.6-.1-2.8-.4-4.1H24v7.8h12.5c-.5 2.7-2.1 5.1-4.7 6.7l7.2 5.6c4.2-3.9 6.6-9.6 6.6-16z"
-            />
-            <path
-              fill="#FBBC05"
-              d="M9.7 28.9c-1-2.7-1-5.7 0-8.4l-7.3-5.7c-3.1 6.2-3.1 13.6 0 19.8l7.3-5.7z"
-            />
-            <path
-              fill="#34A853"
-              d="M24 48c5.7 0 10.6-1.9 14.1-5.1l-7.2-5.6c-2 1.4-4.6 2.2-6.9 2.2-6.9 0-12.6-3.5-14.3-9.4l-7.3 5.7C6.5 42.6 14.6 48 24 48z"
-            />
-          </svg>
-        </span>
-      );
-    case "apple":
-      return (
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-black text-white">
-          <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4">
-            <path
-              fill="currentColor"
-              d="M16.3 1.5c0 1-.4 2-1 2.7-.7.9-1.9 1.6-3 1.5-.1-1 .4-2 .9-2.7.7-.8 1.9-1.5 3.1-1.5ZM19.7 17.4c-.4.9-.6 1.3-1.1 2.1-.7 1-1.6 2.2-2.8 2.2-1.1 0-1.4-.7-2.9-.7-1.5 0-1.9.7-3 .7-1.2 0-2-1.1-2.7-2.1-1.5-2.2-2.6-6.1-1.1-8.8.8-1.4 2.2-2.3 3.7-2.3 1.2 0 2.3.8 3 .8.7 0 2.1-.9 3.5-.8.6 0 2.3.2 3.4 1.7-2.9 1.6-2.4 5.7 1 7.2Z"
-            />
-          </svg>
-        </span>
-      );
-    case "facebook":
-      return (
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#1877F2] text-white">
-          <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4">
-            <path
-              fill="currentColor"
-              d="M22 12a10 10 0 1 0-11.6 9.9v-7H8v-2.9h2.4V9.8c0-2.4 1.4-3.7 3.6-3.7 1 0 2.1.2 2.1.2v2.3h-1.2c-1.2 0-1.6.7-1.6 1.5v1.9h2.7l-.4 2.9h-2.3v7A10 10 0 0 0 22 12Z"
-            />
-          </svg>
-        </span>
-      );
-    case "microsoft":
-      return (
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-black/5">
-          <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4">
-            <path fill="#F25022" d="M1 1h10v10H1z" />
-            <path fill="#7FBA00" d="M13 1h10v10H13z" />
-            <path fill="#00A4EF" d="M1 13h10v10H1z" />
-            <path fill="#FFB900" d="M13 13h10v10H13z" />
-          </svg>
-        </span>
-      );
-    case "email":
-      return (
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-sky-100 text-sky-700">
-          <Mail className="h-4 w-4" aria-hidden />
-        </span>
-      );
-    case "guest":
-      return (
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-slate-700">
-          <UserRound className="h-4 w-4" aria-hidden />
-        </span>
-      );
-    default:
-      return null;
-  }
-};
-
-const AuthDivider = () => (
-  <div className="relative my-3 flex items-center">
-    <div className="h-px w-full bg-slate-200 dark:bg-slate-800" />
-    <span className="absolute left-1/2 -translate-x-1/2 bg-white px-3 text-xs uppercase tracking-[0.3em] text-slate-400 dark:bg-slate-950 dark:text-slate-600">
-      Or
-    </span>
-  </div>
-);
 
 /** Render App component. */
 export default function App() {
@@ -247,6 +150,17 @@ export default function App() {
   const [emailAddress, setEmailAddress] = React.useState("");
   const [emailLinkNotice, setEmailLinkNotice] = React.useState<string | null>(null);
   const [emailLinkUrl, setEmailLinkUrl] = React.useState<string | null>(null);
+  const providerFlags = React.useMemo<ProviderFlags>(
+    () => ({
+      google: Boolean(FIREBASE_ENABLE_GOOGLE),
+      apple: Boolean(FIREBASE_ENABLE_APPLE),
+      facebook: Boolean(FIREBASE_ENABLE_FACEBOOK),
+      microsoft: Boolean(FIREBASE_ENABLE_MICROSOFT),
+      anonymous: Boolean(FIREBASE_ENABLE_GUEST),
+    }),
+    []
+  );
+  const hasOptionalProviders = Object.values(providerFlags).some(Boolean);
 
   const [cloudahoyEmail, setCloudahoyEmail] = React.useState("");
   const [cloudahoyPassword, setCloudahoyPassword] = React.useState("");
@@ -480,22 +394,25 @@ export default function App() {
     setActionError(null);
     const stored = localStorage.getItem(OPEN_STEP_KEY) ?? undefined;
     setManualOpen(stored ?? "connect");
-  }, [startOidcLogin, startFirebaseLogin, setHeaderUserId, setManualOpen]);
+  }, [startOidcLogin, setHeaderUserId, setManualOpen]);
 
   const handleFirebaseLogin = React.useCallback(
-    (provider: Parameters<typeof startFirebaseLogin>[0], options?: Parameters<typeof startFirebaseLogin>[1]) => {
+    (
+      provider: ProviderName,
+      options?: Parameters<typeof startFirebaseLogin>[1]
+    ) => {
       setActionError(null);
       const enabled =
         provider === "google"
-          ? FIREBASE_ENABLE_GOOGLE
+          ? providerFlags.google
           : provider === "apple"
-            ? FIREBASE_ENABLE_APPLE
+            ? providerFlags.apple
             : provider === "facebook"
-              ? FIREBASE_ENABLE_FACEBOOK
+              ? providerFlags.facebook
               : provider === "microsoft"
-                ? FIREBASE_ENABLE_MICROSOFT
+                ? providerFlags.microsoft
                 : provider === "anonymous"
-                  ? FIREBASE_ENABLE_GUEST
+                  ? providerFlags.anonymous
                   : false;
       if (!enabled) {
         setActionError({
@@ -504,9 +421,9 @@ export default function App() {
         });
         return;
       }
-      void startFirebaseLogin(provider, options);
+      void startFirebaseLogin(provider as Parameters<typeof startFirebaseLogin>[0], options);
     },
-    [startFirebaseLogin]
+    [startFirebaseLogin, providerFlags]
   );
 
   const handleEmailLink = React.useCallback(async () => {
@@ -951,12 +868,6 @@ export default function App() {
 
   const isRedirectScreen =
     !flow.signedIn && AUTH_MODE === "oidc" && (isSignInRedirect || isAuthCallback);
-  const hasOptionalProviders =
-    FIREBASE_ENABLE_GOOGLE ||
-    FIREBASE_ENABLE_APPLE ||
-    FIREBASE_ENABLE_FACEBOOK ||
-    FIREBASE_ENABLE_MICROSOFT ||
-    FIREBASE_ENABLE_GUEST;
 
   if (isRedirectScreen) {
     return <div className="min-h-screen bg-background" />;
@@ -981,129 +892,24 @@ export default function App() {
               </Button>
             )}
             {!flow.signedIn && AUTH_MODE === "firebase" && (
-              <AlertDialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
-                <AlertDialogTrigger asChild>
-                  <Button size="sm">Sign up / Sign in</Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Continue with</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {hasOptionalProviders
-                        ? "Use a passwordless email link or choose a provider."
-                        : "Use the passwordless email link to sign in."}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <div className="space-y-2">
-                    {signInError && (
-                      <Alert className="border-rose-200 bg-rose-50/70 text-rose-900">
-                        <AlertTitle>Sign-in failed</AlertTitle>
-                        <AlertDescription>{signInError}</AlertDescription>
-                      </Alert>
-                    )}
-                    {FIREBASE_USE_EMULATOR && !firebaseEmulatorReady && (
-                      <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-900">
-                        Auth emulator is starting up. Sign-in will be available shortly.
-                      </div>
-                    )}
-                    <div className="space-y-2">
-                      <label className="text-xs font-medium text-slate-500">
-                        Email link (passwordless)
-                      </label>
-                      <div className="flex w-full max-w-xl gap-2">
-                        <input
-                          className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none"
-                          placeholder="you@example.com"
-                          value={emailAddress}
-                          onChange={(event) => setEmailAddress(event.target.value)}
-                        />
-                        <Button
-                          variant="outline"
-                          className="h-11 px-4"
-                          onClick={handleEmailLink}
-                          disabled={authButtonsDisabled}
-                        >
-                          Send link
-                        </Button>
-                      </div>
-                      {emailLinkNotice && (
-                        <p className="text-xs text-slate-500">{emailLinkNotice}</p>
-                      )}
-                      {emailLinkUrl && (
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                          Emulator link (click to sign in):
-                          <a
-                            className="ml-1 break-all text-sky-600 hover:underline"
-                            href={emailLinkUrl}
-                          >
-                            {emailLinkUrl}
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                    {hasOptionalProviders && (
-                      <>
-                        <AuthDivider />
-                        <div className="grid gap-2">
-                          {FIREBASE_ENABLE_GOOGLE && (
-                            <Button
-                              className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
-                              onClick={() => handleFirebaseLogin("google")}
-                              disabled={actionLoading}
-                            >
-                              <ProviderIcon name="google" />
-                              Continue with Google
-                            </Button>
-                          )}
-                          {FIREBASE_ENABLE_APPLE && (
-                            <Button
-                              className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
-                              onClick={() => handleFirebaseLogin("apple")}
-                              disabled={actionLoading}
-                            >
-                              <ProviderIcon name="apple" />
-                              Continue with Apple
-                            </Button>
-                          )}
-                          {FIREBASE_ENABLE_FACEBOOK && (
-                            <Button
-                              className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
-                              onClick={() => handleFirebaseLogin("facebook")}
-                              disabled={actionLoading}
-                            >
-                              <ProviderIcon name="facebook" />
-                              Continue with Facebook
-                            </Button>
-                          )}
-                          {FIREBASE_ENABLE_MICROSOFT && (
-                            <Button
-                              className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
-                              onClick={() => handleFirebaseLogin("microsoft")}
-                              disabled={actionLoading}
-                            >
-                              <ProviderIcon name="microsoft" />
-                              Continue with Microsoft
-                            </Button>
-                          )}
-                          {FIREBASE_ENABLE_GUEST && (
-                            <Button
-                              className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
-                              onClick={() => handleFirebaseLogin("anonymous")}
-                              disabled={actionLoading}
-                            >
-                              <ProviderIcon name="guest" />
-                              Continue as guest
-                            </Button>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <FirebaseAuthDialog
+                open={showAuthDialog}
+                onOpenChange={setShowAuthDialog}
+                signInError={signInError}
+                emulatorReady={firebaseEmulatorReady}
+                useEmulator={FIREBASE_USE_EMULATOR}
+                hasOptionalProviders={hasOptionalProviders}
+                emailAddress={emailAddress}
+                onEmailChange={setEmailAddress}
+                onSendLink={handleEmailLink}
+                emailLinkNotice={emailLinkNotice}
+                emailLinkUrl={emailLinkUrl}
+                authButtonsDisabled={authButtonsDisabled}
+                providers={providerFlags}
+                onProvider={handleFirebaseLogin}
+                actionLoading={actionLoading}
+                triggerLabel="Sign up / Sign in"
+              />
             )}
             {flow.connected && (
               <AlertDialog>
@@ -1174,213 +980,57 @@ export default function App() {
         {!flow.signedIn &&
           !(AUTH_MODE === "oidc" && (isSignInRedirect || isAuthCallback)) && (
             <div className="mx-auto max-w-3xl space-y-4">
-              <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
-                <CardHeader className="space-y-2">
-                  <CardTitle>Sign in to start your import</CardTitle>
-                  <CardDescription>
-                    Identify your job and keep your progress in sync across devices.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {signInError && (
-                    <Alert className="border-rose-200 bg-rose-50/70 text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-100">
-                      <AlertTitle>Sign-in failed</AlertTitle>
-                      <AlertDescription>{signInError}</AlertDescription>
-                    </Alert>
-                  )}
-                  {AUTH_MODE !== "firebase" && (
+              {AUTH_MODE !== "firebase" && (
+                <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
+                  <CardHeader className="space-y-2">
+                    <CardTitle>Sign in to start your import</CardTitle>
+                    <CardDescription>
+                      Identify your job and keep your progress in sync across devices.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {signInError && (
+                      <Alert className="border-rose-200 bg-rose-50/70 text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-100">
+                        <AlertTitle>Sign-in failed</AlertTitle>
+                        <AlertDescription>{signInError}</AlertDescription>
+                      </Alert>
+                    )}
                     <Button onClick={handleSignIn} disabled={actionLoading}>
                       Sign up / Sign in
                     </Button>
-                  )}
-                  {AUTH_MODE === "firebase" && (
-                    <div className="space-y-2">
-                      {FIREBASE_USE_EMULATOR && !firebaseEmulatorReady && (
-                        <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-900">
-                          Auth emulator is starting up. Sign-in will be available shortly.
-                        </div>
-                      )}
-                      <div className="space-y-2">
-                        <label className="text-xs font-medium text-slate-500">
-                          {hasOptionalProviders ? "Email link (passwordless)" : "Passwordless email link"}
-                        </label>
-                      <div className="flex w-full max-w-xl gap-2">
-                        <input
-                          className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none"
-                          placeholder="you@example.com"
-                          value={emailAddress}
-                          onChange={(event) => setEmailAddress(event.target.value)}
-                        />
-                        <Button
-                          variant="outline"
-                          className="h-11 px-4"
-                          onClick={handleEmailLink}
-                          disabled={authButtonsDisabled}
-                        >
-                          Send link
-                        </Button>
-                      </div>
-                        {emailLinkNotice && (
-                          <p className="text-xs text-slate-500">{emailLinkNotice}</p>
-                        )}
-                        {emailLinkUrl && (
-                          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                            Emulator link (click to sign in):
-                            <a
-                              className="ml-1 break-all text-sky-600 hover:underline"
-                              href={emailLinkUrl}
-                            >
-                              {emailLinkUrl}
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                      {(FIREBASE_ENABLE_GOOGLE ||
-                        FIREBASE_ENABLE_APPLE ||
-                        FIREBASE_ENABLE_FACEBOOK ||
-                        FIREBASE_ENABLE_MICROSOFT ||
-                        FIREBASE_ENABLE_GUEST) && (
-                        <>
-                          <AuthDivider />
-                          <div className="grid gap-2">
-                            {FIREBASE_ENABLE_GOOGLE && (
-                              <Button
-                                className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-                                onClick={() => handleFirebaseLogin("google")}
-                                disabled={authButtonsDisabled}
-                              >
-                                <ProviderIcon name="google" />
-                                Continue with Google
-                              </Button>
-                            )}
-                            {FIREBASE_ENABLE_APPLE && (
-                              <Button
-                                className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-                                onClick={() => handleFirebaseLogin("apple")}
-                                disabled={authButtonsDisabled}
-                              >
-                                <ProviderIcon name="apple" />
-                                Continue with Apple
-                              </Button>
-                            )}
-                            {FIREBASE_ENABLE_FACEBOOK && (
-                              <Button
-                                className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-                                onClick={() => handleFirebaseLogin("facebook")}
-                                disabled={authButtonsDisabled}
-                              >
-                                <ProviderIcon name="facebook" />
-                                Continue with Facebook
-                              </Button>
-                            )}
-                            {FIREBASE_ENABLE_MICROSOFT && (
-                              <Button
-                                className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-                                onClick={() => handleFirebaseLogin("microsoft")}
-                                disabled={authButtonsDisabled}
-                              >
-                                <ProviderIcon name="microsoft" />
-                                Continue with Microsoft
-                              </Button>
-                            )}
-                            {FIREBASE_ENABLE_GUEST && (
-                              <Button
-                                className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-                                onClick={() => handleFirebaseLogin("anonymous")}
-                                disabled={authButtonsDisabled}
-                              >
-                                <ProviderIcon name="guest" />
-                                Continue as guest
-                              </Button>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  {AUTH_MODE === "firebase" && FIREBASE_USE_EMULATOR && (
-                    <p className="text-xs text-muted-foreground">
-                      Local auth emulator is enabled. Email sign-in links are simulated.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
+              {AUTH_MODE === "firebase" && (
+                <FirebaseAuthCard
+                  signInError={signInError}
+                  useEmulator={FIREBASE_USE_EMULATOR}
+                  emulatorReady={firebaseEmulatorReady}
+                  hasOptionalProviders={hasOptionalProviders}
+                  emailAddress={emailAddress}
+                  onEmailChange={setEmailAddress}
+                  onSendLink={handleEmailLink}
+                  emailLinkNotice={emailLinkNotice}
+                  emailLinkUrl={emailLinkUrl}
+                  authButtonsDisabled={authButtonsDisabled}
+                  providers={providerFlags}
+                  onProvider={handleFirebaseLogin}
+                />
+              )}
             </div>
           )}
 
         {flow.signedIn && (
           <>
             {AUTH_MODE === "firebase" && isAnonymous && (
-              <Card className="mb-4 rounded-xl border border-amber-200 bg-amber-50/60 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100">
-                <CardHeader className="space-y-1">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <ShieldCheck className="h-4 w-4" aria-hidden />
-                    Upgrade your guest session
-                  </CardTitle>
-                  <CardDescription className="text-amber-800/80 dark:text-amber-100/70">
-                    Link a provider to keep your import history across devices.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex flex-wrap gap-2">
-                    {FIREBASE_ENABLE_GOOGLE && (
-                      <Button
-                        className="h-11 justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
-                        onClick={() => handleFirebaseLogin("google", { link: true })}
-                        disabled={actionLoading}
-                      >
-                        <ProviderIcon name="google" />
-                        Link Google
-                      </Button>
-                    )}
-                    {FIREBASE_ENABLE_APPLE && (
-                      <Button
-                        className="h-11 justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
-                        onClick={() => handleFirebaseLogin("apple", { link: true })}
-                        disabled={actionLoading}
-                      >
-                        <ProviderIcon name="apple" />
-                        Link Apple
-                      </Button>
-                    )}
-                    {FIREBASE_ENABLE_MICROSOFT && (
-                      <Button
-                        className="h-11 justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
-                        onClick={() => handleFirebaseLogin("microsoft", { link: true })}
-                        disabled={actionLoading}
-                      >
-                        <ProviderIcon name="microsoft" />
-                        Link Microsoft
-                      </Button>
-                    )}
-                    {FIREBASE_ENABLE_FACEBOOK && (
-                      <Button
-                        className="h-11 justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
-                        onClick={() => handleFirebaseLogin("facebook", { link: true })}
-                        disabled={actionLoading}
-                      >
-                        <ProviderIcon name="facebook" />
-                        Link Facebook
-                      </Button>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-amber-800/80 dark:text-amber-100/70">
-                    <ArrowRight className="h-3 w-3" aria-hidden />
-                    You can also link an email address below.
-                  </div>
-                  <div className="flex w-full max-w-xl gap-2">
-                    <input
-                      className="h-11 w-full rounded-lg border border-amber-200 bg-white px-3 text-sm text-amber-900 shadow-sm focus:border-amber-300 focus:outline-none"
-                      placeholder="you@example.com"
-                      value={emailAddress}
-                      onChange={(event) => setEmailAddress(event.target.value)}
-                    />
-                    <Button variant="outline" className="h-11 px-4" onClick={handleEmailLink}>
-                      Link email
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <GuestUpgradeCard
+                providers={providerFlags}
+                onProvider={(provider) => handleFirebaseLogin(provider, { link: true })}
+                emailAddress={emailAddress}
+                onEmailChange={setEmailAddress}
+                onSendLink={handleEmailLink}
+                actionLoading={actionLoading}
+              />
             )}
             <div className="mb-4 lg:hidden">
               <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">

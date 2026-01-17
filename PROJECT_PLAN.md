@@ -101,7 +101,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [ ] Q3 Confirm whether CloudAhoy/FlySto require fixed egress IP allowlisting (may require NAT).
 
 ## Blockers
-- [ ] Local Firebase emulator stack not yet re-verified after moving emulator access behind `*.skybridge.localhost` subdomains to avoid host port conflicts.
+- [x] Local Firebase emulator stack re-verified after moving emulator access behind `*.skybridge.localhost` subdomains to avoid host port conflicts.
 
 ## Maintenance Notes
 - [x] Show download preparation progress and lock download actions while artifacts are fetched.
@@ -140,3 +140,4 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Fix noVNC web UI serving (use novnc_proxy/websockify --web).
 - [x] Auto-open noVNC auto-connect URL when running Playwright from VS Code.
 - [x] Exclude discovery modules from coverage targets and remove discovery-specific tests.
+- [x] Refactor App shell auth UI into dedicated components/config helpers to keep `App.tsx` maintainable.
