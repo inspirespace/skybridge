@@ -45,8 +45,8 @@ test("sign in updates status", async ({ page }) => {
 
 test("edit import filters returns to connect step", async ({ page }) => {
   await page.addInitScript(() => {
-    window.localStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
-    window.localStorage.setItem(
+    window.sessionStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
+    window.sessionStorage.setItem(
       "skybridge_job_id",
       "00000000-0000-0000-0000-000000000123"
     );
@@ -123,8 +123,8 @@ test("edit import filters returns to connect step", async ({ page }) => {
 
 test("import completed shows results summary", async ({ page }) => {
   await page.addInitScript(() => {
-    window.localStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
-    window.localStorage.setItem(
+    window.sessionStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
+    window.sessionStorage.setItem(
       "skybridge_job_id",
       "00000000-0000-0000-0000-000000000456"
     );
@@ -180,8 +180,8 @@ test("import completed shows results summary", async ({ page }) => {
 
 test("review running shows progress and disables approval", async ({ page }) => {
   await page.addInitScript(() => {
-    window.localStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
-    window.localStorage.setItem(
+    window.sessionStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
+    window.sessionStorage.setItem(
       "skybridge_job_id",
       "00000000-0000-0000-0000-000000000789"
     );
@@ -223,8 +223,8 @@ test("review running shows progress and disables approval", async ({ page }) => 
 
 test("review failure shows retry option", async ({ page }) => {
   await page.addInitScript(() => {
-    window.localStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
-    window.localStorage.setItem(
+    window.sessionStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
+    window.sessionStorage.setItem(
       "skybridge_job_id",
       "00000000-0000-0000-0000-000000000999"
     );
@@ -264,8 +264,8 @@ test("review failure shows retry option", async ({ page }) => {
 
 test("download files shows expired message on 404", async ({ page }) => {
   await page.addInitScript(() => {
-    window.localStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
-    window.localStorage.setItem(
+    window.sessionStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
+    window.sessionStorage.setItem(
       "skybridge_job_id",
       "00000000-0000-0000-0000-000000000456"
     );
@@ -323,8 +323,8 @@ test("download files shows expired message on 404", async ({ page }) => {
 
 test("delete results shows success notice", async ({ page }) => {
   await page.addInitScript(() => {
-    window.localStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
-    window.localStorage.setItem(
+    window.sessionStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
+    window.sessionStorage.setItem(
       "skybridge_job_id",
       "00000000-0000-0000-0000-000000000777"
     );
@@ -381,8 +381,8 @@ test("delete results shows success notice", async ({ page }) => {
 
 test("download files succeeds and triggers download", async ({ page }) => {
   await page.addInitScript(() => {
-    window.localStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
-    window.localStorage.setItem(
+    window.sessionStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
+    window.sessionStorage.setItem(
       "skybridge_job_id",
       "00000000-0000-0000-0000-000000000888"
     );
@@ -440,8 +440,8 @@ test("download files succeeds and triggers download", async ({ page }) => {
 
 test("show more flights expands review table", async ({ page }) => {
   await page.addInitScript(() => {
-    window.localStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
-    window.localStorage.setItem(
+    window.sessionStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
+    window.sessionStorage.setItem(
       "skybridge_job_id",
       "00000000-0000-0000-0000-000000000999"
     );
@@ -491,7 +491,7 @@ test("show more flights expands review table", async ({ page }) => {
 
 test("connect review enables after credentials are filled", async ({ page }) => {
   await page.addInitScript(() => {
-    window.localStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
+    window.sessionStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
   });
 
   await page.goto("/app/");
@@ -508,7 +508,7 @@ test("connect review enables after credentials are filled", async ({ page }) => 
 
 test("connect review surfaces credential validation errors", async ({ page }) => {
   await page.addInitScript(() => {
-    window.localStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
+    window.sessionStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
   });
 
   await page.route("**/api/credentials/validate", async (route) => {
@@ -541,8 +541,8 @@ test("connect review surfaces credential validation errors", async ({ page }) =>
 
 test("accept review requires confirmation before starting import", async ({ page }) => {
   await page.addInitScript(() => {
-    window.localStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
-    window.localStorage.setItem(
+    window.sessionStorage.setItem("skybridge_user_id", "pilot@skybridge.dev");
+    window.sessionStorage.setItem(
       "skybridge_job_id",
       "00000000-0000-0000-0000-000000000555"
     );
