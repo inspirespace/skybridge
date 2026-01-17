@@ -191,11 +191,14 @@ export function useFirebaseAuth({
         url.searchParams.set("mode", "signIn");
         url.searchParams.set("oobCode", oobCode);
         url.searchParams.set("apiKey", apiKey || "demo-local");
+        url.searchParams.set("email", email);
         return url.toString();
       } catch {
         return `${redirectUrl}?mode=signIn&oobCode=${encodeURIComponent(
           oobCode
-        )}&apiKey=${encodeURIComponent(apiKey || "demo-local")}`;
+        )}&apiKey=${encodeURIComponent(apiKey || "demo-local")}&email=${encodeURIComponent(
+          email
+        )}`;
       }
     },
     [apiKey, emulatorUrl, projectId]
