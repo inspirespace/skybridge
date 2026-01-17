@@ -14,7 +14,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { formatISODate } from "@/lib/format";
 import { Calendar as CalendarIcon } from "lucide-react";
@@ -169,8 +168,6 @@ export function ConnectSection({
               </div>
             </div>
           </div>
-
-          <Separator className="my-1" />
 
           <div className="relative rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-sky-900/60 dark:bg-slate-900/80">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.16),_transparent_60%)]" />
