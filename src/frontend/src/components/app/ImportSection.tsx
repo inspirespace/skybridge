@@ -176,7 +176,7 @@ export function ImportSection({
             </div>
           )}
           {importComplete && job?.import_report && (
-            <div className="relative overflow-hidden rounded-md border border-border/60 bg-background/70 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/40">
+            <div className="relative overflow-hidden rounded-md bg-background/70 shadow-sm dark:bg-slate-950/40">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.16),_transparent_60%)]" />
               <ImportResults
                 imported={job.import_report.imported_count}
