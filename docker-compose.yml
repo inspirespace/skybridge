@@ -1,6 +1,6 @@
 services:
   caddy:
-    image: caddy:2.8.4
+    image: caddy:2.10
     ports:
       - "80:80"
       - "443:443"
@@ -43,7 +43,7 @@ services:
       - VITE_FLYSTO_PASSWORD=${FLYSTO_PASSWORD}
 
   firebase-emulator:
-    image: node:24-bookworm
+    image: node:24-alpine
     working_dir: /workspace
     volumes:
       - ./:/workspace
@@ -52,7 +52,7 @@ services:
       [
         "sh",
         "-c",
-        "apt-get update && apt-get install -y curl python3 python3-venv python3-pip && ARCH=$$(uname -m) && if [ \"$$ARCH\" = \"x86_64\" ]; then ARCH=x64; fi && JRE_URL=\"https://api.adoptium.net/v3/binary/latest/21/ga/linux/$${ARCH}/jre/hotspot/normal/eclipse\" && mkdir -p /opt/java && curl -fsSL \"$$JRE_URL\" -o /tmp/jre.tar.gz && tar -xzf /tmp/jre.tar.gz -C /opt/java && JAVA_HOME=$$(ls -d /opt/java/jre-* /opt/java/jdk-* 2>/dev/null | head -1) && export JAVA_HOME && export PATH=\"$$JAVA_HOME/bin:$$PATH\" && java -version && npm install -g firebase-tools@15.3.1 && if [ ! -d /workspace/functions/venv ]; then python3 -m venv /workspace/functions/venv; fi && /workspace/functions/venv/bin/pip install -r /workspace/functions/requirements.txt && firebase emulators:start --project skybridge-dev --only auth,firestore,pubsub,storage,functions,hosting --import /workspace/.firebase-emulator --export-on-exit /workspace/.firebase-emulator"
+        "apk add --no-cache curl python3 py3-pip py3-virtualenv openjdk21-jre && java -version && npm install -g firebase-tools@15.3.1 && if [ ! -d /workspace/functions/venv ]; then python3 -m venv /workspace/functions/venv; fi && /workspace/functions/venv/bin/python -m ensurepip --upgrade && /workspace/functions/venv/bin/python -m pip install -r /workspace/functions/requirements.txt && firebase emulators:start --project skybridge-dev --only auth,firestore,pubsub,storage,functions,hosting --import /workspace/.firebase-emulator --export-on-exit /workspace/.firebase-emulator"
       ]
     environment:
       - CLOUDSDK_CORE_PROJECT=skybridge-dev
