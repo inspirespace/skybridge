@@ -78,6 +78,16 @@ const FIREBASE_APP_ID = import.meta.env.VITE_FIREBASE_APP_ID ?? "";
 const FIREBASE_EMULATOR_HOST = import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_HOST ?? "";
 const FIREBASE_USE_EMULATOR =
   (import.meta.env.VITE_FIREBASE_USE_EMULATOR ?? "") === "1";
+const FIREBASE_ENABLE_GOOGLE =
+  (import.meta.env.VITE_FIREBASE_ENABLE_GOOGLE ?? "") === "1";
+const FIREBASE_ENABLE_APPLE =
+  (import.meta.env.VITE_FIREBASE_ENABLE_APPLE ?? "") === "1";
+const FIREBASE_ENABLE_FACEBOOK =
+  (import.meta.env.VITE_FIREBASE_ENABLE_FACEBOOK ?? "") === "1";
+const FIREBASE_ENABLE_MICROSOFT =
+  (import.meta.env.VITE_FIREBASE_ENABLE_MICROSOFT ?? "") === "1";
+const FIREBASE_ENABLE_GUEST =
+  (import.meta.env.VITE_FIREBASE_ENABLE_GUEST ?? "") === "1";
 const FIRESTORE_LISTEN_ENABLED =
   (import.meta.env.VITE_FIRESTORE_LISTEN ?? "") === "1";
 const DEV_PREFILL =
@@ -478,6 +488,25 @@ export default function App() {
   const handleFirebaseLogin = React.useCallback(
     (provider: Parameters<typeof startFirebaseLogin>[0], options?: Parameters<typeof startFirebaseLogin>[1]) => {
       setActionError(null);
+      const enabled =
+        provider === "google"
+          ? FIREBASE_ENABLE_GOOGLE
+          : provider === "apple"
+            ? FIREBASE_ENABLE_APPLE
+            : provider === "facebook"
+              ? FIREBASE_ENABLE_FACEBOOK
+              : provider === "microsoft"
+                ? FIREBASE_ENABLE_MICROSOFT
+                : provider === "anonymous"
+                  ? FIREBASE_ENABLE_GUEST
+                  : false;
+      if (!enabled) {
+        setActionError({
+          scope: "sign-in",
+          message: "This sign-in option is disabled. Use the email link instead.",
+        });
+        return;
+      }
       void startFirebaseLogin(provider, options);
     },
     [startFirebaseLogin]
@@ -944,51 +973,10 @@ export default function App() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Continue with</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Choose a provider to sign in or continue as a guest.
+                      Use the passwordless email link to sign in.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <div className="space-y-2">
-                    <Button
-                      className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
-                      onClick={() => handleFirebaseLogin("google")}
-                      disabled={actionLoading}
-                    >
-                      <ProviderIcon name="google" />
-                      Continue with Google
-                    </Button>
-                    <Button
-                      className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
-                      onClick={() => handleFirebaseLogin("apple")}
-                      disabled={actionLoading}
-                    >
-                      <ProviderIcon name="apple" />
-                      Continue with Apple
-                    </Button>
-                    <Button
-                      className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
-                      onClick={() => handleFirebaseLogin("facebook")}
-                      disabled={actionLoading}
-                    >
-                      <ProviderIcon name="facebook" />
-                      Continue with Facebook
-                    </Button>
-                    <Button
-                      className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
-                      onClick={() => handleFirebaseLogin("microsoft")}
-                      disabled={actionLoading}
-                    >
-                      <ProviderIcon name="microsoft" />
-                      Continue with Microsoft
-                    </Button>
-                    <Button
-                      className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
-                      onClick={() => handleFirebaseLogin("anonymous")}
-                      disabled={actionLoading}
-                    >
-                      <ProviderIcon name="guest" />
-                      Continue as guest
-                    </Button>
-                    <AuthDivider />
                     <div className="space-y-2">
                       <label className="text-xs font-medium text-slate-500">
                         Email link (passwordless)
@@ -1118,47 +1106,6 @@ export default function App() {
                           Auth emulator is starting up. Sign-in will be available shortly.
                         </div>
                       )}
-                      <Button
-                        className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-                        onClick={() => handleFirebaseLogin("google")}
-                        disabled={authButtonsDisabled}
-                      >
-                        <ProviderIcon name="google" />
-                        Continue with Google
-                      </Button>
-                      <Button
-                        className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-                        onClick={() => handleFirebaseLogin("apple")}
-                        disabled={authButtonsDisabled}
-                      >
-                        <ProviderIcon name="apple" />
-                        Continue with Apple
-                      </Button>
-                      <Button
-                        className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-                        onClick={() => handleFirebaseLogin("facebook")}
-                        disabled={authButtonsDisabled}
-                      >
-                        <ProviderIcon name="facebook" />
-                        Continue with Facebook
-                      </Button>
-                      <Button
-                        className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-                        onClick={() => handleFirebaseLogin("microsoft")}
-                        disabled={authButtonsDisabled}
-                      >
-                        <ProviderIcon name="microsoft" />
-                        Continue with Microsoft
-                      </Button>
-                      <Button
-                        className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-                        onClick={() => handleFirebaseLogin("anonymous")}
-                        disabled={authButtonsDisabled}
-                      >
-                        <ProviderIcon name="guest" />
-                        Continue as guest
-                      </Button>
-                      <AuthDivider />
                       <div className="space-y-2">
                         <label className="text-xs font-medium text-slate-500">
                           Email link (passwordless)
@@ -1193,11 +1140,72 @@ export default function App() {
                           </div>
                         )}
                       </div>
+                      {(FIREBASE_ENABLE_GOOGLE ||
+                        FIREBASE_ENABLE_APPLE ||
+                        FIREBASE_ENABLE_FACEBOOK ||
+                        FIREBASE_ENABLE_MICROSOFT ||
+                        FIREBASE_ENABLE_GUEST) && (
+                        <>
+                          <AuthDivider />
+                          <div className="grid gap-2">
+                            {FIREBASE_ENABLE_GOOGLE && (
+                              <Button
+                                className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                                onClick={() => handleFirebaseLogin("google")}
+                                disabled={authButtonsDisabled}
+                              >
+                                <ProviderIcon name="google" />
+                                Continue with Google
+                              </Button>
+                            )}
+                            {FIREBASE_ENABLE_APPLE && (
+                              <Button
+                                className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                                onClick={() => handleFirebaseLogin("apple")}
+                                disabled={authButtonsDisabled}
+                              >
+                                <ProviderIcon name="apple" />
+                                Continue with Apple
+                              </Button>
+                            )}
+                            {FIREBASE_ENABLE_FACEBOOK && (
+                              <Button
+                                className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                                onClick={() => handleFirebaseLogin("facebook")}
+                                disabled={authButtonsDisabled}
+                              >
+                                <ProviderIcon name="facebook" />
+                                Continue with Facebook
+                              </Button>
+                            )}
+                            {FIREBASE_ENABLE_MICROSOFT && (
+                              <Button
+                                className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                                onClick={() => handleFirebaseLogin("microsoft")}
+                                disabled={authButtonsDisabled}
+                              >
+                                <ProviderIcon name="microsoft" />
+                                Continue with Microsoft
+                              </Button>
+                            )}
+                            {FIREBASE_ENABLE_GUEST && (
+                              <Button
+                                className="h-12 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                                onClick={() => handleFirebaseLogin("anonymous")}
+                                disabled={authButtonsDisabled}
+                              >
+                                <ProviderIcon name="guest" />
+                                Continue as guest
+                              </Button>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                   {AUTH_MODE === "firebase" && FIREBASE_USE_EMULATOR && (
                     <p className="text-xs text-muted-foreground">
-                      Local auth emulator is enabled. Provider selection is simulated.
+                      Local auth emulator is enabled. Email sign-in links are simulated.
                     </p>
                   )}
                 </CardContent>
@@ -1220,38 +1228,46 @@ export default function App() {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <div className="flex flex-wrap gap-2">
-                    <Button
-                      className="h-11 justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
-                      onClick={() => handleFirebaseLogin("google", { link: true })}
-                      disabled={actionLoading}
-                    >
-                      <ProviderIcon name="google" />
-                      Link Google
-                    </Button>
-                    <Button
-                      className="h-11 justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
-                      onClick={() => handleFirebaseLogin("apple", { link: true })}
-                      disabled={actionLoading}
-                    >
-                      <ProviderIcon name="apple" />
-                      Link Apple
-                    </Button>
-                    <Button
-                      className="h-11 justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
-                      onClick={() => handleFirebaseLogin("microsoft", { link: true })}
-                      disabled={actionLoading}
-                    >
-                      <ProviderIcon name="microsoft" />
-                      Link Microsoft
-                    </Button>
-                    <Button
-                      className="h-11 justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
-                      onClick={() => handleFirebaseLogin("facebook", { link: true })}
-                      disabled={actionLoading}
-                    >
-                      <ProviderIcon name="facebook" />
-                      Link Facebook
-                    </Button>
+                    {FIREBASE_ENABLE_GOOGLE && (
+                      <Button
+                        className="h-11 justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
+                        onClick={() => handleFirebaseLogin("google", { link: true })}
+                        disabled={actionLoading}
+                      >
+                        <ProviderIcon name="google" />
+                        Link Google
+                      </Button>
+                    )}
+                    {FIREBASE_ENABLE_APPLE && (
+                      <Button
+                        className="h-11 justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
+                        onClick={() => handleFirebaseLogin("apple", { link: true })}
+                        disabled={actionLoading}
+                      >
+                        <ProviderIcon name="apple" />
+                        Link Apple
+                      </Button>
+                    )}
+                    {FIREBASE_ENABLE_MICROSOFT && (
+                      <Button
+                        className="h-11 justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
+                        onClick={() => handleFirebaseLogin("microsoft", { link: true })}
+                        disabled={actionLoading}
+                      >
+                        <ProviderIcon name="microsoft" />
+                        Link Microsoft
+                      </Button>
+                    )}
+                    {FIREBASE_ENABLE_FACEBOOK && (
+                      <Button
+                        className="h-11 justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
+                        onClick={() => handleFirebaseLogin("facebook", { link: true })}
+                        disabled={actionLoading}
+                      >
+                        <ProviderIcon name="facebook" />
+                        Link Facebook
+                      </Button>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 text-xs text-amber-800/80 dark:text-amber-100/70">
                     <ArrowRight className="h-3 w-3" aria-hidden />
