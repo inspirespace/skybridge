@@ -291,11 +291,11 @@ export function ConnectSection({
                       }
                     }}
                   />
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    Caps the total number of flights that will be imported.
+                  </p>
                 </div>
               </div>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                Caps the total number of flights that will be imported.
-              </p>
             </div>
           </div>
 
