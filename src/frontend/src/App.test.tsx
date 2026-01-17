@@ -8,7 +8,27 @@ vi.mock("@/hooks/use-job-snapshot", () => ({
 vi.mock("@/hooks/use-oidc-auth", () => ({
   useOidcAuth: vi.fn(() => ({
     accessToken: null,
+    idToken: null,
+    userId: null,
+    setUserId: vi.fn(),
+    setAccessToken: vi.fn(),
+    setIdToken: vi.fn(),
     startLogin: vi.fn(),
+    signOut: vi.fn(),
+    clearAuth: vi.fn(),
+  })),
+}));
+
+vi.mock("@/hooks/use-firebase-auth", () => ({
+  useFirebaseAuth: vi.fn(() => ({
+    accessToken: null,
+    startLogin: vi.fn(),
+    startEmailLink: vi.fn(),
+    completeEmailLink: vi.fn(),
+    isAnonymous: false,
+    emulatorProvider: null,
+    emulatorReady: true,
+    emailLinkPending: false,
     signOut: vi.fn(),
     clearAuth: vi.fn(),
   })),
@@ -32,12 +52,12 @@ const JOB_ID_KEY = "skybridge_job_id";
 
 afterEach(() => {
   vi.resetAllMocks();
-  localStorage.clear();
+  sessionStorage.clear();
 });
 
 describe("App", () => {
   it("loads latest job when signed in without job id", async () => {
-    localStorage.setItem(USER_ID_KEY, "pilot");
+    sessionStorage.setItem(USER_ID_KEY, "pilot");
 
     (useJobSnapshot as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       data: null,
@@ -56,13 +76,13 @@ describe("App", () => {
     });
 
     await waitFor(() => {
-      expect(localStorage.getItem(JOB_ID_KEY)).toBe("job-latest");
+      expect(sessionStorage.getItem(JOB_ID_KEY)).toBe("job-latest");
     });
   });
 
   it("clears local session on auth expired error", async () => {
-    localStorage.setItem(USER_ID_KEY, "pilot");
-    localStorage.setItem(JOB_ID_KEY, "job-123");
+    sessionStorage.setItem(USER_ID_KEY, "pilot");
+    sessionStorage.setItem(JOB_ID_KEY, "job-123");
 
     const authError = new Error("Token expired") as Error & { status?: number };
     authError.status = 401;
@@ -76,8 +96,8 @@ describe("App", () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(localStorage.getItem(USER_ID_KEY)).toBeNull();
-      expect(localStorage.getItem(JOB_ID_KEY)).toBeNull();
+      expect(sessionStorage.getItem(USER_ID_KEY)).toBeNull();
+      expect(sessionStorage.getItem(JOB_ID_KEY)).toBeNull();
     });
   });
 });

@@ -1,13 +1,19 @@
 import * as React from "react";
 
-import {
-  apiBaseUrl,
-  buildAuthHeaders,
-  getJob,
-  type AuthContext,
-  type JobRecord,
-  type JobStatus,
-} from "@/api/client";
+import { getJob, type AuthContext, type JobRecord, type JobStatus } from "@/api/client";
+import { patchFirebaseEmulatorRequests } from "@/lib/firebase-emulator";
+
+const AUTH_MODE = import.meta.env.VITE_AUTH_MODE ?? "header";
+const FIRESTORE_LISTEN =
+  (import.meta.env.VITE_FIRESTORE_LISTEN ?? "") === "1";
+const FIREBASE_API_KEY = import.meta.env.VITE_FIREBASE_API_KEY ?? "";
+const FIREBASE_AUTH_DOMAIN = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? "";
+const FIREBASE_PROJECT_ID = import.meta.env.VITE_FIREBASE_PROJECT_ID ?? "";
+const FIREBASE_APP_ID = import.meta.env.VITE_FIREBASE_APP_ID ?? "";
+const FIREBASE_USE_EMULATOR =
+  (import.meta.env.VITE_FIREBASE_USE_EMULATOR ?? "") === "1";
+const FIRESTORE_JOBS_COLLECTION =
+  import.meta.env.VITE_FIRESTORE_JOBS_COLLECTION ?? "skybridge-jobs";
 
 const POLLABLE_STATUSES: JobStatus[] = [
   "review_queued",
@@ -16,14 +22,23 @@ const POLLABLE_STATUSES: JobStatus[] = [
   "import_running",
 ];
 
-// Subscribe to a job via SSE with polling fallback.
+const FIRESTORE_PROXY_HOST = "skybridge.localhost";
+
+// Poll job updates in serverless mode.
 /** Hook for jobsnapshot. */
 export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
   const [data, setData] = React.useState<JobRecord | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<Error | null>(null);
-  const [streamFailed, setStreamFailed] = React.useState(false);
-  const lastEventAtRef = React.useRef<number>(0);
+  const [listenerFailed, setListenerFailed] = React.useState(false);
+  const [listenerActive, setListenerActive] = React.useState(false);
+  const [lastSnapshotAt, setLastSnapshotAt] = React.useState<number | null>(null);
+  const lastListenerState = React.useRef<string | null>(null);
+  const firestoreListenEnabled =
+    AUTH_MODE === "firebase" &&
+    FIRESTORE_LISTEN &&
+    Boolean(FIREBASE_PROJECT_ID) &&
+    Boolean(FIREBASE_AUTH_DOMAIN);
 
   const load = React.useCallback(async () => {
     if (!jobId) return;
@@ -43,115 +58,123 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
     if (!jobId) {
       setData(null);
       setError(null);
-      setStreamFailed(false);
       return;
     }
+    setListenerFailed(false);
+    setListenerActive(false);
+    setLastSnapshotAt(null);
     load();
   }, [jobId, load]);
 
   React.useEffect(() => {
-    if (!jobId || !data?.status) return;
-    if (!POLLABLE_STATUSES.includes(data.status)) return;
+    if (!firestoreListenEnabled) return;
+    const state = listenerFailed
+      ? "polling"
+      : listenerActive
+        ? "connected"
+        : "connecting";
+    if (lastListenerState.current === state) return;
+    lastListenerState.current = state;
+    console.info(`[skybridge] live updates ${state}`);
+  }, [firestoreListenEnabled, listenerFailed, listenerActive]);
 
-    const controller = new AbortController();
-    let silentTimer: number | null = null;
-    /** Handle startStream. */
-    const startStream = async () => {
-      try {
-        const response = await fetch(`${apiBaseUrl}/jobs/${jobId}/events`, {
-          method: "GET",
-          headers: {
-            Accept: "text/event-stream",
-            ...buildAuthHeaders(auth),
-          },
-          signal: controller.signal,
-        });
-
-        if (!response.ok || !response.body) {
-          const err = new Error(`Request failed (${response.status})`);
-          (err as Error & { status?: number }).status = response.status;
-          setError(err);
-          throw err;
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let receivedAny = false;
-        setStreamFailed(false);
-        lastEventAtRef.current = Date.now();
-        silentTimer = window.setInterval(() => {
-          if (Date.now() - lastEventAtRef.current > 15000) {
-            setStreamFailed(true);
-            controller.abort();
-          }
-        }, 2000);
-
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const parts = buffer.split("\n\n");
-          buffer = parts.pop() ?? "";
-          for (const part of parts) {
-            const lines = part.split("\n");
-            const eventName = lines
-              .find((line) => line.startsWith("event:"))
-              ?.replace(/^event:\s?/, "")
-              .trim();
-            const dataLine = lines
-              .filter((line) => line.startsWith("data:"))
-              .map((line) => line.replace(/^data:\s?/, ""))
-              .join("\n")
-              .trim();
-            if (!eventName && !dataLine) continue;
-            receivedAny = true;
-            lastEventAtRef.current = Date.now();
-            if (!dataLine) continue;
-            try {
-              const payload = JSON.parse(dataLine) as Partial<JobRecord> & { type?: string };
-              if (payload?.type === "heartbeat") {
-                continue;
-              }
-              if (payload?.job_id && payload?.status) {
-                setData(payload as JobRecord);
-              }
-            } catch (parseError) {
-              console.debug("Failed to parse SSE payload.", parseError);
-            }
-          }
-        }
-        if (!receivedAny) {
-          setStreamFailed(true);
-        }
-      } catch (err) {
-        if ((err as Error).name === "AbortError") return;
-        console.debug("SSE stream failed, falling back to polling.", err);
-        setStreamFailed(true);
-      } finally {
-        if (silentTimer) {
-          window.clearInterval(silentTimer);
-          silentTimer = null;
-        }
+  React.useEffect(() => {
+    if (!jobId || !firestoreListenEnabled || listenerFailed) return;
+    let unsubscribe: (() => void) | undefined;
+    let cancelled = false;
+    setListenerActive(true);
+    setLastSnapshotAt(null);
+    (async () => {
+      const { initializeApp, getApps } = await import("firebase/app");
+      const {
+        getFirestore,
+        doc,
+        onSnapshot,
+        connectFirestoreEmulator,
+      } = await import(
+        "firebase/firestore"
+      );
+      const app =
+        getApps().length > 0
+          ? getApps()[0]
+          : initializeApp({
+              apiKey: FIREBASE_API_KEY,
+              authDomain: FIREBASE_AUTH_DOMAIN,
+              projectId: FIREBASE_PROJECT_ID,
+              appId: FIREBASE_APP_ID || undefined,
+            });
+      const db = getFirestore(app);
+      if (FIREBASE_USE_EMULATOR) {
+        const host =
+          typeof window !== "undefined"
+            ? FIRESTORE_PROXY_HOST
+            : "localhost";
+        const port =
+          typeof window !== "undefined" && window.location.protocol === "https:"
+            ? 443
+            : 80;
+        patchFirebaseEmulatorRequests();
+        connectFirestoreEmulator(db, host, port);
       }
-    };
-
-    startStream();
+      const ref = doc(db, FIRESTORE_JOBS_COLLECTION, jobId);
+      unsubscribe = onSnapshot(
+        ref,
+        (snapshot) => {
+          if (cancelled) return;
+          if (!snapshot.exists()) return;
+          setListenerActive(true);
+          setLastSnapshotAt(Date.now());
+          const payload = snapshot.data()?.payload ?? snapshot.data();
+          setData(payload as JobRecord);
+          setError(null);
+        },
+        (err) => {
+          if (cancelled) return;
+          unsubscribe?.();
+          setListenerFailed(true);
+          setListenerActive(false);
+          setError(err instanceof Error ? err : new Error("Failed to subscribe"));
+        }
+      );
+    })();
     return () => {
-      if (silentTimer) window.clearInterval(silentTimer);
-      controller.abort();
+      cancelled = true;
+      setListenerActive(false);
+      unsubscribe?.();
     };
-  }, [jobId, data?.status, auth, load]);
+  }, [jobId, firestoreListenEnabled, listenerFailed]);
+
+  React.useEffect(() => {
+    if (!jobId || !firestoreListenEnabled || listenerFailed) return;
+    if (!data?.status || !POLLABLE_STATUSES.includes(data.status)) return;
+    const startedAt = Date.now();
+    const interval = window.setInterval(() => {
+      const now = Date.now();
+      const last = lastSnapshotAt ?? startedAt;
+      if (now - last > 12000) {
+        setListenerFailed(true);
+      }
+    }, 4000);
+    return () => window.clearInterval(interval);
+  }, [jobId, firestoreListenEnabled, listenerFailed, data?.status, lastSnapshotAt]);
 
   React.useEffect(() => {
     if (!jobId || !data?.status) return;
     if (!POLLABLE_STATUSES.includes(data.status)) return;
-    if (!streamFailed) return;
+    if (firestoreListenEnabled && !listenerFailed) return;
     const interval = window.setInterval(() => {
       load();
     }, 4000);
     return () => window.clearInterval(interval);
-  }, [jobId, data?.status, streamFailed, load]);
+  }, [jobId, data?.status, auth, load, firestoreListenEnabled, listenerFailed]);
 
-  return { data, loading, error, refresh: load };
+  return {
+    data,
+    loading,
+    error,
+    refresh: load,
+    listenerFailed,
+    listenerActive: firestoreListenEnabled && !listenerFailed && listenerActive,
+    lastSnapshotAt,
+  };
 }

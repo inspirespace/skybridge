@@ -14,14 +14,25 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { AppFooter } from "@/components/app/AppFooter";
 import { ConnectSection } from "@/components/app/ConnectSection";
 import { ReviewSection } from "@/components/app/ReviewSection";
 import { ImportSection } from "@/components/app/ImportSection";
 import { StepStatus } from "@/components/app/StepStatus";
+import { FirebaseAuthCard } from "@/components/app/auth/FirebaseAuthCard";
+import { FirebaseAuthDialog } from "@/components/app/auth/FirebaseAuthDialog";
+import { GuestUpgradeCard } from "@/components/app/auth/GuestUpgradeCard";
+import type { ProviderFlags } from "@/components/app/auth/FirebaseProviderButtons";
 import { ThemeToggle } from "@/components/theme-toggle";
+import type { ProviderName } from "@/components/app/auth/shared";
 import { navigateWithFade } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import {
@@ -35,11 +46,9 @@ import {
 } from "@/api/client";
 import { canStartOver, deriveFlowState, getOpenStep } from "@/state/flow";
 import { useJobSnapshot } from "@/hooks/use-job-snapshot";
-import type { DateRange } from "react-day-picker";
 import { Loader2 } from "lucide-react";
 import {
   formatDate,
-  formatDateRange,
   formatFlightId,
   formatISODate,
   formatPhaseElapsed,
@@ -48,39 +57,77 @@ import {
 } from "@/lib/format";
 import { isAuthExpiredError } from "@/lib/auth-helpers";
 import { useOidcAuth } from "@/hooks/use-oidc-auth";
+import { useFirebaseAuth } from "@/hooks/use-firebase-auth";
+import {
+  AUTH_CLIENT_ID,
+  AUTH_ISSUER,
+  AUTH_LOGOUT_URL,
+  AUTH_MODE,
+  AUTH_PROVIDER_PARAM,
+  AUTH_REDIRECT_PATH,
+  AUTH_SCOPE,
+  DEV_CLOUD_AHOY_EMAIL,
+  DEV_CLOUD_AHOY_PASSWORD,
+  DEV_FLYSTO_EMAIL,
+  DEV_FLYSTO_PASSWORD,
+  DEV_PREFILL,
+  FIREBASE_API_KEY,
+  FIREBASE_APP_ID,
+  FIREBASE_AUTH_DOMAIN,
+  FIREBASE_EMULATOR_HOST,
+  FIREBASE_ENABLE_APPLE,
+  FIREBASE_ENABLE_FACEBOOK,
+  FIREBASE_ENABLE_GOOGLE,
+  FIREBASE_ENABLE_GUEST,
+  FIREBASE_ENABLE_MICROSOFT,
+  FIREBASE_PROJECT_ID,
+  FIREBASE_USE_EMULATOR,
+  retentionDays,
+} from "@/lib/app-config";
+import { parseISODateInput } from "@/lib/date-input";
 
 const USER_ID_KEY = "skybridge_user_id";
 const JOB_ID_KEY = "skybridge_job_id";
 const OPEN_STEP_KEY = "skybridge_open_step";
 const FORCE_LOGIN_KEY = "skybridge_force_login";
-const AUTH_MODE = import.meta.env.VITE_AUTH_MODE ?? "header";
-const AUTH_ISSUER =
-  import.meta.env.VITE_AUTH_ISSUER_URL ??
-  import.meta.env.VITE_AUTH_BROWSER_ISSUER_URL ??
-  "";
-const AUTH_CLIENT_ID = import.meta.env.VITE_AUTH_CLIENT_ID ?? "skybridge-dev";
-const AUTH_SCOPE =
-  import.meta.env.VITE_AUTH_SCOPE ?? "openid profile email offline_access";
-const AUTH_REDIRECT_PATH = import.meta.env.VITE_AUTH_REDIRECT_PATH ?? "/app/auth/callback";
-const AUTH_PROVIDER_PARAM = import.meta.env.VITE_AUTH_PROVIDER_PARAM ?? "kc_idp_hint";
-const AUTH_LOGOUT_URL = import.meta.env.VITE_AUTH_LOGOUT_URL ?? "";
-const DEV_PREFILL =
-  import.meta.env.DEV && (import.meta.env.VITE_DEV_PREFILL_CREDENTIALS ?? "") === "1";
-const DEV_CLOUD_AHOY_EMAIL = import.meta.env.VITE_CLOUD_AHOY_EMAIL ?? "";
-const DEV_CLOUD_AHOY_PASSWORD = import.meta.env.VITE_CLOUD_AHOY_PASSWORD ?? "";
-const DEV_FLYSTO_EMAIL = import.meta.env.VITE_FLYSTO_EMAIL ?? "";
-const DEV_FLYSTO_PASSWORD = import.meta.env.VITE_FLYSTO_PASSWORD ?? "";
-const RETENTION_DAYS = Number.parseInt(import.meta.env.VITE_RETENTION_DAYS ?? "7", 10);
-const retentionDays = Number.isFinite(RETENTION_DAYS) ? RETENTION_DAYS : 7;
+const EMAIL_LINK_EMAIL_KEY = "skybridge_email_link_email";
+
+const readSessionValue = (key: string) =>
+  typeof window !== "undefined" ? sessionStorage.getItem(key) : null;
+const setSessionValue = (key: string, value: string) => {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(key, value);
+};
+const removeSessionValue = (key: string) => {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(key);
+};
+const readEmailLinkEmail = () => {
+  if (typeof window === "undefined") return null;
+  return (
+    sessionStorage.getItem(EMAIL_LINK_EMAIL_KEY) ||
+    window.localStorage?.getItem(EMAIL_LINK_EMAIL_KEY) ||
+    null
+  );
+};
+const setEmailLinkEmail = (email: string) => {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(EMAIL_LINK_EMAIL_KEY, email);
+  window.localStorage?.setItem(EMAIL_LINK_EMAIL_KEY, email);
+};
+const clearEmailLinkEmail = () => {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(EMAIL_LINK_EMAIL_KEY);
+  window.localStorage?.removeItem(EMAIL_LINK_EMAIL_KEY);
+};
 
 /** Render App component. */
 export default function App() {
-
-  const [userId, setUserId] = React.useState<string | null>(() =>
-    localStorage.getItem(USER_ID_KEY)
-  );
   const [jobId, setJobId] = React.useState<string | null>(() =>
-    localStorage.getItem(JOB_ID_KEY)
+    readSessionValue(JOB_ID_KEY)
+  );
+  const [headerUserId, setHeaderUserId] = React.useState<string | null>(() =>
+    readSessionValue(USER_ID_KEY)
   );
   const [showAllFlights, setShowAllFlights] = React.useState(false);
   const [actionError, setActionError] = React.useState<{
@@ -109,38 +156,123 @@ export default function App() {
     onError: (message) => setActionError({ scope: "sign-in", message }),
     onLoadingChange: setActionLoading,
   });
+  const {
+    accessToken: firebaseToken,
+    startLogin: startFirebaseLogin,
+    startEmailLink: startFirebaseEmailLink,
+    completeEmailLink: completeFirebaseEmailLink,
+    isAnonymous: firebaseAnonymous,
+    emulatorProvider: firebaseEmulatorProvider,
+    emulatorReady: firebaseEmulatorReady,
+    authReady: firebaseAuthReady,
+    emailLinkPending: firebaseEmailLinkPending,
+    signOut: signOutFirebase,
+    clearAuth: clearFirebaseAuth,
+  } = useFirebaseAuth({
+    enabled: AUTH_MODE === "firebase",
+    apiKey: FIREBASE_API_KEY,
+    authDomain: FIREBASE_AUTH_DOMAIN,
+    projectId: FIREBASE_PROJECT_ID,
+    appId: FIREBASE_APP_ID || undefined,
+    emulatorHost: FIREBASE_EMULATOR_HOST || undefined,
+    useEmulator: FIREBASE_USE_EMULATOR,
+    onError: (message) => setActionError({ scope: "sign-in", message }),
+    onLoadingChange: setActionLoading,
+  });
+  const [showAuthDialog, setShowAuthDialog] = React.useState(false);
+  const [emailAddress, setEmailAddress] = React.useState("");
+  const [emailLinkNotice, setEmailLinkNotice] = React.useState<string | null>(null);
+  const [emailLinkUrl, setEmailLinkUrl] = React.useState<string | null>(null);
+  const providerFlags = React.useMemo<ProviderFlags>(
+    () => ({
+      google: Boolean(FIREBASE_ENABLE_GOOGLE),
+      apple: Boolean(FIREBASE_ENABLE_APPLE),
+      facebook: Boolean(FIREBASE_ENABLE_FACEBOOK),
+      microsoft: Boolean(FIREBASE_ENABLE_MICROSOFT),
+      anonymous: Boolean(FIREBASE_ENABLE_GUEST),
+    }),
+    []
+  );
+  const hasOptionalProviders = Object.values(providerFlags).some(Boolean);
 
   const [cloudahoyEmail, setCloudahoyEmail] = React.useState("");
   const [cloudahoyPassword, setCloudahoyPassword] = React.useState("");
   const [flystoEmail, setFlystoEmail] = React.useState("");
   const [flystoPassword, setFlystoPassword] = React.useState("");
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
+  const [startDateInput, setStartDateInput] = React.useState("");
+  const [endDateInput, setEndDateInput] = React.useState("");
   const [maxFlights, setMaxFlights] = React.useState("");
+  const startDate = parseISODateInput(startDateInput);
+  const endDate = parseISODateInput(endDateInput);
 
-  const isSignedIn = AUTH_MODE === "oidc" ? Boolean(accessToken) : Boolean(userId);
+  const activeAccessToken = AUTH_MODE === "firebase" ? firebaseToken : accessToken;
+  const isSignedIn =
+    AUTH_MODE === "oidc" || AUTH_MODE === "firebase"
+      ? Boolean(activeAccessToken)
+      : Boolean(headerUserId);
+  const isAnonymous =
+    AUTH_MODE === "firebase" &&
+    firebaseAnonymous &&
+    !(FIREBASE_USE_EMULATOR && firebaseEmulatorProvider && firebaseEmulatorProvider !== "anonymous");
   const auth = React.useMemo<AuthContext>(
-    () => (AUTH_MODE === "oidc" ? { token: accessToken } : { userId }),
-    [accessToken, userId]
+    () =>
+      AUTH_MODE === "oidc" || AUTH_MODE === "firebase"
+        ? { token: activeAccessToken }
+        : { userId: headerUserId },
+    [activeAccessToken, headerUserId]
   );
 
-  const { data: job, error: jobError, refresh } = useJobSnapshot(
-    isSignedIn ? jobId : null,
-    auth
-  );
+  const { data: job, error: jobError, refresh } = useJobSnapshot(isSignedIn ? jobId : null, auth);
 
   const flow = React.useMemo(
     () => deriveFlowState(isSignedIn, job ?? null),
     [isSignedIn, job]
   );
   const [manualOpen, setManualOpen] = React.useState<string | undefined>(() =>
-    typeof window !== "undefined" ? localStorage.getItem(OPEN_STEP_KEY) ?? undefined : undefined
+    readSessionValue(OPEN_STEP_KEY) ?? undefined
   );
+  const backendResetCheckRef = React.useRef(false);
+  const emailLinkAutoRef = React.useRef(false);
   const openStep = React.useMemo(() => {
     if (flow.importStatus === "running" || flow.importStatus === "complete") return "import";
     if (flow.reviewStatus === "running") return "review";
     if (!flow.connected) return manualOpen ?? "connect";
     return manualOpen ?? getOpenStep(flow);
   }, [flow, manualOpen]);
+
+  React.useEffect(() => {
+    if (!firebaseEmailLinkPending) return;
+    const params =
+      typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const emailParam = params?.get("email") ?? "";
+    if (emailParam) {
+      setEmailLinkEmail(emailParam);
+    }
+    const storedEmail = readEmailLinkEmail() ?? "";
+    if (!emailAddress && storedEmail) {
+      setEmailAddress(storedEmail);
+    }
+    setEmailLinkNotice(
+      storedEmail
+        ? `Email link detected for ${storedEmail}. Complete sign-in to continue.`
+        : "Email link detected. Enter the email you used to request the link to finish signing in."
+    );
+    if (!emailLinkAutoRef.current && storedEmail) {
+      emailLinkAutoRef.current = true;
+      void completeFirebaseEmailLink(storedEmail);
+    }
+    if (!flow.signedIn) {
+      setShowAuthDialog(true);
+    }
+  }, [firebaseEmailLinkPending, flow.signedIn, emailAddress, completeFirebaseEmailLink]);
+
+  React.useEffect(() => {
+    if (!flow.signedIn) return;
+    setEmailLinkNotice(null);
+    setEmailLinkUrl(null);
+    clearEmailLinkEmail();
+    emailLinkAutoRef.current = false;
+  }, [flow.signedIn]);
 
   const reviewSummary = job?.review_summary ?? null;
   const flights = reviewSummary?.flights ?? [];
@@ -162,12 +294,21 @@ export default function App() {
   const showReviewProgress = reviewRunning || reviewComplete;
   const showImportProgress = importRunning || importComplete;
   const [now, setNow] = React.useState(() => new Date());
+  const jobErrorStatus = (jobError as Error & { status?: number })?.status;
   const jobErrorMessage =
-    jobError && !isAuthExpiredError(jobError) ? jobError.message : null;
+    jobError && !isAuthExpiredError(jobError)
+      ? jobErrorStatus && [502, 503, 504].includes(jobErrorStatus)
+        ? null
+        : jobError.message
+      : null;
   const jobFailureMessage =
     job?.status === "failed" ? job.error_message ?? "Job failed." : null;
   const reviewFailureMessage = !hasImportEvents ? jobFailureMessage : null;
   const importFailureMessage = hasImportEvents ? jobFailureMessage : null;
+  const authButtonsDisabled =
+    actionLoading ||
+    (AUTH_MODE === "firebase" &&
+      (!firebaseAuthReady || (FIREBASE_USE_EMULATOR && !firebaseEmulatorReady)));
   const signInError =
     actionError?.scope === "sign-in" || actionError?.scope === "global"
       ? actionError.message
@@ -264,11 +405,11 @@ export default function App() {
 
   React.useEffect(() => {
     if (!isSignedIn) {
-      localStorage.removeItem(OPEN_STEP_KEY);
+      removeSessionValue(OPEN_STEP_KEY);
       return;
     }
     if (openStep) {
-      localStorage.setItem(OPEN_STEP_KEY, openStep);
+      setSessionValue(OPEN_STEP_KEY, openStep);
     }
   }, [isSignedIn, openStep]);
 
@@ -313,13 +454,85 @@ export default function App() {
       startOidcLogin();
       return;
     }
+    if (AUTH_MODE === "firebase") {
+      setShowAuthDialog(true);
+      return;
+    }
     const nextUserId = "pilot@skybridge.dev";
-    localStorage.setItem(USER_ID_KEY, nextUserId);
-    setUserId(nextUserId);
+    setSessionValue(USER_ID_KEY, nextUserId);
+    setHeaderUserId(nextUserId);
     setActionError(null);
-    const stored = localStorage.getItem(OPEN_STEP_KEY) ?? undefined;
+    const stored = readSessionValue(OPEN_STEP_KEY) ?? undefined;
     setManualOpen(stored ?? "connect");
-  }, [startOidcLogin, setUserId, setManualOpen]);
+  }, [startOidcLogin, setHeaderUserId, setManualOpen]);
+
+  const handleFirebaseLogin = React.useCallback(
+    (
+      provider: ProviderName,
+      options?: Parameters<typeof startFirebaseLogin>[1]
+    ) => {
+      setActionError(null);
+      const enabled =
+        provider === "google"
+          ? providerFlags.google
+          : provider === "apple"
+            ? providerFlags.apple
+            : provider === "facebook"
+              ? providerFlags.facebook
+              : provider === "microsoft"
+                ? providerFlags.microsoft
+                : provider === "anonymous"
+                  ? providerFlags.anonymous
+                  : false;
+      if (!enabled) {
+        setActionError({
+          scope: "sign-in",
+          message: "This sign-in option is disabled. Use the email link instead.",
+        });
+        return;
+      }
+      void startFirebaseLogin(provider as Parameters<typeof startFirebaseLogin>[0], options);
+    },
+    [startFirebaseLogin, providerFlags]
+  );
+
+  const handleEmailLink = React.useCallback(async () => {
+    setActionError(null);
+    setEmailLinkNotice(null);
+    setEmailLinkUrl(null);
+    const email = emailAddress.trim();
+    if (!email) {
+      setActionError({ scope: "sign-in", message: "Enter a valid email address." });
+      return;
+    }
+    setEmailLinkEmail(email);
+    const link = await startFirebaseEmailLink(email);
+    setEmailLinkNotice(`We sent a sign-in link to ${email}.`);
+    if (link) {
+      setEmailLinkUrl(link);
+    }
+  }, [emailAddress, startFirebaseEmailLink]);
+
+  const handleEmailLinkComplete = React.useCallback(async () => {
+    setActionError(null);
+    const storedEmail = readEmailLinkEmail() ?? "";
+    const email = emailAddress.trim() || storedEmail;
+    if (!email) {
+      setActionError({ scope: "sign-in", message: "Enter your email to complete sign-in." });
+      return;
+    }
+    if (storedEmail && email !== storedEmail) {
+      setActionError({
+        scope: "sign-in",
+        message: `Use ${storedEmail} to complete sign-in.`,
+      });
+      return;
+    }
+    if (!emailAddress.trim() && storedEmail) {
+      setEmailAddress(storedEmail);
+    }
+    await completeFirebaseEmailLink(email);
+  }, [emailAddress, completeFirebaseEmailLink]);
 
   const isSignInRedirect =
     typeof window !== "undefined" &&
@@ -341,7 +554,11 @@ export default function App() {
     if (flow.signedIn || typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("signin") !== "1") return;
-    handleSignIn();
+    if (AUTH_MODE === "firebase") {
+      setShowAuthDialog(true);
+    } else {
+      handleSignIn();
+    }
     if (AUTH_MODE !== "oidc") {
       params.delete("signin");
       const nextSearch = params.toString();
@@ -354,10 +571,10 @@ export default function App() {
   }, [flow.signedIn, handleSignIn]);
 
   React.useEffect(() => {
-    if (flow.signedIn || typeof window === "undefined") return;
-    if (isSignInRedirect || isAuthCallback) return;
-    window.location.replace("/");
-  }, [flow.signedIn, isSignInRedirect, isAuthCallback]);
+    if (flow.signedIn) {
+      setShowAuthDialog(false);
+    }
+  }, [flow.signedIn]);
 
   /** Handle handleConnectReview. */
   const handleConnectReview = async () => {
@@ -365,20 +582,20 @@ export default function App() {
     setActionLoading(true);
     setActionError(null);
     try {
-      const payload = {
+        const payload = {
         credentials: {
           cloudahoy_username: cloudahoyEmail,
           cloudahoy_password: cloudahoyPassword,
           flysto_username: flystoEmail,
           flysto_password: flystoPassword,
         },
-        start_date: dateRange?.from ? formatISODate(dateRange.from) : null,
-        end_date: dateRange?.to ? formatISODate(dateRange.to) : null,
+        start_date: startDate ? formatISODate(startDate) : null,
+        end_date: endDate ? formatISODate(endDate) : null,
         max_flights: maxFlights ? Number(maxFlights) : null,
       };
       await validateCredentials({ credentials: payload.credentials }, auth);
       const createdJob = await createJob(payload, auth);
-      localStorage.setItem(JOB_ID_KEY, createdJob.job_id);
+      setSessionValue(JOB_ID_KEY, createdJob.job_id);
       setJobId(createdJob.job_id);
       setShowAllFlights(false);
       setManualOpen("review");
@@ -452,7 +669,7 @@ export default function App() {
         });
       })
       .finally(() => {
-        localStorage.removeItem(JOB_ID_KEY);
+        removeSessionValue(JOB_ID_KEY);
         setJobId(null);
         setShowAllFlights(false);
         setManualOpen("connect");
@@ -462,7 +679,7 @@ export default function App() {
 
   /** Handle clearLocalState. */
   const clearLocalState = () => {
-    localStorage.removeItem(JOB_ID_KEY);
+    removeSessionValue(JOB_ID_KEY);
     setJobId(null);
     setShowAllFlights(false);
     setActionError(null);
@@ -505,31 +722,39 @@ export default function App() {
 
   /** Handle handleSignOut. */
   const handleSignOut = () => {
-    localStorage.removeItem(JOB_ID_KEY);
+    removeSessionValue(JOB_ID_KEY);
+    clearEmailLinkEmail();
     setJobId(null);
     setShowAllFlights(false);
     setActionError(null);
     if (AUTH_MODE === "oidc") {
-      sessionStorage.setItem(FORCE_LOGIN_KEY, "1");
-      localStorage.setItem(FORCE_LOGIN_KEY, "1");
+      setSessionValue(FORCE_LOGIN_KEY, "1");
       signOutOidc();
       return;
     }
-    localStorage.removeItem(USER_ID_KEY);
-    setUserId(null);
+    if (AUTH_MODE === "firebase") {
+      void signOutFirebase();
+      return;
+    }
+    removeSessionValue(USER_ID_KEY);
+    setHeaderUserId(null);
   };
 
   const handleTokenExpired = React.useCallback(() => {
-    localStorage.removeItem(USER_ID_KEY);
-    localStorage.removeItem(JOB_ID_KEY);
-    setUserId(null);
+    removeSessionValue(USER_ID_KEY);
+    removeSessionValue(JOB_ID_KEY);
+    clearEmailLinkEmail();
+    setHeaderUserId(null);
     setJobId(null);
     if (AUTH_MODE === "oidc") {
       clearOidcAuth();
     }
+    if (AUTH_MODE === "firebase") {
+      clearFirebaseAuth();
+    }
     setShowAllFlights(false);
     setActionError(null);
-  }, [AUTH_MODE, clearOidcAuth]);
+  }, [AUTH_MODE, clearOidcAuth, clearFirebaseAuth, setHeaderUserId]);
 
   React.useEffect(() => {
     if (!jobError || !isSignedIn) return;
@@ -544,6 +769,43 @@ export default function App() {
   }, [jobError, isSignedIn, handleTokenExpired, clearLocalState]);
 
   React.useEffect(() => {
+    if (!isSignedIn || !jobId || job) return;
+    const status = jobErrorStatus;
+    if (!status || ![502, 503, 504].includes(status)) return;
+    if (backendResetCheckRef.current) return;
+    backendResetCheckRef.current = true;
+    (async () => {
+      try {
+        const response = await listJobs(auth);
+        const jobs = response.jobs ?? [];
+        if (jobs.length === 0) {
+          clearLocalState();
+          return;
+        }
+        const current = jobs.find((item) => item.job_id === jobId);
+        if (!current && jobs[0]?.job_id) {
+          setSessionValue(JOB_ID_KEY, jobs[0].job_id);
+          setJobId(jobs[0].job_id);
+        }
+      } catch (err) {
+        if (isAuthExpiredError(err)) {
+          handleTokenExpired();
+        }
+      } finally {
+        backendResetCheckRef.current = false;
+      }
+    })();
+  }, [
+    isSignedIn,
+    jobId,
+    job,
+    jobErrorStatus,
+    auth,
+    clearLocalState,
+    handleTokenExpired,
+  ]);
+
+  React.useEffect(() => {
     if (!isSignedIn) return;
     if (jobId || actionLoading) return;
     let cancelled = false;
@@ -553,7 +815,7 @@ export default function App() {
         if (cancelled) return;
         const latest = response.jobs?.[0];
         if (latest?.job_id) {
-          localStorage.setItem(JOB_ID_KEY, latest.job_id);
+          setSessionValue(JOB_ID_KEY, latest.job_id);
           setJobId(latest.job_id);
         }
       } catch (err) {
@@ -609,7 +871,7 @@ export default function App() {
     setActionNotice(null);
     try {
       await deleteJob(jobId, auth);
-      localStorage.removeItem(JOB_ID_KEY);
+      removeSessionValue(JOB_ID_KEY);
       setJobId(null);
       setActionNotice({
         scope: "global",
@@ -621,7 +883,7 @@ export default function App() {
         return;
       }
       if ((err as Error & { status?: number }).status === 404) {
-        localStorage.removeItem(JOB_ID_KEY);
+        removeSessionValue(JOB_ID_KEY);
         setJobId(null);
         return;
       }
@@ -639,8 +901,21 @@ export default function App() {
     Boolean(cloudahoyPassword) &&
     Boolean(flystoEmail) &&
     Boolean(flystoPassword);
-  const rangeIncomplete = Boolean(dateRange?.from && !dateRange?.to);
-  const dateRangeLabel = formatDateRange(dateRange);
+  const dateRangeError = (() => {
+    const hasStart = Boolean(startDateInput.trim());
+    const hasEnd = Boolean(endDateInput.trim());
+    if (!hasStart && !hasEnd) return null;
+    if (!hasStart || !hasEnd) {
+      return "Enter both start and end dates, or clear both.";
+    }
+    if (!startDate || !endDate) {
+      return "Use the YYYY-MM-DD format for both dates.";
+    }
+    if (endDate < startDate) {
+      return "End date must be on or after the start date.";
+    }
+    return null;
+  })();
   const reviewProgressCardClass = cn(
     "rounded-md border p-3 text-sm shadow-sm",
     reviewComplete
@@ -684,7 +959,8 @@ export default function App() {
         ? "Import"
         : "All steps completed";
 
-  const isRedirectScreen = !flow.signedIn && (isSignInRedirect || isAuthCallback);
+  const isRedirectScreen =
+    !flow.signedIn && AUTH_MODE === "oidc" && (isSignInRedirect || isAuthCallback);
 
   if (isRedirectScreen) {
     return <div className="min-h-screen bg-background" />;
@@ -703,10 +979,33 @@ export default function App() {
             SKYBRIDGE
           </a>
           <div className="flex items-center gap-2 sm:gap-4">
-            {!flow.signedIn && (
+            {!flow.signedIn && AUTH_MODE !== "firebase" && (
               <Button size="sm" onClick={handleSignIn}>
                 Sign up / Sign in
               </Button>
+            )}
+            {!flow.signedIn && AUTH_MODE === "firebase" && (
+              <FirebaseAuthDialog
+                open={showAuthDialog}
+                onOpenChange={setShowAuthDialog}
+                signInError={signInError}
+                authReady={firebaseAuthReady}
+                emulatorReady={firebaseEmulatorReady}
+                useEmulator={FIREBASE_USE_EMULATOR}
+                hasOptionalProviders={hasOptionalProviders}
+                emailAddress={emailAddress}
+                onEmailChange={setEmailAddress}
+                onSendLink={handleEmailLink}
+                onCompleteLink={handleEmailLinkComplete}
+                emailLinkPending={firebaseEmailLinkPending}
+                emailLinkNotice={emailLinkNotice}
+                emailLinkUrl={emailLinkUrl}
+                authButtonsDisabled={authButtonsDisabled}
+                providers={providerFlags}
+                onProvider={handleFirebaseLogin}
+                actionLoading={actionLoading}
+                triggerLabel="Sign up / Sign in"
+              />
             )}
             {flow.connected && (
               <AlertDialog>
@@ -768,12 +1067,72 @@ export default function App() {
       </header>
 
       <main className="container flex-1 pb-16 pt-5 lg:pb-8">
-        {!flow.signedIn && (isSignInRedirect || isAuthCallback) && (
+        {!flow.signedIn &&
+          AUTH_MODE === "oidc" &&
+          (isSignInRedirect || isAuthCallback) && (
           <div className="min-h-[60vh]" />
         )}
 
+        {!flow.signedIn &&
+          !(AUTH_MODE === "oidc" && (isSignInRedirect || isAuthCallback)) && (
+            <div className="mx-auto max-w-3xl space-y-4">
+              {AUTH_MODE !== "firebase" && (
+                <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
+                  <CardHeader className="space-y-2">
+                    <CardTitle>Sign in to start your import</CardTitle>
+                    <CardDescription>
+                      Identify your job and keep your progress in sync across devices.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {signInError && (
+                      <Alert className="border-rose-200 bg-rose-50/70 text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-100">
+                        <AlertTitle>Sign-in failed</AlertTitle>
+                        <AlertDescription>{signInError}</AlertDescription>
+                      </Alert>
+                    )}
+                    <Button onClick={handleSignIn} disabled={actionLoading}>
+                      Sign up / Sign in
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+              {AUTH_MODE === "firebase" && (
+                <FirebaseAuthCard
+                  signInError={signInError}
+                  authReady={firebaseAuthReady}
+                  useEmulator={FIREBASE_USE_EMULATOR}
+                  emulatorReady={firebaseEmulatorReady}
+                  hasOptionalProviders={hasOptionalProviders}
+                  emailAddress={emailAddress}
+                  onEmailChange={setEmailAddress}
+                  onSendLink={handleEmailLink}
+                  onCompleteLink={handleEmailLinkComplete}
+                  emailLinkPending={firebaseEmailLinkPending}
+                  emailLinkNotice={emailLinkNotice}
+                  emailLinkUrl={emailLinkUrl}
+                  authButtonsDisabled={authButtonsDisabled}
+                  providers={providerFlags}
+                  onProvider={handleFirebaseLogin}
+                />
+              )}
+            </div>
+          )}
+
         {flow.signedIn && (
           <>
+            {AUTH_MODE === "firebase" && isAnonymous && (
+              <GuestUpgradeCard
+                providers={providerFlags}
+                onProvider={(provider) => handleFirebaseLogin(provider, { link: true })}
+                emailAddress={emailAddress}
+                onEmailChange={setEmailAddress}
+                onSendLink={handleEmailLink}
+                onCompleteLink={handleEmailLinkComplete}
+                emailLinkPending={firebaseEmailLinkPending}
+                actionLoading={actionLoading}
+              />
+            )}
             <div className="mb-4 lg:hidden">
               <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
                 <CardContent className="space-y-2 py-3">
@@ -841,9 +1200,13 @@ export default function App() {
                 signedIn={flow.signedIn}
                 connectLocked={connectLocked}
                 canConnect={canConnect}
-                rangeIncomplete={rangeIncomplete}
-                dateRange={dateRange}
-                dateRangeLabel={dateRangeLabel}
+                startDate={startDate ?? undefined}
+                endDate={endDate ?? undefined}
+                startDateInput={startDateInput}
+                endDateInput={endDateInput}
+                setStartDateInput={setStartDateInput}
+                setEndDateInput={setEndDateInput}
+                dateRangeError={dateRangeError}
                 maxFlights={maxFlights}
                 cloudahoyEmail={cloudahoyEmail}
                 cloudahoyPassword={cloudahoyPassword}
@@ -853,7 +1216,6 @@ export default function App() {
                 setCloudahoyPassword={setCloudahoyPassword}
                 setFlystoEmail={setFlystoEmail}
                 setFlystoPassword={setFlystoPassword}
-                setDateRange={setDateRange}
                 setMaxFlights={setMaxFlights}
                 onConnectReview={handleConnectReview}
                 actionLoading={actionLoading}

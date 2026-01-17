@@ -29,7 +29,7 @@ def user_id_from_request(authorization: Optional[str], x_user_id: Optional[str])
         if not x_user_id:
             raise HTTPException(status_code=401, detail="Missing X-User-Id header")
         return x_user_id
-    if mode != "oidc":
+    if mode not in {"oidc", "firebase"}:
         raise HTTPException(status_code=500, detail=f"Unsupported auth mode: {mode}")
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="Missing Authorization bearer token")
@@ -37,11 +37,10 @@ def user_id_from_request(authorization: Optional[str], x_user_id: Optional[str])
     if not token:
         raise HTTPException(status_code=401, detail="Missing Authorization bearer token")
     payload = _verify_token(token)
-    user_id = (
-        payload.get("preferred_username")
-        or payload.get("email")
-        or payload.get("sub")
-    )
+    if mode == "firebase":
+        user_id = payload.get("user_id") or payload.get("sub") or payload.get("email")
+    else:
+        user_id = payload.get("preferred_username") or payload.get("email") or payload.get("sub")
     if not isinstance(user_id, str) or not user_id:
         raise HTTPException(status_code=401, detail="Invalid token subject")
     return user_id
@@ -57,6 +56,20 @@ def user_id_from_event(event: dict[str, Any]) -> str:
 
 def _verify_token(token: str) -> dict[str, Any]:
     """Internal helper for verify token."""
+    if _should_trust_emulator_tokens():
+        try:
+            payload = jwt.decode(
+                token,
+                options={
+                    "verify_signature": False,
+                    "verify_aud": False,
+                    "verify_iss": False,
+                },
+            )
+        except jwt.PyJWTError as exc:
+            raise HTTPException(status_code=401, detail=f"Invalid token: {exc}") from exc
+        return payload
+
     issuer = _env("AUTH_ISSUER_URL")
     if not issuer:
         raise HTTPException(status_code=500, detail="AUTH_ISSUER_URL not configured")
@@ -123,7 +136,7 @@ def _load_jwks(issuer: str) -> list[dict[str, Any]]:
         response.raise_for_status()
         payload = response.json()
     except requests.RequestException as exc:
-        # Keycloak may still be booting; surface a retryable error instead of 500.
+    # Auth provider may still be booting; surface a retryable error instead of 500.
         raise HTTPException(
             status_code=503,
             detail="Auth provider not ready, retry in a few seconds.",
@@ -150,7 +163,7 @@ def _jwks_uri_for_issuer(issuer: str) -> str:
     data = response.json()
     jwks_uri = data.get("jwks_uri")
     if not jwks_uri:
-        raise HTTPException(status_code=500, detail="OIDC config missing jwks_uri")
+        raise HTTPException(status_code=500, detail="Auth config missing jwks_uri")
     _JWKS_CACHE.jwks_uri = jwks_uri
     return jwks_uri
 
@@ -161,3 +174,21 @@ def _env(name: str) -> str | None:
     if value is None or value.strip() == "":
         return None
     return value.strip()
+
+
+def _should_trust_emulator_tokens() -> bool:
+    """Only allow unsigned token parsing when explicitly enabled for local dev."""
+    if not _bool_env("AUTH_EMULATOR_TRUST_TOKENS", False):
+        return False
+    host = _env("FIREBASE_AUTH_EMULATOR_HOST")
+    if not host:
+        return False
+    hostname = host.split(":", 1)[0].strip().lower()
+    return hostname in {"localhost", "127.0.0.1", "::1"}
+
+
+def _bool_env(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}

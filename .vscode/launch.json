@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Stack: Start (Docker Compose)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "docker compose up -d"
+    },
+    {
+      "name": "Stack: Stop (Docker Compose)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "docker compose down"
+    },
+    {
+      "name": "Stack: Build (Docker Compose)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "docker compose build"
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 
 vi.mock("@/api/client", () => ({
   exchangeToken: vi.fn(),
@@ -20,13 +20,11 @@ import { useOidcAuth } from "@/hooks/use-oidc-auth";
 afterEach(() => {
   vi.resetAllMocks();
   vi.unstubAllGlobals();
-  localStorage.clear();
   sessionStorage.clear();
 });
 
 describe("useOidcAuth sign out", () => {
   it("redirects to logout when enabled and id token set", () => {
-    localStorage.setItem("skybridge_id_token", "id");
     const assign = vi.fn();
     vi.stubGlobal("location", {
       ...window.location,
@@ -47,7 +45,13 @@ describe("useOidcAuth sign out", () => {
       })
     );
 
-    result.current.signOut();
+    act(() => {
+      result.current.setIdToken("id");
+    });
+
+    act(() => {
+      result.current.signOut();
+    });
 
     expect(assign).toHaveBeenCalled();
     const url = new URL(assign.mock.calls[0][0]);

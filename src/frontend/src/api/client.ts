@@ -106,6 +106,15 @@ export const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ?? "https://skybridge.localhost/api";
 
 const authMode = import.meta.env.VITE_AUTH_MODE ?? "header";
+const RETRY_ATTEMPTS = Number.parseInt(
+  import.meta.env.VITE_API_RETRY_ATTEMPTS ?? "4",
+  10
+);
+const RETRY_DELAY_MS = Number.parseInt(
+  import.meta.env.VITE_API_RETRY_DELAY_MS ?? "400",
+  10
+);
+const RETRY_STATUSES = new Set([502, 503, 504]);
 
 /** Type AuthContext. */
 export type AuthContext = {
@@ -127,7 +136,7 @@ export function buildAuthHeaders(auth?: AuthContext, skipAuth = false) {
     headers["X-User-Id"] = userId;
   }
 
-  if (authMode === "oidc") {
+  if (authMode === "oidc" || authMode === "firebase") {
     if (!token) {
       throw new Error("Missing access token. Please sign in again.");
     }
@@ -145,12 +154,14 @@ async function requestJson<T>(
     auth,
     signal,
     skipAuth = false,
+    retryAttempts,
   }: {
     method?: string;
     body?: unknown;
     auth?: AuthContext;
     signal?: AbortSignal;
     skipAuth?: boolean;
+    retryAttempts?: number;
   } = {}
 ): Promise<T> {
   const headers: Record<string, string> = {
@@ -158,14 +169,43 @@ async function requestJson<T>(
     ...buildAuthHeaders(auth, skipAuth),
   };
 
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    method,
-    headers,
-    signal,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const maxAttempts =
+    typeof retryAttempts === "number"
+      ? Math.max(1, retryAttempts)
+      : method.toUpperCase() === "GET"
+        ? Math.max(1, RETRY_ATTEMPTS || 1)
+        : 1;
+  let attempt = 0;
 
-  if (!response.ok) {
+  while (true) {
+    attempt += 1;
+    let response: Response;
+    try {
+      response = await fetch(`${apiBaseUrl}${path}`, {
+        method,
+        headers,
+        signal,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    } catch (err) {
+      if (attempt < maxAttempts) {
+        const delay = Math.min(4000, RETRY_DELAY_MS * 2 ** (attempt - 1));
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+      throw err;
+    }
+
+    if (response.ok) {
+      return response.json() as Promise<T>;
+    }
+
+    if (attempt < maxAttempts && RETRY_STATUSES.has(response.status)) {
+      const delay = Math.min(4000, RETRY_DELAY_MS * 2 ** (attempt - 1));
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      continue;
+    }
+
     const rawMessage = await response.text();
     let message = rawMessage;
     const contentType = response.headers.get("content-type") || "";
@@ -185,8 +225,6 @@ async function requestJson<T>(
     (error as Error & { status?: number }).status = response.status;
     throw error;
   }
-
-  return response.json() as Promise<T>;
 }
 
 export async function createJob(payload: JobCreatePayload, auth: AuthContext) {

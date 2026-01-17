@@ -62,7 +62,7 @@ def test_object_prefix_for_missing_job(tmp_path: Path):
 def test_delete_job_deletes_remote_prefix(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     store = JobStore(tmp_path, object_store=FakeObjectStore())
     job = _job(store)
-    monkeypatch.setenv("BACKEND_S3_DELETE_ON_CLEAR", "1")
+    monkeypatch.setenv("BACKEND_OBJECT_STORE_DELETE_ON_CLEAR", "1")
 
     store.delete_job(job.job_id, user_id=job.user_id)
     assert store.object_store.deleted

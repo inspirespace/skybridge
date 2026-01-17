@@ -5,65 +5,33 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 ## Project Structure & Module Organization
 - Place application/source code under `src/`.
 - Put tests under `tests/` or `test/` (match your framework).
-- Keep scripts in `scripts/`, assets in `assets/`, and config files at the repo root.
+- Keep assets in `assets/`, and config files at the repo root.
+- Inspector scripts live in `tools/inspector/` (dev-only helpers).
+- VNC helpers for Playwright live in `scripts/` (devcontainer use only).
+- `scripts/cleanup-merged-branches.sh` is the only user-facing script (branch cleanup).
 - Frontend entry points: landing page in `src/frontend/index.html`, SPA app in `src/frontend/app/index.html`, static legal pages in `src/frontend/privacy/index.html` and `src/frontend/imprint/index.html`.
-- Keycloak dev realm import lives in `docker/keycloak/`.
-- Infrastructure-as-code lives under `infra/terraform/`.
+- Infrastructure-as-code is not tracked in this repository (Firebase-only deployment).
+- Firebase emulators are configured by `firebase.json` and `.firebaserc`.
+- Firebase Functions entrypoints live in `functions/`.
+- `docker-compose.yml` runs the Firebase emulators + Functions for local dev.
 - If you adopt a different layout, document it here with concrete paths (example: `cmd/`, `internal/`, `pkg/` for Go).
 
 ## Build, Test, and Development Commands
-- `./scripts/cleanup-merged-branches.sh` — delete local branches already merged into `main` and prune remotes.
-- `docker build -t skybridge .` — build the image.
-- `./scripts/run-review.sh` — run review mode via Docker (default `MAX_FLIGHTS=5`).
-- `./scripts/run-import.sh` — run approved import using the latest `data/review.json`.
-- `./scripts/run-discovery.sh` — run endpoint discovery via the dedicated discovery CLI (outputs to `data/discovery`).
-- `./scripts/run.sh --approve-import --max-flights 5` — run the CLI with explicit options (container named `skybridge`).
-- `./scripts/run.sh --approve-import` — writes artifacts under `data/runs/<RUN_ID>/` (review, report, exports, logs, state).
-- `./scripts/run.sh --verify-import-report --import-report data/runs/<RUN_ID>/import_report.json` — verify report entries against FlySto.
-- `./scripts/run-backend-dev.sh` — run the backend dev web (FastAPI API + UI) locally.
-- `./scripts/run-sse-smoke.sh` — run a quick SSE smoke test against the dev backend.
-- `./scripts/run-e2e-headed.sh` — run Playwright e2e tests in headed mode (macOS devcontainer/XQuartz helper).
-- `./scripts/setup-e2e-vnc.sh` — install in-container Xvfb + VNC + noVNC dependencies for headed e2e.
-- `./scripts/run-e2e-vnc.sh` — run Playwright e2e tests with in-container Xvfb + VNC/noVNC (no host setup).
-- `./scripts/start-e2e-vnc.sh` — start the VNC/noVNC server (used for VS Code Testing).
-- `./scripts/stop-e2e-vnc.sh` — stop the VNC/noVNC server.
-- Set `DEVCONTAINER_E2E_VNC=1` to auto-install VNC deps on devcontainer start.
-- Stop VNC manually with `./scripts/stop-e2e-vnc.sh` (no devcontainer post-stop hook).
-- noVNC auto-connect URL: `http://localhost:6080/vnc_auto.html?autoconnect=1&resize=remote`.
-- `./scripts/setup-dev-https.sh` — install mkcert CA and generate trusted dev certs for HTTPS (Caddy).
-- `docker compose up --build` — run the backend dev stack (API, worker, DynamoDB Local, MinIO).
-- `docker compose up --build` now also starts DynamoDB Admin UI at `http://localhost:8002`.
-- Set `DEV_PREFILL_CREDENTIALS=1` with `CLOUD_AHOY_EMAIL`/`CLOUD_AHOY_PASSWORD` and `FLYSTO_EMAIL`/`FLYSTO_PASSWORD` to prefill dev web inputs.
-- Backend dev auth uses Keycloak OIDC in Docker Compose (login with `demo` / `demo-password`); local runs should set `AUTH_MODE=oidc`, `AUTH_ISSUER_URL`, `AUTH_BROWSER_ISSUER_URL`, and `AUTH_CLIENT_ID`.
-- Dev backend queues jobs for the worker when `BACKEND_USE_WORKER=1` (credentials are claimed once via `BACKEND_WORKER_TOKEN`).
-- `./scripts/build-lambda.sh` — package the Lambda handlers to `infra/terraform/lambda/backend-handlers.zip`.
-- `python -m src.core.cli --review` — run locally (requires Python deps).
+- `docker compose up --build` — run the local dev stack (Firebase emulators, API, worker, frontend, HTTPS proxy, mocks).
+- VS Code launch configs: `Stack: Start (Docker Compose)`, `Stack: Stop (Docker Compose)`, `Stack: Build (Docker Compose)` in `.vscode/launch.json`.
+- VS Code tasks: `Compose: Up (detached)`, `Compose: Down`, `Compose: Build` in `.vscode/tasks.json`.
+- Firebase deploy workflow lives in `.github/workflows/firebase-deploy.yml` and requires `FIREBASE_PROJECT_ID` + `FIREBASE_SERVICE_ACCOUNT` secrets.
+- Local dev runs behind `http://skybridge.localhost` with emulator subdomains (`auth.skybridge.localhost`, `firestore.skybridge.localhost`, `ui.skybridge.localhost`) instead of localhost ports.
+- `python -m src.core.cli --review` — run the CLI locally (requires Python deps).
 - CLI supports `--start-date` / `--end-date` for targeted imports (YYYY-MM-DD or ISO8601).
-- Set `CLOUD_AHOY_G3X_INCLUDE_HDG=1` to include heading in G3X exports (TRK is always included; default omits HDG to preserve block-time detection).
-- `pytest` — run tests (if installed).
-- `pytest --cov=src --cov-report=term-missing` — run Python coverage report (requires `pytest-cov`).
-- `uv run pytest --junitxml=test-results/pytest/results.xml --cov=src --cov-report=xml:coverage/coverage.xml --cov-report=term-missing` — run backend tests with JUnit + coverage artifacts (CI-style).
-- Use Devcontainer CLI for tests when available: `devcontainer exec --workspace-folder . pytest`.
-- Frontend unit tests: `devcontainer exec --workspace-folder . npm --prefix src/frontend run test`.
-- Frontend coverage: `devcontainer exec --workspace-folder . npm --prefix src/frontend run test:coverage`.
-- Frontend CI unit tests: `devcontainer exec --workspace-folder . npm --prefix src/frontend run test:ci` (JUnit + coverage artifacts).
-- Frontend e2e tests: `devcontainer exec --workspace-folder . npm --prefix src/frontend run test:e2e` (requires Playwright browsers).
-- Frontend CI e2e tests: `devcontainer exec --workspace-folder . npm --prefix src/frontend run test:e2e:ci` (JUnit output).
-- Playwright headed runs in devcontainers can be flaky with XQuartz; default is headless unless `HEADFUL=1`. If using headful, keep `--use-gl=swiftshader` and `--disable-gpu` launch args (configured in `src/frontend/playwright.config.ts`).
-- `terraform fmt -check -recursive` (run from `infra/terraform`) — format check for IaC.
-- Runbook + readiness docs are in `docs/backend-runbook.md`, `docs/backend-maintenance.md`, and `docs/backend-release-readiness.md`.
-- Run all CLI workflows through the devcontainer scripts (`./scripts/run*.sh`) so required dependencies and browser tooling are available.
-- Devcontainer post-start uninstalls GitHub Copilot/Copilot Chat to avoid invalid-extension warnings.
-- Devcontainer installs GitHub CLI via the `github-cli` feature for authenticated GH access.
-- Devcontainer installs Terraform via the `terraform` feature for IaC formatting/tests.
-- Devcontainer ensures Node is on PATH for Codex and installs Codex zsh completions automatically.
-- Devcontainer persists GitHub CLI auth under a mounted volume at `/home/vscode/.config/gh`.
-- Devcontainer disables zsh-autosuggestions to avoid duplicated paste input in the terminal.
-Note: default `MODE=auto` uses API only and does not fall back to web automation.
+- `pytest` — run backend tests (if installed).
+- `devcontainer exec --workspace-folder . pytest` — run backend tests in the devcontainer.
+- `devcontainer exec --workspace-folder . npm --prefix src/frontend run test` — run frontend unit tests in the devcontainer.
+- `devcontainer exec --workspace-folder . npm --prefix src/frontend run test:e2e` — run frontend e2e tests in the devcontainer.
 
 ## Coding Style & Naming Conventions
 - Indentation: 2 spaces by default; follow language-specific conventions where standard (e.g., Python 4 spaces).
-- Filenames: use `kebab-case` for scripts, `PascalCase` or `camelCase` for code modules per language norms.
+- Filenames: use `PascalCase` or `camelCase` for code modules per language norms.
 - Add a formatter/linter config (`.editorconfig`, `prettier`, `ruff`, `gofmt`, etc.) and keep it enforced in CI.
 
 ## Testing Guidelines
@@ -78,7 +46,7 @@ Note: default `MODE=auto` uses API only and does not fall back to web automation
 - Follow CONTRIBUTING.md PR format (Goal / Scope / Testing / Risk / Screenshots) when creating or editing PRs.
 - Never use escaped newline sequences (`\n`) in PR bodies; always use real line breaks.
 - Work in feature branches for non-trivial changes (e.g., `feature/...`, `fix/...`), then merge into `main`.
-- After merging, delete merged feature branches and prune remotes (use `./scripts/cleanup-merged-branches.sh`).
+ - When asked to open a PR, prepare the full PR (title + body) without further prompts, using the CONTRIBUTING.md format and including tests/scope/risk as applicable.
 
 ## Agent Update Policy
 - If you add or change developer workflows, commands, or project structure, update this file in the same change set.

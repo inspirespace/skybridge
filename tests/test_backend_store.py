@@ -109,3 +109,39 @@ def test_jobstore_enrich_review_summary_from_raw_payload() -> None:
         assert loaded_again.review_summary is not None
         assert loaded_again.review_summary.flights[0].origin == "KSEA"
         assert loaded_again.review_summary.flights[0].destination == "KLAX"
+
+
+def test_jobstore_tokens_are_in_memory_only() -> None:
+    """Ensure sensitive tokens are not persisted to disk."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        base_path = Path(tmpdir)
+        store = JobStore(base_path)
+        job_id = uuid4()
+        store.write_token(job_id, "review", "secret-token")
+        token_path = base_path / str(job_id) / "review.token"
+        assert not token_path.exists()
+        assert store.read_token(job_id, "review") == "secret-token"
+        store.clear_token(job_id, "review")
+        assert store.read_token(job_id, "review") is None
+
+
+def test_jobstore_cleanup_expired_local() -> None:
+    """Expired jobs are removed during cleanup."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        base_path = Path(tmpdir)
+        store = JobStore(base_path)
+        job_id = uuid4()
+        now = datetime.now(timezone.utc)
+        expired = now.replace(year=now.year - 2)
+        job = JobRecord(
+            job_id=job_id,
+            user_id="pilot",
+            status="review_ready",
+            created_at=expired,
+            updated_at=expired,
+        )
+        store.save_job(job)
+        assert (base_path / str(job_id) / "job.json").exists()
+        deleted = store.cleanup_expired()
+        assert deleted == 1
+        assert not (base_path / str(job_id) / "job.json").exists()

@@ -14,11 +14,9 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { formatISODate } from "@/lib/format";
 import { Calendar as CalendarIcon } from "lucide-react";
-import type { DateRange } from "react-day-picker";
-import * as React from "react";
 
 /** Render ConnectSection component. */
 export function ConnectSection({
@@ -27,9 +25,13 @@ export function ConnectSection({
   signedIn,
   connectLocked,
   canConnect,
-  rangeIncomplete,
-  dateRange,
-  dateRangeLabel,
+  startDate,
+  endDate,
+  startDateInput,
+  endDateInput,
+  setStartDateInput,
+  setEndDateInput,
+  dateRangeError,
   maxFlights,
   cloudahoyEmail,
   cloudahoyPassword,
@@ -39,7 +41,6 @@ export function ConnectSection({
   setCloudahoyPassword,
   setFlystoEmail,
   setFlystoPassword,
-  setDateRange,
   setMaxFlights,
   onConnectReview,
   actionLoading,
@@ -51,9 +52,13 @@ export function ConnectSection({
   signedIn: boolean;
   connectLocked: boolean;
   canConnect: boolean;
-  rangeIncomplete: boolean;
-  dateRange?: DateRange;
-  dateRangeLabel: string;
+  startDate?: Date;
+  endDate?: Date;
+  startDateInput: string;
+  endDateInput: string;
+  setStartDateInput: (value: string) => void;
+  setEndDateInput: (value: string) => void;
+  dateRangeError: string | null;
   maxFlights: string;
   cloudahoyEmail: string;
   cloudahoyPassword: string;
@@ -63,29 +68,12 @@ export function ConnectSection({
   setCloudahoyPassword: (value: string) => void;
   setFlystoEmail: (value: string) => void;
   setFlystoPassword: (value: string) => void;
-  setDateRange: (value?: DateRange) => void;
   setMaxFlights: (value: string) => void;
   onConnectReview: () => void;
   actionLoading: boolean;
   connectError?: string | null;
   onRefresh: () => void;
 }) {
-  const [isDesktop, setIsDesktop] = React.useState(false);
-
-  React.useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const media = window.matchMedia("(min-width: 768px)");
-    /** Update . */
-    const update = () => setIsDesktop(media.matches);
-    update();
-    if (media.addEventListener) {
-      media.addEventListener("change", update);
-      return () => media.removeEventListener("change", update);
-    }
-    media.addListener(update);
-    return () => media.removeListener(update);
-  }, []);
-
   return (
     <AccordionItem
       value="connect"
@@ -164,64 +152,117 @@ export function ConnectSection({
             </div>
           </div>
 
-          <Separator className="my-1" />
-
           <div className="relative rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-sky-900/60 dark:bg-slate-900/80">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.16),_transparent_60%)]" />
             <div className="space-y-3">
               <div className="text-sm font-semibold">Import filters</div>
-              <div className="grid gap-3 md:grid-cols-3">
-                <div className="space-y-2 md:col-span-2">
+              <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                <div className="space-y-2">
                   <Label>Date range</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className={cn(
-                          "h-9 w-full justify-start text-left font-normal border-input bg-white/70 hover:bg-white/70 dark:bg-slate-900/70 dark:border-sky-900/60 dark:hover:bg-slate-900/70",
-                          !dateRange?.from && "text-muted-foreground"
-                        )}
-                        disabled={connectLocked}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {dateRangeLabel}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-3" align="start">
-                      <Calendar
-                        mode="range"
-                        fixedWeeks
-                        numberOfMonths={isDesktop ? 2 : 1}
-                        selected={dateRange}
-                        onSelect={setDateRange}
-                        fromYear={2000}
-                        toYear={new Date().getFullYear() + 1}
-                        disabled={connectLocked}
-                      />
-                      <div className="mt-3 flex items-center justify-between">
-                        <div className="text-xs text-muted-foreground">
-                          Leave empty to import all available flights.
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setDateRange(undefined)}
-                          disabled={connectLocked || !dateRange?.from}
-                        >
-                          Clear dates
-                        </Button>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <div className="h-4 text-xs leading-4 text-muted-foreground">Start date</div>
+                      <div className="relative">
+                        <Input
+                          id="start-date"
+                          placeholder="YYYY-MM-DD"
+                          disabled={connectLocked}
+                          value={startDateInput}
+                          onChange={(event) => setStartDateInput(event.target.value)}
+                          className={cn("pr-10", dateRangeError && "border-amber-400")}
+                        />
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              disabled={connectLocked}
+                              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground/80 hover:text-foreground hover:bg-transparent"
+                            >
+                <CalendarIcon className="h-4 w-4 cursor-pointer" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-3" align="start">
+                            <Calendar
+                              mode="single"
+                              fixedWeeks
+                              numberOfMonths={1}
+                              selected={startDate}
+                              onSelect={(value) => {
+                                setStartDateInput(value ? formatISODate(value) : "");
+                              }}
+                              fromYear={2000}
+                              toYear={new Date().getFullYear() + 1}
+                              disabled={connectLocked}
+                            />
+                          </PopoverContent>
+                        </Popover>
                       </div>
-                      {rangeIncomplete && (
-                        <div className="mt-2 text-xs text-amber-600">
-                          Select an end date or clear the range.
-                        </div>
-                      )}
-                    </PopoverContent>
-                  </Popover>
+                    </div>
+                    <div className="space-y-1.5">
+                      <div className="h-4 text-xs leading-4 text-muted-foreground">End date</div>
+                      <div className="relative">
+                        <Input
+                          id="end-date"
+                          placeholder="YYYY-MM-DD"
+                          disabled={connectLocked}
+                          value={endDateInput}
+                          onChange={(event) => setEndDateInput(event.target.value)}
+                          className={cn("pr-10", dateRangeError && "border-amber-400")}
+                        />
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              disabled={connectLocked}
+                              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground/80 hover:text-foreground hover:bg-transparent"
+                            >
+                              <CalendarIcon className="h-4 w-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-3" align="start">
+                            <Calendar
+                              mode="single"
+                              fixedWeeks
+                              numberOfMonths={1}
+                              selected={endDate}
+                              onSelect={(value) => {
+                                setEndDateInput(value ? formatISODate(value) : "");
+                              }}
+                              fromYear={2000}
+                              toYear={new Date().getFullYear() + 1}
+                              disabled={connectLocked}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="text-xs text-muted-foreground">
+                      Leave both dates empty to import all available flights.
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setStartDateInput("");
+                        setEndDateInput("");
+                      }}
+                      disabled={connectLocked || (!startDateInput && !endDateInput)}
+                      className="ml-auto h-7 px-2 text-xs font-medium text-muted-foreground/80 hover:text-foreground"
+                    >
+                      Clear dates
+                    </Button>
+                  </div>
+                  {dateRangeError && (
+                    <div className="text-xs text-amber-600">{dateRangeError}</div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="max-flights">Max flights to import</Label>
+                  <div className="h-[14px]" aria-hidden />
                   <Input
                     id="max-flights"
                     type="number"
@@ -238,11 +279,11 @@ export function ConnectSection({
                       }
                     }}
                   />
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    Caps the total number of flights that will be imported.
+                  </p>
                 </div>
               </div>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                Caps the total number of flights that will be imported.
-              </p>
             </div>
           </div>
 
@@ -260,7 +301,7 @@ export function ConnectSection({
 
           <Button
             onClick={onConnectReview}
-            disabled={connectLocked || !canConnect || rangeIncomplete || actionLoading}
+            disabled={connectLocked || !canConnect || Boolean(dateRangeError) || actionLoading}
             className="shadow-sm"
           >
             Connect and review

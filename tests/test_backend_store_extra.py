@@ -48,28 +48,6 @@ class FakeObjectStore:
         self.deleted_prefixes.append(prefix)
 
 
-class FakeTable:
-    def __init__(self):
-        self.updated = []
-        self.items = {}
-
-    def update_item(self, **kwargs):
-        self.updated.append(kwargs)
-
-    def get_item(self, **kwargs):
-        key = kwargs.get("Key", {})
-        item = self.items.get(key.get("job_id"))
-        return {"Item": item} if item else {}
-
-
-class FakeDynamo:
-    def __init__(self, table: FakeTable):
-        self._table = table
-
-    def Table(self, _name: str):
-        return self._table
-
-
 @pytest.fixture
 def job_record() -> JobRecord:
     now = datetime.now(timezone.utc)
