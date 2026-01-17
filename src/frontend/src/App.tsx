@@ -90,6 +90,7 @@ const USER_ID_KEY = "skybridge_user_id";
 const JOB_ID_KEY = "skybridge_job_id";
 const OPEN_STEP_KEY = "skybridge_open_step";
 const FORCE_LOGIN_KEY = "skybridge_force_login";
+const EMAIL_LINK_EMAIL_KEY = "skybridge_email_link_email";
 
 const readSessionValue = (key: string) =>
   typeof window !== "undefined" ? sessionStorage.getItem(key) : null;
@@ -221,18 +222,25 @@ export default function App() {
 
   React.useEffect(() => {
     if (!firebaseEmailLinkPending) return;
+    const storedEmail = readSessionValue(EMAIL_LINK_EMAIL_KEY) ?? "";
+    if (!emailAddress && storedEmail) {
+      setEmailAddress(storedEmail);
+    }
     setEmailLinkNotice(
-      "Email link detected. Enter the email you used to request the link to finish signing in."
+      storedEmail
+        ? `Email link detected for ${storedEmail}. Complete sign-in to continue.`
+        : "Email link detected. Enter the email you used to request the link to finish signing in."
     );
     if (!flow.signedIn) {
       setShowAuthDialog(true);
     }
-  }, [firebaseEmailLinkPending, flow.signedIn]);
+  }, [firebaseEmailLinkPending, flow.signedIn, emailAddress]);
 
   React.useEffect(() => {
     if (!flow.signedIn) return;
     setEmailLinkNotice(null);
     setEmailLinkUrl(null);
+    removeSessionValue(EMAIL_LINK_EMAIL_KEY);
   }, [flow.signedIn]);
 
   const reviewSummary = job?.review_summary ?? null;
@@ -464,6 +472,7 @@ export default function App() {
       setActionError({ scope: "sign-in", message: "Enter a valid email address." });
       return;
     }
+    setSessionValue(EMAIL_LINK_EMAIL_KEY, email);
     const link = await startFirebaseEmailLink(email);
     setEmailLinkNotice(`We sent a sign-in link to ${email}.`);
     if (link) {
@@ -473,10 +482,21 @@ export default function App() {
 
   const handleEmailLinkComplete = React.useCallback(async () => {
     setActionError(null);
-    const email = emailAddress.trim();
+    const storedEmail = readSessionValue(EMAIL_LINK_EMAIL_KEY) ?? "";
+    const email = emailAddress.trim() || storedEmail;
     if (!email) {
       setActionError({ scope: "sign-in", message: "Enter your email to complete sign-in." });
       return;
+    }
+    if (storedEmail && email !== storedEmail) {
+      setActionError({
+        scope: "sign-in",
+        message: `Use ${storedEmail} to complete sign-in.`,
+      });
+      return;
+    }
+    if (!emailAddress.trim() && storedEmail) {
+      setEmailAddress(storedEmail);
     }
     await completeFirebaseEmailLink(email);
   }, [emailAddress, completeFirebaseEmailLink]);
@@ -670,6 +690,7 @@ export default function App() {
   /** Handle handleSignOut. */
   const handleSignOut = () => {
     removeSessionValue(JOB_ID_KEY);
+    removeSessionValue(EMAIL_LINK_EMAIL_KEY);
     setJobId(null);
     setShowAllFlights(false);
     setActionError(null);
@@ -689,6 +710,7 @@ export default function App() {
   const handleTokenExpired = React.useCallback(() => {
     removeSessionValue(USER_ID_KEY);
     removeSessionValue(JOB_ID_KEY);
+    removeSessionValue(EMAIL_LINK_EMAIL_KEY);
     setHeaderUserId(null);
     setJobId(null);
     if (AUTH_MODE === "oidc") {
