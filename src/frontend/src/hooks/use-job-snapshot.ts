@@ -33,6 +33,7 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
   const [listenerFailed, setListenerFailed] = React.useState(false);
   const [listenerActive, setListenerActive] = React.useState(false);
   const [lastSnapshotAt, setLastSnapshotAt] = React.useState<number | null>(null);
+  const lastListenerState = React.useRef<string | null>(null);
   const firestoreListenEnabled =
     AUTH_MODE === "firebase" &&
     FIRESTORE_LISTEN &&
@@ -64,6 +65,18 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
     setLastSnapshotAt(null);
     load();
   }, [jobId, load]);
+
+  React.useEffect(() => {
+    if (!firestoreListenEnabled) return;
+    const state = listenerFailed
+      ? "polling"
+      : listenerActive
+        ? "connected"
+        : "connecting";
+    if (lastListenerState.current === state) return;
+    lastListenerState.current = state;
+    console.info(`[skybridge] live updates ${state}`);
+  }, [firestoreListenEnabled, listenerFailed, listenerActive]);
 
   React.useEffect(() => {
     if (!jobId || !firestoreListenEnabled || listenerFailed) return;

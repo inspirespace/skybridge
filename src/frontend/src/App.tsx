@@ -324,8 +324,6 @@ export default function App() {
     job?.status === "failed" ? job.error_message ?? "Job failed." : null;
   const reviewFailureMessage = !hasImportEvents ? jobFailureMessage : null;
   const importFailureMessage = hasImportEvents ? jobFailureMessage : null;
-  const showLiveUpdatesNotice =
-    AUTH_MODE === "firebase" && FIRESTORE_LISTEN_ENABLED && flow.signedIn;
   const authButtonsDisabled =
     actionLoading || (AUTH_MODE === "firebase" && FIREBASE_USE_EMULATOR && !firebaseEmulatorReady);
   const signInError =
@@ -1420,35 +1418,6 @@ export default function App() {
                   active={reviewComplete && !importComplete}
                   done={importComplete}
                 />
-                {showLiveUpdatesNotice && (
-                  <div
-                    className={cn(
-                      "mt-2 rounded-lg border px-2.5 py-2 text-[11px] font-medium",
-                      listenerFailed
-                        ? "border-amber-200 bg-amber-50 text-amber-900"
-                        : "border-emerald-200 bg-emerald-50 text-emerald-900"
-                    )}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span>
-                        {listenerFailed
-                          ? "Live updates paused. Polling every 4s."
-                          : listenerActive
-                            ? "Live updates connected."
-                            : "Connecting live updates..."}
-                      </span>
-                      {listenerFailed && (
-                        <button
-                          type="button"
-                          onClick={() => refresh()}
-                          className="rounded-md border border-amber-200 bg-white/70 px-2 py-0.5 text-[10px] font-semibold text-amber-900 transition hover:bg-white"
-                        >
-                          Refresh
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </aside>
