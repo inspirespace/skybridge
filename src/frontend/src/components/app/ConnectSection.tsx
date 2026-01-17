@@ -172,10 +172,7 @@ export function ConnectSection({
                           disabled={connectLocked}
                           value={startDateInput}
                           onChange={(event) => setStartDateInput(event.target.value)}
-                          className={cn(
-                            "pr-10 bg-white/70 border-input dark:bg-slate-900/70 dark:border-sky-900/60",
-                            dateRangeError && "border-amber-400"
-                          )}
+                          className={cn("pr-10", dateRangeError && "border-amber-400")}
                         />
                         <Popover>
                           <PopoverTrigger asChild>
@@ -183,7 +180,7 @@ export function ConnectSection({
                               variant="ghost"
                               size="icon"
                               disabled={connectLocked}
-                              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground hover:bg-transparent"
+                              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground/80 hover:text-foreground hover:bg-transparent"
                             >
                               <CalendarIcon className="h-4 w-4" />
                             </Button>
@@ -216,10 +213,7 @@ export function ConnectSection({
                           disabled={connectLocked}
                           value={endDateInput}
                           onChange={(event) => setEndDateInput(event.target.value)}
-                          className={cn(
-                            "pr-10 bg-white/70 border-input dark:bg-slate-900/70 dark:border-sky-900/60",
-                            dateRangeError && "border-amber-400"
-                          )}
+                          className={cn("pr-10", dateRangeError && "border-amber-400")}
                         />
                         <Popover>
                           <PopoverTrigger asChild>
@@ -227,7 +221,7 @@ export function ConnectSection({
                               variant="ghost"
                               size="icon"
                               disabled={connectLocked}
-                              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground hover:bg-transparent"
+                              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground/80 hover:text-foreground hover:bg-transparent"
                             >
                               <CalendarIcon className="h-4 w-4" />
                             </Button>
@@ -262,7 +256,7 @@ export function ConnectSection({
                         setEndDateInput("");
                       }}
                       disabled={connectLocked || (!startDateInput && !endDateInput)}
-                      className="ml-auto h-7 px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
+                      className="ml-auto h-7 px-2 text-xs font-medium text-muted-foreground/80 hover:text-foreground"
                     >
                       Clear dates
                     </Button>
@@ -273,7 +267,7 @@ export function ConnectSection({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="max-flights">Max flights to import</Label>
-                  <div className="h-5" aria-hidden />
+                  <div className="h-[18px]" aria-hidden />
                   <Input
                     id="max-flights"
                     type="number"
@@ -283,7 +277,6 @@ export function ConnectSection({
                     placeholder="50"
                     disabled={connectLocked}
                     value={maxFlights}
-                    className="bg-white/70 border-input dark:bg-slate-900/70 dark:border-sky-900/60"
                     onChange={(event) => {
                       const next = event.target.value;
                       if (next === "" || /^[0-9]+$/.test(next)) {
