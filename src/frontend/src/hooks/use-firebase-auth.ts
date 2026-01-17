@@ -152,20 +152,61 @@ export function useFirebaseAuth({
         throw new Error(`Emulator returned ${response.status}`);
       }
       const payload = await response.json();
-      const oobCode = payload?.oobCode;
-      if (!oobCode) return null;
-      const baseDomain = authDomain ? `https://${authDomain}` : "";
-      const continueUrl = encodeURIComponent(redirectUrl);
-      if (baseDomain) {
-        return `${baseDomain}/__/auth/action?mode=signIn&oobCode=${encodeURIComponent(
-          oobCode
-        )}&apiKey=${encodeURIComponent(apiKey)}&continueUrl=${continueUrl}&lang=en`;
+      let oobCode =
+        payload?.oobCode ??
+        (() => {
+          const link = payload?.oobLink as string | undefined;
+          if (!link) return null;
+          try {
+            const parsed = new URL(link);
+            return parsed.searchParams.get("oobCode");
+          } catch {
+            return null;
+          }
+        })();
+      if (!oobCode) {
+        const oobEndpoint = `${base}/emulator/v1/projects/${encodeURIComponent(
+          projectId || "demo"
+        )}/oobCodes`;
+        const oobResponse = await fetch(oobEndpoint);
+        if (oobResponse.ok) {
+          const oobPayload = await oobResponse.json();
+          const entries = Array.isArray(oobPayload?.oobCodes)
+            ? oobPayload.oobCodes
+            : [];
+          const latest = [...entries]
+            .reverse()
+            .find(
+              (entry) =>
+                entry?.requestType === "EMAIL_SIGNIN" &&
+                String(entry?.email || "").toLowerCase() === email.toLowerCase()
+            );
+          if (latest?.oobCode) {
+            oobCode = latest.oobCode;
+          } else if (latest?.oobLink) {
+            try {
+              const parsed = new URL(latest.oobLink);
+              oobCode = parsed.searchParams.get("oobCode");
+            } catch {
+              oobCode = null;
+            }
+          }
+        }
       }
-      return `${redirectUrl}?mode=signIn&oobCode=${encodeURIComponent(
-        oobCode
-      )}&apiKey=${encodeURIComponent(apiKey)}`;
+      if (!oobCode) return null;
+      try {
+        const url = new URL(redirectUrl);
+        url.searchParams.set("mode", "signIn");
+        url.searchParams.set("oobCode", oobCode);
+        url.searchParams.set("apiKey", apiKey || "demo-local");
+        return url.toString();
+      } catch {
+        return `${redirectUrl}?mode=signIn&oobCode=${encodeURIComponent(
+          oobCode
+        )}&apiKey=${encodeURIComponent(apiKey || "demo-local")}`;
+      }
     },
-    [apiKey, authDomain, emulatorUrl]
+    [apiKey, emulatorUrl, projectId]
   );
 
   const clearAuth = React.useCallback(() => {
