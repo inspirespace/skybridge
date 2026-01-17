@@ -63,6 +63,7 @@ export function useFirebaseAuth({
   const [emulatorReady, setEmulatorReady] = React.useState(!useEmulator);
   const [userId, setUserId] = React.useState<string | null>(null);
   const [emailLinkPending, setEmailLinkPending] = React.useState(false);
+  const [authReady, setAuthReady] = React.useState(false);
   const authRef = React.useRef<ReturnType<typeof import("firebase/auth").getAuth> | null>(null);
   const emulatorUrl = React.useMemo(() => {
     if (!useEmulator) return undefined;
@@ -274,6 +275,7 @@ export function useFirebaseAuth({
         connectAuthEmulator(auth, host, { disableWarnings: true });
       }
       authRef.current = auth;
+      setAuthReady(true);
       unsubscribe = onIdTokenChanged(auth, async (user) => {
         if (disposed) return;
         if (!user) {
@@ -483,6 +485,7 @@ export function useFirebaseAuth({
     isAnonymous,
     emulatorProvider,
     emulatorReady,
+    authReady,
     userId,
     emailLinkPending,
     startLogin,

@@ -6,6 +6,7 @@ import type { ProviderName } from "./shared";
 
 export function FirebaseAuthCard({
   signInError,
+  authReady,
   useEmulator,
   emulatorReady,
   hasOptionalProviders,
@@ -21,6 +22,7 @@ export function FirebaseAuthCard({
   onProvider,
 }: {
   signInError: string | null;
+  authReady: boolean;
   useEmulator: boolean;
   emulatorReady: boolean;
   hasOptionalProviders: boolean;
@@ -55,6 +57,11 @@ export function FirebaseAuthCard({
         {useEmulator && !emulatorReady && (
           <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-900">
             Auth emulator is starting up. Sign-in will be available shortly.
+          </div>
+        )}
+        {!authReady && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-900">
+            Auth is still starting. Sign-in will be available shortly.
           </div>
         )}
         <FirebaseEmailLinkForm

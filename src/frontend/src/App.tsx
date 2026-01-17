@@ -164,6 +164,7 @@ export default function App() {
     isAnonymous: firebaseAnonymous,
     emulatorProvider: firebaseEmulatorProvider,
     emulatorReady: firebaseEmulatorReady,
+    authReady: firebaseAuthReady,
     emailLinkPending: firebaseEmailLinkPending,
     signOut: signOutFirebase,
     clearAuth: clearFirebaseAuth,
@@ -231,6 +232,7 @@ export default function App() {
     readSessionValue(OPEN_STEP_KEY) ?? undefined
   );
   const backendResetCheckRef = React.useRef(false);
+  const emailLinkAutoRef = React.useRef(false);
   const openStep = React.useMemo(() => {
     if (flow.importStatus === "running" || flow.importStatus === "complete") return "import";
     if (flow.reviewStatus === "running") return "review";
@@ -255,16 +257,21 @@ export default function App() {
         ? `Email link detected for ${storedEmail}. Complete sign-in to continue.`
         : "Email link detected. Enter the email you used to request the link to finish signing in."
     );
+    if (!emailLinkAutoRef.current && storedEmail) {
+      emailLinkAutoRef.current = true;
+      void completeFirebaseEmailLink(storedEmail);
+    }
     if (!flow.signedIn) {
       setShowAuthDialog(true);
     }
-  }, [firebaseEmailLinkPending, flow.signedIn, emailAddress]);
+  }, [firebaseEmailLinkPending, flow.signedIn, emailAddress, completeFirebaseEmailLink]);
 
   React.useEffect(() => {
     if (!flow.signedIn) return;
     setEmailLinkNotice(null);
     setEmailLinkUrl(null);
     clearEmailLinkEmail();
+    emailLinkAutoRef.current = false;
   }, [flow.signedIn]);
 
   const reviewSummary = job?.review_summary ?? null;
@@ -299,7 +306,9 @@ export default function App() {
   const reviewFailureMessage = !hasImportEvents ? jobFailureMessage : null;
   const importFailureMessage = hasImportEvents ? jobFailureMessage : null;
   const authButtonsDisabled =
-    actionLoading || (AUTH_MODE === "firebase" && FIREBASE_USE_EMULATOR && !firebaseEmulatorReady);
+    actionLoading ||
+    (AUTH_MODE === "firebase" &&
+      (!firebaseAuthReady || (FIREBASE_USE_EMULATOR && !firebaseEmulatorReady)));
   const signInError =
     actionError?.scope === "sign-in" || actionError?.scope === "global"
       ? actionError.message
@@ -980,6 +989,7 @@ export default function App() {
                 open={showAuthDialog}
                 onOpenChange={setShowAuthDialog}
                 signInError={signInError}
+                authReady={firebaseAuthReady}
                 emulatorReady={firebaseEmulatorReady}
                 useEmulator={FIREBASE_USE_EMULATOR}
                 hasOptionalProviders={hasOptionalProviders}
@@ -1090,6 +1100,7 @@ export default function App() {
               {AUTH_MODE === "firebase" && (
                 <FirebaseAuthCard
                   signInError={signInError}
+                  authReady={firebaseAuthReady}
                   useEmulator={FIREBASE_USE_EMULATOR}
                   emulatorReady={firebaseEmulatorReady}
                   hasOptionalProviders={hasOptionalProviders}

@@ -18,6 +18,7 @@ export function FirebaseAuthDialog({
   open,
   onOpenChange,
   signInError,
+  authReady,
   emulatorReady,
   useEmulator,
   hasOptionalProviders,
@@ -37,6 +38,7 @@ export function FirebaseAuthDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   signInError: string | null;
+  authReady: boolean;
   emulatorReady: boolean;
   useEmulator: boolean;
   hasOptionalProviders: boolean;
@@ -79,6 +81,11 @@ export function FirebaseAuthDialog({
           {useEmulator && !emulatorReady && (
             <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-900">
               Auth emulator is starting up. Sign-in will be available shortly.
+            </div>
+          )}
+          {!authReady && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-900">
+              Auth is still starting. Sign-in will be available shortly.
             </div>
           )}
           <FirebaseEmailLinkForm
