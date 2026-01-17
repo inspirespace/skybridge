@@ -75,22 +75,6 @@ export function ConnectSection({
   connectError?: string | null;
   onRefresh: () => void;
 }) {
-  const [isDesktop, setIsDesktop] = React.useState(false);
-
-  React.useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const media = window.matchMedia("(min-width: 768px)");
-    /** Update . */
-    const update = () => setIsDesktop(media.matches);
-    update();
-    if (media.addEventListener) {
-      media.addEventListener("change", update);
-      return () => media.removeEventListener("change", update);
-    }
-    media.addListener(update);
-    return () => media.removeListener(update);
-  }, []);
-
   return (
     <AccordionItem
       value="connect"
@@ -181,22 +165,22 @@ export function ConnectSection({
                       <Label htmlFor="start-date" className="text-xs text-muted-foreground">
                         Start date
                       </Label>
-                      <div className="flex items-center gap-2">
+                      <div className="relative">
                         <Input
                           id="start-date"
                           placeholder="YYYY-MM-DD"
                           disabled={connectLocked}
                           value={startDateInput}
                           onChange={(event) => setStartDateInput(event.target.value)}
-                          className={cn(dateRangeError && "border-amber-400")}
+                          className={cn("pr-10", dateRangeError && "border-amber-400")}
                         />
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="icon"
                               disabled={connectLocked}
-                              className="h-9 w-9"
+                              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                             >
                               <CalendarIcon className="h-4 w-4" />
                             </Button>
@@ -205,7 +189,7 @@ export function ConnectSection({
                             <Calendar
                               mode="single"
                               fixedWeeks
-                              numberOfMonths={isDesktop ? 2 : 1}
+                              numberOfMonths={1}
                               selected={startDate}
                               onSelect={(value) => {
                                 setStartDateInput(value ? formatISODate(value) : "");
@@ -222,22 +206,22 @@ export function ConnectSection({
                       <Label htmlFor="end-date" className="text-xs text-muted-foreground">
                         End date
                       </Label>
-                      <div className="flex items-center gap-2">
+                      <div className="relative">
                         <Input
                           id="end-date"
                           placeholder="YYYY-MM-DD"
                           disabled={connectLocked}
                           value={endDateInput}
                           onChange={(event) => setEndDateInput(event.target.value)}
-                          className={cn(dateRangeError && "border-amber-400")}
+                          className={cn("pr-10", dateRangeError && "border-amber-400")}
                         />
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="icon"
                               disabled={connectLocked}
-                              className="h-9 w-9"
+                              className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                             >
                               <CalendarIcon className="h-4 w-4" />
                             </Button>
@@ -246,7 +230,7 @@ export function ConnectSection({
                             <Calendar
                               mode="single"
                               fixedWeeks
-                              numberOfMonths={isDesktop ? 2 : 1}
+                              numberOfMonths={1}
                               selected={endDate}
                               onSelect={(value) => {
                                 setEndDateInput(value ? formatISODate(value) : "");
