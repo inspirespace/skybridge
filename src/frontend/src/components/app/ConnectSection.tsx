@@ -162,7 +162,7 @@ export function ConnectSection({
                   <Label>Date range</Label>
                   <div className="grid gap-2 md:grid-cols-2">
                     <div className="space-y-1.5">
-                      <div className="h-4 text-xs text-muted-foreground">Start date</div>
+                      <div className="h-4 text-xs leading-4 text-muted-foreground">Start date</div>
                       <div className="relative">
                         <Input
                           id="start-date"
@@ -201,7 +201,7 @@ export function ConnectSection({
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <div className="h-4 text-xs text-muted-foreground">End date</div>
+                      <div className="h-4 text-xs leading-4 text-muted-foreground">End date</div>
                       <div className="relative">
                         <Input
                           id="end-date"
@@ -263,7 +263,7 @@ export function ConnectSection({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="max-flights">Max flights to import</Label>
-                  <div className="h-4" aria-hidden />
+                  <div className="h-[14px]" aria-hidden />
                   <Input
                     id="max-flights"
                     type="number"
