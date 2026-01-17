@@ -41,11 +41,9 @@ import {
 } from "@/api/client";
 import { canStartOver, deriveFlowState, getOpenStep } from "@/state/flow";
 import { useJobSnapshot } from "@/hooks/use-job-snapshot";
-import type { DateRange } from "react-day-picker";
 import { Loader2, Mail, UserRound, ShieldCheck, ArrowRight } from "lucide-react";
 import {
   formatDate,
-  formatDateRange,
   formatFlightId,
   formatISODate,
   formatPhaseElapsed,
@@ -98,6 +96,15 @@ const DEV_FLYSTO_EMAIL = import.meta.env.VITE_FLYSTO_EMAIL ?? "";
 const DEV_FLYSTO_PASSWORD = import.meta.env.VITE_FLYSTO_PASSWORD ?? "";
 const RETENTION_DAYS = Number.parseInt(import.meta.env.VITE_RETENTION_DAYS ?? "7", 10);
 const retentionDays = Number.isFinite(RETENTION_DAYS) ? RETENTION_DAYS : 7;
+
+const parseISODateInput = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
+  const date = new Date(`${trimmed}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return null;
+  return formatISODate(date) === trimmed ? date : null;
+};
 
 const ProviderIcon = ({ name }: { name: string }) => {
   switch (name) {
@@ -247,8 +254,11 @@ export default function App() {
   const [cloudahoyPassword, setCloudahoyPassword] = React.useState("");
   const [flystoEmail, setFlystoEmail] = React.useState("");
   const [flystoPassword, setFlystoPassword] = React.useState("");
-  const [dateRange, setDateRange] = React.useState<DateRange | undefined>(undefined);
+  const [startDateInput, setStartDateInput] = React.useState("");
+  const [endDateInput, setEndDateInput] = React.useState("");
   const [maxFlights, setMaxFlights] = React.useState("");
+  const startDate = parseISODateInput(startDateInput);
+  const endDate = parseISODateInput(endDateInput);
 
   const activeAccessToken = AUTH_MODE === "firebase" ? firebaseToken : accessToken;
   const isSignedIn =
@@ -574,15 +584,15 @@ export default function App() {
     setActionLoading(true);
     setActionError(null);
     try {
-      const payload = {
+        const payload = {
         credentials: {
           cloudahoy_username: cloudahoyEmail,
           cloudahoy_password: cloudahoyPassword,
           flysto_username: flystoEmail,
           flysto_password: flystoPassword,
         },
-        start_date: dateRange?.from ? formatISODate(dateRange.from) : null,
-        end_date: dateRange?.to ? formatISODate(dateRange.to) : null,
+        start_date: startDate ? formatISODate(startDate) : null,
+        end_date: endDate ? formatISODate(endDate) : null,
         max_flights: maxFlights ? Number(maxFlights) : null,
       };
       await validateCredentials({ credentials: payload.credentials }, auth);
@@ -892,8 +902,21 @@ export default function App() {
     Boolean(cloudahoyPassword) &&
     Boolean(flystoEmail) &&
     Boolean(flystoPassword);
-  const rangeIncomplete = Boolean(dateRange?.from && !dateRange?.to);
-  const dateRangeLabel = formatDateRange(dateRange);
+  const dateRangeError = (() => {
+    const hasStart = Boolean(startDateInput.trim());
+    const hasEnd = Boolean(endDateInput.trim());
+    if (!hasStart && !hasEnd) return null;
+    if (!hasStart || !hasEnd) {
+      return "Enter both start and end dates, or clear both.";
+    }
+    if (!startDate || !endDate) {
+      return "Use the YYYY-MM-DD format for both dates.";
+    }
+    if (endDate < startDate) {
+      return "End date must be on or after the start date.";
+    }
+    return null;
+  })();
   const reviewProgressCardClass = cn(
     "rounded-md border p-3 text-sm shadow-sm",
     reviewComplete
@@ -1437,9 +1460,13 @@ export default function App() {
                 signedIn={flow.signedIn}
                 connectLocked={connectLocked}
                 canConnect={canConnect}
-                rangeIncomplete={rangeIncomplete}
-                dateRange={dateRange}
-                dateRangeLabel={dateRangeLabel}
+                startDate={startDate ?? undefined}
+                endDate={endDate ?? undefined}
+                startDateInput={startDateInput}
+                endDateInput={endDateInput}
+                setStartDateInput={setStartDateInput}
+                setEndDateInput={setEndDateInput}
+                dateRangeError={dateRangeError}
                 maxFlights={maxFlights}
                 cloudahoyEmail={cloudahoyEmail}
                 cloudahoyPassword={cloudahoyPassword}
@@ -1449,7 +1476,6 @@ export default function App() {
                 setCloudahoyPassword={setCloudahoyPassword}
                 setFlystoEmail={setFlystoEmail}
                 setFlystoPassword={setFlystoPassword}
-                setDateRange={setDateRange}
                 setMaxFlights={setMaxFlights}
                 onConnectReview={handleConnectReview}
                 actionLoading={actionLoading}
