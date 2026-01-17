@@ -941,6 +941,12 @@ export default function App() {
 
   const isRedirectScreen =
     !flow.signedIn && AUTH_MODE === "oidc" && (isSignInRedirect || isAuthCallback);
+  const hasOptionalProviders =
+    FIREBASE_ENABLE_GOOGLE ||
+    FIREBASE_ENABLE_APPLE ||
+    FIREBASE_ENABLE_FACEBOOK ||
+    FIREBASE_ENABLE_MICROSOFT ||
+    FIREBASE_ENABLE_GUEST;
 
   if (isRedirectScreen) {
     return <div className="min-h-screen bg-background" />;
@@ -973,7 +979,9 @@ export default function App() {
                   <AlertDialogHeader>
                     <AlertDialogTitle>Continue with</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Use the passwordless email link to sign in.
+                      {hasOptionalProviders
+                        ? "Use a passwordless email link or choose a provider."
+                        : "Use the passwordless email link to sign in."}
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <div className="space-y-2">
@@ -1004,6 +1012,63 @@ export default function App() {
                         </div>
                       )}
                     </div>
+                    {hasOptionalProviders && (
+                      <>
+                        <AuthDivider />
+                        <div className="grid gap-2">
+                          {FIREBASE_ENABLE_GOOGLE && (
+                            <Button
+                              className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
+                              onClick={() => handleFirebaseLogin("google")}
+                              disabled={actionLoading}
+                            >
+                              <ProviderIcon name="google" />
+                              Continue with Google
+                            </Button>
+                          )}
+                          {FIREBASE_ENABLE_APPLE && (
+                            <Button
+                              className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
+                              onClick={() => handleFirebaseLogin("apple")}
+                              disabled={actionLoading}
+                            >
+                              <ProviderIcon name="apple" />
+                              Continue with Apple
+                            </Button>
+                          )}
+                          {FIREBASE_ENABLE_FACEBOOK && (
+                            <Button
+                              className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
+                              onClick={() => handleFirebaseLogin("facebook")}
+                              disabled={actionLoading}
+                            >
+                              <ProviderIcon name="facebook" />
+                              Continue with Facebook
+                            </Button>
+                          )}
+                          {FIREBASE_ENABLE_MICROSOFT && (
+                            <Button
+                              className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
+                              onClick={() => handleFirebaseLogin("microsoft")}
+                              disabled={actionLoading}
+                            >
+                              <ProviderIcon name="microsoft" />
+                              Continue with Microsoft
+                            </Button>
+                          )}
+                          {FIREBASE_ENABLE_GUEST && (
+                            <Button
+                              className="h-11 w-full justify-start gap-3 rounded-xl border border-slate-700/60 bg-slate-950 text-white shadow-[0_10px_20px_rgba(15,23,42,0.35)] hover:bg-slate-900"
+                              onClick={() => handleFirebaseLogin("anonymous")}
+                              disabled={actionLoading}
+                            >
+                              <ProviderIcon name="guest" />
+                              Continue as guest
+                            </Button>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -1108,7 +1173,7 @@ export default function App() {
                       )}
                       <div className="space-y-2">
                         <label className="text-xs font-medium text-slate-500">
-                          Email link (passwordless)
+                          {hasOptionalProviders ? "Email link (passwordless)" : "Passwordless email link"}
                         </label>
                         <div className="flex w-full max-w-xl gap-2">
                           <input
