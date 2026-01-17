@@ -17,7 +17,6 @@ import {
 import { cn } from "@/lib/utils";
 import { formatISODate } from "@/lib/format";
 import { Calendar as CalendarIcon } from "lucide-react";
-import * as React from "react";
 
 /** Render ConnectSection component. */
 export function ConnectSection({
@@ -180,7 +179,7 @@ export function ConnectSection({
                               disabled={connectLocked}
                               className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground/80 hover:text-foreground hover:bg-transparent"
                             >
-                              <CalendarIcon className="h-4 w-4" />
+                <CalendarIcon className="h-4 w-4 cursor-pointer" />
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-3" align="start">

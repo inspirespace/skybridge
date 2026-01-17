@@ -334,7 +334,8 @@ export function useFirebaseAuth({
   const startLogin = React.useCallback(
     async (provider?: ProviderName, options?: { link?: boolean }) => {
       if (!enabled) return;
-      if (!authRef.current) {
+      const auth = authRef.current;
+      if (!auth) {
         onError?.("Auth is not ready yet.");
         return;
       }
@@ -353,11 +354,13 @@ export function useFirebaseAuth({
           OAuthProvider,
         } = await import("firebase/auth");
         if (provider === "anonymous") {
-          if (!authRef.current.currentUser) {
+          if (!auth.currentUser) {
             if (useEmulator) {
-              await retryEmulatorAuth(async () => signInAnonymously(authRef.current));
+              await retryEmulatorAuth(async () => {
+                await signInAnonymously(auth);
+              });
             } else {
-              await signInAnonymously(authRef.current);
+              await signInAnonymously(auth);
             }
           }
           if (useEmulator) {
@@ -367,8 +370,10 @@ export function useFirebaseAuth({
           return;
         }
         if (useEmulator) {
-          if (!authRef.current.currentUser) {
-            await retryEmulatorAuth(async () => signInAnonymously(authRef.current));
+          if (!auth.currentUser) {
+            await retryEmulatorAuth(async () => {
+              await signInAnonymously(auth);
+            });
           }
           const nextProvider = provider ?? "google";
           setEmulatorProvider(nextProvider);
@@ -394,17 +399,21 @@ export function useFirebaseAuth({
             authProvider = new GoogleAuthProvider();
             break;
         }
-        if (options?.link && authRef.current.currentUser) {
-          await linkWithPopup(authRef.current.currentUser, authProvider);
+        if (options?.link && auth.currentUser) {
+          await linkWithPopup(auth.currentUser, authProvider);
         } else {
-          await signInWithPopup(authRef.current, authProvider);
+          await signInWithPopup(auth, authProvider);
         }
       } catch (err) {
         if (useEmulator) {
           try {
             const { signInAnonymously } = await import("firebase/auth");
             if (!authRef.current?.currentUser) {
-              await retryEmulatorAuth(async () => signInAnonymously(authRef.current));
+              const nextAuth = authRef.current;
+              if (!nextAuth) return;
+              await retryEmulatorAuth(async () => {
+                await signInAnonymously(nextAuth);
+              });
             }
             return;
           } catch (fallbackError) {
@@ -424,14 +433,15 @@ export function useFirebaseAuth({
 
   const startEmailLink = React.useCallback(
     async (email: string): Promise<string | null> => {
-      if (!enabled) return;
-      if (!authRef.current) {
+      if (!enabled) return null;
+      const auth = authRef.current;
+      if (!auth) {
         onError?.("Auth is not ready yet.");
-        return;
+        return null;
       }
       if (!email) {
         onError?.("Enter a valid email address.");
-        return;
+        return null;
       }
       onLoadingChange?.(true);
       try {
@@ -449,7 +459,7 @@ export function useFirebaseAuth({
           localStorage.setItem(EMAIL_LINK_KEY, email);
           return link;
         }
-        await sendSignInLinkToEmail(authRef.current, email, {
+        await sendSignInLinkToEmail(auth, email, {
           url: redirectUrl,
           handleCodeInApp: true,
         });
@@ -466,16 +476,19 @@ export function useFirebaseAuth({
   );
 
   const signOut = React.useCallback(async () => {
-    if (!authRef.current) {
+    const auth = authRef.current;
+    if (!auth) {
       clearAuth();
       return;
     }
     try {
       const { signOut } = await import("firebase/auth");
       if (useEmulator) {
-        await retryEmulatorAuth(async () => signOut(authRef.current));
+        await retryEmulatorAuth(async () => {
+          await signOut(auth);
+        });
       } else {
-        await signOut(authRef.current);
+        await signOut(auth);
       }
     } catch (err) {
       onError?.(formatEmulatorError(err instanceof Error ? err.message : "Sign out failed"));

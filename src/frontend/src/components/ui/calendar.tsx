@@ -18,20 +18,20 @@ function Calendar({
     <DayPicker
       captionLayout="dropdown"
       showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
+      className={cn("min-w-[320px] px-8 py-4", className)}
       classNames={{
         months: "flex flex-col space-y-4",
         month: "space-y-4",
         month_caption: "flex justify-center pt-1 relative items-center",
         caption_label: "sr-only !hidden",
-        nav: "flex w-full items-center justify-between gap-1 !static",
+        nav: "pointer-events-none absolute left-0 right-0 top-1/2 flex -translate-y-1/2 items-center justify-between px-2",
         button_previous: cn(
           buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100"
+          "pointer-events-auto h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100"
         ),
         button_next: cn(
           buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100"
+          "pointer-events-auto h-7 w-7 bg-transparent p-0 opacity-60 hover:opacity-100"
         ),
         dropdowns: "flex items-center gap-2",
         months_dropdown: "mr-1 w-[120px]",
@@ -71,7 +71,9 @@ function Calendar({
           </select>
         ),
         Chevron: ({ className: iconClassName, orientation, ...iconProps }) => {
-          if (orientation !== "left" && orientation !== "right") return null;
+          if (orientation !== "left" && orientation !== "right") {
+            return <span className="hidden" aria-hidden />;
+          }
           const Icon = orientation === "left" ? ChevronLeft : ChevronRight;
           return <Icon className={cn("h-4 w-4", iconClassName)} {...iconProps} />;
         },

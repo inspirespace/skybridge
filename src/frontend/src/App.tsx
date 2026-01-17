@@ -86,8 +86,6 @@ const FIREBASE_ENABLE_MICROSOFT =
   (import.meta.env.VITE_FIREBASE_ENABLE_MICROSOFT ?? "") === "1";
 const FIREBASE_ENABLE_GUEST =
   (import.meta.env.VITE_FIREBASE_ENABLE_GUEST ?? "") === "1";
-const FIRESTORE_LISTEN_ENABLED =
-  (import.meta.env.VITE_FIRESTORE_LISTEN ?? "") === "1";
 const DEV_PREFILL =
   import.meta.env.DEV && (import.meta.env.VITE_DEV_PREFILL_CREDENTIALS ?? "") === "1";
 const DEV_CLOUD_AHOY_EMAIL = import.meta.env.VITE_CLOUD_AHOY_EMAIL ?? "";
@@ -277,16 +275,7 @@ export default function App() {
     [activeAccessToken, headerUserId]
   );
 
-  const {
-    data: job,
-    error: jobError,
-    refresh,
-    listenerFailed,
-    listenerActive,
-  } = useJobSnapshot(
-    isSignedIn ? jobId : null,
-    auth
-  );
+  const { data: job, error: jobError, refresh } = useJobSnapshot(isSignedIn ? jobId : null, auth);
 
   const flow = React.useMemo(
     () => deriveFlowState(isSignedIn, job ?? null),

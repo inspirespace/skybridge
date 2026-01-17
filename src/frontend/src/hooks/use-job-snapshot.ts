@@ -114,9 +114,7 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
             ? 443
             : 80;
         patchFirebaseEmulatorRequests();
-        const ssl =
-          typeof window !== "undefined" && window.location.protocol === "https:";
-        connectFirestoreEmulator(db, host, port, { ssl });
+        connectFirestoreEmulator(db, host, port);
       }
       const ref = doc(db, FIRESTORE_JOBS_COLLECTION, jobId);
       unsubscribe = onSnapshot(

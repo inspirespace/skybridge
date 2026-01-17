@@ -6,6 +6,7 @@ import path from "path";
 // https://vite.dev/config/
 export default defineConfig({
   appType: "mpa",
+  assetsInclude: ["**/*.woff", "**/*.woff2"],
   plugins: [
     react(),
     {
