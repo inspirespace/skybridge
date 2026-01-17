@@ -91,13 +91,24 @@ const JOB_ID_KEY = "skybridge_job_id";
 const OPEN_STEP_KEY = "skybridge_open_step";
 const FORCE_LOGIN_KEY = "skybridge_force_login";
 
+const readSessionValue = (key: string) =>
+  typeof window !== "undefined" ? sessionStorage.getItem(key) : null;
+const setSessionValue = (key: string, value: string) => {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(key, value);
+};
+const removeSessionValue = (key: string) => {
+  if (typeof window === "undefined") return;
+  sessionStorage.removeItem(key);
+};
+
 /** Render App component. */
 export default function App() {
   const [jobId, setJobId] = React.useState<string | null>(() =>
-    localStorage.getItem(JOB_ID_KEY)
+    readSessionValue(JOB_ID_KEY)
   );
   const [headerUserId, setHeaderUserId] = React.useState<string | null>(() =>
-    localStorage.getItem(USER_ID_KEY)
+    readSessionValue(USER_ID_KEY)
   );
   const [showAllFlights, setShowAllFlights] = React.useState(false);
   const [actionError, setActionError] = React.useState<{
@@ -130,9 +141,11 @@ export default function App() {
     accessToken: firebaseToken,
     startLogin: startFirebaseLogin,
     startEmailLink: startFirebaseEmailLink,
+    completeEmailLink: completeFirebaseEmailLink,
     isAnonymous: firebaseAnonymous,
     emulatorProvider: firebaseEmulatorProvider,
     emulatorReady: firebaseEmulatorReady,
+    emailLinkPending: firebaseEmailLinkPending,
     signOut: signOutFirebase,
     clearAuth: clearFirebaseAuth,
   } = useFirebaseAuth({
@@ -196,7 +209,7 @@ export default function App() {
     [isSignedIn, job]
   );
   const [manualOpen, setManualOpen] = React.useState<string | undefined>(() =>
-    typeof window !== "undefined" ? localStorage.getItem(OPEN_STEP_KEY) ?? undefined : undefined
+    readSessionValue(OPEN_STEP_KEY) ?? undefined
   );
   const backendResetCheckRef = React.useRef(false);
   const openStep = React.useMemo(() => {
@@ -205,6 +218,22 @@ export default function App() {
     if (!flow.connected) return manualOpen ?? "connect";
     return manualOpen ?? getOpenStep(flow);
   }, [flow, manualOpen]);
+
+  React.useEffect(() => {
+    if (!firebaseEmailLinkPending) return;
+    setEmailLinkNotice(
+      "Email link detected. Enter the email you used to request the link to finish signing in."
+    );
+    if (!flow.signedIn) {
+      setShowAuthDialog(true);
+    }
+  }, [firebaseEmailLinkPending, flow.signedIn]);
+
+  React.useEffect(() => {
+    if (!flow.signedIn) return;
+    setEmailLinkNotice(null);
+    setEmailLinkUrl(null);
+  }, [flow.signedIn]);
 
   const reviewSummary = job?.review_summary ?? null;
   const flights = reviewSummary?.flights ?? [];
@@ -335,11 +364,11 @@ export default function App() {
 
   React.useEffect(() => {
     if (!isSignedIn) {
-      localStorage.removeItem(OPEN_STEP_KEY);
+      removeSessionValue(OPEN_STEP_KEY);
       return;
     }
     if (openStep) {
-      localStorage.setItem(OPEN_STEP_KEY, openStep);
+      setSessionValue(OPEN_STEP_KEY, openStep);
     }
   }, [isSignedIn, openStep]);
 
@@ -389,10 +418,10 @@ export default function App() {
       return;
     }
     const nextUserId = "pilot@skybridge.dev";
-    localStorage.setItem(USER_ID_KEY, nextUserId);
+    setSessionValue(USER_ID_KEY, nextUserId);
     setHeaderUserId(nextUserId);
     setActionError(null);
-    const stored = localStorage.getItem(OPEN_STEP_KEY) ?? undefined;
+    const stored = readSessionValue(OPEN_STEP_KEY) ?? undefined;
     setManualOpen(stored ?? "connect");
   }, [startOidcLogin, setHeaderUserId, setManualOpen]);
 
@@ -441,6 +470,16 @@ export default function App() {
       setEmailLinkUrl(link);
     }
   }, [emailAddress, startFirebaseEmailLink]);
+
+  const handleEmailLinkComplete = React.useCallback(async () => {
+    setActionError(null);
+    const email = emailAddress.trim();
+    if (!email) {
+      setActionError({ scope: "sign-in", message: "Enter your email to complete sign-in." });
+      return;
+    }
+    await completeFirebaseEmailLink(email);
+  }, [emailAddress, completeFirebaseEmailLink]);
 
   const isSignInRedirect =
     typeof window !== "undefined" &&
@@ -503,7 +542,7 @@ export default function App() {
       };
       await validateCredentials({ credentials: payload.credentials }, auth);
       const createdJob = await createJob(payload, auth);
-      localStorage.setItem(JOB_ID_KEY, createdJob.job_id);
+      setSessionValue(JOB_ID_KEY, createdJob.job_id);
       setJobId(createdJob.job_id);
       setShowAllFlights(false);
       setManualOpen("review");
@@ -577,7 +616,7 @@ export default function App() {
         });
       })
       .finally(() => {
-        localStorage.removeItem(JOB_ID_KEY);
+        removeSessionValue(JOB_ID_KEY);
         setJobId(null);
         setShowAllFlights(false);
         setManualOpen("connect");
@@ -587,7 +626,7 @@ export default function App() {
 
   /** Handle clearLocalState. */
   const clearLocalState = () => {
-    localStorage.removeItem(JOB_ID_KEY);
+    removeSessionValue(JOB_ID_KEY);
     setJobId(null);
     setShowAllFlights(false);
     setActionError(null);
@@ -630,13 +669,12 @@ export default function App() {
 
   /** Handle handleSignOut. */
   const handleSignOut = () => {
-    localStorage.removeItem(JOB_ID_KEY);
+    removeSessionValue(JOB_ID_KEY);
     setJobId(null);
     setShowAllFlights(false);
     setActionError(null);
     if (AUTH_MODE === "oidc") {
-      sessionStorage.setItem(FORCE_LOGIN_KEY, "1");
-      localStorage.setItem(FORCE_LOGIN_KEY, "1");
+      setSessionValue(FORCE_LOGIN_KEY, "1");
       signOutOidc();
       return;
     }
@@ -644,13 +682,13 @@ export default function App() {
       void signOutFirebase();
       return;
     }
-    localStorage.removeItem(USER_ID_KEY);
+    removeSessionValue(USER_ID_KEY);
     setHeaderUserId(null);
   };
 
   const handleTokenExpired = React.useCallback(() => {
-    localStorage.removeItem(USER_ID_KEY);
-    localStorage.removeItem(JOB_ID_KEY);
+    removeSessionValue(USER_ID_KEY);
+    removeSessionValue(JOB_ID_KEY);
     setHeaderUserId(null);
     setJobId(null);
     if (AUTH_MODE === "oidc") {
@@ -691,7 +729,7 @@ export default function App() {
         }
         const current = jobs.find((item) => item.job_id === jobId);
         if (!current && jobs[0]?.job_id) {
-          localStorage.setItem(JOB_ID_KEY, jobs[0].job_id);
+          setSessionValue(JOB_ID_KEY, jobs[0].job_id);
           setJobId(jobs[0].job_id);
         }
       } catch (err) {
@@ -722,7 +760,7 @@ export default function App() {
         if (cancelled) return;
         const latest = response.jobs?.[0];
         if (latest?.job_id) {
-          localStorage.setItem(JOB_ID_KEY, latest.job_id);
+          setSessionValue(JOB_ID_KEY, latest.job_id);
           setJobId(latest.job_id);
         }
       } catch (err) {
@@ -778,7 +816,7 @@ export default function App() {
     setActionNotice(null);
     try {
       await deleteJob(jobId, auth);
-      localStorage.removeItem(JOB_ID_KEY);
+      removeSessionValue(JOB_ID_KEY);
       setJobId(null);
       setActionNotice({
         scope: "global",
@@ -790,7 +828,7 @@ export default function App() {
         return;
       }
       if ((err as Error & { status?: number }).status === 404) {
-        localStorage.removeItem(JOB_ID_KEY);
+        removeSessionValue(JOB_ID_KEY);
         setJobId(null);
         return;
       }
@@ -902,6 +940,8 @@ export default function App() {
                 emailAddress={emailAddress}
                 onEmailChange={setEmailAddress}
                 onSendLink={handleEmailLink}
+                onCompleteLink={handleEmailLinkComplete}
+                emailLinkPending={firebaseEmailLinkPending}
                 emailLinkNotice={emailLinkNotice}
                 emailLinkUrl={emailLinkUrl}
                 authButtonsDisabled={authButtonsDisabled}
@@ -1010,6 +1050,8 @@ export default function App() {
                   emailAddress={emailAddress}
                   onEmailChange={setEmailAddress}
                   onSendLink={handleEmailLink}
+                  onCompleteLink={handleEmailLinkComplete}
+                  emailLinkPending={firebaseEmailLinkPending}
                   emailLinkNotice={emailLinkNotice}
                   emailLinkUrl={emailLinkUrl}
                   authButtonsDisabled={authButtonsDisabled}
@@ -1029,6 +1071,8 @@ export default function App() {
                 emailAddress={emailAddress}
                 onEmailChange={setEmailAddress}
                 onSendLink={handleEmailLink}
+                onCompleteLink={handleEmailLinkComplete}
+                emailLinkPending={firebaseEmailLinkPending}
                 actionLoading={actionLoading}
               />
             )}

@@ -10,12 +10,8 @@ import {
   parseJwt,
 } from "@/lib/auth-helpers";
 
-const TOKEN_KEY = "skybridge_access_token";
-const ID_TOKEN_KEY = "skybridge_id_token";
-const REFRESH_TOKEN_KEY = "skybridge_refresh_token";
 const CODE_VERIFIER_KEY = "skybridge_code_verifier";
 const AUTH_STATE_KEY = "skybridge_auth_state";
-const USER_ID_KEY = "skybridge_user_id";
 const FORCE_LOGIN_KEY = "skybridge_force_login";
 
 /** Hook for oidcauth. */
@@ -40,18 +36,10 @@ export function useOidcAuth({
   onError?: (message: string) => void;
   onLoadingChange?: (loading: boolean) => void;
 }) {
-  const [accessToken, setAccessToken] = React.useState<string | null>(() =>
-    localStorage.getItem(TOKEN_KEY)
-  );
-  const [idToken, setIdToken] = React.useState<string | null>(() =>
-    localStorage.getItem(ID_TOKEN_KEY)
-  );
-  const [refreshTokenValue, setRefreshTokenValue] = React.useState<string | null>(() =>
-    localStorage.getItem(REFRESH_TOKEN_KEY)
-  );
-  const [userId, setUserId] = React.useState<string | null>(() =>
-    localStorage.getItem(USER_ID_KEY)
-  );
+  const [accessToken, setAccessToken] = React.useState<string | null>(null);
+  const [idToken, setIdToken] = React.useState<string | null>(null);
+  const [refreshTokenValue, setRefreshTokenValue] = React.useState<string | null>(null);
+  const [userId, setUserId] = React.useState<string | null>(null);
   const didExchangeRef = React.useRef(false);
   const refreshInFlight = React.useRef<Promise<void> | null>(null);
   const authEpochRef = React.useRef(0);
@@ -61,12 +49,9 @@ export function useOidcAuth({
     authEpochRef.current += 1;
     refreshAbortRef.current?.abort();
     refreshAbortRef.current = null;
-    localStorage.removeItem(USER_ID_KEY);
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(ID_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
     sessionStorage.removeItem(CODE_VERIFIER_KEY);
     sessionStorage.removeItem(AUTH_STATE_KEY);
+    sessionStorage.removeItem(FORCE_LOGIN_KEY);
     setUserId(null);
     setAccessToken(null);
     setIdToken(null);
@@ -76,18 +61,14 @@ export function useOidcAuth({
 
   const applyTokenResponse = React.useCallback(
     (token: Awaited<ReturnType<typeof exchangeToken>>) => {
-      localStorage.setItem(TOKEN_KEY, token.access_token);
       setAccessToken(token.access_token);
       if (token.refresh_token) {
-        localStorage.setItem(REFRESH_TOKEN_KEY, token.refresh_token);
         setRefreshTokenValue(token.refresh_token);
       }
       if (token.id_token) {
-        localStorage.setItem(ID_TOKEN_KEY, token.id_token);
         setIdToken(token.id_token);
         const claims = parseJwt(token.id_token);
         if (claims?.email) {
-          localStorage.setItem(USER_ID_KEY, claims.email);
           setUserId(claims.email);
         }
       }
@@ -220,8 +201,7 @@ export function useOidcAuth({
       const currentUrl = new URL(window.location.href);
       const forceLogin =
         currentUrl.searchParams.get("force") === "1" ||
-        sessionStorage.getItem(FORCE_LOGIN_KEY) === "1" ||
-        localStorage.getItem(FORCE_LOGIN_KEY) === "1";
+        sessionStorage.getItem(FORCE_LOGIN_KEY) === "1";
       const redirectUri = `${window.location.origin}${redirectPath}`;
       const verifier = generateCodeVerifier();
       sessionStorage.setItem(CODE_VERIFIER_KEY, verifier);
@@ -241,7 +221,6 @@ export function useOidcAuth({
         authUrl.searchParams.set("prompt", "login");
         authUrl.searchParams.set("max_age", "0");
         sessionStorage.removeItem(FORCE_LOGIN_KEY);
-        localStorage.removeItem(FORCE_LOGIN_KEY);
       }
       if (provider) {
         authUrl.searchParams.set(providerParam, provider);
@@ -252,11 +231,10 @@ export function useOidcAuth({
   );
 
   const signOut = React.useCallback(() => {
-    const currentIdToken = idToken ?? localStorage.getItem(ID_TOKEN_KEY);
+    const currentIdToken = idToken ?? undefined;
     clearAuth();
     if (enabled) {
       sessionStorage.setItem(FORCE_LOGIN_KEY, "1");
-      localStorage.setItem(FORCE_LOGIN_KEY, "1");
     }
     if (enabled && logoutUrl && currentIdToken) {
       const url = new URL(logoutUrl);
@@ -278,6 +256,7 @@ export function useOidcAuth({
     setUserId,
     setAccessToken,
     setIdToken,
+    setRefreshToken: setRefreshTokenValue,
     startLogin,
     signOut,
     clearAuth,

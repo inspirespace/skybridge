@@ -12,6 +12,8 @@ from datetime import datetime, timezone
 from dataclasses import dataclass
 from typing import Optional
 
+from .crypto import decrypt_json, encrypt_json, require_encryption_key
+
 @dataclass
 class _Entry:
     job_id: str
@@ -57,20 +59,22 @@ class FirestoreCredentialStore:
         """Internal helper for init  ."""
         from google.cloud import firestore
 
+        require_encryption_key()
         self._client = firestore.Client(project=project_id or None)
         self._collection = self._client.collection(collection)
 
     def issue(self, job_id: str, purpose: str, credentials: dict, ttl_seconds: int) -> str:
         """Handle issue."""
         token = secrets.token_urlsafe(32)
+        encrypted = encrypt_json(credentials)
         ttl_epoch = int(time.time() + ttl_seconds)
         ttl_at = datetime.fromtimestamp(ttl_epoch, tz=timezone.utc)
         self._collection.document(token).set(
             {
-                "token": token,
                 "job_id": job_id,
                 "purpose": purpose,
-                "credentials": credentials,
+                "credentials_enc": encrypted,
+                "enc_v": 1,
                 "ttl_epoch": ttl_epoch,
                 "ttl_at": ttl_at,
                 "used": False,
@@ -96,7 +100,10 @@ class FirestoreCredentialStore:
                 txn.delete(doc_ref)
                 return None
             txn.delete(doc_ref)
-            return item.get("credentials")
+            encrypted = item.get("credentials_enc")
+            if not encrypted:
+                return None
+            return decrypt_json(encrypted)
 
         transaction = self._client.transaction()
         return _claim(transaction)

@@ -37,11 +37,10 @@ def user_id_from_request(authorization: Optional[str], x_user_id: Optional[str])
     if not token:
         raise HTTPException(status_code=401, detail="Missing Authorization bearer token")
     payload = _verify_token(token)
-    user_id = (
-        payload.get("preferred_username")
-        or payload.get("email")
-        or payload.get("sub")
-    )
+    if mode == "firebase":
+        user_id = payload.get("user_id") or payload.get("sub") or payload.get("email")
+    else:
+        user_id = payload.get("preferred_username") or payload.get("email") or payload.get("sub")
     if not isinstance(user_id, str) or not user_id:
         raise HTTPException(status_code=401, detail="Invalid token subject")
     return user_id
@@ -57,7 +56,7 @@ def user_id_from_event(event: dict[str, Any]) -> str:
 
 def _verify_token(token: str) -> dict[str, Any]:
     """Internal helper for verify token."""
-    if _env("FIREBASE_AUTH_EMULATOR_HOST"):
+    if _should_trust_emulator_tokens():
         try:
             payload = jwt.decode(
                 token,
@@ -175,3 +174,21 @@ def _env(name: str) -> str | None:
     if value is None or value.strip() == "":
         return None
     return value.strip()
+
+
+def _should_trust_emulator_tokens() -> bool:
+    """Only allow unsigned token parsing when explicitly enabled for local dev."""
+    if not _bool_env("AUTH_EMULATOR_TRUST_TOKENS", False):
+        return False
+    host = _env("FIREBASE_AUTH_EMULATOR_HOST")
+    if not host:
+        return False
+    hostname = host.split(":", 1)[0].strip().lower()
+    return hostname in {"localhost", "127.0.0.1", "::1"}
+
+
+def _bool_env(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}

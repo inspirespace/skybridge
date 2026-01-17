@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 
 vi.mock("@/api/client", () => ({
   exchangeToken: vi.fn(),
@@ -19,16 +19,12 @@ import { exchangeToken, refreshToken } from "@/api/client";
 import { isJwtExpired } from "@/lib/auth-helpers";
 import { useOidcAuth } from "@/hooks/use-oidc-auth";
 
-const TOKEN_KEY = "skybridge_access_token";
-const ID_TOKEN_KEY = "skybridge_id_token";
-const REFRESH_TOKEN_KEY = "skybridge_refresh_token";
 const AUTH_STATE_KEY = "skybridge_auth_state";
 const CODE_VERIFIER_KEY = "skybridge_code_verifier";
 
 afterEach(() => {
   vi.resetAllMocks();
   vi.unstubAllGlobals();
-  localStorage.clear();
   sessionStorage.clear();
 });
 
@@ -94,7 +90,7 @@ describe("useOidcAuth", () => {
     sessionStorage.setItem(CODE_VERIFIER_KEY, "verifier");
     window.history.replaceState({}, "", "/app/auth/callback?code=abc&state=state");
 
-    renderHook(() =>
+    const { result } = renderHook(() =>
       useOidcAuth({
         enabled: true,
         issuer: "https://issuer.example",
@@ -110,14 +106,14 @@ describe("useOidcAuth", () => {
       expect(exchangeToken).toHaveBeenCalled();
     });
 
-    expect(localStorage.getItem(TOKEN_KEY)).toBe("access");
-    expect(localStorage.getItem(REFRESH_TOKEN_KEY)).toBe("refresh");
-    expect(localStorage.getItem(ID_TOKEN_KEY)).toBe("id");
+    await waitFor(() => {
+      expect(result.current.accessToken).toBe("access");
+      expect(result.current.idToken).toBe("id");
+      expect(result.current.userId).toBe("pilot@example.com");
+    });
   });
 
   it("refreshes access token when expired", async () => {
-    localStorage.setItem(TOKEN_KEY, "expired");
-    localStorage.setItem(REFRESH_TOKEN_KEY, "refresh");
     (isJwtExpired as unknown as ReturnType<typeof vi.fn>).mockReturnValue(true);
     (refreshToken as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
       access_token: "new-access",
@@ -125,7 +121,7 @@ describe("useOidcAuth", () => {
       id_token: "id",
     });
 
-    renderHook(() =>
+    const { result } = renderHook(() =>
       useOidcAuth({
         enabled: true,
         issuer: "https://issuer.example",
@@ -137,10 +133,17 @@ describe("useOidcAuth", () => {
       })
     );
 
+    act(() => {
+      result.current.setAccessToken("expired");
+      result.current.setRefreshToken("refresh");
+    });
+
     await waitFor(() => {
       expect(refreshToken).toHaveBeenCalled();
     });
 
-    expect(localStorage.getItem(TOKEN_KEY)).toBe("new-access");
+    await waitFor(() => {
+      expect(result.current.accessToken).toBe("new-access");
+    });
   });
 });

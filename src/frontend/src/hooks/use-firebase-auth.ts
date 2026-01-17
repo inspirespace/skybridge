@@ -1,12 +1,5 @@
 import * as React from "react";
 
-import { parseJwt } from "@/lib/auth-helpers";
-
-const TOKEN_KEY = "skybridge_access_token";
-const ID_TOKEN_KEY = "skybridge_id_token";
-const USER_ID_KEY = "skybridge_user_id";
-const EMAIL_LINK_KEY = "skybridge_email_link";
-const EMULATOR_PROVIDER_KEY = "skybridge_emulator_provider";
 const EMULATOR_RETRY_ATTEMPTS = 3;
 const EMULATOR_RETRY_DELAY_MS = 600;
 
@@ -60,17 +53,16 @@ export function useFirebaseAuth({
   onLoadingChange?: (loading: boolean) => void;
 }) {
   const [accessToken, setAccessToken] = React.useState<string | null>(() =>
-    localStorage.getItem(TOKEN_KEY)
+    null
   );
   const [idToken, setIdToken] = React.useState<string | null>(() =>
-    localStorage.getItem(ID_TOKEN_KEY)
+    null
   );
   const [isAnonymous, setIsAnonymous] = React.useState(false);
-  const [emulatorProvider, setEmulatorProvider] = React.useState<ProviderName | null>(() => {
-    const stored = localStorage.getItem(EMULATOR_PROVIDER_KEY);
-    return (stored as ProviderName) ?? null;
-  });
+  const [emulatorProvider, setEmulatorProvider] = React.useState<ProviderName | null>(null);
   const [emulatorReady, setEmulatorReady] = React.useState(!useEmulator);
+  const [userId, setUserId] = React.useState<string | null>(null);
+  const [emailLinkPending, setEmailLinkPending] = React.useState(false);
   const authRef = React.useRef<ReturnType<typeof import("firebase/auth").getAuth> | null>(null);
   const emulatorUrl = React.useMemo(() => {
     if (!useEmulator) return undefined;
@@ -210,11 +202,10 @@ export function useFirebaseAuth({
   );
 
   const clearAuth = React.useCallback(() => {
-    localStorage.removeItem(USER_ID_KEY);
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(ID_TOKEN_KEY);
     setAccessToken(null);
     setIdToken(null);
+    setUserId(null);
+    setEmailLinkPending(false);
   }, []);
 
   const completeEmailLink = React.useCallback(
@@ -239,7 +230,7 @@ export function useFirebaseAuth({
         } else {
           await signInWithEmailLink(auth, email, window.location.href);
         }
-        localStorage.removeItem(EMAIL_LINK_KEY);
+        setEmailLinkPending(false);
         window.history.replaceState({}, document.title, window.location.pathname);
       } catch (err) {
         onError?.(err instanceof Error ? err.message : "Email link sign-in failed");
@@ -261,6 +252,7 @@ export function useFirebaseAuth({
       const { getAuth, onIdTokenChanged, connectAuthEmulator } = await import(
         "firebase/auth"
       );
+      const { setPersistence, inMemoryPersistence } = await import("firebase/auth");
       const app =
         getApps().length > 0
           ? getApps()[0]
@@ -271,6 +263,7 @@ export function useFirebaseAuth({
               appId,
             });
       const auth = getAuth(app);
+      await setPersistence(auth, inMemoryPersistence);
       if (useEmulator && emulatorUrl) {
         const host = emulatorUrl.startsWith("http")
           ? emulatorUrl
@@ -284,21 +277,15 @@ export function useFirebaseAuth({
           clearAuth();
           setIsAnonymous(false);
           setEmulatorProvider(null);
-          localStorage.removeItem(EMULATOR_PROVIDER_KEY);
           return;
         }
         try {
           const token = await user.getIdToken();
-          localStorage.setItem(TOKEN_KEY, token);
-          localStorage.setItem(ID_TOKEN_KEY, token);
           setAccessToken(token);
           setIdToken(token);
           setIsAnonymous(Boolean(user.isAnonymous));
-          const claims = parseJwt(token);
-          const userId = claims?.email ?? user.email ?? user.uid;
-          if (userId) {
-            localStorage.setItem(USER_ID_KEY, userId);
-          }
+          setUserId(user.uid ?? null);
+          setEmailLinkPending(false);
         } catch (err) {
           onError?.(err instanceof Error ? err.message : "Failed to load auth token");
         }
@@ -306,12 +293,7 @@ export function useFirebaseAuth({
 
       const { isSignInWithEmailLink } = await import("firebase/auth");
       if (typeof window !== "undefined" && isSignInWithEmailLink(auth, window.location.href)) {
-        const storedEmail = localStorage.getItem(EMAIL_LINK_KEY) ?? "";
-        if (storedEmail) {
-          await completeEmailLink(storedEmail);
-        } else {
-          onError?.("Missing email for sign-in link. Please request a new link.");
-        }
+        setEmailLinkPending(true);
       }
     })();
     return () => {
@@ -365,7 +347,6 @@ export function useFirebaseAuth({
           }
           if (useEmulator) {
             setEmulatorProvider("anonymous");
-            localStorage.setItem(EMULATOR_PROVIDER_KEY, "anonymous");
           }
           return;
         }
@@ -377,7 +358,6 @@ export function useFirebaseAuth({
           }
           const nextProvider = provider ?? "google";
           setEmulatorProvider(nextProvider);
-          localStorage.setItem(EMULATOR_PROVIDER_KEY, nextProvider);
           return;
         }
         let authProvider;
@@ -456,14 +436,12 @@ export function useFirebaseAuth({
         }
         if (useEmulator) {
           const link = await buildEmulatorEmailLink(email, redirectUrl);
-          localStorage.setItem(EMAIL_LINK_KEY, email);
           return link;
         }
         await sendSignInLinkToEmail(auth, email, {
           url: redirectUrl,
           handleCodeInApp: true,
         });
-        localStorage.setItem(EMAIL_LINK_KEY, email);
         return null;
       } catch (err) {
         onError?.(err instanceof Error ? err.message : "Failed to send sign-in link");
@@ -502,8 +480,11 @@ export function useFirebaseAuth({
     isAnonymous,
     emulatorProvider,
     emulatorReady,
+    userId,
+    emailLinkPending,
     startLogin,
     startEmailLink,
+    completeEmailLink,
     signOut,
     clearAuth,
   };

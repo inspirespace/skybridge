@@ -38,6 +38,8 @@ data/
 docker/https/certs/
 /data/
 .firebase-emulator/
+firebase-export-*/
+firebase-export-*.json
 functions/venv/
 functions/.env
 

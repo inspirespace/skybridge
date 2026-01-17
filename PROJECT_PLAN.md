@@ -141,3 +141,12 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Auto-open noVNC auto-connect URL when running Playwright from VS Code.
 - [x] Exclude discovery modules from coverage targets and remove discovery-specific tests.
 - [x] Refactor App shell auth UI into dedicated components/config helpers to keep `App.tsx` maintainable.
+
+## 10. Security Hardening (In Progress)
+- [x] Require encrypted storage for credential payloads when Firestore is enabled.
+- [x] Remove token persistence from job storage (in-memory only).
+- [x] Lock Firestore/Storage rules to authenticated reads and server-only writes.
+- [x] Gate emulator token trust behind explicit local-only flag.
+- [x] Replace persistent auth token storage with in-memory/session-only handling.
+- [x] Add security regression tests (crypto roundtrip, token persistence guard, emulator trust).
+- [ ] Validate production environment variables include encryption key + strict CORS allowlist.

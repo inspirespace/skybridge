@@ -40,6 +40,7 @@ class JobStore:
         self._object_store = object_store
         self._firestore = None
         self._firestore_collection = None
+        self._token_cache: dict[tuple[str, str], str] = {}
         if firestore_collection:
             from google.cloud import firestore
 
@@ -72,12 +73,9 @@ class JobStore:
         """Internal helper for job file."""
         return self._job_dir(job_id) / "job.json"
 
-    def _token_file(self, job_id: UUID, purpose: str) -> Path:
-        """Internal helper for token file."""
-        return self._job_dir(job_id) / f"{purpose}.token"
-
     def list_all_jobs(self) -> list[JobRecord]:
         """Handle list all jobs."""
+        self.cleanup_expired()
         if self._firestore_collection:
             jobs: list[JobRecord] = []
             for doc in self._firestore_collection.stream():
@@ -115,6 +113,7 @@ class JobStore:
 
     def list_jobs(self, user_id: str) -> list[JobRecord]:
         """Handle list jobs."""
+        self.cleanup_expired()
         if self._firestore_collection:
             jobs: list[JobRecord] = []
             query = self._firestore_collection.where("user_id", "==", user_id)
@@ -177,6 +176,8 @@ class JobStore:
             return self._maybe_enrich_review_summary(job)
 
         job_file = self._job_file(job_id)
+        if not job_file.exists():
+            raise FileNotFoundError("Job not found")
         job_data = json.loads(job_file.read_text())
         job = JobRecord.model_validate(job_data)
         if self._is_expired(job):
@@ -305,30 +306,11 @@ class JobStore:
 
     def write_token(self, job_id: UUID, purpose: str, token: str) -> None:
         """Handle write token."""
-        token_file = self._token_file(job_id, purpose)
-        token_file.write_text(token)
-        if self._firestore_collection:
-            job = self.load_job(job_id)
-            field = f"{purpose}_token"
-            self._firestore_collection.document(str(job.job_id)).update({field: token})
+        self._token_cache[(str(job_id), purpose)] = token
 
     def read_token(self, job_id: UUID, purpose: str) -> str | None:
         """Handle read token."""
-        token_file = self._token_file(job_id, purpose)
-        if not token_file.exists():
-            if self._firestore_collection:
-                try:
-                    job = self.load_job(job_id)
-                except FileNotFoundError:
-                    return None
-                field = f"{purpose}_token"
-                doc = self._firestore_collection.document(str(job.job_id)).get()
-                if not doc.exists:
-                    return None
-                payload = doc.to_dict() or {}
-                return payload.get(field)
-            return None
-        return token_file.read_text().strip()
+        return self._token_cache.get((str(job_id), purpose))
 
     def _maybe_enrich_review_summary(self, job: JobRecord) -> JobRecord:
         """Backfill origin/destination from review payload when missing."""
@@ -399,16 +381,36 @@ class JobStore:
 
     def clear_token(self, job_id: UUID, purpose: str) -> None:
         """Handle clear token."""
-        token_file = self._token_file(job_id, purpose)
-        if token_file.exists():
-            token_file.unlink()
+        self._token_cache.pop((str(job_id), purpose), None)
+
+    def cleanup_expired(self) -> int:
+        """Remove expired jobs from storage. Returns count deleted."""
+        deleted = 0
+        now = int(datetime.now(timezone.utc).timestamp())
         if self._firestore_collection:
+            query = self._firestore_collection.where("ttl_epoch", "<", now)
+            for doc in query.stream():
+                doc.reference.delete()
+                deleted += 1
+            return deleted
+        for job_dir in self._base_path.iterdir():
+            if not job_dir.is_dir():
+                continue
+            job_file = job_dir / "job.json"
+            if not job_file.exists():
+                continue
             try:
-                job = self.load_job(job_id)
-            except FileNotFoundError:
-                return
-            field = f"{purpose}_token"
-            self._firestore_collection.document(str(job.job_id)).update({field: None})
+                job_data = json.loads(job_file.read_text())
+                job = JobRecord.model_validate(job_data)
+            except Exception:
+                continue
+            if self._is_expired(job):
+                try:
+                    self.delete_job(job.job_id, user_id=job.user_id)
+                except Exception:
+                    pass
+                deleted += 1
+        return deleted
 
     def _is_expired(self, job: JobRecord) -> bool:
         """Internal helper for is expired."""

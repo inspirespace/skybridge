@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 
 vi.mock("@/hooks/use-job-snapshot", () => ({
   useJobSnapshot: vi.fn(),
@@ -24,7 +24,11 @@ vi.mock("@/hooks/use-firebase-auth", () => ({
     accessToken: null,
     startLogin: vi.fn(),
     startEmailLink: vi.fn(),
+    completeEmailLink: vi.fn(),
     isAnonymous: false,
+    emulatorProvider: null,
+    emulatorReady: true,
+    emailLinkPending: false,
     signOut: vi.fn(),
     clearAuth: vi.fn(),
   })),
@@ -47,8 +51,10 @@ const USER_ID_KEY = "skybridge_user_id";
 const JOB_ID_KEY = "skybridge_job_id";
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.resetAllMocks();
-  localStorage.clear();
+  vi.unstubAllGlobals();
+  sessionStorage.clear();
 });
 
 function baseJob(overrides: Record<string, unknown>) {
@@ -72,8 +78,8 @@ function baseJob(overrides: Record<string, unknown>) {
 
 describe("App UI flows", () => {
   it("renders import results and allows download", async () => {
-    localStorage.setItem(USER_ID_KEY, "pilot");
-    localStorage.setItem(JOB_ID_KEY, "job-123");
+    sessionStorage.setItem(USER_ID_KEY, "pilot");
+    sessionStorage.setItem(JOB_ID_KEY, "job-123");
 
     (useJobSnapshot as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       data: baseJob({
@@ -84,18 +90,35 @@ describe("App UI flows", () => {
       refresh: vi.fn(),
     });
 
+    const clickMock = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => {});
+    const createObjectURL = vi.fn(() => "blob:download");
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(window.URL, "createObjectURL", {
+      value: createObjectURL,
+      writable: true,
+    });
+    Object.defineProperty(window.URL, "revokeObjectURL", {
+      value: revokeObjectURL,
+      writable: true,
+    });
+
     render(<App />);
 
     expect(await screen.findByText(/import results/i)).toBeInTheDocument();
     const download = screen.getByRole("button", { name: /download files/i });
-    fireEvent.click(download);
+    await act(async () => {
+      fireEvent.click(download);
+    });
 
     expect(downloadArtifactsZip).toHaveBeenCalled();
+    clickMock.mockRestore();
   });
 
   it("shows review failure message when job failed before import", async () => {
-    localStorage.setItem(USER_ID_KEY, "pilot");
-    localStorage.setItem(JOB_ID_KEY, "job-123");
+    sessionStorage.setItem(USER_ID_KEY, "pilot");
+    sessionStorage.setItem(JOB_ID_KEY, "job-123");
 
     (useJobSnapshot as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
       data: baseJob({ status: "failed", error_message: "Review failed" }),

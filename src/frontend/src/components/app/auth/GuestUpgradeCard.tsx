@@ -10,6 +10,8 @@ export function GuestUpgradeCard({
   emailAddress,
   onEmailChange,
   onSendLink,
+  onCompleteLink,
+  emailLinkPending,
   actionLoading,
 }: {
   providers: ProviderFlags;
@@ -17,8 +19,12 @@ export function GuestUpgradeCard({
   emailAddress: string;
   onEmailChange: (value: string) => void;
   onSendLink: () => void;
+  onCompleteLink: () => void;
+  emailLinkPending: boolean;
   actionLoading: boolean;
 }) {
+  const emailActionLabel = emailLinkPending ? "Complete sign-in" : "Link email";
+  const emailAction = emailLinkPending ? onCompleteLink : onSendLink;
   const providerList = [
     { key: "google" as const, enabled: providers.google },
     { key: "apple" as const, enabled: providers.apple },
@@ -62,8 +68,8 @@ export function GuestUpgradeCard({
             value={emailAddress}
             onChange={(event) => onEmailChange(event.target.value)}
           />
-          <Button variant="outline" className="h-11 px-4" onClick={onSendLink}>
-            Link email
+          <Button variant="outline" className="h-11 px-4" onClick={emailAction}>
+            {emailActionLabel}
           </Button>
         </div>
       </CardContent>

@@ -52,18 +52,21 @@ services:
       [
         "sh",
         "-c",
-        "apk add --no-cache curl python3 py3-pip py3-virtualenv openjdk21-jre && java -version && npm install -g firebase-tools@15.3.1 && if [ ! -d /workspace/functions/venv ]; then python3 -m venv /workspace/functions/venv; fi && /workspace/functions/venv/bin/python -m ensurepip --upgrade && /workspace/functions/venv/bin/python -m pip install -r /workspace/functions/requirements.txt && firebase emulators:start --project skybridge-dev --only auth,firestore,pubsub,storage,functions,hosting --import /workspace/.firebase-emulator --export-on-exit /workspace/.firebase-emulator"
+        "apk add --no-cache curl python3 py3-pip py3-virtualenv openjdk21-jre && java -version && npm install -g firebase-tools@15.3.1 && if [ ! -d /workspace/functions/venv ]; then python3 -m venv /workspace/functions/venv; fi && /workspace/functions/venv/bin/python -m ensurepip --upgrade && /workspace/functions/venv/bin/python -m pip install -r /workspace/functions/requirements.txt && mkdir -p /workspace/.firebase-emulator/exports && firebase emulators:start --project skybridge-dev --only auth,firestore,pubsub,storage,functions,hosting --import /workspace/.firebase-emulator/exports --export-on-exit /workspace/.firebase-emulator/exports"
       ]
     environment:
       - CLOUDSDK_CORE_PROJECT=skybridge-dev
       - FIREBASE_PROJECT=skybridge-dev
       - FIREBASE_AUTH_EMULATOR_HOST=firebase-emulator:9099
+      - AUTH_EMULATOR_TRUST_TOKENS=1
       - PUBSUB_EMULATOR_HOST=firebase-emulator:8085
       - FIRESTORE_EMULATOR_HOST=firebase-emulator:8080
       - STORAGE_EMULATOR_HOST=http://firebase-emulator:9199
       - GCP_PROJECT_ID=skybridge-dev
       - GOOGLE_CLOUD_PROJECT=skybridge-dev
       - AUTH_MODE=firebase
+      - BACKEND_ENCRYPTION_KEY=${BACKEND_ENCRYPTION_KEY}
+      - CORS_ALLOW_ORIGINS=https://skybridge.localhost,https://emulator.skybridge.localhost
       - BACKEND_USE_WORKER=true
       - BACKEND_PUBSUB_ENABLED=1
       - PUBSUB_TOPIC=skybridge-job-queue

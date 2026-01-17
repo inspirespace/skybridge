@@ -5,10 +5,11 @@ import json
 import os
 import re
 import sys
+import time
 from pathlib import Path
 from typing import Any, Callable
 
-from firebase_functions import https_fn, pubsub_fn, options
+from firebase_functions import https_fn, pubsub_fn, scheduler_fn, options
 from flask import Request, Response
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -56,9 +57,13 @@ def _register_routes() -> None:
 
 
 def _cors_headers() -> dict[str, str]:
-    origin = os.getenv("CORS_ALLOW_ORIGINS") or "*"
+    raw = os.getenv("CORS_ALLOW_ORIGINS") or "https://skybridge.localhost"
+    origins = [origin.strip() for origin in raw.split(",") if origin.strip()]
+    if not origins:
+        origins = ["https://skybridge.localhost"]
+    allow_origin = "*" if "*" in origins else origins[0]
     return {
-        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Allow-Origin": allow_origin,
         "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
         "Access-Control-Allow-Headers": "Authorization,Content-Type,X-User-Id",
     }
@@ -136,3 +141,31 @@ def worker(event: pubsub_fn.CloudEvent[pubsub_fn.MessagePublishedData]) -> None:
         return
     lambda_handlers._process_queue_payload(data)
     _route("POST", r"^/auth/token$", lambda_handlers.auth_token_handler)
+
+
+@scheduler_fn.on_schedule(schedule="every 24 hours")
+def cleanup_expired(_event: scheduler_fn.ScheduledEvent) -> None:
+    # Cleanup job records (Firestore or local).
+    try:
+        lambda_handlers.store.cleanup_expired()
+    except Exception:
+        pass
+    if (os.getenv("BACKEND_FIRESTORE_ENABLED") or "false").lower() not in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }:
+        return
+    from google.cloud import firestore
+
+    project_id = os.getenv("GCP_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT")
+    client = firestore.Client(project=project_id or None)
+    now = int(time.time())
+    collections = [
+        os.getenv("FIRESTORE_JOBS_COLLECTION") or "skybridge-jobs",
+        os.getenv("FIRESTORE_CREDENTIALS_COLLECTION") or "skybridge-credentials",
+    ]
+    for name in collections:
+        for doc in client.collection(name).where("ttl_epoch", "<", now).stream():
+            doc.reference.delete()

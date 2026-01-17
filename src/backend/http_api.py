@@ -12,11 +12,22 @@ from . import lambda_handlers
 
 app = FastAPI(title="Skybridge API")
 
-origins = [origin.strip() for origin in (os.getenv("CORS_ALLOW_ORIGINS") or "*").split(",")]
+
+def _cors_config() -> list[str]:
+    raw = os.getenv("CORS_ALLOW_ORIGINS") or "https://skybridge.localhost"
+    origins = [origin.strip() for origin in raw.split(",") if origin.strip()]
+    if not origins:
+        origins = ["https://skybridge.localhost"]
+    if "*" in origins:
+        return ["*"]
+    return origins
+
+
+_cors_origins = _cors_config()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins if origins != ["*"] else ["*"],
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=False,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-User-Id"],
 )
@@ -97,4 +108,3 @@ async def delete_job(job_id: str, request: Request) -> Response:
 @app.post("/auth/token")
 async def auth_token(request: Request) -> Response:
     return await _invoke(lambda_handlers.auth_token_handler, request)
-

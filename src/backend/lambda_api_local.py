@@ -2,12 +2,19 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Callable
 from urllib.parse import urlparse
 
 from . import lambda_handlers
+
+
+def _allowed_origins() -> list[str]:
+    raw = os.getenv("CORS_ALLOW_ORIGINS") or "https://skybridge.localhost"
+    origins = [origin.strip() for origin in raw.split(",") if origin.strip()]
+    return origins or ["https://skybridge.localhost"]
 
 _ROUTES: list[tuple[str, re.Pattern[str], Callable]] = []
 
@@ -125,9 +132,16 @@ class LambdaLocalHandler(BaseHTTPRequestHandler):
         self.wfile.write(b'{"detail":"Not found"}')
 
     def _send_cors_headers(self) -> None:
-        """Apply permissive CORS headers for local dev."""
-        origin = self.headers.get("Origin") or "*"
-        self.send_header("Access-Control-Allow-Origin", origin)
+        """Apply CORS headers for local dev."""
+        origin = self.headers.get("Origin") or ""
+        origins = _allowed_origins()
+        if "*" in origins:
+            allow_origin = "*"
+        elif origin in origins:
+            allow_origin = origin
+        else:
+            allow_origin = origins[0]
+        self.send_header("Access-Control-Allow-Origin", allow_origin)
         self.send_header("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Authorization,Content-Type,X-User-Id")
 

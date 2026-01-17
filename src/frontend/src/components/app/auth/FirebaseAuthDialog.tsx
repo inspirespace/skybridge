@@ -24,6 +24,8 @@ export function FirebaseAuthDialog({
   emailAddress,
   onEmailChange,
   onSendLink,
+  onCompleteLink,
+  emailLinkPending,
   emailLinkNotice,
   emailLinkUrl,
   authButtonsDisabled,
@@ -41,6 +43,8 @@ export function FirebaseAuthDialog({
   emailAddress: string;
   onEmailChange: (value: string) => void;
   onSendLink: () => void;
+  onCompleteLink: () => void;
+  emailLinkPending: boolean;
   emailLinkNotice: string | null;
   emailLinkUrl: string | null;
   authButtonsDisabled: boolean;
@@ -49,6 +53,8 @@ export function FirebaseAuthDialog({
   actionLoading: boolean;
   triggerLabel: string;
 }) {
+  const emailActionLabel = emailLinkPending ? "Complete sign-in" : "Send link";
+  const emailAction = emailLinkPending ? onCompleteLink : onSendLink;
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogTrigger asChild>
@@ -79,9 +85,9 @@ export function FirebaseAuthDialog({
             label="Email link (passwordless)"
             email={emailAddress}
             onEmailChange={onEmailChange}
-            onSend={onSendLink}
+            onSend={emailAction}
             disabled={authButtonsDisabled}
-            buttonLabel="Send link"
+            buttonLabel={emailActionLabel}
             notice={emailLinkNotice}
             linkUrl={emailLinkUrl}
           />

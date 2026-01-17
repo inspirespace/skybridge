@@ -72,8 +72,20 @@ def test_user_id_from_request_oidc_valid_token(monkeypatch: pytest.MonkeyPatch) 
 def test_user_id_from_request_firebase_valid_token(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test firebase mode behaves like OIDC."""
     monkeypatch.setenv("AUTH_MODE", "firebase")
-    monkeypatch.setattr(auth, "_verify_token", lambda token: {"email": "pilot@example.com"})
-    assert auth.user_id_from_request("Bearer abc", None) == "pilot@example.com"
+    monkeypatch.setattr(auth, "_verify_token", lambda token: {"user_id": "firebase-uid"})
+    assert auth.user_id_from_request("Bearer abc", None) == "firebase-uid"
+
+
+def test_emulator_trust_requires_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FIREBASE_AUTH_EMULATOR_HOST", "localhost:9099")
+    monkeypatch.setenv("AUTH_EMULATOR_TRUST_TOKENS", "false")
+    assert auth._should_trust_emulator_tokens() is False
+
+
+def test_emulator_trust_requires_localhost(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FIREBASE_AUTH_EMULATOR_HOST", "emulator.example:9099")
+    monkeypatch.setenv("AUTH_EMULATOR_TRUST_TOKENS", "true")
+    assert auth._should_trust_emulator_tokens() is False
 
 
 def test_user_id_from_request_oidc_invalid_subject(monkeypatch: pytest.MonkeyPatch) -> None:

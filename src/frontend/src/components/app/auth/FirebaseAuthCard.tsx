@@ -12,6 +12,8 @@ export function FirebaseAuthCard({
   emailAddress,
   onEmailChange,
   onSendLink,
+  onCompleteLink,
+  emailLinkPending,
   emailLinkNotice,
   emailLinkUrl,
   authButtonsDisabled,
@@ -25,12 +27,16 @@ export function FirebaseAuthCard({
   emailAddress: string;
   onEmailChange: (value: string) => void;
   onSendLink: () => void;
+  onCompleteLink: () => void;
+  emailLinkPending: boolean;
   emailLinkNotice: string | null;
   emailLinkUrl: string | null;
   authButtonsDisabled: boolean;
   providers: ProviderFlags;
   onProvider: (provider: ProviderName) => void;
 }) {
+  const emailActionLabel = emailLinkPending ? "Complete sign-in" : "Send link";
+  const emailAction = emailLinkPending ? onCompleteLink : onSendLink;
   return (
     <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
       <CardHeader className="space-y-2">
@@ -55,9 +61,9 @@ export function FirebaseAuthCard({
           label={hasOptionalProviders ? "Email link (passwordless)" : "Passwordless email link"}
           email={emailAddress}
           onEmailChange={onEmailChange}
-          onSend={onSendLink}
+          onSend={emailAction}
           disabled={authButtonsDisabled}
-          buttonLabel="Send link"
+          buttonLabel={emailActionLabel}
           notice={emailLinkNotice}
           linkUrl={emailLinkUrl}
         />
