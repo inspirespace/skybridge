@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,6 +17,8 @@ from .models import CredentialValidationRequest, JobAcceptRequest, JobCreateRequ
 from .object_store import build_object_store_from_env
 from .service import JobService, validate_credentials
 from .store import JobStore
+
+_logger = logging.getLogger(__name__)
 
 
 def _json_default(value: Any) -> str:
@@ -137,12 +140,18 @@ def _set_queued(job, *, phase: str) -> None:
 
 
 def _handle_error(exc: Exception) -> dict[str, Any]:
-    """Normalize handler errors into API responses."""
+    """Normalize handler errors into API responses.
+
+    SECURITY: Internal exceptions are logged but not exposed to clients.
+    Only controlled error messages are returned to prevent information leakage.
+    """
     if isinstance(exc, LambdaHttpError):
         return _response(exc.status_code, {"detail": exc.detail})
     if isinstance(exc, ValidationError):
         return _response(400, {"detail": exc.errors()})
-    return _response(500, {"detail": str(exc)})
+    # Log the actual exception for debugging, but return generic message to client
+    _logger.exception("Internal error: %s", exc)
+    return _response(500, {"detail": "An internal error occurred. Please try again later."})
 
 
 DATA_DIR = Path(os.environ.get("BACKEND_DATA_DIR", "/tmp/backend/jobs"))
@@ -374,7 +383,14 @@ def auth_token_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
 
         response = requests.post(token_url, data=data, timeout=15)
         if not response.ok:
-            return _response(response.status_code, {"detail": response.text})
+            # Log the actual OAuth error for debugging, return generic message to client
+            _logger.warning("OAuth token exchange failed: status=%d body=%s", response.status_code, response.text)
+            # Map common OAuth errors to user-friendly messages
+            if response.status_code == 400:
+                return _response(400, {"detail": "Invalid or expired authorization code."})
+            if response.status_code == 401:
+                return _response(401, {"detail": "Authentication failed."})
+            return _response(502, {"detail": "Authentication service error. Please try again."})
         return _response(200, response.json())
     except Exception as exc:
         return _handle_error(exc)
@@ -408,47 +424,55 @@ def download_artifacts_zip_handler(event: dict[str, Any], _context: Any) -> dict
 
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
         temp_file.close()
+        temp_path = temp_file.name
 
-        exports_dir = job_dir / "work" / "cloudahoy_exports"
-        with zipfile.ZipFile(temp_file.name, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
-            if exports_dir.exists():
-                for path in exports_dir.rglob("*"):
-                    if not path.is_file():
-                        continue
-                    if path.name.endswith(".token"):
-                        continue
-                    arcname = str(path.relative_to(exports_dir))
-                    zipf.write(path, arcname=arcname)
-            elif store.object_store:
-                prefix = store.object_store.key_for(user_id, str(job_uuid), "cloudahoy_exports")
-                keys = store.object_store.list_prefix(prefix)
-                for key in keys:
-                    if key.endswith(".token"):
-                        continue
-                    full_key = store.object_store.key_for(
-                        user_id,
-                        str(job_uuid),
-                        "cloudahoy_exports",
-                        key,
-                    )
-                    payload = store.object_store.get_bytes(full_key)
-                    if payload is None:
-                        continue
-                    zipf.writestr(key, payload)
+        try:
+            exports_dir = job_dir / "work" / "cloudahoy_exports"
+            with zipfile.ZipFile(temp_path, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
+                if exports_dir.exists():
+                    for path in exports_dir.rglob("*"):
+                        if not path.is_file():
+                            continue
+                        if path.name.endswith(".token"):
+                            continue
+                        arcname = str(path.relative_to(exports_dir))
+                        zipf.write(path, arcname=arcname)
+                elif store.object_store:
+                    prefix = store.object_store.key_for(user_id, str(job_uuid), "cloudahoy_exports")
+                    keys = store.object_store.list_prefix(prefix)
+                    for key in keys:
+                        if key.endswith(".token"):
+                            continue
+                        full_key = store.object_store.key_for(
+                            user_id,
+                            str(job_uuid),
+                            "cloudahoy_exports",
+                            key,
+                        )
+                        payload = store.object_store.get_bytes(full_key)
+                        if payload is None:
+                            continue
+                        zipf.writestr(key, payload)
 
-        with open(temp_file.name, "rb") as handle:
-            payload = handle.read()
-        encoded = base64.b64encode(payload).decode("utf-8")
-        filename = f"skybridge-run-{job_uuid}.zip"
-        return {
-            "statusCode": 200,
-            "headers": {
-                "Content-Type": "application/zip",
-                "Content-Disposition": f'attachment; filename="{filename}"',
-            },
-            "isBase64Encoded": True,
-            "body": encoded,
-        }
+            with open(temp_path, "rb") as handle:
+                payload = handle.read()
+            encoded = base64.b64encode(payload).decode("utf-8")
+            filename = f"skybridge-run-{job_uuid}.zip"
+            return {
+                "statusCode": 200,
+                "headers": {
+                    "Content-Type": "application/zip",
+                    "Content-Disposition": f'attachment; filename="{filename}"',
+                },
+                "isBase64Encoded": True,
+                "body": encoded,
+            }
+        finally:
+            # Always clean up the temp file to prevent disk space exhaustion
+            try:
+                os.unlink(temp_path)
+            except OSError:
+                pass
     except Exception as exc:
         return _handle_error(exc)
 

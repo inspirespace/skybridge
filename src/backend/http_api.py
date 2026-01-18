@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from typing import Any, Callable
 
@@ -9,8 +10,15 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import lambda_handlers
+from .rate_limit import RateLimiter
+
+_logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Skybridge API")
+
+# Rate limiters for sensitive endpoints (10 requests per 60 seconds per IP)
+_auth_rate_limiter = RateLimiter(window_seconds=60, max_events=10)
+_credentials_rate_limiter = RateLimiter(window_seconds=60, max_events=10)
 
 
 def _cors_config() -> list[str]:
@@ -19,8 +27,33 @@ def _cors_config() -> list[str]:
     if not origins:
         origins = ["https://skybridge.localhost"]
     if "*" in origins:
+        # Log warning if wildcard CORS is configured
+        if os.getenv("BACKEND_PRODUCTION", "").lower() in {"1", "true", "yes", "on"}:
+            _logger.warning(
+                "SECURITY WARNING: CORS_ALLOW_ORIGINS contains '*' in production. "
+                "This allows requests from any origin. Configure explicit origins instead."
+            )
         return ["*"]
     return origins
+
+
+def _get_client_ip(request: Request) -> str:
+    """Extract client IP for rate limiting, considering proxies.
+
+    In Firebase/Cloud Run, Google's load balancer appends the real client IP
+    to the end of X-Forwarded-For. A malicious client can prepend fake IPs,
+    so we must use the LAST value (added by the trusted proxy), not the first.
+
+    Example: Client sends "X-Forwarded-For: fake" -> LB makes it "fake, <real-ip>"
+    """
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        # Use the LAST IP - added by Google's trusted load balancer
+        ips = [ip.strip() for ip in forwarded.split(",") if ip.strip()]
+        if ips:
+            return ips[-1]
+    # Fall back to direct client IP
+    return request.client.host if request.client else "unknown"
 
 
 _cors_origins = _cors_config()
@@ -60,6 +93,14 @@ async def _invoke(handler: Callable[[dict[str, Any], Any], dict[str, Any]], requ
 
 @app.post("/credentials/validate")
 async def validate_credentials(request: Request) -> Response:
+    client_ip = _get_client_ip(request)
+    if not _credentials_rate_limiter.allow(client_ip):
+        return Response(
+            content='{"detail":"Too many requests. Please try again later."}',
+            status_code=429,
+            media_type="application/json",
+            headers={"Retry-After": "60"},
+        )
     return await _invoke(lambda_handlers.validate_credentials_handler, request)
 
 
@@ -107,4 +148,12 @@ async def delete_job(job_id: str, request: Request) -> Response:
     return await _invoke(lambda_handlers.delete_job_handler, request, {"job_id": job_id})
 @app.post("/auth/token")
 async def auth_token(request: Request) -> Response:
+    client_ip = _get_client_ip(request)
+    if not _auth_rate_limiter.allow(client_ip):
+        return Response(
+            content='{"detail":"Too many requests. Please try again later."}',
+            status_code=429,
+            media_type="application/json",
+            headers={"Retry-After": "60"},
+        )
     return await _invoke(lambda_handlers.auth_token_handler, request)

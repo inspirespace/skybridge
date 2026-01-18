@@ -14,6 +14,7 @@ This is a checklist of what production needs, not a step-by-step deployment guid
   - `/api/**` rewrites to the `api` function (see `firebase.json`).
 
 ## Required backend environment (Firebase Functions)
+- `BACKEND_PRODUCTION=true` (enables production security guards)
 - `AUTH_MODE=firebase`
 - `AUTH_ISSUER_URL=https://securetoken.google.com/<project_id>`
 - `AUTH_JWKS_URL=https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com`
@@ -30,7 +31,7 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - `GCS_PREFIX=jobs`
 - `GCS_LOCATION=<region>`
 - `GCP_PROJECT_ID=<project_id>`
-- `CORS_ALLOW_ORIGINS=<comma separated origins>`
+- `CORS_ALLOW_ORIGINS=<comma separated origins>` (never use `*` in production)
 
 ## Frontend build configuration (Firebase)
 - `VITE_API_BASE_URL` points at your Firebase Hosting domain.
@@ -64,4 +65,11 @@ Job artifacts must expire automatically. Apply a lifecycle rule to your storage 
 ## Security defaults
 - Firestore rules only allow authenticated reads of job documents owned by the current UID; all writes are server-only.
 - Storage rules deny all client access (artifacts are served via the API).
-- Do not set `AUTH_EMULATOR_TRUST_TOKENS` outside local emulators.
+- Rate limiting is applied to `/auth/token` and `/credentials/validate` endpoints (10 requests/minute per IP).
+- Internal errors are logged but not exposed to clients.
+- Security headers (CSP, X-Frame-Options, X-Content-Type-Options) are configured in `firebase.json`.
+
+## Security environment variables
+- `BACKEND_PRODUCTION=true` — **Required in production.** Prevents emulator token bypass regardless of other settings.
+- `AUTH_EMULATOR_TRUST_TOKENS` — Never set outside local emulators; the `BACKEND_PRODUCTION` flag blocks it anyway.
+- `CORS_ALLOW_ORIGINS` — Set to your production domain(s); a warning is logged if `*` is used in production.
