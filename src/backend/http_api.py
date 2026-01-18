@@ -38,12 +38,20 @@ def _cors_config() -> list[str]:
 
 
 def _get_client_ip(request: Request) -> str:
-    """Extract client IP for rate limiting, considering proxies."""
-    # Check X-Forwarded-For header (set by proxies/load balancers)
+    """Extract client IP for rate limiting, considering proxies.
+
+    In Firebase/Cloud Run, Google's load balancer appends the real client IP
+    to the end of X-Forwarded-For. A malicious client can prepend fake IPs,
+    so we must use the LAST value (added by the trusted proxy), not the first.
+
+    Example: Client sends "X-Forwarded-For: fake" -> LB makes it "fake, <real-ip>"
+    """
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
-        # First IP in the chain is the original client
-        return forwarded.split(",")[0].strip()
+        # Use the LAST IP - added by Google's trusted load balancer
+        ips = [ip.strip() for ip in forwarded.split(",") if ip.strip()]
+        if ips:
+            return ips[-1]
     # Fall back to direct client IP
     return request.client.host if request.client else "unknown"
 
