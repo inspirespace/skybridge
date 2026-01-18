@@ -177,7 +177,15 @@ def _env(name: str) -> str | None:
 
 
 def _should_trust_emulator_tokens() -> bool:
-    """Only allow unsigned token parsing when explicitly enabled for local dev."""
+    """Only allow unsigned token parsing when explicitly enabled for local dev.
+
+    SECURITY: This function controls whether JWT signature verification is bypassed.
+    It will NEVER return True if BACKEND_PRODUCTION=true is set, regardless of
+    other environment variables. This prevents accidental emulator trust in production.
+    """
+    # Hard block in production - this check cannot be bypassed
+    if _bool_env("BACKEND_PRODUCTION", False):
+        return False
     if not _bool_env("AUTH_EMULATOR_TRUST_TOKENS", False):
         return False
     host = _env("FIREBASE_AUTH_EMULATOR_HOST")
