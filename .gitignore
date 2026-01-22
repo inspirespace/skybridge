@@ -50,3 +50,4 @@ src/frontend/.npm-cache/
 src/frontend/.npm-cache-shadcn/
 src/frontend/.vite/
 .claude/settings.local.json
+.playwright-mcp/

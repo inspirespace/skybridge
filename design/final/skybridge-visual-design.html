@@ -1,0 +1,2239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skybridge — Visual Design Mockup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════════════════════════════════════
+       SKYBRIDGE VISUAL DESIGN — Aviation-Inspired Premium Theme
+       Target: Aviation enthusiasts migrating flight data
+    ═══════════════════════════════════════════════════════════════════════════ */
+
+    :root {
+      /* Sky gradient palette — inspired by aviation twilight */
+      --sky-900: #0a0e1a;
+      --sky-800: #0f1729;
+      --sky-700: #162036;
+      --sky-600: #1e2d4a;
+      --sky-500: #2a3f5f;
+      --sky-400: #3d5a80;
+      --sky-300: #5c7da8;
+      --sky-200: #8ba4c7;
+      --sky-100: #c5d5e8;
+      --sky-50: #e8eff7;
+
+      /* Horizon accent — sunrise/sunset warmth */
+      --horizon-500: #f97316;
+      --horizon-400: #fb923c;
+      --horizon-300: #fdba74;
+      --horizon-glow: rgba(249, 115, 22, 0.15);
+
+      /* Altitude green — instrument panel success */
+      --altitude-500: #10b981;
+      --altitude-400: #34d399;
+      --altitude-300: #6ee7b7;
+      --altitude-glow: rgba(16, 185, 129, 0.15);
+
+      /* Warning amber — caution indicators */
+      --caution-500: #f59e0b;
+      --caution-400: #fbbf24;
+      --caution-glow: rgba(245, 158, 11, 0.12);
+
+      /* Danger red — alerts */
+      --danger-500: #ef4444;
+      --danger-400: #f87171;
+      --danger-glow: rgba(239, 68, 68, 0.12);
+
+      /* Glass effects */
+      --glass-bg: rgba(15, 23, 41, 0.7);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --glass-highlight: rgba(255, 255, 255, 0.05);
+
+      /* Typography */
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+
+      /* Spacing */
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--sky-900);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       BACKGROUND — Aviation-inspired layered atmosphere
+    ═══════════════════════════════════════════════════════════════════════════ */
+
+    .atmosphere {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .atmosphere::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 120% 60% at 50% 100%, rgba(249, 115, 22, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse 80% 50% at 20% 20%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
+        linear-gradient(180deg, var(--sky-900) 0%, var(--sky-800) 50%, var(--sky-700) 100%);
+    }
+
+    /* Horizon line */
+    .atmosphere::after {
+      content: '';
+      position: absolute;
+      bottom: 30%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(249, 115, 22, 0.2) 20%,
+        rgba(249, 115, 22, 0.4) 50%,
+        rgba(249, 115, 22, 0.2) 80%,
+        transparent 100%
+      );
+      filter: blur(1px);
+    }
+
+    /* Runway lights pattern */
+    .runway-lights {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 4px;
+      height: 200px;
+      background: repeating-linear-gradient(
+        to top,
+        rgba(255, 255, 255, 0.1) 0px,
+        rgba(255, 255, 255, 0.1) 2px,
+        transparent 2px,
+        transparent 20px
+      );
+      opacity: 0.5;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       LAYOUT
+    ═══════════════════════════════════════════════════════════════════════════ */
+
+    .app {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .main-container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 32px 24px 120px;
+      width: 100%;
+      flex: 1;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 32px;
+      margin-top: 8px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       SIDEBAR NAVIGATION — Flight instruments panel
+    ═══════════════════════════════════════════════════════════════════════════ */
+
+    .sidebar {
+      position: sticky;
+      top: 24px;
+      height: fit-content;
+    }
+
+    .nav-panel {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow:
+        0 4px 24px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 var(--glass-highlight);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--horizon-500) 0%, var(--horizon-400) 100%);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+    }
+
+    .brand-icon svg {
+      width: 22px;
+      height: 22px;
+      stroke: white;
+      stroke-width: 2;
+      fill: none;
+    }
+
+    .brand-text {
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: 0.1em;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--sky-200) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .nav-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .nav-step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .nav-step::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--glass-highlight) 0%, transparent 100%);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .nav-step:hover::before {
+      opacity: 1;
+    }
+
+    .nav-step.active {
+      background: linear-gradient(135deg, rgba(249, 115, 22, 0.15) 0%, rgba(249, 115, 22, 0.05) 100%);
+      border: 1px solid rgba(249, 115, 22, 0.3);
+    }
+
+    .nav-step.completed .step-indicator {
+      background: var(--altitude-500);
+      border-color: var(--altitude-400);
+      box-shadow: 0 0 12px var(--altitude-glow);
+    }
+
+    .nav-step.locked {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .step-indicator {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid var(--sky-500);
+      background: var(--sky-700);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+    }
+
+    .nav-step.active .step-indicator {
+      border-color: var(--horizon-500);
+      background: var(--horizon-500);
+      color: white;
+      box-shadow: 0 0 16px rgba(249, 115, 22, 0.4);
+    }
+
+    .step-indicator svg {
+      width: 14px;
+      height: 14px;
+      stroke: white;
+      stroke-width: 2.5;
+    }
+
+    .step-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .step-title {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+
+    .step-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .nav-step.active .step-title {
+      color: var(--horizon-400);
+    }
+
+    /* Flight path connector */
+    .flight-path {
+      position: absolute;
+      left: 33px;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--sky-600);
+      z-index: -1;
+    }
+
+    .nav-steps-container {
+      position: relative;
+      padding-left: 0;
+    }
+
+    /* Nav actions */
+    .nav-actions {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--glass-border);
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--glass-border);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn:hover {
+      background: var(--glass-highlight);
+      border-color: var(--sky-400);
+      color: var(--text-primary);
+    }
+
+    .nav-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       MAIN CONTENT — Accordion Steps
+    ═══════════════════════════════════════════════════════════════════════════ */
+
+    .content {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .accordion {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .accordion.active {
+      border-color: rgba(249, 115, 22, 0.3);
+      box-shadow:
+        0 4px 32px rgba(0, 0, 0, 0.3),
+        0 0 0 1px rgba(249, 115, 22, 0.1),
+        inset 0 1px 0 var(--glass-highlight);
+    }
+
+    .accordion.locked {
+      opacity: 0.5;
+      border-style: dashed;
+    }
+
+    .accordion-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .accordion:not(.locked) .accordion-header:hover {
+      background: var(--glass-highlight);
+    }
+
+    .accordion-title {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .accordion-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      background: var(--sky-700);
+      border: 1px solid var(--sky-600);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    .accordion.active .accordion-icon {
+      background: linear-gradient(135deg, var(--horizon-500) 0%, var(--horizon-400) 100%);
+      border-color: var(--horizon-400);
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+    }
+
+    .accordion.completed .accordion-icon {
+      background: linear-gradient(135deg, var(--altitude-500) 0%, var(--altitude-400) 100%);
+      border-color: var(--altitude-400);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .accordion-icon svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--text-secondary);
+      stroke-width: 2;
+    }
+
+    .accordion.active .accordion-icon svg,
+    .accordion.completed .accordion-icon svg {
+      stroke: white;
+    }
+
+    .accordion-label {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .accordion.locked .accordion-label {
+      color: var(--text-muted);
+    }
+
+    /* Status badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--glass-border);
+      background: var(--sky-700);
+      color: var(--text-secondary);
+    }
+
+    .badge.required {
+      border-color: var(--sky-500);
+      color: var(--text-secondary);
+    }
+
+    .badge.success {
+      background: var(--altitude-glow);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: var(--altitude-400);
+    }
+
+    .badge.warning {
+      background: var(--caution-glow);
+      border-color: rgba(245, 158, 11, 0.3);
+      color: var(--caution-400);
+    }
+
+    .badge.active {
+      background: var(--horizon-glow);
+      border-color: rgba(249, 115, 22, 0.3);
+      color: var(--horizon-400);
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .badge.success .badge-dot {
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Accordion body */
+    .accordion-body {
+      display: none;
+      padding: 0 20px 24px;
+    }
+
+    .accordion.open .accordion-body {
+      display: block;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       STEP 1 — SIGN IN
+    ═══════════════════════════════════════════════════════════════════════════ */
+
+    .hero-section {
+      padding: 8px 0 24px;
+    }
+
+    .hero-title {
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.4;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--sky-200) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-subtitle {
+      font-size: 15px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      max-width: 540px;
+    }
+
+    /* Trust panel */
+    .trust-panel {
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.03) 100%);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: var(--radius-md);
+      padding: 18px 20px;
+      margin: 20px 0 24px;
+    }
+
+    .trust-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .trust-item {
+      display: flex;
+      gap: 12px;
+      font-size: 14px;
+      color: var(--sky-200);
+      line-height: 1.6;
+    }
+
+    .trust-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .trust-icon svg {
+      width: 20px;
+      height: 20px;
+      stroke: var(--sky-300);
+      stroke-width: 2;
+    }
+
+    /* Auth buttons */
+    .auth-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 12px 20px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .btn:hover::before {
+      opacity: 1;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--horizon-500) 0%, #ea580c 100%);
+      color: white;
+      box-shadow: 0 4px 16px rgba(249, 115, 22, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(249, 115, 22, 0.4);
+    }
+
+    .btn-secondary {
+      background: var(--sky-700);
+      border: 1px solid var(--sky-500);
+      color: var(--text-primary);
+    }
+
+    .btn-secondary:hover {
+      background: var(--sky-600);
+      border-color: var(--sky-400);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+    }
+
+    .btn-ghost:hover {
+      background: var(--glass-highlight);
+      color: var(--text-primary);
+    }
+
+    .btn-danger {
+      background: var(--danger-glow);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--danger-400);
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: var(--danger-400);
+    }
+
+    .btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       STEP 2 — CONNECT ACCOUNTS
+    ═══════════════════════════════════════════════════════════════════════════ */
+
+    .info-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: var(--radius-md);
+      margin-bottom: 20px;
+      font-size: 13px;
+      color: var(--sky-200);
+    }
+
+    .info-banner svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--sky-300);
+      stroke-width: 2;
+      flex-shrink: 0;
+    }
+
+    .credentials-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .credential-card {
+      background: var(--sky-800);
+      border: 1px solid var(--sky-600);
+      border-radius: var(--radius-md);
+      padding: 18px;
+    }
+
+    .credential-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--sky-600);
+    }
+
+    .credential-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      background: var(--sky-700);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .credential-logo svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--text-secondary);
+      stroke-width: 2;
+    }
+
+    .credential-name {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .form-input {
+      width: 100%;
+      height: 42px;
+      padding: 0 14px;
+      background: var(--sky-700);
+      border: 1px solid var(--sky-500);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s ease;
+    }
+
+    .form-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--horizon-500);
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+    }
+
+    /* Filters card */
+    .filters-card {
+      background: var(--sky-800);
+      border: 1px solid var(--sky-600);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      margin-top: 16px;
+    }
+
+    .filters-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .filters-header svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--text-secondary);
+      stroke-width: 2;
+    }
+
+    .filters-title {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .filters-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 140px;
+      gap: 14px;
+    }
+
+    .form-helper {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       STEP 3 — REVIEW
+    ═══════════════════════════════════════════════════════════════════════════ */
+
+    .progress-card {
+      background: var(--sky-800);
+      border: 1px solid var(--sky-600);
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+      margin-bottom: 16px;
+    }
+
+    .progress-card.success {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.03) 100%);
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .progress-title {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .progress-card.success .progress-title {
+      color: var(--altitude-400);
+    }
+
+    .progress-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .progress-bar {
+      height: 6px;
+      background: var(--sky-600);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--horizon-500) 0%, var(--horizon-400) 100%);
+      border-radius: 3px;
+      transition: width 0.5s ease;
+    }
+
+    .progress-card.success .progress-fill {
+      background: linear-gradient(90deg, var(--altitude-500) 0%, var(--altitude-400) 100%);
+    }
+
+    .progress-helper {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 10px;
+      line-height: 1.5;
+    }
+
+    .progress-card.success .progress-helper {
+      color: var(--altitude-300);
+    }
+
+    /* Summary chips */
+    .summary-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .summary-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--sky-200);
+    }
+
+    .summary-chip.warning {
+      background: var(--caution-glow);
+      border-color: rgba(245, 158, 11, 0.3);
+      color: var(--caution-400);
+    }
+
+    /* Data table */
+    .data-table {
+      background: var(--sky-800);
+      border: 1px solid var(--sky-600);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }
+
+    .table-header {
+      display: grid;
+      grid-template-columns: 100px 1.5fr 100px 100px 80px 80px;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--sky-700);
+      border-bottom: 1px solid var(--sky-600);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .table-body {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .table-row {
+      display: grid;
+      grid-template-columns: 100px 1.5fr 100px 100px 80px 80px;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--sky-700);
+      font-size: 13px;
+      align-items: center;
+      transition: background 0.15s ease;
+    }
+
+    .table-row:last-child {
+      border-bottom: none;
+    }
+
+    .table-row:hover {
+      background: var(--sky-700);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .status-pill.ok {
+      background: var(--altitude-glow);
+      color: var(--altitude-400);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .status-pill.warning {
+      background: var(--caution-glow);
+      color: var(--caution-400);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .flight-id {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .airport-code {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .table-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+      align-items: center;
+    }
+
+    .link-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      padding: 0;
+    }
+
+    .link-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .link-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       STEP 4 — IMPORT RESULTS
+    ═══════════════════════════════════════════════════════════════════════════ */
+
+    .results-card {
+      background: var(--sky-800);
+      border: 1px solid var(--sky-600);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      margin-top: 16px;
+    }
+
+    .results-header {
+      padding: 14px 18px;
+      background: var(--sky-700);
+      border-bottom: 1px solid var(--sky-600);
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .results-body {
+      padding: 4px 0;
+    }
+
+    .result-row {
+      display: grid;
+      grid-template-columns: 120px 1fr auto;
+      gap: 16px;
+      padding: 14px 18px;
+      align-items: start;
+      border-bottom: 1px solid var(--sky-700);
+    }
+
+    .result-row:last-child {
+      border-bottom: none;
+    }
+
+    .result-label {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .result-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .result-count {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .result-count strong {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    /* Conclusion panel */
+    .conclusion-panel {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.03) 100%);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-top: 20px;
+    }
+
+    .conclusion-title {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--altitude-400);
+      margin-bottom: 8px;
+    }
+
+    .conclusion-text {
+      font-size: 13px;
+      color: var(--altitude-300);
+      line-height: 1.7;
+      margin-bottom: 16px;
+    }
+
+    .conclusion-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════════════════════════════════════════ */
+
+    .site-footer {
+      margin-top: auto;
+      border-top: 1px solid var(--glass-border);
+      padding: 20px 0;
+    }
+
+    .footer-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+    }
+
+    .footer-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      transition: color 0.2s ease;
+    }
+
+    .footer-links a:hover {
+      color: var(--text-primary);
+    }
+
+    .footer-copy {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       MOBILE RESPONSIVE
+    ═══════════════════════════════════════════════════════════════════════════ */
+
+    .mobile-header {
+      display: none;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+      padding: 12px 20px;
+    }
+
+    .mobile-header-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .mobile-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .mobile-brand-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--horizon-500) 0%, var(--horizon-400) 100%);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mobile-brand-icon svg {
+      width: 18px;
+      height: 18px;
+      stroke: white;
+      stroke-width: 2;
+    }
+
+    .mobile-brand-text {
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.1em;
+    }
+
+    .mobile-stepper {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--glass-border);
+      padding: 14px 20px 24px;
+      z-index: 100;
+    }
+
+    .stepper-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .stepper-label {
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .stepper-next {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .stepper-bar {
+      height: 4px;
+      background: var(--sky-600);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .stepper-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--horizon-500) 0%, var(--horizon-400) 100%);
+      border-radius: 2px;
+      width: 25%;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      .mobile-header {
+        display: block;
+      }
+
+      .mobile-stepper {
+        display: block;
+      }
+
+      .main-container {
+        padding: 20px 16px 140px;
+      }
+
+      .credentials-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .filters-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .table-header,
+      .table-row {
+        grid-template-columns: 80px 1fr 80px 80px;
+        font-size: 12px;
+      }
+
+      .table-header > *:nth-child(5),
+      .table-header > *:nth-child(6),
+      .table-row > *:nth-child(5),
+      .table-row > *:nth-child(6) {
+        display: none;
+      }
+
+      .auth-buttons {
+        flex-direction: column;
+      }
+
+      .auth-buttons .btn {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .filters-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .result-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .result-row .status-pill {
+        order: -1;
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════
+       ANIMATIONS
+    ═══════════════════════════════════════════════════════════════════════════ */
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 1; }
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .accordion.open .accordion-body {
+      animation: fadeIn 0.3s ease;
+    }
+
+    /* Glow effects for active elements */
+    .accordion.active {
+      position: relative;
+    }
+
+    .accordion.active::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: 20%;
+      right: 20%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--horizon-500), transparent);
+      opacity: 0.5;
+    }
+
+    /* Stars in background */
+    .stars {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: white;
+      border-radius: 50%;
+      opacity: 0.3;
+      animation: twinkle 3s ease-in-out infinite;
+    }
+
+    .star:nth-child(1) { top: 10%; left: 15%; animation-delay: 0s; }
+    .star:nth-child(2) { top: 20%; left: 85%; animation-delay: 0.5s; }
+    .star:nth-child(3) { top: 5%; left: 45%; animation-delay: 1s; }
+    .star:nth-child(4) { top: 15%; left: 70%; animation-delay: 1.5s; }
+    .star:nth-child(5) { top: 8%; left: 30%; animation-delay: 2s; }
+    .star:nth-child(6) { top: 25%; left: 55%; animation-delay: 0.3s; }
+    .star:nth-child(7) { top: 12%; left: 90%; animation-delay: 0.8s; }
+    .star:nth-child(8) { top: 3%; left: 60%; animation-delay: 1.3s; }
+    .star:nth-child(9) { top: 18%; left: 25%; animation-delay: 1.8s; }
+    .star:nth-child(10) { top: 22%; left: 78%; animation-delay: 2.3s; }
+
+    /* Aviation instrument styling for progress */
+    .progress-card {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+      background: var(--sky-600);
+    }
+
+    .progress-card.success::before {
+      background: linear-gradient(180deg, var(--altitude-500), var(--altitude-400));
+    }
+
+    /* Altitude indicator marks */
+    .data-table::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: repeating-linear-gradient(
+        to bottom,
+        var(--sky-600) 0px,
+        var(--sky-600) 2px,
+        transparent 2px,
+        transparent 20px
+      );
+      opacity: 0.5;
+    }
+
+    .data-table {
+      position: relative;
+    }
+
+    /* Hover animations */
+    .btn {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn-primary:active {
+      transform: translateY(1px);
+    }
+
+    /* Card hover effects */
+    .credential-card {
+      transition: all 0.3s ease;
+    }
+
+    .credential-card:hover {
+      border-color: var(--sky-500);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Focus states for accessibility */
+    .form-input:focus {
+      outline: none;
+      border-color: var(--horizon-500);
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15), 0 0 12px rgba(249, 115, 22, 0.1);
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid var(--horizon-500);
+      outline-offset: 2px;
+    }
+
+    /* Table row hover glow */
+    .table-row {
+      position: relative;
+    }
+
+    .table-row::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: transparent;
+      transition: background 0.2s ease;
+    }
+
+    .table-row:hover::before {
+      background: var(--horizon-500);
+    }
+
+    /* Nav step connecting line */
+    .nav-steps {
+      position: relative;
+    }
+
+    .nav-steps::before {
+      content: '';
+      position: absolute;
+      left: 33px;
+      top: 28px;
+      bottom: 28px;
+      width: 2px;
+      background: var(--sky-600);
+      z-index: 0;
+    }
+
+    .nav-step {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Brand icon float animation */
+    .brand-icon {
+      animation: float 4s ease-in-out infinite;
+    }
+
+    /* Smooth scroll behavior */
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /* Loading shimmer effect (for future use) */
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+
+    .skeleton {
+      background: linear-gradient(
+        90deg,
+        var(--sky-700) 25%,
+        var(--sky-600) 50%,
+        var(--sky-700) 75%
+      );
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: var(--radius-sm);
+    }
+  </style>
+</head>
+<body>
+  <!-- Atmospheric background -->
+  <div class="atmosphere">
+    <div class="stars">
+      <div class="star"></div>
+      <div class="star"></div>
+      <div class="star"></div>
+      <div class="star"></div>
+      <div class="star"></div>
+      <div class="star"></div>
+      <div class="star"></div>
+      <div class="star"></div>
+      <div class="star"></div>
+      <div class="star"></div>
+    </div>
+    <div class="runway-lights"></div>
+  </div>
+
+  <div class="app">
+    <!-- Mobile header -->
+    <header class="mobile-header">
+      <div class="mobile-header-inner">
+        <div class="mobile-brand">
+          <div class="mobile-brand-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>
+            </svg>
+          </div>
+          <span class="mobile-brand-text">SKYBRIDGE</span>
+        </div>
+        <div class="mobile-actions">
+          <button class="nav-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="main-container">
+      <div class="layout">
+        <!-- Sidebar navigation -->
+        <aside class="sidebar">
+          <nav class="nav-panel">
+            <div class="brand">
+              <div class="brand-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>
+                </svg>
+              </div>
+              <span class="brand-text">SKYBRIDGE</span>
+            </div>
+
+            <div class="nav-steps-container">
+              <div class="nav-steps">
+                <div class="nav-step active">
+                  <div class="step-indicator">1</div>
+                  <div class="step-content">
+                    <div class="step-title">Sign In</div>
+                    <div class="step-subtitle">Authenticate to begin</div>
+                  </div>
+                </div>
+
+                <div class="nav-step locked">
+                  <div class="step-indicator">2</div>
+                  <div class="step-content">
+                    <div class="step-title">Connect</div>
+                    <div class="step-subtitle">Link your accounts</div>
+                  </div>
+                </div>
+
+                <div class="nav-step locked">
+                  <div class="step-indicator">3</div>
+                  <div class="step-content">
+                    <div class="step-title">Review</div>
+                    <div class="step-subtitle">Verify flight data</div>
+                  </div>
+                </div>
+
+                <div class="nav-step locked">
+                  <div class="step-indicator">4</div>
+                  <div class="step-content">
+                    <div class="step-title">Import</div>
+                    <div class="step-subtitle">Transfer to FlySto</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="nav-actions">
+              <button class="nav-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 12a9 9 0 1 0 3-6.7"/>
+                  <path d="M3 3v6h6"/>
+                </svg>
+                Start Over
+              </button>
+              <button class="nav-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+                Sign Out
+              </button>
+            </div>
+          </nav>
+        </aside>
+
+        <!-- Main content -->
+        <main class="content">
+          <!-- Step 1: Sign In -->
+          <section class="accordion active open">
+            <div class="accordion-header">
+              <div class="accordion-title">
+                <div class="accordion-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                    <polyline points="10 17 15 12 10 7"/>
+                    <line x1="15" y1="12" x2="3" y2="12"/>
+                  </svg>
+                </div>
+                <span class="accordion-label">1. Sign In</span>
+              </div>
+              <span class="badge required">Required</span>
+            </div>
+            <div class="accordion-body">
+              <div class="hero-section">
+                <h1 class="hero-title">Import your CloudAhoy flights into FlySto</h1>
+                <p class="hero-subtitle">
+                  Connect both accounts, review your flight history, and approve the import.
+                  We'll generate a detailed report so you can verify every transferred flight.
+                </p>
+              </div>
+
+              <div class="trust-panel">
+                <ul class="trust-list">
+                  <li class="trust-item">
+                    <span class="trust-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                      </svg>
+                    </span>
+                    <span>Sign in identifies your job, protects your data, and lets you resume imports later. Use email or social login.</span>
+                  </li>
+                  <li class="trust-item">
+                    <span class="trust-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                      </svg>
+                    </span>
+                    <span>Your data stays private: credentials are used only for this job and never stored. Results are retained for 10 days, then deleted.</span>
+                  </li>
+                  <li class="trust-item">
+                    <span class="trust-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>
+                      </svg>
+                    </span>
+                    <span>We import flights, times, routes, aircraft details, and remarks. You can review everything before the final import.</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div class="auth-buttons">
+                <button class="btn btn-primary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="5" width="18" height="14" rx="2"/>
+                    <polyline points="3 7 12 13 21 7"/>
+                  </svg>
+                  Sign in with Email
+                </button>
+                <button class="btn btn-secondary">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                  </svg>
+                  Continue with Google
+                </button>
+                <button class="btn btn-secondary">
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                  </svg>
+                  Continue with Apple
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Step 2: Connect -->
+          <section class="accordion locked">
+            <div class="accordion-header">
+              <div class="accordion-title">
+                <div class="accordion-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                  </svg>
+                </div>
+                <span class="accordion-label">2. Connect Accounts</span>
+              </div>
+              <span class="badge">Sign in first</span>
+            </div>
+            <div class="accordion-body">
+              <div class="info-banner">
+                <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="16" x2="12" y2="12"/>
+                  <line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                <span>Credentials are used only for this import session and are never stored.</span>
+              </div>
+
+              <div class="credentials-grid">
+                <div class="credential-card">
+                  <div class="credential-header">
+                    <div class="credential-logo">
+                      <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M2 12h20"/>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                      </svg>
+                    </div>
+                    <span class="credential-name">CloudAhoy</span>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-input" placeholder="your@email.com">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" placeholder="Enter password">
+                  </div>
+                </div>
+
+                <div class="credential-card">
+                  <div class="credential-header">
+                    <div class="credential-logo">
+                      <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                      </svg>
+                    </div>
+                    <span class="credential-name">FlySto</span>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-input" placeholder="your@email.com">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" placeholder="Enter password">
+                  </div>
+                </div>
+              </div>
+
+              <div class="filters-card">
+                <div class="filters-header">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+                  </svg>
+                  <span class="filters-title">Import Filters</span>
+                </div>
+                <div class="filters-grid">
+                  <div class="form-group">
+                    <label class="form-label">Start Date</label>
+                    <input type="text" class="form-input" placeholder="YYYY-MM-DD">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">End Date</label>
+                    <input type="text" class="form-input" placeholder="YYYY-MM-DD">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Max Flights</label>
+                    <input type="text" class="form-input" placeholder="e.g., 50">
+                  </div>
+                </div>
+                <p class="form-helper">Leave empty to import all available flights. Max flights caps the total number of flights that will be imported.</p>
+              </div>
+
+              <div class="action-row">
+                <button class="btn btn-primary">Connect & Review</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Step 3: Review -->
+          <section class="accordion locked">
+            <div class="accordion-header">
+              <div class="accordion-title">
+                <div class="accordion-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10 9 9 9 8 9"/>
+                  </svg>
+                </div>
+                <span class="accordion-label">3. Review Flights</span>
+              </div>
+              <span class="badge">Connect first</span>
+            </div>
+            <div class="accordion-body">
+              <div class="progress-card success">
+                <div class="progress-header">
+                  <span class="progress-title">Review Complete</span>
+                  <span class="progress-meta">Elapsed: 2m 14s</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 100%"></div>
+                </div>
+                <p class="progress-helper">All flights fetched from CloudAhoy. Review the data below before importing.</p>
+              </div>
+
+              <div class="summary-chips">
+                <span class="summary-chip">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>
+                  </svg>
+                  12 Flights
+                </span>
+                <span class="summary-chip">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  24.6 Hours
+                </span>
+                <span class="summary-chip warning">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                  2 Missing Registration
+                </span>
+              </div>
+
+              <div class="data-table">
+                <div class="table-header">
+                  <div>Status</div>
+                  <div>Flight ID</div>
+                  <div>Date</div>
+                  <div>Registration</div>
+                  <div>Origin</div>
+                  <div>Dest</div>
+                </div>
+                <div class="table-body">
+                  <div class="table-row">
+                    <div><span class="status-pill ok">OK</span></div>
+                    <div class="flight-id">...X18xRk06bzjO</div>
+                    <div>2025-11-21</div>
+                    <div class="airport-code">N12SB</div>
+                    <div class="airport-code">KPAO</div>
+                    <div class="airport-code">KTVL</div>
+                  </div>
+                  <div class="table-row">
+                    <div><span class="status-pill warning">Review</span></div>
+                    <div class="flight-id">...V5kNEt0wFs8g</div>
+                    <div>2025-11-23</div>
+                    <div style="color: var(--caution-400);">--</div>
+                    <div class="airport-code">KSJC</div>
+                    <div class="airport-code">KSNS</div>
+                  </div>
+                  <div class="table-row">
+                    <div><span class="status-pill ok">OK</span></div>
+                    <div class="flight-id">...X3cA5bJDzh9M</div>
+                    <div>2025-11-24</div>
+                    <div class="airport-code">N12SB</div>
+                    <div class="airport-code">KPAO</div>
+                    <div class="airport-code">KSQL</div>
+                  </div>
+                  <div class="table-row">
+                    <div><span class="status-pill ok">OK</span></div>
+                    <div class="flight-id">...YcBHrG7zHSdz</div>
+                    <div>2025-11-26</div>
+                    <div class="airport-code">N12SB</div>
+                    <div class="airport-code">KPAO</div>
+                    <div class="airport-code">KAPC</div>
+                  </div>
+                  <div class="table-row">
+                    <div><span class="status-pill ok">OK</span></div>
+                    <div class="flight-id">...bVX81F2Wonzs</div>
+                    <div>2025-11-27</div>
+                    <div class="airport-code">N12SB</div>
+                    <div class="airport-code">KPAO</div>
+                    <div class="airport-code">KMRY</div>
+                  </div>
+                  <div class="table-row">
+                    <div><span class="status-pill warning">Review</span></div>
+                    <div class="flight-id">...ffeyJppG6u7E</div>
+                    <div>2025-11-28</div>
+                    <div style="color: var(--caution-400);">--</div>
+                    <div class="airport-code">KPAO</div>
+                    <div class="airport-code">KSTS</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="table-actions">
+                <button class="link-btn">Show more flights</button>
+                <span style="color: var(--text-muted); font-size: 12px;">Showing 6 of 12</span>
+              </div>
+
+              <div class="action-row">
+                <button class="btn btn-primary">Accept & Start Import</button>
+                <button class="btn btn-ghost">Edit Filters</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Step 4: Import -->
+          <section class="accordion locked">
+            <div class="accordion-header">
+              <div class="accordion-title">
+                <div class="accordion-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                </div>
+                <span class="accordion-label">4. Import Results</span>
+              </div>
+              <span class="badge">Approve first</span>
+            </div>
+            <div class="accordion-body">
+              <div class="progress-card success">
+                <div class="progress-header">
+                  <span class="progress-title">Import Completed</span>
+                  <span class="progress-meta">Elapsed: 4m 32s</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: 100%"></div>
+                </div>
+              </div>
+
+              <div class="results-card">
+                <div class="results-header">Import Results</div>
+                <div class="results-body">
+                  <div class="result-row">
+                    <div><span class="status-pill ok">OK</span></div>
+                    <div>
+                      <div class="result-label">Imported Flights</div>
+                      <div class="result-desc">All approved flights created in FlySto</div>
+                    </div>
+                    <div class="result-count">Total: <strong>46</strong></div>
+                  </div>
+                  <div class="result-row">
+                    <div><span class="status-pill ok">OK</span></div>
+                    <div>
+                      <div class="result-label">Skipped or Pending</div>
+                      <div class="result-desc">Pending: 0 / Failed: 0</div>
+                    </div>
+                    <div class="result-count">Total: <strong>0</strong></div>
+                  </div>
+                  <div class="result-row">
+                    <div><span class="status-pill warning">Review</span></div>
+                    <div>
+                      <div class="result-label">Registration Missing</div>
+                      <div class="result-desc">Flights imported without aircraft registration</div>
+                    </div>
+                    <div class="result-count">Total: <strong>2</strong></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="action-row">
+                <button class="btn btn-ghost">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                  Download Report
+                </button>
+              </div>
+
+              <div class="conclusion-panel">
+                <div class="conclusion-title">Import Successful</div>
+                <p class="conclusion-text">
+                  Review your imported flights in FlySto, download the report for your records, and keep this page bookmarked while results are retained.
+                  We keep run results for 10 days. You can delete them now if you prefer.
+                </p>
+                <div class="conclusion-actions">
+                  <button class="btn btn-primary">Open FlySto</button>
+                  <button class="btn btn-danger">Delete Results Now</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-links">
+          <a href="#">Imprint</a>
+          <a href="#">Privacy</a>
+          <a href="#">Terms</a>
+          <a href="#">Support</a>
+        </div>
+        <div class="footer-copy">&copy; 2025 Inspirespace e.U.</div>
+      </div>
+    </footer>
+
+    <!-- Mobile stepper -->
+    <div class="mobile-stepper">
+      <div class="stepper-info">
+        <span class="stepper-label">Step 1 of 4 &middot; Sign In</span>
+        <span class="stepper-next">Next: Connect</span>
+      </div>
+      <div class="stepper-bar">
+        <div class="stepper-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SKYBRIDGE INTERACTIVE DEMO
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    const state = {
+      currentStep: 0, // 0-3
+      signedIn: false,
+      connected: false,
+      reviewReady: true, // Demo: show review as complete
+      importComplete: true, // Demo: show import as complete
+    };
+
+    const steps = ['signin', 'connect', 'review', 'import'];
+    const stepTitles = ['Sign In', 'Connect', 'Review', 'Import'];
+
+    // Elements
+    const navSteps = document.querySelectorAll('.nav-step');
+    const accordions = document.querySelectorAll('.accordion');
+
+    function updateUI() {
+      // Update nav steps
+      navSteps.forEach((step, index) => {
+        step.classList.remove('active', 'completed', 'locked');
+        if (index < state.currentStep) {
+          step.classList.add('completed');
+          step.querySelector('.step-indicator').innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          `;
+        } else if (index === state.currentStep) {
+          step.classList.add('active');
+          step.querySelector('.step-indicator').textContent = index + 1;
+        } else {
+          step.classList.add('locked');
+          step.querySelector('.step-indicator').textContent = index + 1;
+        }
+      });
+
+      // Update accordions
+      accordions.forEach((acc, index) => {
+        acc.classList.remove('active', 'completed', 'locked', 'open');
+        if (index < state.currentStep) {
+          acc.classList.add('completed');
+        } else if (index === state.currentStep) {
+          acc.classList.add('active', 'open');
+        } else {
+          acc.classList.add('locked');
+        }
+      });
+
+      // Update badges
+      updateBadges();
+
+      // Update mobile stepper
+      updateMobileStepper();
+    }
+
+    function updateBadges() {
+      const badges = document.querySelectorAll('.accordion .badge');
+
+      badges[0].className = state.currentStep > 0 ? 'badge success' : 'badge required';
+      badges[0].innerHTML = state.currentStep > 0
+        ? '<span class="badge-dot"></span>Signed in'
+        : 'Required';
+
+      badges[1].className = state.currentStep > 1 ? 'badge success' : (state.currentStep === 1 ? 'badge active' : 'badge');
+      badges[1].innerHTML = state.currentStep > 1
+        ? '<span class="badge-dot"></span>Connected'
+        : (state.currentStep === 1 ? 'Ready' : 'Sign in first');
+
+      badges[2].className = state.currentStep > 2 ? 'badge success' : (state.currentStep === 2 ? 'badge active' : 'badge');
+      badges[2].innerHTML = state.currentStep > 2
+        ? '<span class="badge-dot"></span>Approved'
+        : (state.currentStep === 2 ? 'Ready for review' : 'Connect first');
+
+      badges[3].className = state.currentStep === 3 && state.importComplete ? 'badge success' : (state.currentStep === 3 ? 'badge active' : 'badge');
+      badges[3].innerHTML = state.currentStep === 3 && state.importComplete
+        ? '<span class="badge-dot"></span>Complete'
+        : (state.currentStep === 3 ? 'Running...' : 'Approve first');
+    }
+
+    function updateMobileStepper() {
+      const label = document.querySelector('.stepper-label');
+      const next = document.querySelector('.stepper-next');
+      const fill = document.querySelector('.stepper-fill');
+
+      label.textContent = `Step ${state.currentStep + 1} of 4 · ${stepTitles[state.currentStep]}`;
+      next.textContent = state.currentStep < 3 ? `Next: ${stepTitles[state.currentStep + 1]}` : 'Final step';
+      fill.style.width = `${((state.currentStep + 1) / 4) * 100}%`;
+    }
+
+    function goToStep(index) {
+      if (index <= state.currentStep + 1 && index >= 0 && index < 4) {
+        state.currentStep = index;
+        updateUI();
+      }
+    }
+
+    // Click handlers for nav steps
+    navSteps.forEach((step, index) => {
+      step.addEventListener('click', () => {
+        if (index <= state.currentStep) {
+          goToStep(index);
+        }
+      });
+    });
+
+    // Click handlers for accordion headers
+    document.querySelectorAll('.accordion-header').forEach((header, index) => {
+      header.addEventListener('click', () => {
+        if (index <= state.currentStep) {
+          goToStep(index);
+        }
+      });
+    });
+
+    // Auth button handlers (demo)
+    document.querySelectorAll('.auth-buttons .btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.signedIn = true;
+        goToStep(1);
+      });
+    });
+
+    // Connect button handler
+    document.querySelector('.filters-card')?.closest('.accordion-body')?.querySelector('.btn-primary')?.addEventListener('click', () => {
+      state.connected = true;
+      goToStep(2);
+    });
+
+    // Review accept button
+    document.querySelectorAll('.action-row .btn-primary').forEach((btn, i) => {
+      if (i === 1) { // Second primary button is the Accept one
+        btn.addEventListener('click', () => {
+          goToStep(3);
+        });
+      }
+    });
+
+    // Initial state
+    updateUI();
+  </script>
+</body>
+</html>
