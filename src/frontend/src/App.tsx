@@ -967,12 +967,35 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell min-h-screen flex flex-col bg-gradient-to-b from-[#f7f9fc] to-[#eef3f8] text-[#1c2430] dark:bg-gradient-to-b dark:from-[#0b1120] dark:to-[#0f172a] dark:text-slate-100">
-      <header className="sticky top-0 z-40 border-b border-[#d9e1ec] bg-white/95 backdrop-blur dark:border-sky-900/60 dark:bg-slate-950/90">
-        <div className="absolute inset-x-0 top-0 h-1 bg-[#f1f4f8] dark:bg-slate-900/70" />
+    <div className="app-shell relative min-h-screen flex flex-col text-foreground">
+      {/* Atmospheric background */}
+      <div className="atmosphere">
+        <div className="stars">
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+        </div>
+        <div className="horizon-line"></div>
+        <div className="runway-lights"></div>
+      </div>
+
+      <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl dark:border-[hsl(var(--sky-accent))]/15 dark:bg-[hsl(var(--cockpit-dark))]/90">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--horizon))]/30 to-transparent" />
         <div className="container flex h-14 items-center justify-between sm:h-16">
           <a
-            className="text-xs font-semibold tracking-[0.28em] text-[#5b6775] hover:text-foreground dark:text-slate-300"
+            className="text-xs font-bold tracking-[0.3em] text-muted-foreground hover:text-foreground transition-colors dark:text-[hsl(var(--horizon))]/80 dark:hover:text-[hsl(var(--horizon))]"
             href={flow.signedIn ? "/app/" : "/"}
             onClick={(event) => navigateWithFade(event, flow.signedIn ? "/app/" : "/")}
           >
@@ -984,7 +1007,7 @@ export default function App() {
                 Sign up / Sign in
               </Button>
             )}
-            {!flow.signedIn && AUTH_MODE === "firebase" && (
+            {!flow.signedIn && AUTH_MODE === "firebase" && firebaseAuthReady && (
               <FirebaseAuthDialog
                 open={showAuthDialog}
                 onOpenChange={setShowAuthDialog}
@@ -1066,7 +1089,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="container flex-1 pb-16 pt-5 lg:pb-8">
+      <main className="container relative z-10 flex-1 pb-16 pt-5 lg:pb-8">
         {!flow.signedIn &&
           AUTH_MODE === "oidc" &&
           (isSignInRedirect || isAuthCallback) && (
@@ -1076,28 +1099,37 @@ export default function App() {
         {!flow.signedIn &&
           !(AUTH_MODE === "oidc" && (isSignInRedirect || isAuthCallback)) && (
             <div className="mx-auto max-w-3xl space-y-4">
+              {/* Show loading state while Firebase Auth is initializing */}
+              {AUTH_MODE === "firebase" && !firebaseAuthReady && (
+                <div className="flex min-h-[40vh] items-center justify-center">
+                  <div className="text-center space-y-3">
+                    <div className="h-8 w-8 mx-auto rounded-full border-2 border-[hsl(var(--horizon))]/30 border-t-[hsl(var(--horizon))] animate-spin" />
+                    <p className="text-sm text-muted-foreground">Loading...</p>
+                  </div>
+                </div>
+              )}
               {AUTH_MODE !== "firebase" && (
-                <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
+                <Card className="glass-card rounded-2xl border-border/40 dark:border-[hsl(var(--sky-accent))]/20">
                   <CardHeader className="space-y-2">
-                    <CardTitle>Sign in to start your import</CardTitle>
+                    <CardTitle className="text-xl">Sign in to start your import</CardTitle>
                     <CardDescription>
                       Identify your job and keep your progress in sync across devices.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {signInError && (
-                      <Alert className="border-rose-200 bg-rose-50/70 text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-100">
+                      <Alert className="border-rose-200 bg-rose-50/70 text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100">
                         <AlertTitle>Sign-in failed</AlertTitle>
                         <AlertDescription>{signInError}</AlertDescription>
                       </Alert>
                     )}
-                    <Button onClick={handleSignIn} disabled={actionLoading}>
+                    <Button onClick={handleSignIn} disabled={actionLoading} className="btn-primary-glow">
                       Sign up / Sign in
                     </Button>
                   </CardContent>
                 </Card>
               )}
-              {AUTH_MODE === "firebase" && (
+              {AUTH_MODE === "firebase" && firebaseAuthReady && (
                 <FirebaseAuthCard
                   signInError={signInError}
                   authReady={firebaseAuthReady}
@@ -1134,34 +1166,34 @@ export default function App() {
               />
             )}
             <div className="mb-4 lg:hidden">
-              <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
+              <Card className="glass-card rounded-2xl">
                 <CardContent className="space-y-2 py-3">
-                  <div className="flex items-center justify-between text-xs text-[#5b6775]">
-                    <span>Step {stepIndex} of 3</span>
-                    <span>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="font-medium">Step {stepIndex} of 3</span>
+                    <span className="text-[hsl(var(--horizon))]">
                       {nextLabel === "All steps completed"
                         ? nextLabel
                         : `Next: ${nextLabel}`}
                     </span>
                   </div>
-                  <Progress value={(stepIndex / 3) * 100} />
+                  <Progress value={(stepIndex / 3) * 100} className="progress-bar-aviation" />
                 </CardContent>
               </Card>
             </div>
 
             {actionNotice && (
-              <Alert className="mb-4 border-emerald-200 bg-emerald-50/60 text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100">
+              <Alert className="mb-4 border-[hsl(var(--altitude))]/30 bg-[hsl(var(--altitude))]/10 text-[hsl(var(--altitude))] dark:border-[hsl(var(--altitude))]/30 dark:bg-[hsl(var(--altitude))]/10">
                 <AlertTitle>Done</AlertTitle>
                 <AlertDescription>{actionNotice.message}</AlertDescription>
               </Alert>
             )}
 
-            <div className="grid min-w-0 gap-4 lg:grid-cols-[240px_1fr]">
+            <div className="grid min-w-0 gap-4 lg:grid-cols-[260px_1fr]">
           <aside className="hidden space-y-3 lg:sticky lg:top-20 lg:block lg:self-start">
-            <Card className="relative overflow-hidden rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.14),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.2),_transparent_60%)]" />
+            <Card className="glass-card relative overflow-hidden rounded-2xl">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.06),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.1),_transparent_60%)]" />
               <CardHeader className="pb-2">
-                <CardTitle className="text-xs uppercase tracking-[0.28em] text-[#5b6775]">
+                <CardTitle className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground dark:text-muted-foreground/60">
                   Progress
                 </CardTitle>
               </CardHeader>
@@ -1186,8 +1218,8 @@ export default function App() {
           </aside>
 
           <section className="min-w-0 space-y-2.5">
-            <div className="relative min-w-0 overflow-hidden rounded-xl border border-[#d1dbea] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.12),_transparent_58%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.18),_transparent_58%)]" />
+            <div className="glass-card-accent relative min-w-0 rounded-2xl">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.04),_transparent_58%)] dark:bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.08),_transparent_58%)]" />
             <Accordion
               type="single"
               collapsible
@@ -1223,7 +1255,7 @@ export default function App() {
                 onRefresh={refresh}
               />
 
-              <div className="border-t border-[#e3ebf5] dark:border-sky-900/60" />
+              <div className="border-t border-border/30 dark:border-[hsl(var(--sky-accent))]/10" />
               <ReviewSection
                 allowed={allowedSteps.has("review")}
                 reviewComplete={reviewComplete}
@@ -1253,7 +1285,7 @@ export default function App() {
                 formatDate={formatDate}
               />
 
-              <div className="border-t border-[#e3ebf5] dark:border-sky-900/60" />
+              <div className="border-t border-border/30 dark:border-[hsl(var(--sky-accent))]/10" />
               <ImportSection
                 allowed={allowedSteps.has("import")}
                 importComplete={importComplete}

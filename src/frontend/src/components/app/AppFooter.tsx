@@ -4,12 +4,12 @@ import { navigateWithFade } from "@/lib/navigation";
 /** Render AppFooter component. */
 export function AppFooter() {
   return (
-    <footer className="border-t bg-background/80">
+    <footer className="relative z-10 border-t border-border/30 bg-background/80 backdrop-blur-sm dark:border-[hsl(var(--sky-accent))]/10">
       <div className="container flex flex-wrap items-center justify-between gap-3 pb-20 pt-6 text-sm text-muted-foreground lg:py-6">
         <div>
           © {new Date().getFullYear()}{" "}
           <a
-            className="hover:text-foreground"
+            className="transition-colors hover:text-foreground dark:hover:text-[hsl(var(--sky-accent))]"
             href="https://www.inspirespace.co"
             target="_blank"
             rel="noreferrer"
@@ -19,21 +19,21 @@ export function AppFooter() {
         </div>
         <div className="flex flex-wrap gap-4">
           <a
-            className="hover:text-foreground"
+            className="transition-colors hover:text-foreground dark:hover:text-[hsl(var(--sky-accent))]"
             href="/imprint/"
             onClick={(event) => navigateWithFade(event, "/imprint/")}
           >
             Imprint
           </a>
           <a
-            className="hover:text-foreground"
+            className="transition-colors hover:text-foreground dark:hover:text-[hsl(var(--sky-accent))]"
             href="/privacy/"
             onClick={(event) => navigateWithFade(event, "/privacy/")}
           >
             Privacy
           </a>
           <a
-            className="hover:text-foreground"
+            className="transition-colors hover:text-foreground dark:hover:text-[hsl(var(--sky-accent))]"
             href="https://github.com/inspirespace/skybridge"
             target="_blank"
             rel="noreferrer"
@@ -41,7 +41,7 @@ export function AppFooter() {
             GitHub
           </a>
           <a
-            className="hover:text-foreground"
+            className="transition-colors hover:text-foreground dark:hover:text-[hsl(var(--sky-accent))]"
             href="https://github.com/inspirespace/skybridge/issues"
             target="_blank"
             rel="noreferrer"

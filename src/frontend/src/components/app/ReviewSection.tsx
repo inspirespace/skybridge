@@ -98,8 +98,8 @@ export function ReviewSection({
     <AccordionItem
       value="review"
       className={cn(
-        "border-0 px-4 bg-white dark:bg-transparent",
-        !allowed && "bg-[#f7fafd] dark:bg-slate-900/60"
+        "border-0 px-4 sm:px-5 bg-transparent",
+        !allowed && "opacity-60"
       )}
     >
       <AccordionTrigger
@@ -123,7 +123,7 @@ export function ReviewSection({
         </div>
       </AccordionTrigger>
       <AccordionContent>
-        <div className="space-y-3 pb-4">
+        <div className="space-y-3 pb-6">
           {showReviewProgress && (
             <div className={reviewProgressCardClass}>
               <div className="flex items-center justify-between">
@@ -179,16 +179,16 @@ export function ReviewSection({
             </div>
           )}
           {reviewComplete && reviewSummary && (
-            <div className="flex flex-wrap gap-2 rounded-md border border-[#e3ebf5] bg-muted/20 p-2 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/40">
+            <div className="flex flex-wrap gap-2 rounded-xl border border-border/30 bg-muted/20 p-3 dark:border-[hsl(var(--sky-accent))]/15 dark:bg-[hsl(var(--cockpit-dark))]/30">
               <Badge
                 variant="secondary"
-                className="border border-sky-200/40 text-foreground dark:border-sky-900/70 dark:bg-sky-950/40 dark:text-sky-100"
+                className="border border-[hsl(var(--sky-accent))]/20 text-foreground dark:border-[hsl(var(--sky-accent))]/25 dark:bg-[hsl(var(--sky-accent))]/8"
               >
                 <span className="tabular-nums">Flights: {reviewSummary.flight_count}</span>
               </Badge>
               <Badge
                 variant="secondary"
-                className="border border-sky-200/40 text-foreground dark:border-sky-900/70 dark:bg-sky-950/40 dark:text-sky-100"
+                className="border border-[hsl(var(--sky-accent))]/20 text-foreground dark:border-[hsl(var(--sky-accent))]/25 dark:bg-[hsl(var(--sky-accent))]/8"
               >
                 <span className="tabular-nums">Hours: {reviewSummary.total_hours}</span>
               </Badge>
@@ -197,7 +197,7 @@ export function ReviewSection({
                 className={
                   reviewSummary.missing_tail_numbers > 0
                     ? undefined
-                    : "border border-sky-200/40 text-foreground dark:border-sky-900/70 dark:bg-sky-950/40 dark:text-sky-100"
+                    : "border border-[hsl(var(--sky-accent))]/20 text-foreground dark:border-[hsl(var(--sky-accent))]/25 dark:bg-[hsl(var(--sky-accent))]/8"
                 }
               >
                 <span className="tabular-nums">
@@ -207,10 +207,10 @@ export function ReviewSection({
             </div>
           )}
           {reviewComplete && (
-            <div className="relative w-full max-w-full overflow-x-auto rounded-md border border-[#e3ebf5] bg-background/70 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/40">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.16),_transparent_60%)]" />
+            <div className="relative w-full max-w-full overflow-x-auto rounded-xl border border-border/30 bg-background/70 dark:border-[hsl(var(--sky-accent))]/15 dark:bg-[hsl(var(--cockpit-dark))]/30">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.03),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.06),_transparent_60%)]" />
               <Table className="w-full min-w-[640px]">
-                <TableHeader className="bg-muted/40 dark:bg-slate-900/60">
+                <TableHeader className="bg-muted/30 dark:bg-[hsl(var(--cockpit-dark))]/50">
                   <TableRow>
                     <TableHead>Status</TableHead>
                     <TableHead>Date</TableHead>
@@ -279,7 +279,7 @@ export function ReviewSection({
               <AlertDialogTrigger asChild>
                 <Button
                   disabled={!canApprove || importRunning || importComplete || actionLoading}
-                  className="shadow-sm"
+                  className="btn-primary-glow"
                 >
                   Accept and start import
                 </Button>

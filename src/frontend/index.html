@@ -58,251 +58,321 @@
     </script>
   </head>
   <body>
-    <div class="app-shell min-h-screen flex flex-col bg-gradient-to-b from-[#f7f9fc] to-[#eef3f8] text-[#1c2430] dark:bg-gradient-to-b dark:from-[#0b1120] dark:to-[#0f172a] dark:text-slate-100">
+    <!-- Atmospheric background -->
+    <div class="atmosphere">
+      <div class="stars">
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+      </div>
+      <div class="horizon-line"></div>
+      <div class="runway-lights"></div>
+    </div>
+
+    <div class="app-shell relative z-10 min-h-screen flex flex-col">
       <!-- @partial header -->
 
-      <main class="container flex-1 pb-16 pt-5 lg:pb-8">
-        <section class="space-y-6">
-          <div class="rounded-lg border bg-card text-card-foreground shadow-sm relative overflow-hidden rounded-3xl border border-[#d1dbea] bg-white shadow-[0_18px_50px_rgba(22,32,44,0.12)] dark:border-sky-900/60 dark:bg-slate-950/75 dark:shadow-none">
-            <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.18),_transparent_55%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.24),_transparent_55%)]"></div>
-            <div class="pointer-events-none absolute -right-32 top-20 h-72 w-72 rounded-full bg-sky-200/40 blur-3xl dark:bg-sky-500/20"></div>
-            <div class="p-6 pt-0 relative space-y-8 p-6 sm:p-10">
-              <div class="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors border-transparent bg-secondary text-secondary-foreground dark:border-sky-900/60 dark:bg-sky-950/50 dark:text-sky-100 w-fit border border-sky-200/50 text-slate-700 dark:border-sky-900/60 dark:bg-sky-950/60 dark:text-slate-200">
-                CloudAhoy → FlySto
+      <main class="container flex-1 pb-16 pt-6 lg:pt-8 lg:pb-10">
+        <!-- Hero Section -->
+        <section class="py-8 lg:py-16">
+          <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <!-- Hero Text -->
+            <div class="space-y-6 lg:space-y-8">
+              <!-- Badge -->
+              <div class="badge-aviation w-fit">
+                <span class="badge-aviation-dot"></span>
+                Free migration tool for pilots
               </div>
-              <div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-                <div class="space-y-4">
-                  <h1 class="text-3xl font-semibold leading-snug text-foreground sm:text-4xl lg:text-[2.75rem] lg:leading-[1.1]">
-                    Move your CloudAhoy history into FlySto with complete confidence.
-                  </h1>
-                  <p class="text-base leading-relaxed text-muted-foreground">
-                    Skybridge connects both accounts, builds a clean summary, and lets you review
-                    everything before approving the import. No scripts or CSV juggling—just a guided,
-                    review‑first workflow built for pilots, operators, and flight logbook teams.
-                  </p>
-                  <p class="text-sm text-slate-600 dark:text-slate-300">
-                    Open-source on
-                    <a
-                      class="text-sky-600 hover:underline dark:text-sky-400"
-                      href="https://github.com/inspirespace/skybridge"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      GitHub
-                    </a>
-                    · Created by
-                    <a
-                      class="text-sky-600 hover:underline dark:text-sky-400"
-                      href="https://www.inspirespace.co"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Inspirespace
-                    </a>
-                  </p>
-                  <div class="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
-                    <span class="rounded-full border border-sky-200/60 bg-white/70 px-3 py-1 dark:border-sky-900/60 dark:bg-slate-950/60">
-                      Review before import
-                    </span>
-                    <span class="rounded-full border border-sky-200/60 bg-white/70 px-3 py-1 dark:border-sky-900/60 dark:bg-slate-950/60">
-                      Credentials never stored
-                    </span>
-                    <span class="rounded-full border border-sky-200/60 bg-white/70 px-3 py-1 dark:border-sky-900/60 dark:bg-slate-950/60">
-                      Results retained {{RETENTION_DAYS}} days
-                    </span>
-                  </div>
-                  <div class="flex flex-wrap items-center gap-3">
-                    <a
-                      href="/app/?signin=1"
-                      data-go-app
-                      class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 hover:shadow-md hover:shadow-primary/20 dark:bg-primary dark:text-primary-foreground h-11 rounded-md px-6 px-6 shadow-[0_12px_24px_rgba(56,189,248,0.2)] dark:shadow-[0_14px_30px_rgba(56,189,248,0.22)]"
-                    >
-                      Sign up / Sign in
-                    </a>
-                  </div>
-                </div>
-                <div class="rounded-xl border border-sky-200/80 bg-white/80 p-5 text-slate-900 shadow-[0_14px_28px_rgba(56,189,248,0.15)] dark:border-sky-800/70 dark:bg-slate-950/60 dark:text-slate-100 dark:shadow-[0_18px_30px_rgba(14,116,144,0.2)]">
-                  <div class="text-base font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    What you can expect
-                  </div>
-                  <ul class="mt-4 space-y-3 text-base">
-                    <li class="grid grid-cols-[20px_1fr] items-start gap-3">
-                      <svg
-                        viewBox="0 0 24 24"
-                        class="mt-[2px] h-5 w-5 text-emerald-500"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        aria-hidden="true"
-                      >
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="m9 12 2 2 4-4"></path>
-                      </svg>
-                      <span class="leading-[1.65]">
-                        Sign in to identify your job, protect your data, and resume later.
-                      </span>
-                    </li>
-                    <li class="grid grid-cols-[20px_1fr] items-start gap-3">
-                      <svg
-                        viewBox="0 0 24 24"
-                        class="mt-[2px] h-5 w-5 text-emerald-500"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        aria-hidden="true"
-                      >
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="m9 12 2 2 4-4"></path>
-                      </svg>
-                      <span class="leading-[1.65]">
-                        We import flights, times, routes, crew, trajectory data, and remarks.
-                      </span>
-                    </li>
-                    <li class="grid grid-cols-[20px_1fr] items-start gap-3">
-                      <svg
-                        viewBox="0 0 24 24"
-                        class="mt-[2px] h-5 w-5 text-emerald-500"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        aria-hidden="true"
-                      >
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="m9 12 2 2 4-4"></path>
-                      </svg>
-                      <span class="leading-[1.65]">
-                        Credentials are used only for this job and never stored.
-                      </span>
-                    </li>
-                    <li class="grid grid-cols-[20px_1fr] items-start gap-3">
-                      <svg
-                        viewBox="0 0 24 24"
-                        class="mt-[2px] h-5 w-5 text-emerald-500"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        aria-hidden="true"
-                      >
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="m9 12 2 2 4-4"></path>
-                      </svg>
-                      <span class="leading-[1.65]">
-                        Results are retained for 7 days, then deleted.
-                      </span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-              <div class="grid gap-3 sm:grid-cols-3">
-                <div class="rounded-lg border border-sky-100 bg-white/70 p-3 text-sm text-muted-foreground dark:border-sky-900/60 dark:bg-slate-950/50">
-                  <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Avg. setup
-                  </div>
-                  <div class="mt-1 text-lg font-semibold text-foreground">2 minutes</div>
-                </div>
-                <div class="rounded-lg border border-sky-100 bg-white/70 p-3 text-sm text-muted-foreground dark:border-sky-900/60 dark:bg-slate-950/50">
-                  <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Review first
-                  </div>
-                  <div class="mt-1 text-lg font-semibold text-foreground">Always</div>
-                </div>
-                <div class="rounded-lg border border-sky-100 bg-white/70 p-3 text-sm text-muted-foreground dark:border-sky-900/60 dark:bg-slate-950/50">
-                  <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                    Stored for
-                  </div>
-                  <div class="mt-1 text-lg font-semibold text-foreground">{{RETENTION_DAYS}} days</div>
-                </div>
+
+              <!-- Title with gradient -->
+              <h1 class="text-4xl sm:text-5xl lg:text-[3.5rem] font-bold leading-[1.1] tracking-tight">
+                <span class="text-gradient">Move your CloudAhoy history into FlySto</span>
+                <span class="text-foreground"> with complete confidence.</span>
+              </h1>
+
+              <!-- Subtitle -->
+              <p class="text-lg text-muted-foreground leading-relaxed max-w-xl">
+                Skybridge connects both accounts, builds a clean summary, and lets you review
+                everything before approving the import. No scripts or CSV juggling—just a guided,
+                review-first workflow built for pilots, operators, and flight logbook teams.
+              </p>
+
+              <!-- Open source link -->
+              <p class="text-sm text-muted-foreground">
+                Open-source on
+                <a
+                  class="text-primary hover:underline"
+                  href="https://github.com/inspirespace/skybridge"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  GitHub
+                </a>
+                · Created by
+                <a
+                  class="text-primary hover:underline"
+                  href="https://www.inspirespace.co"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Inspirespace
+                </a>
+              </p>
+
+              <!-- CTA Buttons -->
+              <div class="flex flex-wrap items-center gap-4 pt-2">
+                <a
+                  href="/app/?signin=1"
+                  data-go-app
+                  class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-base font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground h-12 px-8 btn-primary-glow"
+                >
+                  <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>
+                  </svg>
+                  Start Migration
+                </a>
+                <a
+                  href="#how-it-works"
+                  class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-base font-medium transition-all duration-200 border border-border bg-card/50 hover:bg-card text-foreground h-12 px-8 btn-secondary-glass"
+                >
+                  <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/>
+                  </svg>
+                  How it works
+                </a>
               </div>
             </div>
+
+            <!-- Hero Visual Card -->
+            <div class="relative">
+              <div class="hero-visual-card">
+                <!-- Card Header -->
+                <div class="flex items-center gap-4 mb-6 pb-5 border-b border-border">
+                  <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-[hsl(var(--altitude))] text-white shadow-lg shadow-[hsl(var(--altitude))]/30">
+                    <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="font-semibold text-foreground">Import Complete</div>
+                    <div class="text-sm text-muted-foreground">All flights transferred successfully</div>
+                  </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-3 gap-4 mb-6">
+                  <div class="hero-stat">
+                    <div class="hero-stat-value hero-stat-value-highlight">127</div>
+                    <div class="hero-stat-label">Flights</div>
+                  </div>
+                  <div class="hero-stat">
+                    <div class="hero-stat-value">284.6</div>
+                    <div class="hero-stat-label">Hours</div>
+                  </div>
+                  <div class="hero-stat">
+                    <div class="hero-stat-value">43</div>
+                    <div class="hero-stat-label">Airports</div>
+                  </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="p-4 rounded-xl bg-muted/50 dark:bg-[hsl(var(--sky-800))] border border-border">
+                  <div class="flex justify-between items-center mb-3">
+                    <span class="text-sm font-medium text-[hsl(var(--altitude))]">Migration Complete</span>
+                    <span class="text-sm text-muted-foreground">127/127</span>
+                  </div>
+                  <div class="progress-bar-aviation">
+                    <div class="progress-bar-fill progress-bar-fill-altitude" style="width: 100%;"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Floating Elements -->
+              <div class="floating-element hidden lg:flex -top-4 -right-4" style="animation-delay: 0s;">
+                <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                <span class="text-sm">N12SB verified</span>
+              </div>
+              <div class="floating-element hidden lg:flex bottom-24 -left-8" style="animation-delay: 1s;">
+                <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span class="text-sm">2.4h flight time</span>
+              </div>
+              <div class="floating-element hidden lg:flex -bottom-4 right-16" style="animation-delay: 2s;">
+                <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                  <circle cx="12" cy="10" r="3"/>
+                </svg>
+                <span class="text-sm">KPAO → KTVL</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="py-16 lg:py-24">
+          <div class="text-center max-w-2xl mx-auto mb-12">
+            <div class="section-label mx-auto w-fit">Features</div>
+            <h2 class="text-3xl sm:text-4xl font-bold mb-4">What you can expect</h2>
+            <p class="text-muted-foreground text-lg">
+              Built for pilots who want to preserve their complete flight history with accuracy and peace of mind.
+            </p>
           </div>
 
-          <section class="space-y-3" aria-labelledby="how-it-works">
-            <h2
-              id="how-it-works"
-              class="text-sm font-semibold uppercase tracking-[0.28em] text-slate-500 dark:text-slate-400"
-            >
-              How Skybridge works
-            </h2>
-            <div class="grid gap-4 lg:grid-cols-3">
-            <div class="rounded-lg border bg-card text-card-foreground shadow-sm rounded-xl border border-[#d1dbea] bg-white/80 p-5 shadow-[0_10px_24px_rgba(22,32,44,0.06)] dark:border-sky-900/60 dark:bg-slate-950/60 dark:shadow-none">
-              <div class="flex items-start justify-between">
-                <div>
-                  <div class="text-sm font-semibold text-foreground">Connect accounts</div>
-                  <p class="mt-2 text-sm text-muted-foreground">
-                    Authenticate CloudAhoy and FlySto, then set your optional import filters.
-                  </p>
-                </div>
-                <svg
-                  viewBox="0 0 24 24"
-                  class="h-4 w-4 text-slate-400"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="m5 12 14 0"></path>
-                  <path d="m13 6 6 6-6 6"></path>
+          <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="feature-card">
+              <div class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
                 </svg>
               </div>
+              <h3 class="font-semibold text-foreground mb-2">Complete Flight Data</h3>
+              <p class="text-sm text-muted-foreground leading-relaxed">
+                We import flights, times, routes, crew, trajectory data, and remarks.
+              </p>
             </div>
-            <div class="rounded-lg border bg-card text-card-foreground shadow-sm rounded-xl border border-[#d1dbea] bg-white/80 p-5 shadow-[0_10px_24px_rgba(22,32,44,0.06)] dark:border-sky-900/60 dark:bg-slate-950/60 dark:shadow-none">
-              <div class="flex items-start justify-between">
-                <div>
-                  <div class="text-sm font-semibold text-foreground">Review the summary</div>
-                  <p class="mt-2 text-sm text-muted-foreground">
-                    Preview flights, hours, and missing registrations before any changes are made.
-                  </p>
-                </div>
-                <svg
-                  viewBox="0 0 24 24"
-                  class="h-4 w-4 text-slate-400"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="m5 12 14 0"></path>
-                  <path d="m13 6 6 6-6 6"></path>
+
+            <div class="feature-card">
+              <div class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
                 </svg>
               </div>
+              <h3 class="font-semibold text-foreground mb-2">Review Before Import</h3>
+              <p class="text-sm text-muted-foreground leading-relaxed">
+                Preview flights, hours, and missing registrations before any changes are made.
+              </p>
             </div>
-            <div class="rounded-lg border bg-card text-card-foreground shadow-sm rounded-xl border border-[#d1dbea] bg-white/80 p-5 shadow-[0_10px_24px_rgba(22,32,44,0.06)] dark:border-sky-900/60 dark:bg-slate-950/60 dark:shadow-none">
-              <div class="flex items-start justify-between">
-                <div>
-                  <div class="text-sm font-semibold text-foreground">Approve import</div>
-                  <p class="mt-2 text-sm text-muted-foreground">
-                    Start the import when you are ready, then download the results as a bundle.
-                  </p>
-                </div>
-                <svg
-                  viewBox="0 0 24 24"
-                  class="h-4 w-4 text-slate-400"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="m5 12 14 0"></path>
-                  <path d="m13 6 6 6-6 6"></path>
+
+            <div class="feature-card">
+              <div class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
               </div>
+              <h3 class="font-semibold text-foreground mb-2">Credentials Never Stored</h3>
+              <p class="text-sm text-muted-foreground leading-relaxed">
+                Credentials are used only for this job and never stored on our servers.
+              </p>
+            </div>
+
+            <div class="feature-card">
+              <div class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+              </div>
+              <h3 class="font-semibold text-foreground mb-2">Results Retained</h3>
+              <p class="text-sm text-muted-foreground leading-relaxed">
+                Results are retained for {{RETENTION_DAYS}} days, then automatically deleted.
+              </p>
             </div>
           </div>
-          </section>
+        </section>
+
+        <!-- How It Works Section -->
+        <section class="py-16 lg:py-24" aria-labelledby="how-it-works" id="how-it-works">
+          <div class="text-center max-w-2xl mx-auto mb-12">
+            <div class="section-label mx-auto w-fit">Process</div>
+            <h2 class="text-3xl sm:text-4xl font-bold mb-4">How Skybridge works</h2>
+            <p class="text-muted-foreground text-lg">
+              The entire process takes just a few minutes. You stay in control at every step.
+            </p>
+          </div>
+
+          <div class="grid lg:grid-cols-3 gap-6 steps-connector">
+            <div class="step-card">
+              <div class="step-number">1</div>
+              <h3 class="font-semibold text-lg text-foreground mb-3">Connect accounts</h3>
+              <p class="text-muted-foreground leading-relaxed">
+                Sign in to identify your job, protect your data, and resume later. Authenticate CloudAhoy and FlySto, then set your optional import filters.
+              </p>
+            </div>
+
+            <div class="step-card">
+              <div class="step-number">2</div>
+              <h3 class="font-semibold text-lg text-foreground mb-3">Review the summary</h3>
+              <p class="text-muted-foreground leading-relaxed">
+                Preview flights, hours, and missing registrations before any changes are made. Check data integrity and spot any issues.
+              </p>
+            </div>
+
+            <div class="step-card">
+              <div class="step-number">3</div>
+              <h3 class="font-semibold text-lg text-foreground mb-3">Approve import</h3>
+              <p class="text-muted-foreground leading-relaxed">
+                Start the import when you are ready, then download the results as a bundle. Watch progress in real-time.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Stats Section -->
+        <section class="py-16">
+          <div class="grid sm:grid-cols-3 gap-6">
+            <div class="stat-card rounded-2xl p-6 text-center">
+              <div class="text-3xl font-bold text-foreground mb-1">2 minutes</div>
+              <div class="text-sm text-muted-foreground uppercase tracking-wide">Avg. setup time</div>
+            </div>
+            <div class="stat-card rounded-2xl p-6 text-center">
+              <div class="text-3xl font-bold text-foreground mb-1">Always</div>
+              <div class="text-sm text-muted-foreground uppercase tracking-wide">Review first</div>
+            </div>
+            <div class="stat-card rounded-2xl p-6 text-center">
+              <div class="text-3xl font-bold text-foreground mb-1">{{RETENTION_DAYS}} days</div>
+              <div class="text-sm text-muted-foreground uppercase tracking-wide">Results retention</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="py-16">
+          <div class="cta-card">
+            <h2 class="text-2xl sm:text-3xl font-bold mb-4">Ready to migrate your flights?</h2>
+            <p class="text-muted-foreground text-lg mb-8 max-w-lg mx-auto">
+              Start your guided, review-first migration from CloudAhoy to FlySto in minutes.
+            </p>
+            <div class="flex flex-wrap justify-center gap-4">
+              <a
+                href="/app/?signin=1"
+                data-go-app
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-base font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground h-12 px-8 btn-primary-glow"
+              >
+                <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>
+                </svg>
+                Start Free Migration
+              </a>
+              <a
+                href="#how-it-works"
+                class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-base font-medium transition-all duration-200 border border-border bg-card/50 hover:bg-card text-foreground h-12 px-8 btn-secondary-glass"
+              >
+                Learn More
+              </a>
+            </div>
+          </div>
         </section>
       </main>
 

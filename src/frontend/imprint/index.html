@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Imprint | Skybridge</title>
     <meta name="description" content="Skybridge imprint and legal disclosure." />
@@ -10,41 +10,186 @@
     <link rel="stylesheet" href="/src/index.css" />
   </head>
   <body>
-    <div class="app-shell min-h-screen flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+    <!-- Atmospheric background -->
+    <div class="atmosphere">
+      <div class="stars">
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+        <div class="star"></div>
+      </div>
+      <div class="horizon-line"></div>
+      <div class="runway-lights"></div>
+    </div>
+
+    <div class="app-shell relative z-10 min-h-screen flex flex-col">
       <!-- @partial header -->
+
       <main class="container flex-1 py-10">
-        <div class="max-w-3xl space-y-6">
-          <div class="space-y-2">
-            <h1 class="text-2xl font-semibold">Imprint</h1>
-            <p class="text-sm text-muted-foreground">Skybridge is operated by Inspirespace e.U.</p>
+        <div class="max-w-3xl mx-auto">
+          <!-- Page Header -->
+          <div class="hero-visual-card mb-8">
+            <div class="flex items-center gap-4">
+              <div class="flex h-14 w-14 items-center justify-center rounded-xl bg-primary text-white shadow-lg shadow-primary/30 animate-float">
+                <svg
+                  viewBox="0 0 24 24"
+                  class="h-7 w-7"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
+                </svg>
+              </div>
+              <div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-foreground">Imprint</h1>
+                <p class="text-muted-foreground">Skybridge is operated by Inspirespace e.U.</p>
+              </div>
+            </div>
           </div>
-          <div class="space-y-3 text-sm leading-relaxed text-slate-700 dark:text-slate-200">
-            <p>Inspirespace e.U.</p>
-            <p>Eingetragenes Einzelunternehmen</p>
-            <p>Inhaber: Ulrich Lehner</p>
-            <p>Gewerbewortlaut: Dienstleistungen in der automatischen Datenverarbeitung und Informationstechnik</p>
-            <p>Geschaftszweig: IT- und Marketing-Dienstleistungen, Konzeption, Entwicklung und Vermarktung von Software und Prototypen</p>
-            <p>Firmensitz: Golfplatzstrasse 32/5, 4048 Puchenau, Austria</p>
-            <p>E-Mail: hello@inspirespace.co</p>
-            <p>Telefon: +43 660 3243257</p>
-            <p>UID-Nr: ATU76178226</p>
-            <p>Firmenbuchnummer (FN): 542815h</p>
-            <p>Firmenbuchgericht: Landesgericht Linz</p>
-            <p>Aufsichtsbehorde: Bezirkshauptmannschaft Urfahr Umgebung</p>
-            <p>Kammerzugehorigkeit: WKO Oberosterreich Sparte Information und Consulting</p>
-            <p>Gewerbeordnung: www.ris.bka.gv.at</p>
-            <p>
-              Verbraucher haben die Moglichkeit, Beschwerden an die Online-Streitbeilegungsplattform der EU zu richten:
-              http://ec.europa.eu/odr. Sie konnen allfallige Beschwerde auch an die oben angegebene E-Mail-Adresse richten.
-            </p>
-          </div>
-          <div>
-            <a class="text-sm text-sky-600 hover:underline" href="/" data-back-link>
-              Back to landing page
-            </a>
+
+          <!-- Content Card -->
+          <div class="glass-card rounded-2xl p-6 sm:p-8 space-y-6">
+            <div class="space-y-6 text-sm leading-relaxed text-foreground/80">
+              <!-- Company & Legal form -->
+              <div class="grid gap-6 sm:grid-cols-2">
+                <div class="space-y-2">
+                  <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Company</div>
+                  <p class="font-semibold text-lg text-foreground">Inspirespace e.U.</p>
+                </div>
+                <div class="space-y-2">
+                  <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Legal form</div>
+                  <p>Eingetragenes Einzelunternehmen</p>
+                </div>
+              </div>
+
+              <!-- Owner -->
+              <div class="border-t border-border/50 pt-6">
+                <div class="space-y-2">
+                  <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Owner</div>
+                  <p class="font-semibold text-foreground">Ulrich Lehner</p>
+                </div>
+              </div>
+
+              <!-- Business description -->
+              <div class="border-t border-border/50 pt-6 space-y-4">
+                <div class="space-y-2">
+                  <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Business description</div>
+                  <p>Dienstleistungen in der automatischen Datenverarbeitung und Informationstechnik</p>
+                </div>
+                <div class="space-y-2">
+                  <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Business sector</div>
+                  <p>IT- und Marketing-Dienstleistungen, Konzeption, Entwicklung und Vermarktung von Software und Prototypen</p>
+                </div>
+              </div>
+
+              <!-- Address & Contact -->
+              <div class="border-t border-border/50 pt-6">
+                <div class="grid gap-6 sm:grid-cols-2">
+                  <div class="space-y-2">
+                    <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Address</div>
+                    <p>Golfplatzstrasse 32/5<br/>4048 Puchenau, Austria</p>
+                  </div>
+                  <div class="space-y-2">
+                    <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Contact</div>
+                    <p>
+                      <a href="mailto:hello@inspirespace.co" class="text-primary hover:underline">hello@inspirespace.co</a><br/>
+                      +43 660 3243257
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- UID & Registration -->
+              <div class="border-t border-border/50 pt-6">
+                <div class="grid gap-6 sm:grid-cols-2">
+                  <div class="space-y-2">
+                    <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">UID-Nr</div>
+                    <p class="font-mono text-sm text-foreground">ATU76178226</p>
+                  </div>
+                  <div class="space-y-2">
+                    <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Registration number</div>
+                    <p class="font-mono text-sm text-foreground">FN 542815h</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Court & Authority -->
+              <div class="border-t border-border/50 pt-6">
+                <div class="grid gap-6 sm:grid-cols-2">
+                  <div class="space-y-2">
+                    <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Registration court</div>
+                    <p>Landesgericht Linz</p>
+                  </div>
+                  <div class="space-y-2">
+                    <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Regulatory authority</div>
+                    <p>Bezirkshauptmannschaft Urfahr Umgebung</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Chamber & Trade -->
+              <div class="border-t border-border/50 pt-6 space-y-4">
+                <div class="space-y-2">
+                  <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Chamber membership</div>
+                  <p>WKO Oberosterreich Sparte Information und Consulting</p>
+                </div>
+                <div class="space-y-2">
+                  <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Trade regulations</div>
+                  <p><a href="https://www.ris.bka.gv.at" target="_blank" rel="noreferrer" class="text-primary hover:underline">www.ris.bka.gv.at</a></p>
+                </div>
+              </div>
+
+              <!-- ODR Notice -->
+              <div class="border-t border-border/50 pt-6">
+                <div class="trust-item">
+                  <div class="trust-item-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <path d="M12 16v-4"/>
+                      <path d="M12 8h.01"/>
+                    </svg>
+                  </div>
+                  <p class="text-xs text-muted-foreground leading-relaxed">
+                    Verbraucher haben die Moglichkeit, Beschwerden an die Online-Streitbeilegungsplattform der EU zu richten:
+                    <a href="http://ec.europa.eu/odr" target="_blank" rel="noreferrer" class="text-primary hover:underline">http://ec.europa.eu/odr</a>.
+                    Sie konnen allfallige Beschwerde auch an die oben angegebene E-Mail-Adresse richten.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Back link -->
+            <div class="pt-6 border-t border-border/50">
+              <a
+                class="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline transition-colors"
+                href="/"
+                data-back-link
+              >
+                <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m15 18-6-6 6-6"/>
+                </svg>
+                Back to landing page
+              </a>
+            </div>
           </div>
         </div>
       </main>
+
       <!-- @partial footer -->
     </div>
   </body>

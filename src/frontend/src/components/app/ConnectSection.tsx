@@ -78,8 +78,8 @@ export function ConnectSection({
     <AccordionItem
       value="connect"
       className={cn(
-        "border-0 px-4 bg-white dark:bg-transparent",
-        !allowed && "bg-[#f7fafd] dark:bg-slate-900/60"
+        "border-0 px-4 sm:px-5 bg-transparent",
+        !allowed && "opacity-60"
       )}
     >
       <AccordionTrigger
@@ -94,20 +94,20 @@ export function ConnectSection({
         </div>
       </AccordionTrigger>
       <AccordionContent>
-        <div className="space-y-4 pb-4">
+        <div className="space-y-4 pb-6">
           <p className="text-sm leading-relaxed text-muted-foreground">
             Enter CloudAhoy and FlySto credentials, then run the review.
           </p>
-          <Alert className="border-sky-100 bg-sky-50/60 text-slate-900 dark:border-sky-900/50 dark:bg-sky-950/40 dark:text-slate-100">
-            <AlertTitle>Credentials</AlertTitle>
-            <AlertDescription>Credentials are used only for this job and not stored.</AlertDescription>
+          <Alert className="border-[hsl(var(--sky-accent))]/20 bg-[hsl(var(--sky-accent))]/5 text-foreground dark:border-[hsl(var(--sky-accent))]/25 dark:bg-[hsl(var(--sky-accent))]/8">
+            <AlertTitle className="text-[hsl(var(--sky-accent))]">Credentials</AlertTitle>
+            <AlertDescription className="text-muted-foreground">Credentials are used only for this job and not stored.</AlertDescription>
           </Alert>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <div className="text-sm font-medium">CloudAhoy</div>
-              <div className="relative space-y-2 overflow-hidden rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-sky-900/60 dark:bg-slate-900/80">
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.16),_transparent_60%)]" />
+              <div className="text-sm font-semibold text-foreground">CloudAhoy</div>
+              <div className="relative space-y-3 overflow-hidden rounded-xl border border-border/40 bg-muted/30 p-4 dark:border-[hsl(var(--sky-accent))]/15 dark:bg-[hsl(var(--cockpit-dark))]/40">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.03),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.06),_transparent_60%)]" />
                 <Label htmlFor="cloudahoy-email">Email</Label>
                 <Input
                   id="cloudahoy-email"
@@ -128,9 +128,9 @@ export function ConnectSection({
               </div>
             </div>
             <div className="space-y-2">
-              <div className="text-sm font-medium">FlySto</div>
-              <div className="relative space-y-2 overflow-hidden rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-sky-900/60 dark:bg-slate-900/80">
-                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.16),_transparent_60%)]" />
+              <div className="text-sm font-semibold text-foreground">FlySto</div>
+              <div className="relative space-y-3 overflow-hidden rounded-xl border border-border/40 bg-muted/30 p-4 dark:border-[hsl(var(--sky-accent))]/15 dark:bg-[hsl(var(--cockpit-dark))]/40">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.03),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.06),_transparent_60%)]" />
                 <Label htmlFor="flysto-email">Email</Label>
                 <Input
                   id="flysto-email"
@@ -152,10 +152,10 @@ export function ConnectSection({
             </div>
           </div>
 
-          <div className="relative rounded-md border border-[#d9e1ec] bg-[#f8fafc] p-3 dark:border-sky-900/60 dark:bg-slate-900/80">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.16),_transparent_60%)]" />
+          <div className="relative rounded-xl border border-border/40 bg-muted/30 p-4 dark:border-[hsl(var(--sky-accent))]/15 dark:bg-[hsl(var(--cockpit-dark))]/40">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.03),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.06),_transparent_60%)]" />
             <div className="space-y-3">
-              <div className="text-sm font-semibold">Import filters</div>
+              <div className="text-sm font-semibold text-foreground">Import filters</div>
               <div className="grid gap-4 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
                 <div className="space-y-2">
                   <Label>Date range</Label>
@@ -302,7 +302,7 @@ export function ConnectSection({
           <Button
             onClick={onConnectReview}
             disabled={connectLocked || !canConnect || Boolean(dateRangeError) || actionLoading}
-            className="shadow-sm"
+            className="btn-primary-glow"
           >
             Connect and review
           </Button>
