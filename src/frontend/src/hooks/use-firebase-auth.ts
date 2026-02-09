@@ -256,7 +256,7 @@ export function useFirebaseAuth({
       const { getAuth, onIdTokenChanged, connectAuthEmulator } = await import(
         "firebase/auth"
       );
-      const { setPersistence, inMemoryPersistence } = await import("firebase/auth");
+      const { setPersistence, browserSessionPersistence } = await import("firebase/auth");
       const app =
         getApps().length > 0
           ? getApps()[0]
@@ -267,7 +267,7 @@ export function useFirebaseAuth({
               appId,
             });
       const auth = getAuth(app);
-      await setPersistence(auth, inMemoryPersistence);
+      await setPersistence(auth, browserSessionPersistence);
       if (useEmulator && emulatorUrl) {
         const host = emulatorUrl.startsWith("http")
           ? emulatorUrl
