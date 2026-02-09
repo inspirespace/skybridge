@@ -192,68 +192,88 @@ export function ReviewSection({
             </div>
           )}
           {reviewComplete && reviewSummary && (
-            <div className="flex flex-wrap gap-2 rounded-xl border border-border/30 bg-muted/20 p-3 dark:border-[hsl(var(--sky-accent))]/15 dark:bg-[hsl(var(--cockpit-dark))]/30">
+            <div className="review-summary-strip flex flex-wrap gap-2 rounded-xl border border-border/30 bg-muted/20 p-3 dark:border-[hsl(var(--sky-accent))]/15 dark:bg-[hsl(var(--cockpit-dark))]/30">
               <Badge
                 variant="secondary"
-                className="border border-[hsl(var(--sky-accent))]/20 text-foreground dark:border-[hsl(var(--sky-accent))]/25 dark:bg-[hsl(var(--sky-accent))]/8"
+                className="review-summary-chip border border-[hsl(var(--sky-accent))]/20 text-foreground dark:border-[hsl(var(--sky-accent))]/25 dark:bg-[hsl(var(--sky-accent))]/8"
               >
-                <span className="tabular-nums">Flights: {reviewSummary.flight_count}</span>
+                <span className="tabular-nums">Legs: {reviewSummary.flight_count}</span>
               </Badge>
               <Badge
                 variant="secondary"
-                className="border border-[hsl(var(--sky-accent))]/20 text-foreground dark:border-[hsl(var(--sky-accent))]/25 dark:bg-[hsl(var(--sky-accent))]/8"
+                className="review-summary-chip border border-[hsl(var(--sky-accent))]/20 text-foreground dark:border-[hsl(var(--sky-accent))]/25 dark:bg-[hsl(var(--sky-accent))]/8"
               >
-                <span className="tabular-nums">Hours: {reviewSummary.total_hours}</span>
+                <span className="tabular-nums">Block hours: {reviewSummary.total_hours}</span>
               </Badge>
               <Badge
                 variant={reviewSummary.missing_tail_numbers > 0 ? "warning" : "secondary"}
                 className={
                   reviewSummary.missing_tail_numbers > 0
-                    ? undefined
-                    : "border border-[hsl(var(--sky-accent))]/20 text-foreground dark:border-[hsl(var(--sky-accent))]/25 dark:bg-[hsl(var(--sky-accent))]/8"
+                    ? "review-summary-chip"
+                    : "review-summary-chip border border-[hsl(var(--sky-accent))]/20 text-foreground dark:border-[hsl(var(--sky-accent))]/25 dark:bg-[hsl(var(--sky-accent))]/8"
                 }
               >
                 <span className="tabular-nums">
-                  Registration missing: {reviewSummary.missing_tail_numbers}
+                  Unmatched tail regs: {reviewSummary.missing_tail_numbers}
                 </span>
               </Badge>
             </div>
           )}
           {reviewComplete && (
-            <div className="relative w-full max-w-full overflow-x-auto rounded-xl border border-border/30 bg-background/70 dark:border-[hsl(var(--sky-accent))]/15 dark:bg-[hsl(var(--cockpit-dark))]/30">
+            <div className="review-ops-table-shell relative w-full max-w-full overflow-x-auto rounded-xl border border-border/30 bg-background/70 dark:border-[hsl(var(--sky-accent))]/15 dark:bg-[hsl(var(--cockpit-dark))]/30">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.03),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.06),_transparent_60%)]" />
-              <Table className="w-full min-w-[640px]">
-                <TableHeader className="bg-muted/30 dark:bg-[hsl(var(--cockpit-dark))]/50">
+              <Table className="review-ops-table w-full min-w-[700px]">
+                <TableHeader className="review-ops-head bg-muted/30 dark:bg-[hsl(var(--cockpit-dark))]/50">
                   <TableRow>
                     <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Registration</TableHead>
-                    <TableHead>From / To</TableHead>
+                    <TableHead>Log Date</TableHead>
+                    <TableHead>Tail Reg</TableHead>
+                    <TableHead>Route (ICAO)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {visibleFlights.map((flight, index) => (
                     <TableRow
                       key={flight.flight_id}
-                      className={
-                        index % 2 === 0 ? "bg-muted/40 dark:bg-slate-900/30" : undefined
-                      }
+                      className={cn(
+                        "review-ops-row",
+                        index % 2 === 0 && "is-even",
+                        !flight.tail_number && "is-alert"
+                      )}
                     >
-                      <TableCell>
+                      <TableCell className="align-middle">
                         <Badge
                           variant={flight.tail_number ? "success" : "warning"}
-                          className="min-w-[110px] justify-center"
+                          className={cn(
+                            "review-status-badge min-w-[118px] justify-center",
+                            flight.tail_number
+                              ? "review-status-ok"
+                              : "review-status-alert"
+                          )}
                         >
-                          {flight.tail_number ? "OK" : "Needs review"}
+                          {flight.tail_number ? "Matched" : "Needs tail"}
                         </Badge>
                       </TableCell>
-                      <TableCell>{formatDate(flight.date)}</TableCell>
-                      <TableCell>{flight.tail_number ?? "—"}</TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center gap-2">
-                          <span className="tabular-nums">{flight.origin ?? "—"}</span>
+                      <TableCell className="review-date-cell">
+                        <span className="review-date-primary">{formatDate(flight.date)}</span>
+                        <span className="review-date-secondary">logbook date (UTC)</span>
+                      </TableCell>
+                      <TableCell className="review-tail-cell">
+                        {flight.tail_number ? (
+                          <span className="review-tail-value">{flight.tail_number}</span>
+                        ) : (
+                          <span className="review-tail-missing">UNASSIGNED</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="review-route-cell">
+                        <span className="review-route-track">
+                          <span className="review-airport-chip tabular-nums">
+                            {flight.origin ?? "----"}
+                          </span>
                           <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="tabular-nums">{flight.destination ?? "—"}</span>
+                          <span className="review-airport-chip tabular-nums">
+                            {flight.destination ?? "----"}
+                          </span>
                         </span>
                       </TableCell>
                     </TableRow>

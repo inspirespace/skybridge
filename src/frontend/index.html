@@ -157,41 +157,63 @@
 
             <!-- Hero Visual Card -->
             <div class="relative">
-              <div class="hero-visual-card">
-                <!-- Card Header -->
-                <div class="flex items-center gap-4 mb-6 pb-5 border-b border-border">
-                  <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-[hsl(var(--altitude))] text-white shadow-lg shadow-[hsl(var(--altitude))]/30">
-                    <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                  </div>
-                  <div>
-                    <div class="font-semibold text-foreground">Import Complete</div>
-                    <div class="text-sm text-muted-foreground">All flights transferred successfully</div>
+              <div class="hero-visual-card hero-visual-route">
+                <div class="hero-route-header">
+                  <div class="hero-route-kicker">Transfer briefing</div>
+                  <div class="hero-route-status">
+                    <span class="hero-route-status-dot"></span>
+                    Review complete
                   </div>
                 </div>
 
-                <!-- Stats Grid -->
-                <div class="grid grid-cols-3 gap-4 mb-6">
-                  <div class="hero-stat">
-                    <div class="hero-stat-value hero-stat-value-highlight">127</div>
-                    <div class="hero-stat-label">Flights</div>
+                <div class="hero-route-track" aria-label="Sample route KPAO to KSEA">
+                  <div class="hero-route-endpoint">
+                    <div class="hero-airport-code">KPAO</div>
+                    <div class="hero-airport-name">Palo Alto</div>
                   </div>
-                  <div class="hero-stat">
-                    <div class="hero-stat-value">284.6</div>
-                    <div class="hero-stat-label">Hours</div>
+                  <div class="hero-route-line">
+                    <span class="hero-route-line-mark">DEP 16:20Z</span>
+                    <span class="hero-route-line-mark">ARR 19:05Z</span>
                   </div>
-                  <div class="hero-stat">
-                    <div class="hero-stat-value">43</div>
-                    <div class="hero-stat-label">Airports</div>
+                  <div class="hero-route-endpoint hero-route-endpoint-arrival">
+                    <div class="hero-airport-code">KSEA</div>
+                    <div class="hero-airport-name">Seattle</div>
                   </div>
                 </div>
 
-                <!-- Progress Bar -->
-                <div class="p-4 rounded-xl bg-muted/50 dark:bg-[hsl(var(--sky-800))] border border-border">
-                  <div class="flex justify-between items-center mb-3">
-                    <span class="text-sm font-medium text-[hsl(var(--altitude))]">Migration Complete</span>
-                    <span class="text-sm text-muted-foreground">127/127</span>
+                <div class="hero-route-chips">
+                  <span class="hero-route-chip">N739SB</span>
+                  <span class="hero-route-chip">PA-28R</span>
+                  <span class="hero-route-chip">IFR</span>
+                </div>
+
+                <div class="hero-instrument-grid">
+                  <div class="hero-instrument">
+                    <div class="hero-instrument-label">Flights Imported</div>
+                    <div class="hero-instrument-value hero-instrument-value-highlight">127</div>
+                    <div class="hero-instrument-sub">Dispatch log matched</div>
+                  </div>
+                  <div class="hero-instrument">
+                    <div class="hero-instrument-label">Block Hours</div>
+                    <div class="hero-instrument-value">284.6</div>
+                    <div class="hero-instrument-sub">UTC timestamps preserved</div>
+                  </div>
+                  <div class="hero-instrument">
+                    <div class="hero-instrument-label">Airports</div>
+                    <div class="hero-instrument-value">43</div>
+                    <div class="hero-instrument-sub">ICAO routes retained</div>
+                  </div>
+                  <div class="hero-instrument">
+                    <div class="hero-instrument-label">Tail Matches</div>
+                    <div class="hero-instrument-value">124/127</div>
+                    <div class="hero-instrument-sub">3 need confirmation</div>
+                  </div>
+                </div>
+
+                <div class="hero-checklist-strip">
+                  <div class="hero-checklist-strip-header">
+                    <span>Checklist</span>
+                    <span>3/3 complete</span>
                   </div>
                   <div class="progress-bar-aviation">
                     <div class="progress-bar-fill progress-bar-fill-altitude" style="width: 100%;"></div>
@@ -204,21 +226,21 @@
                 <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="20 6 9 17 4 12"/>
                 </svg>
-                <span class="text-sm">N12SB verified</span>
+                <span class="text-sm">N739SB matched</span>
               </div>
               <div class="floating-element hidden lg:flex bottom-24 -left-8" style="animation-delay: 1s;">
                 <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="12" cy="12" r="10"/>
                   <polyline points="12 6 12 12 16 14"/>
                 </svg>
-                <span class="text-sm">2.4h flight time</span>
+                <span class="text-sm">2.8h block time</span>
               </div>
               <div class="floating-element hidden lg:flex -bottom-4 right-16" style="animation-delay: 2s;">
                 <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                   <circle cx="12" cy="10" r="3"/>
                 </svg>
-                <span class="text-sm">KPAO → KTVL</span>
+                <span class="text-sm">KPAO → KSEA</span>
               </div>
             </div>
           </div>

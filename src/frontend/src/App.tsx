@@ -972,7 +972,7 @@ export default function App() {
     {
       id: "connect",
       title: "Connect",
-      subtitle: "Link your accounts",
+      subtitle: "Link CloudAhoy and FlySto",
       done: flow.connected,
       active: !flow.connected,
       locked: false,
@@ -980,7 +980,7 @@ export default function App() {
     {
       id: "review",
       title: "Review",
-      subtitle: "Verify flight data",
+      subtitle: "Verify your flight data",
       done: reviewComplete,
       active: flow.connected && !reviewComplete,
       locked: !flow.connected,
@@ -994,6 +994,8 @@ export default function App() {
       locked: !reviewComplete,
     },
   ] as const;
+  const completedSteps = navSteps.filter((step) => step.done).length;
+  const checklistProgress = (completedSteps / navSteps.length) * 100;
 
   const isRedirectScreen =
     !flow.signedIn && AUTH_MODE === "oidc" && (isSignInRedirect || isAuthCallback);
@@ -1260,32 +1262,67 @@ export default function App() {
             <Card className="glass-card nav-panel relative overflow-hidden rounded-2xl">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.06),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.1),_transparent_60%)]" />
               <CardContent className="space-y-4 p-5">
-                <div className="border-b border-border/35 pb-3 dark:border-[hsl(var(--sky-accent))]/15">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                    Import Progress
-                  </p>
+                <div className="checklist-header">
+                  <p className="checklist-kicker">Import progress</p>
+                  <div className="checklist-summary-row">
+                    <span className="checklist-summary-label">
+                      {completedSteps}/{navSteps.length} complete
+                    </span>
+                    <span className="checklist-summary-next">
+                      {nextLabel === "All steps completed"
+                        ? "Done"
+                        : nextLabel}
+                    </span>
+                  </div>
+                  <Progress
+                    value={checklistProgress}
+                    className="checklist-progress"
+                    indicatorClassName="checklist-progress-indicator"
+                  />
                 </div>
                 <div className="nav-steps-container">
                   <div className="nav-steps gap-1.5">
-                    {navSteps.map((step, index) => (
-                      <div
-                        key={step.id}
-                        className={cn(
-                          "nav-step",
-                          step.active && "active",
-                          step.done && !step.active && "completed",
-                          step.locked && "locked"
-                        )}
-                      >
-                        <span className="step-indicator">
-                          {step.done ? <Check className="h-3.5 w-3.5" /> : index + 1}
-                        </span>
-                        <span className="step-content">
-                          <span className="step-title">{step.title}</span>
-                          <span className="step-subtitle">{step.subtitle}</span>
-                        </span>
-                      </div>
-                    ))}
+                    {navSteps.map((step, index) => {
+                      const statusLabel = step.done
+                        ? "Done"
+                        : step.active
+                          ? "Current"
+                          : step.locked
+                            ? "Locked"
+                            : "Ready";
+                      return (
+                        <div
+                          key={step.id}
+                          className={cn(
+                            "nav-step",
+                            step.active && "active",
+                            step.done && !step.active && "completed",
+                            step.locked && "locked"
+                          )}
+                        >
+                          <span className="step-indicator">
+                            {step.done ? <Check className="h-3.5 w-3.5" /> : index + 1}
+                          </span>
+                          <span className="step-content">
+                            <span className="step-title-row">
+                              <span className="step-title">{step.title}</span>
+                              <span
+                                className={cn(
+                                  "step-inline-status",
+                                  step.done && "done",
+                                  step.active && "active",
+                                  step.locked && "locked"
+                                )}
+                              >
+                                <span className="step-inline-dot" aria-hidden />
+                                <span className="step-inline-label">{statusLabel}</span>
+                              </span>
+                            </span>
+                            <span className="step-subtitle">{step.subtitle}</span>
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </CardContent>

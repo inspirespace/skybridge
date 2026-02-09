@@ -142,6 +142,9 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Auto-open noVNC auto-connect URL when running Playwright from VS Code.
 - [x] Exclude discovery modules from coverage targets and remove discovery-specific tests.
 - [x] Refactor App shell auth UI into dedicated components/config helpers to keep `App.tsx` maintainable.
+- [x] Refresh visual polish for landing/app (route-oriented hero + denser review table styling) while keeping existing flow behavior.
+- [x] Simplify sidebar copy/layout (remove `Preflight`/`CHK-*` wording, reduce visual clutter, improve readability on narrower widths).
+- [x] Refine step status indicator to plain text + animated dot (no status pills) for cleaner web-app UI.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.
