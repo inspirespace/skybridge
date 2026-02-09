@@ -1032,11 +1032,27 @@ export default function App() {
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--horizon))]/30 to-transparent" />
         <div className="container flex h-14 items-center justify-between sm:h-16">
           <a
-            className="text-xs font-bold tracking-[0.3em] text-muted-foreground hover:text-foreground transition-colors dark:text-[hsl(var(--horizon))]/80 dark:hover:text-[hsl(var(--horizon))]"
+            className="group flex items-center gap-3"
             href={flow.signedIn ? "/app/" : "/"}
             onClick={(event) => navigateWithFade(event, flow.signedIn ? "/app/" : "/")}
           >
-            SKYBRIDGE
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-transform group-hover:scale-105 animate-float">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
+              </svg>
+            </div>
+            <span className="text-sm font-bold tracking-[0.2em] text-foreground/80 transition-colors group-hover:text-foreground">
+              SKYBRIDGE
+            </span>
           </a>
           <div className="flex items-center gap-2 sm:gap-4">
             {!flow.signedIn && AUTH_MODE !== "firebase" && (
@@ -1244,13 +1260,10 @@ export default function App() {
             <Card className="glass-card nav-panel relative overflow-hidden rounded-2xl">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.06),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.1),_transparent_60%)]" />
               <CardContent className="space-y-4 p-5">
-                <div className="flex items-center gap-3 border-b border-border/35 pb-4 dark:border-[hsl(var(--sky-accent))]/15">
-                  <div className="nav-brand-icon">
-                    <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
-                    </svg>
-                  </div>
-                  <span className="text-sm font-bold tracking-[0.22em] text-gradient">SKYBRIDGE</span>
+                <div className="border-b border-border/35 pb-3 dark:border-[hsl(var(--sky-accent))]/15">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    Import Progress
+                  </p>
                 </div>
                 <div className="nav-steps-container">
                   <div className="nav-steps gap-1.5">

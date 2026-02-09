@@ -52,7 +52,7 @@ services:
       [
         "sh",
         "-c",
-        "apk add --no-cache curl python3 py3-pip py3-virtualenv openjdk21-jre && java -version && npm install -g firebase-tools@15.3.1 && if [ ! -d /workspace/functions/venv ]; then python3 -m venv /workspace/functions/venv; fi && /workspace/functions/venv/bin/python -m ensurepip --upgrade && /workspace/functions/venv/bin/python -m pip install -r /workspace/functions/requirements.txt && mkdir -p /workspace/.firebase-emulator/exports && firebase emulators:start --project skybridge-dev --only auth,firestore,pubsub,storage,functions,hosting --import /workspace/.firebase-emulator/exports --export-on-exit /workspace/.firebase-emulator/exports"
+        "apk add --no-cache curl python3 py3-pip py3-virtualenv openjdk21-jre && java -version && npm install -g firebase-tools@15.3.1 && if [ ! -d /workspace/functions/venv ]; then python3 -m venv /workspace/functions/venv; fi && /workspace/functions/venv/bin/python -m ensurepip --upgrade && /workspace/functions/venv/bin/python -m pip install -r /workspace/functions/requirements.txt && mkdir -p /workspace/.firebase-emulator/exports && cd /workspace/.firebase-emulator && firebase emulators:start --project skybridge-dev --only auth,firestore,pubsub,storage,functions,hosting --import /workspace/.firebase-emulator/exports --export-on-exit /workspace/.firebase-emulator/exports"
       ]
     environment:
       - CLOUDSDK_CORE_PROJECT=skybridge-dev

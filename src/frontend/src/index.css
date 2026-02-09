@@ -1023,7 +1023,7 @@
   padding: 64px;
   text-align: center;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .dark .cta-card {
@@ -1180,26 +1180,6 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    NAVIGATION
 ═══════════════════════════════════════════════════════════════════════════ */
-
-.nav-brand-icon {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--horizon-light)) 100%);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 16px hsl(var(--primary) / 0.35);
-  animation: float 4s ease-in-out infinite;
-}
-
-.nav-brand-icon svg {
-  width: 22px;
-  height: 22px;
-  stroke: white;
-  stroke-width: 2;
-  fill: none;
-}
 
 .nav-scrolled {
   background: hsl(var(--background) / 0.9);
