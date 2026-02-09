@@ -208,13 +208,15 @@ export function ImportSection({
                 {retentionDays} days before deletion.
               </AlertDescription>
               <div className="mt-4 flex flex-wrap gap-3">
-                <Button asChild className="btn-primary-glow">
+                <Button asChild size="lg" className="btn-primary-glow rounded-xl px-6">
                   <a href="https://www.flysto.net/logs" target="_blank" rel="noreferrer">
                     Open FlySto
                   </a>
                 </Button>
                 <Button
+                  size="lg"
                   variant="outline"
+                  className="btn-secondary-glass rounded-xl px-6"
                   onClick={onDownloadFiles}
                   disabled={actionLoading || downloadLoading}
                   aria-busy={downloadLoading}
@@ -228,7 +230,12 @@ export function ImportSection({
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="destructive" disabled={actionLoading || downloadLoading}>
+                    <Button
+                      variant="link"
+                      size="lg"
+                      className="px-2 text-destructive hover:text-destructive/85"
+                      disabled={actionLoading || downloadLoading}
+                    >
                       Delete results now
                     </Button>
                   </AlertDialogTrigger>
