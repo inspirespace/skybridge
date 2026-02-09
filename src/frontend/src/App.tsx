@@ -26,7 +26,6 @@ import { AppFooter } from "@/components/app/AppFooter";
 import { ConnectSection } from "@/components/app/ConnectSection";
 import { ReviewSection } from "@/components/app/ReviewSection";
 import { ImportSection } from "@/components/app/ImportSection";
-import { StepStatus } from "@/components/app/StepStatus";
 import { FirebaseAuthCard } from "@/components/app/auth/FirebaseAuthCard";
 import { FirebaseAuthDialog } from "@/components/app/auth/FirebaseAuthDialog";
 import { GuestUpgradeCard } from "@/components/app/auth/GuestUpgradeCard";
@@ -46,7 +45,7 @@ import {
 } from "@/api/client";
 import { canStartOver, deriveFlowState, getOpenStep } from "@/state/flow";
 import { useJobSnapshot } from "@/hooks/use-job-snapshot";
-import { Loader2 } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import {
   formatDate,
   formatFlightId,
@@ -180,6 +179,7 @@ export default function App() {
     onLoadingChange: setActionLoading,
   });
   const [showAuthDialog, setShowAuthDialog] = React.useState(false);
+  const [authInitTimedOut, setAuthInitTimedOut] = React.useState(false);
   const [emailAddress, setEmailAddress] = React.useState("");
   const [emailLinkNotice, setEmailLinkNotice] = React.useState<string | null>(null);
   const [emailLinkUrl, setEmailLinkUrl] = React.useState<string | null>(null);
@@ -273,6 +273,18 @@ export default function App() {
     clearEmailLinkEmail();
     emailLinkAutoRef.current = false;
   }, [flow.signedIn]);
+
+  React.useEffect(() => {
+    if (AUTH_MODE !== "firebase") return;
+    if (firebaseAuthReady) {
+      setAuthInitTimedOut(false);
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      setAuthInitTimedOut(true);
+    }, 10000);
+    return () => window.clearTimeout(timeout);
+  }, [AUTH_MODE, firebaseAuthReady]);
 
   const reviewSummary = job?.review_summary ?? null;
   const flights = reviewSummary?.flights ?? [];
@@ -948,19 +960,45 @@ export default function App() {
     ? 1
     : !reviewComplete
       ? 2
-      : !importComplete
-        ? 3
-        : 3;
+      : 3;
   const nextLabel = !flow.connected
-    ? "Connect"
+    ? "Review"
     : !reviewComplete
-      ? "Review"
+      ? "Import"
       : !importComplete
-        ? "Import"
+        ? "Complete import"
         : "All steps completed";
+  const navSteps = [
+    {
+      id: "connect",
+      title: "Connect",
+      subtitle: "Link your accounts",
+      done: flow.connected,
+      active: !flow.connected,
+      locked: false,
+    },
+    {
+      id: "review",
+      title: "Review",
+      subtitle: "Verify flight data",
+      done: reviewComplete,
+      active: flow.connected && !reviewComplete,
+      locked: !flow.connected,
+    },
+    {
+      id: "import",
+      title: "Import",
+      subtitle: "Transfer to FlySto",
+      done: importComplete,
+      active: reviewComplete && !importComplete,
+      locked: !reviewComplete,
+    },
+  ] as const;
 
   const isRedirectScreen =
     !flow.signedIn && AUTH_MODE === "oidc" && (isSignInRedirect || isAuthCallback);
+  const authInitializing =
+    AUTH_MODE === "firebase" && !firebaseAuthReady && !authInitTimedOut;
 
   if (isRedirectScreen) {
     return <div className="min-h-screen bg-background" />;
@@ -1100,13 +1138,27 @@ export default function App() {
           !(AUTH_MODE === "oidc" && (isSignInRedirect || isAuthCallback)) && (
             <div className="mx-auto max-w-3xl space-y-4">
               {/* Show loading state while Firebase Auth is initializing */}
-              {AUTH_MODE === "firebase" && !firebaseAuthReady && (
+              {authInitializing && (
                 <div className="flex min-h-[40vh] items-center justify-center">
                   <div className="text-center space-y-3">
                     <div className="h-8 w-8 mx-auto rounded-full border-2 border-[hsl(var(--horizon))]/30 border-t-[hsl(var(--horizon))] animate-spin" />
                     <p className="text-sm text-muted-foreground">Loading...</p>
                   </div>
                 </div>
+              )}
+              {AUTH_MODE === "firebase" && !firebaseAuthReady && authInitTimedOut && (
+                <Alert className="border-amber-300 bg-amber-50/80 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+                  <AlertTitle>Sign-in initialization delayed</AlertTitle>
+                  <AlertDescription>
+                    Firebase Auth is taking longer than expected to initialize.
+                    Check your local stack and refresh this page.
+                  </AlertDescription>
+                  <div className="mt-3">
+                    <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
+                      Reload
+                    </Button>
+                  </div>
+                </Alert>
               )}
               {AUTH_MODE !== "firebase" && (
                 <Card className="glass-card rounded-2xl border-border/40 dark:border-[hsl(var(--sky-accent))]/20">
@@ -1188,36 +1240,47 @@ export default function App() {
               </Alert>
             )}
 
-            <div className="grid min-w-0 gap-4 lg:grid-cols-[260px_1fr]">
+            <div className="grid min-w-0 gap-4 lg:grid-cols-[280px_1fr]">
           <aside className="hidden space-y-3 lg:sticky lg:top-20 lg:block lg:self-start">
-            <Card className="glass-card relative overflow-hidden rounded-2xl">
+            <Card className="glass-card nav-panel relative overflow-hidden rounded-2xl">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.06),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.1),_transparent_60%)]" />
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground dark:text-muted-foreground/60">
-                  Progress
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 pt-0">
-                <StepStatus
-                  label="1 · Connect"
-                  active={!flow.connected}
-                  done={flow.connected}
-                />
-                <StepStatus
-                  label="2 · Review"
-                  active={flow.connected && !reviewComplete}
-                  done={reviewComplete}
-                />
-                <StepStatus
-                  label="3 · Import"
-                  active={reviewComplete && !importComplete}
-                  done={importComplete}
-                />
+              <CardContent className="space-y-4 p-5">
+                <div className="flex items-center gap-3 border-b border-border/35 pb-4 dark:border-[hsl(var(--sky-accent))]/15">
+                  <div className="nav-brand-icon">
+                    <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
+                    </svg>
+                  </div>
+                  <span className="text-sm font-bold tracking-[0.22em] text-gradient">SKYBRIDGE</span>
+                </div>
+                <div className="nav-steps-container">
+                  <div className="nav-steps gap-1.5">
+                    {navSteps.map((step, index) => (
+                      <div
+                        key={step.id}
+                        className={cn(
+                          "nav-step",
+                          step.active && "active",
+                          step.done && !step.active && "completed",
+                          step.locked && "locked"
+                        )}
+                      >
+                        <span className="step-indicator">
+                          {step.done ? <Check className="h-3.5 w-3.5" /> : index + 1}
+                        </span>
+                        <span className="step-content">
+                          <span className="step-title">{step.title}</span>
+                          <span className="step-subtitle">{step.subtitle}</span>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </aside>
 
-          <section className="min-w-0 space-y-2.5">
+          <section className="min-w-0 space-y-2.5 app-content-stack">
             <div className="glass-card-accent relative min-w-0 rounded-2xl">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.04),_transparent_58%)] dark:bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.08),_transparent_58%)]" />
             <Accordion

@@ -98,19 +98,32 @@ export function ReviewSection({
     <AccordionItem
       value="review"
       className={cn(
-        "border-0 px-4 sm:px-5 bg-transparent",
+        "flow-accordion-item border-0 px-4 sm:px-5 bg-transparent",
         !allowed && "opacity-60"
       )}
     >
       <AccordionTrigger
         disabled={!allowed}
-        className={!allowed ? "font-normal text-muted-foreground" : undefined}
+        className={cn(
+          "flow-accordion-trigger",
+          !allowed && "font-normal text-muted-foreground"
+        )}
       >
-        <div className="flex w-full items-center justify-between">
-          <span>2 · Review</span>
+        <div className="flex w-full items-center justify-between gap-3">
+          <div className="flow-accordion-title">
+            <span className="flow-accordion-icon" aria-hidden>
+              <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+            </span>
+            <span className="flow-accordion-label">2. Review Flights</span>
+          </div>
           <Badge
             variant={reviewComplete ? "success" : reviewRunning ? "active" : "outline"}
-            className={!allowed ? "border-dashed" : undefined}
+            className={cn("flow-accordion-badge", !allowed && "border-dashed")}
           >
             {reviewApproved
               ? "Approved"

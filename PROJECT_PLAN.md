@@ -132,6 +132,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Add backend app coverage for auth token errors, credential claim errors, and rate-limit validation.
 - [x] Add e2e coverage for review table expansion (show more flights).
 - [x] Add e2e coverage for connect enablement, credential validation errors, and import confirmation.
+- [x] Align frontend app shell and landing page visuals with finalized mockups (`design/final/skybridge-visual-design.html`, `design/final/skybridge-landing-page.html`) while preserving the existing state/API flow.
 - [x] Add macOS devcontainer headed e2e helper for XQuartz black-window mitigation.
 - [x] Add devcontainer-only Xvfb/VNC/noVNC helper scripts for headed e2e without host config.
 - [x] Allow auto-install of VNC deps at devcontainer start via `DEVCONTAINER_E2E_VNC`.

@@ -82,21 +82,33 @@ export function ImportSection({
     <AccordionItem
       value="import"
       className={cn(
-        "border-0 px-4 sm:px-5 bg-transparent",
+        "flow-accordion-item border-0 px-4 sm:px-5 bg-transparent",
         !allowed && "opacity-60"
       )}
     >
       <AccordionTrigger
         disabled={!allowed}
-        className={!allowed ? "font-normal text-muted-foreground" : undefined}
+        className={cn(
+          "flow-accordion-trigger",
+          !allowed && "font-normal text-muted-foreground"
+        )}
       >
-        <div className="flex w-full items-center justify-between">
-          <span>3 · Import</span>
+        <div className="flex w-full items-center justify-between gap-3">
+          <div className="flow-accordion-title">
+            <span className="flow-accordion-icon" aria-hidden>
+              <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </span>
+            <span className="flow-accordion-label">3. Import</span>
+          </div>
           <Badge
             variant={
               importComplete ? "success" : importRunning ? "active" : reviewComplete ? "secondary" : "outline"
             }
-            className={!allowed ? "border-dashed" : undefined}
+            className={cn("flow-accordion-badge", !allowed && "border-dashed")}
           >
             {importComplete
               ? "Completed"

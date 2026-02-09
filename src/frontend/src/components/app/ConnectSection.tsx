@@ -78,17 +78,31 @@ export function ConnectSection({
     <AccordionItem
       value="connect"
       className={cn(
-        "border-0 px-4 sm:px-5 bg-transparent",
+        "flow-accordion-item border-0 px-4 sm:px-5 bg-transparent",
         !allowed && "opacity-60"
       )}
     >
       <AccordionTrigger
         disabled={!allowed}
-        className={!allowed ? "font-normal text-muted-foreground" : undefined}
+        className={cn(
+          "flow-accordion-trigger",
+          !allowed && "font-normal text-muted-foreground"
+        )}
       >
-        <div className="flex w-full items-center justify-between">
-          <span>1 · Connect accounts</span>
-          <Badge variant={connected ? "success" : "outline"} className={!allowed ? "border-dashed" : undefined}>
+        <div className="flex w-full items-center justify-between gap-3">
+          <div className="flow-accordion-title">
+            <span className="flow-accordion-icon" aria-hidden>
+              <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+              </svg>
+            </span>
+            <span className="flow-accordion-label">1. Connect Accounts</span>
+          </div>
+          <Badge
+            variant={connected ? "success" : "outline"}
+            className={cn("flow-accordion-badge", !allowed && "border-dashed")}
+          >
             {connected ? "Connected" : signedIn ? "Required" : "Sign in required"}
           </Badge>
         </div>

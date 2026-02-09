@@ -141,7 +141,7 @@
                   <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>
                   </svg>
-                  Start Migration
+                  Sign up / Sign in
                 </a>
                 <a
                   href="#how-it-works"
@@ -226,7 +226,7 @@
         </section>
 
         <!-- Features Section -->
-        <section class="py-16 lg:py-24">
+        <section class="py-16 lg:py-24" id="features">
           <div class="text-center max-w-2xl mx-auto mb-12">
             <div class="section-label mx-auto w-fit">Features</div>
             <h2 class="text-3xl sm:text-4xl font-bold mb-4">What you can expect</h2>
@@ -329,6 +329,65 @@
           </div>
         </section>
 
+        <!-- Security Section -->
+        <section class="py-16 lg:py-24" id="security">
+          <div class="text-center max-w-2xl mx-auto mb-12">
+            <div class="section-label mx-auto w-fit">Security</div>
+            <h2 class="text-3xl sm:text-4xl font-bold mb-4">Built for private, review-first imports</h2>
+            <p class="text-muted-foreground text-lg">
+              Skybridge is designed to minimize risk: credentials are used only for the active job, and
+              you always review before importing.
+            </p>
+          </div>
+          <div class="trust-card max-w-4xl mx-auto">
+            <div class="grid md:grid-cols-3 gap-4">
+              <div class="trust-item">
+                <div class="trust-item-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="font-semibold text-foreground mb-1">Credentials not stored</div>
+                  <p class="text-sm text-muted-foreground leading-relaxed">
+                    Login details are only used for this run and are not persisted by Skybridge.
+                  </p>
+                </div>
+              </div>
+              <div class="trust-item">
+                <div class="trust-item-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="font-semibold text-foreground mb-1">Review before import</div>
+                  <p class="text-sm text-muted-foreground leading-relaxed">
+                    Flights are fetched first so you can inspect summaries and registration gaps before transfer.
+                  </p>
+                </div>
+              </div>
+              <div class="trust-item">
+                <div class="trust-item-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="font-semibold text-foreground mb-1">Timed retention</div>
+                  <p class="text-sm text-muted-foreground leading-relaxed">
+                    Run artifacts are retained for {{RETENTION_DAYS}} days so you can download reports, then removed.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- Stats Section -->
         <section class="py-16">
           <div class="grid sm:grid-cols-3 gap-6">
@@ -363,7 +422,7 @@
                 <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>
                 </svg>
-                Start Free Migration
+                Start migration
               </a>
               <a
                 href="#how-it-works"
