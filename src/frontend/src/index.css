@@ -622,10 +622,12 @@
 .btn-primary-glow {
   background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--horizon-dark)) 100%);
   color: white;
-  /* Use filter instead of box-shadow to avoid clipping by parent overflow:hidden */
-  filter: drop-shadow(0 4px 12px hsl(var(--primary) / 0.4));
+  box-shadow: 0 4px 14px hsl(var(--primary) / 0.35);
   position: relative;
   overflow: hidden;
+  isolation: isolate;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -640,7 +642,7 @@
 
 .btn-primary-glow:hover {
   transform: translateY(-2px);
-  filter: drop-shadow(0 6px 20px hsl(var(--primary) / 0.5));
+  box-shadow: 0 8px 24px hsl(var(--primary) / 0.42);
 }
 
 .btn-primary-glow:hover::before {
@@ -649,7 +651,7 @@
 
 .btn-primary-glow:active {
   transform: translateY(0);
-  filter: drop-shadow(0 4px 12px hsl(var(--primary) / 0.4));
+  box-shadow: 0 4px 14px hsl(var(--primary) / 0.35);
 }
 
 .btn-secondary-glass {
