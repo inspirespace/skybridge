@@ -4,7 +4,7 @@ import { navigateWithFade } from "@/lib/navigation";
 /** Render AppFooter component. */
 export function AppFooter() {
   return (
-    <footer className="relative z-10 border-t border-border/30 bg-background/80 backdrop-blur-sm dark:border-[hsl(var(--sky-accent))]/10">
+    <footer className="footer-shell relative z-10 border-t border-border/30 bg-background/80 backdrop-blur-sm dark:border-[hsl(var(--sky-accent))]/10">
       <div className="container flex flex-wrap items-center justify-between gap-3 pb-20 pt-6 text-sm text-muted-foreground lg:py-6">
         <div>
           © {new Date().getFullYear()}{" "}

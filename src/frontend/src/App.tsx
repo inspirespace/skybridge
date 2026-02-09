@@ -1025,7 +1025,6 @@ export default function App() {
           <div className="star"></div>
           <div className="star"></div>
         </div>
-        <div className="horizon-line"></div>
         <div className="runway-lights"></div>
       </div>
 

@@ -325,55 +325,63 @@
     );
 }
 
-/* Horizon glow layer */
-.horizon-line {
+/* Footer separator glow line */
+.footer-shell {
+  position: relative;
+  overflow: hidden;
+}
+
+.footer-shell::before {
+  content: '';
   position: absolute;
-  bottom: 20%;
+  top: 0;
   left: 0;
   right: 0;
   height: 1px;
   background: linear-gradient(90deg,
     transparent 0%,
-    hsl(var(--primary) / 0.1) 15%,
-    hsl(var(--primary) / 0.25) 35%,
-    hsl(var(--primary) / 0.4) 50%,
-    hsl(var(--primary) / 0.25) 65%,
-    hsl(var(--primary) / 0.1) 85%,
+    hsl(var(--primary) / 0.12) 15%,
+    hsl(var(--primary) / 0.3) 35%,
+    hsl(var(--primary) / 0.5) 50%,
+    hsl(var(--primary) / 0.3) 65%,
+    hsl(var(--primary) / 0.12) 85%,
     transparent 100%
   );
   filter: blur(0.5px);
+  pointer-events: none;
 }
 
-/* Horizon glow bloom */
-.horizon-line::before {
+.footer-shell::after {
   content: '';
   position: absolute;
-  bottom: 0;
+  top: 0;
   left: 0;
   right: 0;
-  height: 80px;
+  height: 56px;
   background: linear-gradient(to top,
-    hsl(var(--primary) / 0.02) 0%,
-    transparent 100%
+    transparent 0%,
+    hsl(var(--primary) / 0.03) 100%
   );
+  transform: translateY(-100%);
+  pointer-events: none;
 }
 
-.dark .horizon-line {
+.dark .footer-shell::before {
   background: linear-gradient(90deg,
     transparent 0%,
-    hsl(var(--primary) / 0.15) 15%,
-    hsl(var(--primary) / 0.35) 35%,
-    hsl(var(--primary) / 0.5) 50%,
-    hsl(var(--primary) / 0.35) 65%,
-    hsl(var(--primary) / 0.15) 85%,
+    hsl(var(--primary) / 0.16) 15%,
+    hsl(var(--primary) / 0.38) 35%,
+    hsl(var(--primary) / 0.58) 50%,
+    hsl(var(--primary) / 0.38) 65%,
+    hsl(var(--primary) / 0.16) 85%,
     transparent 100%
   );
 }
 
-.dark .horizon-line::before {
+.dark .footer-shell::after {
   background: linear-gradient(to top,
-    hsl(var(--primary) / 0.04) 0%,
-    transparent 100%
+    transparent 0%,
+    hsl(var(--primary) / 0.06) 100%
   );
 }
 
