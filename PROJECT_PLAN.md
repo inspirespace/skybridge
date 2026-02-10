@@ -145,6 +145,10 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Refresh visual polish for landing/app (route-oriented hero + denser review table styling) while keeping existing flow behavior.
 - [x] Simplify sidebar copy/layout (remove `Preflight`/`CHK-*` wording, reduce visual clutter, improve readability on narrower widths).
 - [x] Refine step status indicator to plain text + animated dot (no status pills) for cleaner web-app UI.
+- [x] Fix landing hero floating "block time" chip overlap by repositioning it inside the hero card and raising text-column stacking.
+- [x] Remove floating "block time" overlay and convert it to an in-card chip to eliminate hero-content overlap across breakpoints.
+- [x] Replace misleading "How it works" play icon with a steps/checklist icon to reflect guidance content (not video).
+- [x] Upgrade "How it works" CTA icon to a route/flow motif with subtle hover motion for better visual engagement.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.

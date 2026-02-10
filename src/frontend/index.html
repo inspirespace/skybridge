@@ -88,7 +88,7 @@
         <section class="py-8 lg:py-16">
           <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <!-- Hero Text -->
-            <div class="space-y-6 lg:space-y-8">
+            <div class="relative z-20 space-y-6 lg:space-y-8">
               <!-- Badge -->
               <div class="badge-aviation w-fit">
                 <span class="badge-aviation-dot"></span>
@@ -144,11 +144,13 @@
                 </a>
                 <a
                   href="#how-it-works"
-                  class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-base font-medium transition-all duration-200 border border-border bg-card/50 hover:bg-card text-foreground h-12 px-8 btn-secondary-glass"
+                  class="how-it-works-cta inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-base font-medium transition-all duration-200 border border-border bg-card/50 hover:bg-card text-foreground h-12 px-8 btn-secondary-glass"
                 >
-                  <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/>
+                  <svg viewBox="0 0 24 24" class="h-5 w-5 how-it-works-icon" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path class="how-it-works-route" d="M4 18c0-4 3-7 7-7h2c4 0 7-3 7-7" />
+                    <circle class="how-it-works-node how-it-works-node-start" cx="4" cy="18" r="2" />
+                    <circle class="how-it-works-node how-it-works-node-mid" cx="11" cy="11" r="1.7" />
+                    <circle class="how-it-works-node how-it-works-node-end" cx="20" cy="4" r="2" />
                   </svg>
                   How it works
                 </a>
@@ -185,6 +187,13 @@
                   <span class="hero-route-chip">N739SB</span>
                   <span class="hero-route-chip">PA-28R</span>
                   <span class="hero-route-chip">IFR</span>
+                  <span class="hero-route-chip hero-route-chip-time">
+                    <svg viewBox="0 0 24 24" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    2.8h block time
+                  </span>
                 </div>
 
                 <div class="hero-instrument-grid">
@@ -227,13 +236,6 @@
                   <polyline points="20 6 9 17 4 12"/>
                 </svg>
                 <span class="text-sm">N739SB matched</span>
-              </div>
-              <div class="floating-element hidden lg:flex bottom-24 -left-8" style="animation-delay: 1s;">
-                <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12 6 12 12 16 14"/>
-                </svg>
-                <span class="text-sm">2.8h block time</span>
               </div>
               <div class="floating-element hidden lg:flex -bottom-4 right-16" style="animation-delay: 2s;">
                 <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
