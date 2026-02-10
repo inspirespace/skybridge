@@ -26,7 +26,6 @@ import { AppFooter } from "@/components/app/AppFooter";
 import { ConnectSection } from "@/components/app/ConnectSection";
 import { ReviewSection } from "@/components/app/ReviewSection";
 import { ImportSection } from "@/components/app/ImportSection";
-import { StepStatus } from "@/components/app/StepStatus";
 import { FirebaseAuthCard } from "@/components/app/auth/FirebaseAuthCard";
 import { FirebaseAuthDialog } from "@/components/app/auth/FirebaseAuthDialog";
 import { GuestUpgradeCard } from "@/components/app/auth/GuestUpgradeCard";
@@ -46,7 +45,7 @@ import {
 } from "@/api/client";
 import { canStartOver, deriveFlowState, getOpenStep } from "@/state/flow";
 import { useJobSnapshot } from "@/hooks/use-job-snapshot";
-import { Loader2 } from "lucide-react";
+import { Check, Loader2 } from "lucide-react";
 import {
   formatDate,
   formatFlightId,
@@ -180,6 +179,7 @@ export default function App() {
     onLoadingChange: setActionLoading,
   });
   const [showAuthDialog, setShowAuthDialog] = React.useState(false);
+  const [authInitTimedOut, setAuthInitTimedOut] = React.useState(false);
   const [emailAddress, setEmailAddress] = React.useState("");
   const [emailLinkNotice, setEmailLinkNotice] = React.useState<string | null>(null);
   const [emailLinkUrl, setEmailLinkUrl] = React.useState<string | null>(null);
@@ -273,6 +273,18 @@ export default function App() {
     clearEmailLinkEmail();
     emailLinkAutoRef.current = false;
   }, [flow.signedIn]);
+
+  React.useEffect(() => {
+    if (AUTH_MODE !== "firebase") return;
+    if (firebaseAuthReady) {
+      setAuthInitTimedOut(false);
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      setAuthInitTimedOut(true);
+    }, 10000);
+    return () => window.clearTimeout(timeout);
+  }, [AUTH_MODE, firebaseAuthReady]);
 
   const reviewSummary = job?.review_summary ?? null;
   const flights = reviewSummary?.flights ?? [];
@@ -948,35 +960,94 @@ export default function App() {
     ? 1
     : !reviewComplete
       ? 2
-      : !importComplete
-        ? 3
-        : 3;
+      : 3;
   const nextLabel = !flow.connected
-    ? "Connect"
+    ? "Review"
     : !reviewComplete
-      ? "Review"
+      ? "Import"
       : !importComplete
-        ? "Import"
+        ? "Complete import"
         : "All steps completed";
+  const navSteps = [
+    {
+      id: "connect",
+      title: "Connect",
+      subtitle: "Link CloudAhoy and FlySto",
+      done: flow.connected,
+      active: !flow.connected,
+      locked: false,
+    },
+    {
+      id: "review",
+      title: "Review",
+      subtitle: "Verify your flight data",
+      done: reviewComplete,
+      active: flow.connected && !reviewComplete,
+      locked: !flow.connected,
+    },
+    {
+      id: "import",
+      title: "Import",
+      subtitle: "Transfer to FlySto",
+      done: importComplete,
+      active: reviewComplete && !importComplete,
+      locked: !reviewComplete,
+    },
+  ] as const;
+  const completedSteps = navSteps.filter((step) => step.done).length;
+  const checklistProgress = (completedSteps / navSteps.length) * 100;
 
   const isRedirectScreen =
     !flow.signedIn && AUTH_MODE === "oidc" && (isSignInRedirect || isAuthCallback);
+  const authInitializing =
+    AUTH_MODE === "firebase" && !firebaseAuthReady && !authInitTimedOut;
 
   if (isRedirectScreen) {
     return <div className="min-h-screen bg-background" />;
   }
 
   return (
-    <div className="app-shell min-h-screen flex flex-col bg-gradient-to-b from-[#f7f9fc] to-[#eef3f8] text-[#1c2430] dark:bg-gradient-to-b dark:from-[#0b1120] dark:to-[#0f172a] dark:text-slate-100">
-      <header className="sticky top-0 z-40 border-b border-[#d9e1ec] bg-white/95 backdrop-blur dark:border-sky-900/60 dark:bg-slate-950/90">
-        <div className="absolute inset-x-0 top-0 h-1 bg-[#f1f4f8] dark:bg-slate-900/70" />
+    <div className="app-shell relative min-h-screen flex flex-col text-foreground">
+      {/* Atmospheric background */}
+      <div className="atmosphere">
+        <div className="stars">
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+          <div className="star"></div>
+        </div>
+        <div className="runway-lights"></div>
+      </div>
+
+      <header className="sticky top-0 z-40 border-b border-border/50 bg-background/80 backdrop-blur-xl dark:border-[hsl(var(--sky-accent))]/15 dark:bg-[hsl(var(--cockpit-dark))]/90">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--horizon))]/30 to-transparent" />
         <div className="container flex h-14 items-center justify-between sm:h-16">
           <a
-            className="text-xs font-semibold tracking-[0.28em] text-[#5b6775] hover:text-foreground dark:text-slate-300"
+            className="group flex items-center gap-3"
             href={flow.signedIn ? "/app/" : "/"}
             onClick={(event) => navigateWithFade(event, flow.signedIn ? "/app/" : "/")}
           >
-            SKYBRIDGE
+            <img
+              src="/brand/logo-64.png"
+              srcSet="/brand/logo-64.png 1x, /brand/logo-128.png 2x"
+              alt=""
+              aria-hidden
+              className="h-8 w-8 rounded-lg object-cover shadow-lg shadow-primary/30 transition-transform group-hover:scale-105 animate-float"
+            />
+            <span className="text-sm font-bold tracking-[0.2em] text-foreground/80 transition-colors group-hover:text-foreground">
+              SKYBRIDGE
+            </span>
           </a>
           <div className="flex items-center gap-2 sm:gap-4">
             {!flow.signedIn && AUTH_MODE !== "firebase" && (
@@ -984,7 +1055,7 @@ export default function App() {
                 Sign up / Sign in
               </Button>
             )}
-            {!flow.signedIn && AUTH_MODE === "firebase" && (
+            {!flow.signedIn && AUTH_MODE === "firebase" && firebaseAuthReady && (
               <FirebaseAuthDialog
                 open={showAuthDialog}
                 onOpenChange={setShowAuthDialog}
@@ -1066,7 +1137,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="container flex-1 pb-16 pt-5 lg:pb-8">
+      <main className="container relative z-10 flex-1 pb-16 pt-5 lg:pb-8">
         {!flow.signedIn &&
           AUTH_MODE === "oidc" &&
           (isSignInRedirect || isAuthCallback) && (
@@ -1076,28 +1147,51 @@ export default function App() {
         {!flow.signedIn &&
           !(AUTH_MODE === "oidc" && (isSignInRedirect || isAuthCallback)) && (
             <div className="mx-auto max-w-3xl space-y-4">
+              {/* Show loading state while Firebase Auth is initializing */}
+              {authInitializing && (
+                <div className="flex min-h-[40vh] items-center justify-center">
+                  <div className="text-center space-y-3">
+                    <div className="h-8 w-8 mx-auto rounded-full border-2 border-[hsl(var(--horizon))]/30 border-t-[hsl(var(--horizon))] animate-spin" />
+                    <p className="text-sm text-muted-foreground">Loading...</p>
+                  </div>
+                </div>
+              )}
+              {AUTH_MODE === "firebase" && !firebaseAuthReady && authInitTimedOut && (
+                <Alert className="border-amber-300 bg-amber-50/80 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+                  <AlertTitle>Sign-in initialization delayed</AlertTitle>
+                  <AlertDescription>
+                    Firebase Auth is taking longer than expected to initialize.
+                    Check your local stack and refresh this page.
+                  </AlertDescription>
+                  <div className="mt-3">
+                    <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
+                      Reload
+                    </Button>
+                  </div>
+                </Alert>
+              )}
               {AUTH_MODE !== "firebase" && (
-                <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
+                <Card className="glass-card rounded-2xl border-border/40 dark:border-[hsl(var(--sky-accent))]/20">
                   <CardHeader className="space-y-2">
-                    <CardTitle>Sign in to start your import</CardTitle>
+                    <CardTitle className="text-xl">Sign in to start your import</CardTitle>
                     <CardDescription>
                       Identify your job and keep your progress in sync across devices.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {signInError && (
-                      <Alert className="border-rose-200 bg-rose-50/70 text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-100">
+                      <Alert className="border-rose-200 bg-rose-50/70 text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100">
                         <AlertTitle>Sign-in failed</AlertTitle>
                         <AlertDescription>{signInError}</AlertDescription>
                       </Alert>
                     )}
-                    <Button onClick={handleSignIn} disabled={actionLoading}>
+                    <Button onClick={handleSignIn} disabled={actionLoading} className="btn-primary-glow">
                       Sign up / Sign in
                     </Button>
                   </CardContent>
                 </Card>
               )}
-              {AUTH_MODE === "firebase" && (
+              {AUTH_MODE === "firebase" && firebaseAuthReady && (
                 <FirebaseAuthCard
                   signInError={signInError}
                   authReady={firebaseAuthReady}
@@ -1134,60 +1228,103 @@ export default function App() {
               />
             )}
             <div className="mb-4 lg:hidden">
-              <Card className="rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
+              <Card className="glass-card rounded-2xl">
                 <CardContent className="space-y-2 py-3">
-                  <div className="flex items-center justify-between text-xs text-[#5b6775]">
-                    <span>Step {stepIndex} of 3</span>
-                    <span>
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="font-medium">Step {stepIndex} of 3</span>
+                    <span className="text-[hsl(var(--horizon))]">
                       {nextLabel === "All steps completed"
                         ? nextLabel
                         : `Next: ${nextLabel}`}
                     </span>
                   </div>
-                  <Progress value={(stepIndex / 3) * 100} />
+                  <Progress value={(stepIndex / 3) * 100} className="progress-bar-aviation" />
                 </CardContent>
               </Card>
             </div>
 
             {actionNotice && (
-              <Alert className="mb-4 border-emerald-200 bg-emerald-50/60 text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-100">
+              <Alert className="mb-4 border-[hsl(var(--altitude))]/30 bg-[hsl(var(--altitude))]/10 text-[hsl(var(--altitude))] dark:border-[hsl(var(--altitude))]/30 dark:bg-[hsl(var(--altitude))]/10">
                 <AlertTitle>Done</AlertTitle>
                 <AlertDescription>{actionNotice.message}</AlertDescription>
               </Alert>
             )}
 
-            <div className="grid min-w-0 gap-4 lg:grid-cols-[240px_1fr]">
+            <div className="grid min-w-0 gap-4 lg:grid-cols-[280px_1fr]">
           <aside className="hidden space-y-3 lg:sticky lg:top-20 lg:block lg:self-start">
-            <Card className="relative overflow-hidden rounded-xl border border-[#d9e1ec] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.14),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.2),_transparent_60%)]" />
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs uppercase tracking-[0.28em] text-[#5b6775]">
-                  Progress
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 pt-0">
-                <StepStatus
-                  label="1 · Connect"
-                  active={!flow.connected}
-                  done={flow.connected}
-                />
-                <StepStatus
-                  label="2 · Review"
-                  active={flow.connected && !reviewComplete}
-                  done={reviewComplete}
-                />
-                <StepStatus
-                  label="3 · Import"
-                  active={reviewComplete && !importComplete}
-                  done={importComplete}
-                />
+            <Card className="glass-card nav-panel relative overflow-hidden rounded-2xl">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.06),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.1),_transparent_60%)]" />
+              <CardContent className="space-y-4 p-5">
+                <div className="checklist-header">
+                  <p className="checklist-kicker">Import progress</p>
+                  <div className="checklist-summary-row">
+                    <span className="checklist-summary-label">
+                      {completedSteps}/{navSteps.length} complete
+                    </span>
+                    <span className="checklist-summary-next">
+                      {nextLabel === "All steps completed"
+                        ? "Done"
+                        : nextLabel}
+                    </span>
+                  </div>
+                  <Progress
+                    value={checklistProgress}
+                    className="checklist-progress"
+                    indicatorClassName="checklist-progress-indicator"
+                  />
+                </div>
+                <div className="nav-steps-container">
+                  <div className="nav-steps gap-1.5">
+                    {navSteps.map((step, index) => {
+                      const statusLabel = step.done
+                        ? "Done"
+                        : step.active
+                          ? "Current"
+                          : step.locked
+                            ? "Locked"
+                            : "Ready";
+                      return (
+                        <div
+                          key={step.id}
+                          className={cn(
+                            "nav-step",
+                            step.active && "active",
+                            step.done && !step.active && "completed",
+                            step.locked && "locked"
+                          )}
+                        >
+                          <span className="step-indicator">
+                            {step.done ? <Check className="h-3.5 w-3.5" /> : index + 1}
+                          </span>
+                          <span className="step-content">
+                            <span className="step-title-row">
+                              <span className="step-title">{step.title}</span>
+                              <span
+                                className={cn(
+                                  "step-inline-status",
+                                  step.done && "done",
+                                  step.active && "active",
+                                  step.locked && "locked"
+                                )}
+                              >
+                                <span className="step-inline-dot" aria-hidden />
+                                <span className="step-inline-label">{statusLabel}</span>
+                              </span>
+                            </span>
+                            <span className="step-subtitle">{step.subtitle}</span>
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </aside>
 
-          <section className="min-w-0 space-y-2.5">
-            <div className="relative min-w-0 overflow-hidden rounded-xl border border-[#d1dbea] bg-white shadow-[0_10px_30px_rgba(22,32,44,0.08)] dark:border-sky-900/60 dark:bg-slate-950/70 dark:shadow-none">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.12),_transparent_58%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.18),_transparent_58%)]" />
+          <section className="min-w-0 space-y-2.5 app-content-stack">
+            <div className="glass-card-accent relative min-w-0 rounded-2xl">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.04),_transparent_58%)] dark:bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.08),_transparent_58%)]" />
             <Accordion
               type="single"
               collapsible
@@ -1223,7 +1360,7 @@ export default function App() {
                 onRefresh={refresh}
               />
 
-              <div className="border-t border-[#e3ebf5] dark:border-sky-900/60" />
+              <div className="border-t border-border/30 dark:border-[hsl(var(--sky-accent))]/10" />
               <ReviewSection
                 allowed={allowedSteps.has("review")}
                 reviewComplete={reviewComplete}
@@ -1253,7 +1390,7 @@ export default function App() {
                 formatDate={formatDate}
               />
 
-              <div className="border-t border-[#e3ebf5] dark:border-sky-900/60" />
+              <div className="border-t border-border/30 dark:border-[hsl(var(--sky-accent))]/10" />
               <ImportSection
                 allowed={allowedSteps.has("import")}
                 importComplete={importComplete}

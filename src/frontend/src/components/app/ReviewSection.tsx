@@ -98,19 +98,32 @@ export function ReviewSection({
     <AccordionItem
       value="review"
       className={cn(
-        "border-0 px-4 bg-white dark:bg-transparent",
-        !allowed && "bg-[#f7fafd] dark:bg-slate-900/60"
+        "flow-accordion-item border-0 px-4 sm:px-5 bg-transparent",
+        !allowed && "opacity-60"
       )}
     >
       <AccordionTrigger
         disabled={!allowed}
-        className={!allowed ? "font-normal text-muted-foreground" : undefined}
+        className={cn(
+          "flow-accordion-trigger",
+          !allowed && "font-normal text-muted-foreground"
+        )}
       >
-        <div className="flex w-full items-center justify-between">
-          <span>2 · Review</span>
+        <div className="flex w-full items-center justify-between gap-3">
+          <div className="flow-accordion-title">
+            <span className="flow-accordion-icon" aria-hidden>
+              <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+            </span>
+            <span className="flow-accordion-label">2. Review Flights</span>
+          </div>
           <Badge
             variant={reviewComplete ? "success" : reviewRunning ? "active" : "outline"}
-            className={!allowed ? "border-dashed" : undefined}
+            className={cn("flow-accordion-badge", !allowed && "border-dashed")}
           >
             {reviewApproved
               ? "Approved"
@@ -123,7 +136,7 @@ export function ReviewSection({
         </div>
       </AccordionTrigger>
       <AccordionContent>
-        <div className="space-y-3 pb-4">
+        <div className="space-y-3 pb-6">
           {showReviewProgress && (
             <div className={reviewProgressCardClass}>
               <div className="flex items-center justify-between">
@@ -179,68 +192,88 @@ export function ReviewSection({
             </div>
           )}
           {reviewComplete && reviewSummary && (
-            <div className="flex flex-wrap gap-2 rounded-md border border-[#e3ebf5] bg-muted/20 p-2 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/40">
+            <div className="review-summary-strip flex flex-wrap gap-2 rounded-xl border border-border/30 bg-muted/20 p-3 dark:border-[hsl(var(--sky-accent))]/15 dark:bg-[hsl(var(--cockpit-dark))]/30">
               <Badge
                 variant="secondary"
-                className="border border-sky-200/40 text-foreground dark:border-sky-900/70 dark:bg-sky-950/40 dark:text-sky-100"
+                className="review-summary-chip border border-[hsl(var(--sky-accent))]/20 text-foreground dark:border-[hsl(var(--sky-accent))]/25 dark:bg-[hsl(var(--sky-accent))]/8"
               >
-                <span className="tabular-nums">Flights: {reviewSummary.flight_count}</span>
+                <span className="tabular-nums">Legs: {reviewSummary.flight_count}</span>
               </Badge>
               <Badge
                 variant="secondary"
-                className="border border-sky-200/40 text-foreground dark:border-sky-900/70 dark:bg-sky-950/40 dark:text-sky-100"
+                className="review-summary-chip border border-[hsl(var(--sky-accent))]/20 text-foreground dark:border-[hsl(var(--sky-accent))]/25 dark:bg-[hsl(var(--sky-accent))]/8"
               >
-                <span className="tabular-nums">Hours: {reviewSummary.total_hours}</span>
+                <span className="tabular-nums">Block hours: {reviewSummary.total_hours}</span>
               </Badge>
               <Badge
                 variant={reviewSummary.missing_tail_numbers > 0 ? "warning" : "secondary"}
                 className={
                   reviewSummary.missing_tail_numbers > 0
-                    ? undefined
-                    : "border border-sky-200/40 text-foreground dark:border-sky-900/70 dark:bg-sky-950/40 dark:text-sky-100"
+                    ? "review-summary-chip"
+                    : "review-summary-chip border border-[hsl(var(--sky-accent))]/20 text-foreground dark:border-[hsl(var(--sky-accent))]/25 dark:bg-[hsl(var(--sky-accent))]/8"
                 }
               >
                 <span className="tabular-nums">
-                  Registration missing: {reviewSummary.missing_tail_numbers}
+                  Unmatched tail regs: {reviewSummary.missing_tail_numbers}
                 </span>
               </Badge>
             </div>
           )}
           {reviewComplete && (
-            <div className="relative w-full max-w-full overflow-x-auto rounded-md border border-[#e3ebf5] bg-background/70 shadow-sm dark:border-sky-900/60 dark:bg-slate-950/40">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.16),_transparent_60%)]" />
-              <Table className="w-full min-w-[640px]">
-                <TableHeader className="bg-muted/40 dark:bg-slate-900/60">
+            <div className="review-ops-table-shell relative w-full max-w-full overflow-x-auto rounded-xl border border-border/30 bg-background/70 dark:border-[hsl(var(--sky-accent))]/15 dark:bg-[hsl(var(--cockpit-dark))]/30">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.03),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.06),_transparent_60%)]" />
+              <Table className="review-ops-table w-full min-w-[700px]">
+                <TableHeader className="review-ops-head bg-muted/30 dark:bg-[hsl(var(--cockpit-dark))]/50">
                   <TableRow>
                     <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Registration</TableHead>
-                    <TableHead>From / To</TableHead>
+                    <TableHead>Log Date</TableHead>
+                    <TableHead>Tail Reg</TableHead>
+                    <TableHead>Route (ICAO)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {visibleFlights.map((flight, index) => (
                     <TableRow
                       key={flight.flight_id}
-                      className={
-                        index % 2 === 0 ? "bg-muted/40 dark:bg-slate-900/30" : undefined
-                      }
+                      className={cn(
+                        "review-ops-row",
+                        index % 2 === 0 && "is-even",
+                        !flight.tail_number && "is-alert"
+                      )}
                     >
-                      <TableCell>
+                      <TableCell className="align-middle">
                         <Badge
                           variant={flight.tail_number ? "success" : "warning"}
-                          className="min-w-[110px] justify-center"
+                          className={cn(
+                            "review-status-badge min-w-[118px] justify-center",
+                            flight.tail_number
+                              ? "review-status-ok"
+                              : "review-status-alert"
+                          )}
                         >
-                          {flight.tail_number ? "OK" : "Needs review"}
+                          {flight.tail_number ? "Matched" : "Needs tail"}
                         </Badge>
                       </TableCell>
-                      <TableCell>{formatDate(flight.date)}</TableCell>
-                      <TableCell>{flight.tail_number ?? "—"}</TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center gap-2">
-                          <span className="tabular-nums">{flight.origin ?? "—"}</span>
+                      <TableCell className="review-date-cell">
+                        <span className="review-date-primary">{formatDate(flight.date)}</span>
+                        <span className="review-date-secondary">logbook date (UTC)</span>
+                      </TableCell>
+                      <TableCell className="review-tail-cell">
+                        {flight.tail_number ? (
+                          <span className="review-tail-value">{flight.tail_number}</span>
+                        ) : (
+                          <span className="review-tail-missing">UNASSIGNED</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="review-route-cell">
+                        <span className="review-route-track">
+                          <span className="review-airport-chip tabular-nums">
+                            {flight.origin ?? "----"}
+                          </span>
                           <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="tabular-nums">{flight.destination ?? "—"}</span>
+                          <span className="review-airport-chip tabular-nums">
+                            {flight.destination ?? "----"}
+                          </span>
                         </span>
                       </TableCell>
                     </TableRow>
@@ -279,7 +312,7 @@ export function ReviewSection({
               <AlertDialogTrigger asChild>
                 <Button
                   disabled={!canApprove || importRunning || importComplete || actionLoading}
-                  className="shadow-sm"
+                  className="btn-primary-glow"
                 >
                   Accept and start import
                 </Button>

@@ -4,18 +4,18 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors",
+  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-all duration-300",
   {
     variants: {
       variant: {
         default: "border-transparent bg-primary text-primary-foreground",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground dark:border-sky-900/60 dark:bg-sky-950/50 dark:text-sky-100",
+          "border-transparent bg-secondary text-secondary-foreground dark:border-[hsl(var(--sky-accent))]/20 dark:bg-[hsl(var(--sky-accent))]/8 dark:text-[hsl(var(--sky-accent))]",
         outline:
-          "text-foreground dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-100",
-        success: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300",
-        warning: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300",
-        active: "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-300",
+          "text-foreground border-border/50 dark:border-[hsl(var(--sky-accent))]/15 dark:bg-[hsl(var(--cockpit-dark))]/30 dark:text-muted-foreground",
+        success: "border-[hsl(var(--altitude))]/30 bg-[hsl(var(--altitude))]/10 text-[hsl(var(--altitude))] dark:border-[hsl(var(--altitude))]/30 dark:bg-[hsl(var(--altitude))]/10 dark:text-[hsl(var(--altitude))]",
+        warning: "border-amber-300/40 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400",
+        active: "border-[hsl(var(--horizon))]/40 bg-[hsl(var(--horizon))]/10 text-[hsl(var(--horizon))] shadow-[0_0_12px_hsl(var(--horizon)/0.2)] dark:border-[hsl(var(--horizon))]/30 dark:bg-[hsl(var(--horizon))]/10 dark:text-[hsl(var(--horizon))]",
       },
     },
     defaultVariants: {

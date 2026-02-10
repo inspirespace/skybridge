@@ -28,6 +28,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `devcontainer exec --workspace-folder . pytest` — run backend tests in the devcontainer.
 - `devcontainer exec --workspace-folder . npm --prefix src/frontend run test` — run frontend unit tests in the devcontainer.
 - `devcontainer exec --workspace-folder . npm --prefix src/frontend run test:e2e` — run frontend e2e tests in the devcontainer.
+- `npm --prefix src/frontend run logo:generate` — regenerate logo-derived assets (header/footer logos, favicon set, web manifest icons) from `design/logo/skybridge-logo-2048x2048.webp` (or pass a custom source path as an argument; requires `magick` or macOS `sips`).
 
 ## Coding Style & Naming Conventions
 - Indentation: 2 spaces by default; follow language-specific conventions where standard (e.g., Python 4 spaces).
@@ -47,6 +48,10 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Never use escaped newline sequences (`\n`) in PR bodies; always use real line breaks.
 - Work in feature branches for non-trivial changes (e.g., `feature/...`, `fix/...`), then merge into `main`.
  - When asked to open a PR, prepare the full PR (title + body) without further prompts, using the CONTRIBUTING.md format and including tests/scope/risk as applicable.
+
+## Visual PR Screenshot Workflow
+- Canonical process is defined in `CONTRIBUTING.md` under `Visual Screenshot Workflow (required for visual PRs)`.
+- For any visual/UI PR, follow that section as the source of truth (do not duplicate or diverge workflow rules in other docs).
 
 ## Agent Update Policy
 - If you add or change developer workflows, commands, or project structure, update this file in the same change set.

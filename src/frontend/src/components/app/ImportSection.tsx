@@ -82,21 +82,33 @@ export function ImportSection({
     <AccordionItem
       value="import"
       className={cn(
-        "border-0 px-4 bg-white dark:bg-transparent",
-        !allowed && "bg-[#f7fafd] dark:bg-slate-900/60"
+        "flow-accordion-item border-0 px-4 sm:px-5 bg-transparent",
+        !allowed && "opacity-60"
       )}
     >
       <AccordionTrigger
         disabled={!allowed}
-        className={!allowed ? "font-normal text-muted-foreground" : undefined}
+        className={cn(
+          "flow-accordion-trigger",
+          !allowed && "font-normal text-muted-foreground"
+        )}
       >
-        <div className="flex w-full items-center justify-between">
-          <span>3 · Import</span>
+        <div className="flex w-full items-center justify-between gap-3">
+          <div className="flow-accordion-title">
+            <span className="flow-accordion-icon" aria-hidden>
+              <svg viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </span>
+            <span className="flow-accordion-label">3. Import</span>
+          </div>
           <Badge
             variant={
               importComplete ? "success" : importRunning ? "active" : reviewComplete ? "secondary" : "outline"
             }
-            className={!allowed ? "border-dashed" : undefined}
+            className={cn("flow-accordion-badge", !allowed && "border-dashed")}
           >
             {importComplete
               ? "Completed"
@@ -109,7 +121,7 @@ export function ImportSection({
         </div>
       </AccordionTrigger>
       <AccordionContent>
-        <div className="space-y-4 pb-4">
+        <div className="space-y-4 pb-6">
           <p className="text-sm text-muted-foreground">
             Import runs after approval and produces a report summary.
           </p>
@@ -176,8 +188,8 @@ export function ImportSection({
             </div>
           )}
           {importComplete && job?.import_report && (
-            <div className="relative overflow-hidden rounded-md bg-background/70 shadow-sm dark:bg-slate-950/40">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.08),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.16),_transparent_60%)]" />
+            <div className="relative overflow-hidden rounded-xl bg-background/70 dark:bg-[hsl(var(--cockpit-dark))]/30">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--altitude)/0.05),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_hsl(var(--altitude)/0.1),_transparent_60%)]" />
               <ImportResults
                 imported={job.import_report.imported_count}
                 skipped={job.import_report.skipped_count}
@@ -187,22 +199,24 @@ export function ImportSection({
             </div>
           )}
           {importComplete && (
-            <Alert className="border-emerald-200/70 bg-emerald-50/50 dark:border-emerald-900/50 dark:bg-emerald-950/40">
-              <AlertTitle>Next steps</AlertTitle>
-              <AlertDescription>
+            <Alert className="border-[hsl(var(--altitude))]/30 bg-[hsl(var(--altitude))]/10 dark:border-[hsl(var(--altitude))]/20 dark:bg-[hsl(var(--altitude))]/5">
+              <AlertTitle className="text-[hsl(var(--altitude))]">Next steps</AlertTitle>
+              <AlertDescription className="text-muted-foreground">
                 Review your imported flights in FlySto, download the files for your
                 records, and keep this page bookmarked while results are retained for
                 {" "}
                 {retentionDays} days before deletion.
               </AlertDescription>
               <div className="mt-4 flex flex-wrap gap-3">
-                <Button asChild>
+                <Button asChild size="lg" className="btn-primary-glow rounded-xl px-6">
                   <a href="https://www.flysto.net/logs" target="_blank" rel="noreferrer">
                     Open FlySto
                   </a>
                 </Button>
                 <Button
+                  size="lg"
                   variant="outline"
+                  className="btn-secondary-glass rounded-xl px-6"
                   onClick={onDownloadFiles}
                   disabled={actionLoading || downloadLoading}
                   aria-busy={downloadLoading}
@@ -216,7 +230,12 @@ export function ImportSection({
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="destructive" disabled={actionLoading || downloadLoading}>
+                    <Button
+                      variant="link"
+                      size="lg"
+                      className="px-2 text-destructive hover:text-destructive/85"
+                      disabled={actionLoading || downloadLoading}
+                    >
                       Delete results now
                     </Button>
                   </AlertDialogTrigger>

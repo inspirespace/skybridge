@@ -132,6 +132,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Add backend app coverage for auth token errors, credential claim errors, and rate-limit validation.
 - [x] Add e2e coverage for review table expansion (show more flights).
 - [x] Add e2e coverage for connect enablement, credential validation errors, and import confirmation.
+- [x] Align frontend app shell and landing page visuals with finalized mockups (`design/final/skybridge-visual-design.html`, `design/final/skybridge-landing-page.html`) while preserving the existing state/API flow.
 - [x] Add macOS devcontainer headed e2e helper for XQuartz black-window mitigation.
 - [x] Add devcontainer-only Xvfb/VNC/noVNC helper scripts for headed e2e without host config.
 - [x] Allow auto-install of VNC deps at devcontainer start via `DEVCONTAINER_E2E_VNC`.
@@ -141,6 +142,20 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Auto-open noVNC auto-connect URL when running Playwright from VS Code.
 - [x] Exclude discovery modules from coverage targets and remove discovery-specific tests.
 - [x] Refactor App shell auth UI into dedicated components/config helpers to keep `App.tsx` maintainable.
+- [x] Refresh visual polish for landing/app (route-oriented hero + denser review table styling) while keeping existing flow behavior.
+- [x] Simplify sidebar copy/layout (remove `Preflight`/`CHK-*` wording, reduce visual clutter, improve readability on narrower widths).
+- [x] Refine step status indicator to plain text + animated dot (no status pills) for cleaner web-app UI.
+- [x] Fix landing hero floating "block time" chip overlap by repositioning it inside the hero card and raising text-column stacking.
+- [x] Remove floating "block time" overlay and convert it to an in-card chip to eliminate hero-content overlap across breakpoints.
+- [x] Replace misleading "How it works" play icon with a steps/checklist icon to reflect guidance content (not video).
+- [x] Upgrade "How it works" CTA icon to a route/flow motif with subtle hover motion for better visual engagement.
+- [x] Fine-tune "How it works" route icon dashed-path stroke weight for a lighter appearance.
+- [x] Make "How it works" route icon dots fully solid and non-animated to reduce visual distraction against the animated dashed path.
+- [x] Align app footer markup to landing footer design (logo chip, spacing, link treatment, and GitHub icon link) for consistent shared presentation.
+- [x] Add automated logo asset generation from `design/logo/skybridge-logo-2048x2048.webp` and wire generated assets into shared headers/footers plus favicon/manifest metadata across app + static pages.
+- [x] Remove duplicate storage of the full original logo in generated assets; keep `design/logo/skybridge-logo-2048x2048.webp` as the single source-of-truth.
+- [x] Standardize visual PR screenshot workflow (before=`main`, deterministic app-state captures, light+dark sets, PR-context hosting, no screenshot binaries in git history).
+- [x] De-duplicate screenshot workflow docs: keep detailed procedure in `CONTRIBUTING.md` and reference it from `AGENTS.md`.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.

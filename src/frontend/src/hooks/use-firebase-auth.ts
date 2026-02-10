@@ -96,7 +96,11 @@ export function useFirebaseAuth({
       apiKey
     )}`;
     const response = await fetch(endpoint, { method: "GET", mode: "cors" });
-    return Boolean(response);
+    // Reaching the emulator endpoint is enough; 4xx can still mean emulator is up.
+    if (response.status >= 500) {
+      throw new Error(`Auth emulator readiness check failed (${response.status})`);
+    }
+    return true;
   }, [useEmulator, emulatorUrl, apiKey]);
 
   React.useEffect(() => {
@@ -252,53 +256,68 @@ export function useFirebaseAuth({
     let unsubscribe: (() => void) | undefined;
     let disposed = false;
     (async () => {
-      const { initializeApp, getApps } = await import("firebase/app");
-      const { getAuth, onIdTokenChanged, connectAuthEmulator } = await import(
-        "firebase/auth"
-      );
-      const { setPersistence, inMemoryPersistence } = await import("firebase/auth");
-      const app =
-        getApps().length > 0
-          ? getApps()[0]
-          : initializeApp({
-              apiKey,
-              authDomain,
-              projectId,
-              appId,
-            });
-      const auth = getAuth(app);
-      await setPersistence(auth, inMemoryPersistence);
-      if (useEmulator && emulatorUrl) {
-        const host = emulatorUrl.startsWith("http")
-          ? emulatorUrl
-          : `http://${emulatorUrl}`;
-        connectAuthEmulator(auth, host, { disableWarnings: true });
-      }
-      authRef.current = auth;
-      setAuthReady(true);
-      unsubscribe = onIdTokenChanged(auth, async (user) => {
-        if (disposed) return;
-        if (!user) {
-          clearAuth();
-          setIsAnonymous(false);
-          setEmulatorProvider(null);
-          return;
+      try {
+        const { initializeApp, getApps } = await import("firebase/app");
+        const { getAuth, onIdTokenChanged, connectAuthEmulator } = await import(
+          "firebase/auth"
+        );
+        const { setPersistence, browserSessionPersistence } = await import("firebase/auth");
+        const app =
+          getApps().length > 0
+            ? getApps()[0]
+            : initializeApp({
+                apiKey,
+                authDomain,
+                projectId,
+                appId,
+              });
+        const auth = getAuth(app);
+        if (useEmulator && emulatorUrl) {
+          const host = emulatorUrl.startsWith("http")
+            ? emulatorUrl
+            : `http://${emulatorUrl}`;
+          try {
+            connectAuthEmulator(auth, host, { disableWarnings: true });
+          } catch (err) {
+            const code = (err as { code?: string })?.code;
+            // In dev/HMR, auth may already be emulator-configured. Keep existing config.
+            if (code !== "auth/emulator-config-failed") {
+              throw err;
+            }
+          }
         }
-        try {
-          const token = await user.getIdToken();
-          setAccessToken(token);
-          setIdToken(token);
-          setIsAnonymous(Boolean(user.isAnonymous));
-          setUserId(user.uid ?? null);
-          setEmailLinkPending(false);
-        } catch (err) {
-          onError?.(err instanceof Error ? err.message : "Failed to load auth token");
-        }
-      });
+        await setPersistence(auth, browserSessionPersistence);
+        authRef.current = auth;
+        setAuthReady(true);
+        unsubscribe = onIdTokenChanged(auth, async (user) => {
+          if (disposed) return;
+          if (!user) {
+            clearAuth();
+            setIsAnonymous(false);
+            setEmulatorProvider(null);
+            return;
+          }
+          try {
+            const token = await user.getIdToken();
+            setAccessToken(token);
+            setIdToken(token);
+            setIsAnonymous(Boolean(user.isAnonymous));
+            setUserId(user.uid ?? null);
+            setEmailLinkPending(false);
+          } catch (err) {
+            onError?.(err instanceof Error ? err.message : "Failed to load auth token");
+          }
+        });
 
-      const { isSignInWithEmailLink } = await import("firebase/auth");
-      if (typeof window !== "undefined" && isSignInWithEmailLink(auth, window.location.href)) {
-        setEmailLinkPending(true);
+        const { isSignInWithEmailLink } = await import("firebase/auth");
+        if (typeof window !== "undefined" && isSignInWithEmailLink(auth, window.location.href)) {
+          setEmailLinkPending(true);
+        }
+      } catch (err) {
+        if (!disposed) {
+          setAuthReady(false);
+          onError?.(formatEmulatorError(err instanceof Error ? err.message : "Firebase auth initialization failed"));
+        }
       }
     })();
     return () => {
