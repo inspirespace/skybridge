@@ -682,29 +682,33 @@
 }
 
 .how-it-works-route {
-  stroke-dasharray: 3 3;
+  stroke-width: 1.25;
+  stroke-dasharray: 2.5 3.5;
   transition: stroke-dashoffset 260ms ease, opacity 260ms ease;
   opacity: 0.85;
 }
 
 .how-it-works-node {
-  transition: transform 260ms ease, opacity 260ms ease;
+  transition: none;
   transform-box: fill-box;
   transform-origin: center;
+  opacity: 1;
+  fill: hsl(var(--foreground));
+  stroke: hsl(var(--foreground));
 }
 
 .how-it-works-node-start {
-  opacity: 0.75;
+  stroke-width: 2;
 }
 
 .how-it-works-node-mid {
-  opacity: 0.55;
+  stroke-width: 2;
 }
 
 .how-it-works-node-end {
   fill: hsl(var(--primary));
   stroke: hsl(var(--primary));
-  opacity: 0.95;
+  stroke-width: 2;
 }
 
 .how-it-works-cta:hover .how-it-works-route {
@@ -712,14 +716,6 @@
   opacity: 1;
 }
 
-.how-it-works-cta:hover .how-it-works-node-mid {
-  opacity: 0.85;
-  transform: scale(1.08);
-}
-
-.how-it-works-cta:hover .how-it-works-node-end {
-  transform: scale(1.12);
-}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    BADGES & STATUS PILLS

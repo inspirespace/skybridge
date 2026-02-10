@@ -149,6 +149,8 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Remove floating "block time" overlay and convert it to an in-card chip to eliminate hero-content overlap across breakpoints.
 - [x] Replace misleading "How it works" play icon with a steps/checklist icon to reflect guidance content (not video).
 - [x] Upgrade "How it works" CTA icon to a route/flow motif with subtle hover motion for better visual engagement.
+- [x] Fine-tune "How it works" route icon dashed-path stroke weight for a lighter appearance.
+- [x] Make "How it works" route icon dots fully solid and non-animated to reduce visual distraction against the animated dashed path.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.
