@@ -33,4 +33,7 @@ while IFS= read -r branch; do
   if ! git push "${REMOTE}" --delete "${branch}"; then
     echo "Skipping remote branch '${REMOTE}/${branch}' (could not delete)." >&2
   fi
-done < <(git for-each-ref --format='%(refname:lstrip=3)' --merged="${REMOTE}/${TARGET_BRANCH}" "refs/remotes/${REMOTE}/*")
+done < <(
+  git for-each-ref --format='%(refname)' --merged="${REMOTE}/${TARGET_BRANCH}" "refs/remotes/${REMOTE}" \
+    | sed -n "s#^refs/remotes/${REMOTE}/##p"
+)

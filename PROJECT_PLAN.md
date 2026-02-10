@@ -158,6 +158,8 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] De-duplicate screenshot workflow docs: keep detailed procedure in `CONTRIBUTING.md` and reference it from `AGENTS.md`.
 - [x] Add a VS Code task (`Git: Cleanup Merged Branches`) for `scripts/cleanup-merged-branches.sh` to make branch cleanup accessible from the editor.
 - [x] Gate Firebase deploy workflow with a preflight secrets check so CI exits successfully with a skip notice when deploy prerequisites are not configured.
+- [x] Remove Terraform devcontainer feature and align VS Code Vitest settings with current `vitest.explorer` configuration keys.
+- [x] Fix merged-remote cleanup to include nested remote branch names (e.g., `feature/foo`) instead of only single-segment names.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.
