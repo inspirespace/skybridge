@@ -5,7 +5,6 @@ bash .devcontainer/setup-history.sh
 bash .devcontainer/setup-codex.sh
 bash .devcontainer/setup-venv.sh
 bash .devcontainer/setup-completion.sh
-bash .devcontainer/setup-copilot.sh
 bash .devcontainer/setup-zsh-autosuggestions.sh
 UV_CACHE_DIR=/tmp/uv-cache uv sync --frozen --extra dev
 if ! command -v pytest >/dev/null 2>&1; then

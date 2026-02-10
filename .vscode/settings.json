@@ -7,8 +7,5 @@
   "python.testing.autoTestDiscoverOnSaveEnabled": true,
   "python.testing.cwd": "${workspaceFolder}",
   "vitest.rootConfig": "src/frontend/vite.config.ts",
-  "vitest.include": [
-    "src/frontend"
-  ],
   "playwright.reuseBrowser": true
 }
