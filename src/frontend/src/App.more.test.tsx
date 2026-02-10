@@ -44,7 +44,7 @@ vi.mock("@/api/client", () => ({
 }));
 
 import { useJobSnapshot } from "@/hooks/use-job-snapshot";
-import { downloadArtifactsZip } from "@/api/client";
+import { deleteJob, downloadArtifactsZip } from "@/api/client";
 import App from "@/App";
 
 const USER_ID_KEY = "skybridge_user_id";
@@ -77,6 +77,28 @@ function baseJob(overrides: Record<string, unknown>) {
 }
 
 describe("App UI flows", () => {
+  it("returns to connect step immediately while edit-filter delete is in flight", async () => {
+    sessionStorage.setItem(USER_ID_KEY, "pilot");
+    sessionStorage.setItem(JOB_ID_KEY, "job-123");
+
+    const neverSettles = new Promise<never>(() => {});
+    (deleteJob as unknown as ReturnType<typeof vi.fn>).mockReturnValue(neverSettles);
+    (useJobSnapshot as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: baseJob({ status: "review_ready" }),
+      error: null,
+      refresh: vi.fn(),
+    });
+
+    render(<App />);
+
+    const editFilters = await screen.findByRole("button", { name: /edit import filters/i });
+    await act(async () => {
+      fireEvent.click(editFilters);
+    });
+
+    expect(await screen.findByText(/connect accounts/i)).toBeInTheDocument();
+  });
+
   it("renders import results and allows download", async () => {
     sessionStorage.setItem(USER_ID_KEY, "pilot");
     sessionStorage.setItem(JOB_ID_KEY, "job-123");

@@ -663,28 +663,30 @@ export default function App() {
 
   /** Handle handleEditFilters. */
   const handleEditFilters = () => {
-    if (!jobId) {
+    const currentJobId = jobId;
+    if (!currentJobId) {
       setManualOpen("connect");
       return;
     }
+    // Leave review immediately so polling errors from a just-deleted job never flash in step 2.
+    removeSessionValue(JOB_ID_KEY);
+    setJobId(null);
+    setShowAllFlights(false);
+    setManualOpen("connect");
     setActionLoading(true);
     setActionError(null);
-    deleteJob(jobId, auth)
+    deleteJob(currentJobId, auth)
       .catch((err) => {
         if (isAuthExpiredError(err)) {
           handleTokenExpired();
           return;
         }
         setActionError({
-          scope: "review",
+          scope: "connect",
           message: err instanceof Error ? err.message : "Failed to reset filters",
         });
       })
       .finally(() => {
-        removeSessionValue(JOB_ID_KEY);
-        setJobId(null);
-        setShowAllFlights(false);
-        setManualOpen("connect");
         setActionLoading(false);
       });
   };
