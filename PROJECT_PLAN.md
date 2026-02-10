@@ -151,6 +151,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Upgrade "How it works" CTA icon to a route/flow motif with subtle hover motion for better visual engagement.
 - [x] Fine-tune "How it works" route icon dashed-path stroke weight for a lighter appearance.
 - [x] Make "How it works" route icon dots fully solid and non-animated to reduce visual distraction against the animated dashed path.
+- [x] Align app footer markup to landing footer design (logo chip, spacing, link treatment, and GitHub icon link) for consistent shared presentation.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.
