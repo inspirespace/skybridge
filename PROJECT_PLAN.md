@@ -152,6 +152,8 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Fine-tune "How it works" route icon dashed-path stroke weight for a lighter appearance.
 - [x] Make "How it works" route icon dots fully solid and non-animated to reduce visual distraction against the animated dashed path.
 - [x] Align app footer markup to landing footer design (logo chip, spacing, link treatment, and GitHub icon link) for consistent shared presentation.
+- [x] Add automated logo asset generation from `design/logo/skybridge-logo-2048x2048.webp` and wire generated assets into shared headers/footers plus favicon/manifest metadata across app + static pages.
+- [x] Remove duplicate storage of the full original logo in generated assets; keep `design/logo/skybridge-logo-2048x2048.webp` as the single source-of-truth.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.

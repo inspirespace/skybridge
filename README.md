@@ -44,6 +44,21 @@ mkdir -p docker/https/certs
 mkcert -cert-file docker/https/certs/skybridge.localhost.pem -key-file docker/https/certs/skybridge.localhost-key.pem skybridge.localhost "*.skybridge.localhost"
 ```
 
+### Logo assets
+
+The frontend logo, favicon set, and manifest icons are generated from `design/logo/skybridge-logo-2048x2048.webp`.
+The generator requires either ImageMagick (`magick`) or macOS `sips`.
+
+```sh
+npm --prefix src/frontend run logo:generate
+```
+
+To use a different source file for one-off generation:
+
+```sh
+npm --prefix src/frontend run logo:generate -- path/to/new-logo.webp
+```
+
 ## Deploy (Firebase)
 
 CI deploys live from `main` via GitHub Actions (`.github/workflows/firebase-deploy.yml`).

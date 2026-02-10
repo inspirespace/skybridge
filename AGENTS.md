@@ -28,6 +28,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `devcontainer exec --workspace-folder . pytest` — run backend tests in the devcontainer.
 - `devcontainer exec --workspace-folder . npm --prefix src/frontend run test` — run frontend unit tests in the devcontainer.
 - `devcontainer exec --workspace-folder . npm --prefix src/frontend run test:e2e` — run frontend e2e tests in the devcontainer.
+- `npm --prefix src/frontend run logo:generate` — regenerate logo-derived assets (header/footer logos, favicon set, web manifest icons) from `design/logo/skybridge-logo-2048x2048.webp` (or pass a custom source path as an argument; requires `magick` or macOS `sips`).
 
 ## Coding Style & Naming Conventions
 - Indentation: 2 spaces by default; follow language-specific conventions where standard (e.g., Python 4 spaces).
