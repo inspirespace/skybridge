@@ -49,6 +49,25 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Work in feature branches for non-trivial changes (e.g., `feature/...`, `fix/...`), then merge into `main`.
  - When asked to open a PR, prepare the full PR (title + body) without further prompts, using the CONTRIBUTING.md format and including tests/scope/risk as applicable.
 
+## Visual PR Screenshot Workflow
+- Required for PRs that change visuals/UI (landing page, app, legal pages, shared layout/components, theming).
+- Capture before/after pairs with the same viewport and framing:
+  - Before source must be `main`.
+  - After source must be the PR branch.
+- Standard desktop viewport is `1440x1100`; add mobile screenshots when mobile layout is affected.
+- Capture both light and dark mode for changed screens (`localStorage` key `skybridge-theme`).
+- App screenshots must show a real in-app flow state (for example `review_ready`), not only the sign-in screen:
+  - Seed deterministic session state and stub API responses as needed for stable visuals.
+- Do not commit screenshot binaries to git history for PR evidence (`.png`, `.jpg`, `.webp`).
+- Persist screenshot evidence in PR context:
+  - Preferred: GitHub PR attachments (description/comment upload via web UI).
+  - CLI fallback: PR-specific prerelease assets (for example `pr-<number>-visual-screenshots`) linked from the PR body.
+- PR screenshot section must explicitly label:
+  - Before branch (`main`) vs after branch (PR head).
+  - Light mode and dark mode sets.
+  - Direct links fallback when inline image previews fail.
+- Before merge, verify screenshots are not in repo diff/history (`git diff --name-only`, `gh pr diff --name-only`).
+
 ## Agent Update Policy
 - If you add or change developer workflows, commands, or project structure, update this file in the same change set.
 - Always update project tracker files (e.g., `PROJECT_PLAN.md`) when material progress or blockers occur, without waiting for a reminder.

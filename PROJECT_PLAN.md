@@ -154,6 +154,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Align app footer markup to landing footer design (logo chip, spacing, link treatment, and GitHub icon link) for consistent shared presentation.
 - [x] Add automated logo asset generation from `design/logo/skybridge-logo-2048x2048.webp` and wire generated assets into shared headers/footers plus favicon/manifest metadata across app + static pages.
 - [x] Remove duplicate storage of the full original logo in generated assets; keep `design/logo/skybridge-logo-2048x2048.webp` as the single source-of-truth.
+- [x] Standardize visual PR screenshot workflow (before=`main`, deterministic app-state captures, light+dark sets, PR-context hosting, no screenshot binaries in git history).
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.
