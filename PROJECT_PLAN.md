@@ -156,6 +156,11 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Remove duplicate storage of the full original logo in generated assets; keep `design/logo/skybridge-logo-2048x2048.webp` as the single source-of-truth.
 - [x] Standardize visual PR screenshot workflow (before=`main`, deterministic app-state captures, light+dark sets, PR-context hosting, no screenshot binaries in git history).
 - [x] De-duplicate screenshot workflow docs: keep detailed procedure in `CONTRIBUTING.md` and reference it from `AGENTS.md`.
+- [x] Add a VS Code task (`Git: Cleanup Merged Branches`) for `scripts/cleanup-merged-branches.sh` to make branch cleanup accessible from the editor.
+- [x] Gate Firebase deploy workflow with a preflight secrets check so CI exits successfully with a skip notice when deploy prerequisites are not configured.
+- [x] Remove Terraform devcontainer feature and align VS Code Vitest settings with current `vitest.explorer` configuration keys.
+- [x] Fix merged-remote cleanup to include nested remote branch names (e.g., `feature/foo`) instead of only single-segment names.
+- [x] Remove devcontainer Copilot-uninstall hook/scripts to prevent noisy VS Code extension uninstall errors on container start.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.

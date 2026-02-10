@@ -6,8 +6,6 @@
   ],
   "python.testing.autoTestDiscoverOnSaveEnabled": true,
   "python.testing.cwd": "${workspaceFolder}",
-  "vitest.enable": true,
-  "vitest.commandLine": "npm run test:watch",
-  "vitest.rootDirectory": "${workspaceFolder}/src/frontend",
+  "vitest.rootConfig": "src/frontend/vite.config.ts",
   "playwright.reuseBrowser": true
 }

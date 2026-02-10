@@ -18,6 +18,12 @@
       "type": "shell",
       "command": "docker compose build",
       "problemMatcher": []
+    },
+    {
+      "label": "Git: Cleanup Merged Branches",
+      "type": "shell",
+      "command": "./scripts/cleanup-merged-branches.sh",
+      "problemMatcher": []
     }
   ]
 }
