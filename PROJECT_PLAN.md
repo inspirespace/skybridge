@@ -162,6 +162,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Fix merged-remote cleanup to include nested remote branch names (e.g., `feature/foo`) instead of only single-segment names.
 - [x] Remove devcontainer Copilot-uninstall hook/scripts to prevent noisy VS Code extension uninstall errors on container start.
 - [x] Fix Step 2 "Edit import filters" transient review error flash by resetting to Connect state optimistically before async job deletion completes.
+- [x] Extend privacy policy wording with explicit Firebase hosting/processing details and Google Analytics disclosure (consent, cookies, transfer safeguards).
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.
