@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Keep devcontainer startup output clean and deterministic.
+export NPM_CONFIG_UPDATE_NOTIFIER=false
+
 bash .devcontainer/setup-history.sh
 bash .devcontainer/setup-codex.sh
 bash .devcontainer/setup-venv.sh
@@ -14,7 +17,7 @@ mkdir -p "${NPM_CACHE_DIR}" "${UV_CACHE_DIR}"
 # Ensure Firebase CLI is available in the devcontainer shell.
 if ! command -v firebase >/dev/null 2>&1; then
   echo "Installing Firebase CLI..."
-  if ! NPM_CONFIG_CACHE="${NPM_CACHE_DIR}" npm install -g firebase-tools; then
+  if ! NPM_CONFIG_CACHE="${NPM_CACHE_DIR}" NPM_CONFIG_UPDATE_NOTIFIER=false npm install -g firebase-tools; then
     echo "Warning: failed to install Firebase CLI; continuing without it."
   fi
 fi
@@ -49,8 +52,12 @@ fi
 
 # Optional: install VNC/noVNC deps for headed Playwright inside the container.
 if [ "${DEVCONTAINER_E2E_VNC:-0}" = "1" ]; then
-  bash ./scripts/setup-e2e-vnc.sh
-  bash ./scripts/start-e2e-vnc.sh
+  if ! bash ./scripts/setup-e2e-vnc.sh; then
+    echo "Warning: VNC dependency setup failed; continuing without blocking devcontainer startup."
+  fi
+  if ! bash ./scripts/start-e2e-vnc.sh; then
+    echo "Warning: VNC startup failed; continuing without blocking devcontainer startup."
+  fi
 fi
 
 # Ensure frontend deps match Linux platform for Playwright/Vite.
@@ -64,7 +71,7 @@ if [ -d "src/frontend" ]; then
   if [ ! -d "src/frontend/node_modules/$rollup_pkg" ]; then
     echo "Reinstalling frontend dependencies for Linux ($arch)..."
     rm -rf src/frontend/node_modules
-    (cd src/frontend && NPM_CONFIG_CACHE="${NPM_CACHE_DIR}" npm ci)
+    (cd src/frontend && NPM_CONFIG_CACHE="${NPM_CACHE_DIR}" NPM_CONFIG_UPDATE_NOTIFIER=false npm ci)
   fi
 fi
 

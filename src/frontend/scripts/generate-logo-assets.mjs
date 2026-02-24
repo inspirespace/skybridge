@@ -2,6 +2,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -11,6 +12,15 @@ const frontendDir = path.resolve(__dirname, "..");
 const repoRoot = path.resolve(frontendDir, "..", "..");
 const publicDir = path.resolve(frontendDir, "public");
 const brandDir = path.resolve(publicDir, "brand");
+const SOCIAL_PREVIEW_WIDTH = 1280;
+const SOCIAL_PREVIEW_HEIGHT = 640;
+const SOCIAL_PREVIEW_SAFE_MARGIN = 40;
+const SOCIAL_PREVIEW_CORE_SIZE = SOCIAL_PREVIEW_HEIGHT - SOCIAL_PREVIEW_SAFE_MARGIN;
+
+if (SOCIAL_PREVIEW_CORE_SIZE <= 0) {
+  console.error("Social preview safe area leaves no drawable content.");
+  process.exit(1);
+}
 
 const cliSource = process.argv[2]
   ? path.resolve(process.cwd(), process.argv[2])
@@ -30,18 +40,17 @@ if (!sourcePath) {
   process.exit(1);
 }
 
-const hasMagick = commandExists("magick");
-const hasSips = commandExists("sips");
+const imageMagickCommand = resolveImageMagickCommand();
 
-if (!hasMagick && !hasSips) {
-  console.error("Missing image tooling. Install ImageMagick (`magick`) or use macOS `sips`.");
+if (!imageMagickCommand) {
+  console.error("Missing ImageMagick tooling. Install ImageMagick (`magick` or `convert`).");
   process.exit(1);
 }
 
 fs.mkdirSync(brandDir, { recursive: true });
 
 console.log(`Using logo source: ${sourcePath}`);
-console.log(`Renderer: ${hasMagick ? "ImageMagick" : "sips"}`);
+console.log(`Renderer: ImageMagick (${imageMagickCommand})`);
 
 const squarePngTargets = [
   { size: 48, path: path.resolve(brandDir, "logo-48.png") },
@@ -61,39 +70,34 @@ const squarePngTargets = [
 ];
 
 for (const target of squarePngTargets) {
-  resizeSquarePng(sourcePath, target.size, target.path, hasMagick);
+  resizeSquarePng(sourcePath, target.size, target.path, imageMagickCommand);
 }
 
 const logoWebpPath = path.resolve(brandDir, "logo-512.webp");
-if (hasMagick) {
-  run("magick", [
-    sourcePath,
-    "-resize",
-    "512x512",
-    "-background",
-    "none",
-    "-gravity",
-    "center",
-    "-extent",
-    "512x512",
-    logoWebpPath,
-  ]);
-} else {
-  run("sips", ["-s", "format", "webp", "-z", "512", "512", sourcePath, "--out", logoWebpPath]);
-}
+runImageMagick(imageMagickCommand, [
+  sourcePath,
+  "-resize",
+  "512x512",
+  "-background",
+  "none",
+  "-gravity",
+  "center",
+  "-extent",
+  "512x512",
+  logoWebpPath,
+]);
 
-if (hasMagick) {
-  run("magick", [
-    sourcePath,
-    "-background",
-    "none",
-    "-define",
-    "icon:auto-resize=16,32,48",
-    path.resolve(publicDir, "favicon.ico"),
-  ]);
-} else {
-  console.warn("Skipping favicon.ico generation (requires ImageMagick `magick`).");
-}
+runImageMagick(imageMagickCommand, [
+  sourcePath,
+  "-background",
+  "none",
+  "-define",
+  "icon:auto-resize=16,32,48",
+  path.resolve(publicDir, "favicon.ico"),
+]);
+
+const socialPreviewPath = path.resolve(publicDir, "social-preview.png");
+generateSocialPreview(sourcePath, socialPreviewPath, imageMagickCommand);
 
 const webmanifest = {
   name: "Skybridge",
@@ -129,39 +133,98 @@ console.log("- public/favicon-32x32.png");
 console.log("- public/apple-touch-icon.png");
 console.log("- public/android-chrome-192x192.png");
 console.log("- public/android-chrome-512x512.png");
-if (hasMagick) {
-  console.log("- public/favicon.ico");
-}
+console.log("- public/social-preview.png");
+console.log("- public/favicon.ico");
 console.log("- public/site.webmanifest");
 
-function resizeSquarePng(source, size, outputPath, useMagick) {
+function resizeSquarePng(source, size, outputPath, imageMagickCommand) {
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-  if (useMagick) {
-    run("magick", [
-      source,
-      "-resize",
-      `${size}x${size}`,
-      "-background",
-      "none",
-      "-gravity",
-      "center",
-      "-extent",
-      `${size}x${size}`,
-      outputPath,
-    ]);
-    return;
-  }
-  run("sips", [
-    "-s",
-    "format",
-    "png",
-    "-z",
-    String(size),
-    String(size),
+  runImageMagick(imageMagickCommand, [
     source,
-    "--out",
+    "-resize",
+    `${size}x${size}`,
+    "-background",
+    "none",
+    "-gravity",
+    "center",
+    "-extent",
+    `${size}x${size}`,
     outputPath,
   ]);
+}
+
+function generateSocialPreview(source, outputPath, imageMagickCommand) {
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+  generateSocialPreviewWithMagick(source, outputPath, imageMagickCommand);
+}
+
+function generateSocialPreviewWithMagick(source, outputPath, imageMagickCommand) {
+  const sideWidth = (SOCIAL_PREVIEW_WIDTH - SOCIAL_PREVIEW_CORE_SIZE) / 2;
+  if (!Number.isInteger(sideWidth) || sideWidth < 0) {
+    console.error(`Invalid social preview side width: ${sideWidth}`);
+    process.exit(1);
+  }
+
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "skybridge-social-preview-"));
+  const centerPath = path.join(tempDir, "center.png");
+  const leftPath = path.join(tempDir, "left.png");
+  const rightPath = path.join(tempDir, "right.png");
+  const middlePath = path.join(tempDir, "middle.png");
+  const topPath = path.join(tempDir, "top.png");
+
+  try {
+    runImageMagick(imageMagickCommand, [
+      source,
+      "-resize",
+      `${SOCIAL_PREVIEW_CORE_SIZE}x${SOCIAL_PREVIEW_CORE_SIZE}`,
+      centerPath,
+    ]);
+    runImageMagick(imageMagickCommand, [
+      centerPath,
+      "-crop",
+      `1x${SOCIAL_PREVIEW_CORE_SIZE}+0+0`,
+      "+repage",
+      "-resize",
+      `${sideWidth}x${SOCIAL_PREVIEW_CORE_SIZE}!`,
+      leftPath,
+    ]);
+    runImageMagick(imageMagickCommand, [
+      centerPath,
+      "-crop",
+      `1x${SOCIAL_PREVIEW_CORE_SIZE}+${SOCIAL_PREVIEW_CORE_SIZE - 1}+0`,
+      "+repage",
+      "-resize",
+      `${sideWidth}x${SOCIAL_PREVIEW_CORE_SIZE}!`,
+      rightPath,
+    ]);
+    runImageMagick(imageMagickCommand, [leftPath, centerPath, rightPath, "+append", middlePath]);
+    runImageMagick(imageMagickCommand, [
+      middlePath,
+      "-crop",
+      `${SOCIAL_PREVIEW_WIDTH}x1+0+0`,
+      "+repage",
+      "-resize",
+      `${SOCIAL_PREVIEW_WIDTH}x${SOCIAL_PREVIEW_SAFE_MARGIN}!`,
+      topPath,
+    ]);
+    runImageMagick(imageMagickCommand, [topPath, middlePath, "-append", outputPath]);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+}
+
+function resolveImageMagickCommand() {
+  if (commandExists("magick")) {
+    return "magick";
+  }
+  if (commandExists("convert")) {
+    return "convert";
+  }
+  return null;
+}
+
+function runImageMagick(command, args) {
+  run(command, args);
 }
 
 function commandExists(command) {

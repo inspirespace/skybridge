@@ -143,6 +143,8 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Fix devcontainer startup failure caused by `HISTFILE` expansion in `.devcontainer/setup-history.sh` under `set -u`.
 - [x] Fix devcontainer post-start cache permissions by using user-owned npm/uv caches (`$HOME/.cache/*`) and suppress non-fatal ownership warnings from mounted volumes.
 - [x] Harden devcontainer Python 3.11 detection in post-start (`python3.11`/absolute path/python3-version fallback) and include Python feature bin paths in remote `PATH`.
+- [x] Silence devcontainer npm update-notifier notices during startup (`NPM_CONFIG_UPDATE_NOTIFIER=false`) for cleaner rebuild logs.
+- [x] Make devcontainer VNC setup/start best-effort in post-start so optional noVNC failures do not abort container startup.
 - [x] Exclude discovery modules from coverage targets and remove discovery-specific tests.
 - [x] Refactor App shell auth UI into dedicated components/config helpers to keep `App.tsx` maintainable.
 - [x] Refresh visual polish for landing/app (route-oriented hero + denser review table styling) while keeping existing flow behavior.
@@ -171,6 +173,8 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Remove devcontainer Copilot-uninstall hook/scripts to prevent noisy VS Code extension uninstall errors on container start.
 - [x] Fix Step 2 "Edit import filters" transient review error flash by resetting to Connect state optimistically before async job deletion completes.
 - [x] Extend privacy policy wording with explicit Firebase hosting/processing details and Google Analytics disclosure (consent, cookies, transfer safeguards).
+- [x] Extend `logo:generate` to also create a repeatable 1280x640 social preview image (`src/frontend/public/social-preview.png`) and wire landing-page social meta tags to that asset.
+- [x] Add devcontainer image tooling for asset generation (ImageMagick binaries) so logo/social generation commands work in-container.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.

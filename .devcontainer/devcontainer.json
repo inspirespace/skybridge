@@ -3,7 +3,7 @@
   "build": {
     "dockerfile": "../Dockerfile",
     "context": "..",
-    "target": "base"
+    "target": "devcontainer"
   },
   "workspaceFolder": "/workspaces/skybridge",
   "mounts": [
@@ -92,6 +92,7 @@
     "STARSHIP_CONFIG": "/workspaces/skybridge/.devcontainer/starship.toml",
     "VIRTUAL_ENV": "/opt/venv",
     "PATH": "/usr/local/python/current/bin:/usr/local/py-utils/bin:/usr/local/jupyter:/usr/local/share/nvm/current/bin:/opt/venv/bin:/home/vscode/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "NPM_CONFIG_UPDATE_NOTIFIER": "false",
     "VIRTUAL_ENV_DISABLE_PROMPT": "1",
     "DEVCONTAINER_E2E_VNC": "1",
     "DISPLAY": ":99"

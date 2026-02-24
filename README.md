@@ -46,8 +46,8 @@ mkcert -cert-file docker/https/certs/skybridge.localhost.pem -key-file docker/ht
 
 ### Logo assets
 
-The frontend logo, favicon set, and manifest icons are generated from `design/logo/skybridge-logo-2048x2048.webp`.
-The generator requires either ImageMagick (`magick`) or macOS `sips`.
+The frontend logo, favicon set, web manifest icons, and social preview image (`src/frontend/public/social-preview.png`, 1280x640) are generated from `design/logo/skybridge-logo-2048x2048.webp`.
+The generator requires ImageMagick (`magick` or `convert`); the devcontainer installs ImageMagick by default.
 
 ```sh
 npm --prefix src/frontend run logo:generate

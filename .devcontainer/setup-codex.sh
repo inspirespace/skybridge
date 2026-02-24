@@ -29,7 +29,7 @@ if [[ ! -x "${CODEX_BIN}" ]]; then
 
   if command -v npm >/dev/null 2>&1; then
     mkdir -p /home/vscode/.npm-global
-    NPM_CONFIG_PREFIX="/home/vscode/.npm-global" npm i -g @openai/codex || true
+    NPM_CONFIG_PREFIX="/home/vscode/.npm-global" NPM_CONFIG_UPDATE_NOTIFIER=false npm i -g @openai/codex || true
   fi
 fi
 

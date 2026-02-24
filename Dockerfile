@@ -6,6 +6,12 @@ ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1
 
+FROM base AS devcontainer
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends imagemagick \
+  && rm -rf /var/lib/apt/lists/*
+RUN command -v convert >/dev/null
+
 FROM base AS prod
 WORKDIR /app
 COPY pyproject.toml uv.lock /app/

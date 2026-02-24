@@ -23,6 +23,9 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Devcontainer startup attempts to install Firebase CLI (`firebase-tools`) when missing; if npm is unreachable, setup continues and `firebase` remains unavailable until install succeeds.
 - Devcontainer tooling is pinned to Python `3.11` to match Firebase Functions runtime `python311`.
 - Devcontainer post-start uses user-owned caches (`$HOME/.cache/npm`, `$HOME/.cache/uv`) to avoid permission issues from shared `/tmp` cache directories.
+- Devcontainer startup disables npm update-notifier noise (`NPM_CONFIG_UPDATE_NOTIFIER=false`) for cleaner rebuild logs.
+- Devcontainer VNC/noVNC setup is best-effort during post-start; failures are logged as warnings and do not block startup.
+- Devcontainer image includes ImageMagick binaries for frontend asset generation commands (`convert`, `identify`, etc.).
 - Firebase deploy workflow lives in `.github/workflows/firebase-deploy.yml` and requires `FIREBASE_PROJECT_ID` + `FIREBASE_SERVICE_ACCOUNT` secrets.
 - Local dev runs behind `http://skybridge.localhost` with emulator subdomains (`auth.skybridge.localhost`, `firestore.skybridge.localhost`, `ui.skybridge.localhost`) instead of localhost ports.
 - `python -m src.core.cli --review` — run the CLI locally (requires Python deps).
@@ -31,7 +34,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `devcontainer exec --workspace-folder . pytest` — run backend tests in the devcontainer.
 - `devcontainer exec --workspace-folder . npm --prefix src/frontend run test` — run frontend unit tests in the devcontainer.
 - `devcontainer exec --workspace-folder . npm --prefix src/frontend run test:e2e` — run frontend e2e tests in the devcontainer.
-- `npm --prefix src/frontend run logo:generate` — regenerate logo-derived assets (header/footer logos, favicon set, web manifest icons) from `design/logo/skybridge-logo-2048x2048.webp` (or pass a custom source path as an argument; requires `magick` or macOS `sips`).
+- `npm --prefix src/frontend run logo:generate` — regenerate logo-derived assets (header/footer logos, favicon set, web manifest icons, social preview `public/social-preview.png` at `1280x640`) from `design/logo/skybridge-logo-2048x2048.webp` (or pass a custom source path as an argument; requires ImageMagick: `magick` or `convert`).
 
 ## Coding Style & Naming Conventions
 - Indentation: 2 spaces by default; follow language-specific conventions where standard (e.g., Python 4 spaces).
