@@ -8,7 +8,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Keep assets in `assets/`, and config files at the repo root.
 - Inspector scripts live in `tools/inspector/` (dev-only helpers).
 - VNC helpers for Playwright live in `scripts/` (devcontainer use only).
-- `scripts/cleanup-merged-branches.sh` is the only user-facing script (branch cleanup).
+- User-facing scripts: `scripts/cleanup-merged-branches.sh` (branch cleanup) and `scripts/clean-workspace.sh` (local dependency/build cleanup).
 - Frontend entry points: landing page in `src/frontend/index.html`, SPA app in `src/frontend/app/index.html`, static legal pages in `src/frontend/privacy/index.html` and `src/frontend/imprint/index.html`.
 - Infrastructure-as-code is not tracked in this repository (Firebase-only deployment).
 - Firebase emulators are configured by `firebase.json` and `.firebaserc`.
@@ -19,7 +19,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 ## Build, Test, and Development Commands
 - `docker compose up --build` — run the local dev stack (Firebase emulators, API, worker, frontend, HTTPS proxy, mocks).
 - VS Code launch configs: `Stack: Start (Docker Compose)`, `Stack: Stop (Docker Compose)`, `Stack: Build (Docker Compose)` in `.vscode/launch.json`.
-- VS Code tasks: `Compose: Up (detached)`, `Compose: Down`, `Compose: Build`, `Git: Cleanup Merged Branches` in `.vscode/tasks.json`.
+- VS Code tasks: `Compose: Up (detached)`, `Compose: Down`, `Compose: Build`, `Workspace: Clean`, `Git: Cleanup Merged Branches` in `.vscode/tasks.json`.
 - Devcontainer startup attempts to install Firebase CLI (`firebase-tools`) when missing; if npm is unreachable, setup continues and `firebase` remains unavailable until install succeeds.
 - Firebase deploy workflow lives in `.github/workflows/firebase-deploy.yml` and requires `FIREBASE_PROJECT_ID` + `FIREBASE_SERVICE_ACCOUNT` secrets.
 - Local dev runs behind `http://skybridge.localhost` with emulator subdomains (`auth.skybridge.localhost`, `firestore.skybridge.localhost`, `ui.skybridge.localhost`) instead of localhost ports.

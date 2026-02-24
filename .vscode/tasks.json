@@ -20,6 +20,12 @@
       "problemMatcher": []
     },
     {
+      "label": "Workspace: Clean",
+      "type": "shell",
+      "command": "./scripts/clean-workspace.sh",
+      "problemMatcher": []
+    },
+    {
       "label": "Git: Cleanup Merged Branches",
       "type": "shell",
       "command": "./scripts/cleanup-merged-branches.sh",
