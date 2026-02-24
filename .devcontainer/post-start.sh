@@ -6,6 +6,23 @@ bash .devcontainer/setup-codex.sh
 bash .devcontainer/setup-venv.sh
 bash .devcontainer/setup-completion.sh
 bash .devcontainer/setup-zsh-autosuggestions.sh
+
+# Enforce repository commit hooks (Conventional Commits, etc.).
+git config core.hooksPath .githooks
+
+# Ensure Firebase CLI is available in the devcontainer shell.
+if ! command -v firebase >/dev/null 2>&1; then
+  echo "Installing Firebase CLI..."
+  if ! NPM_CONFIG_CACHE=/tmp/npm-cache npm install -g firebase-tools; then
+    echo "Warning: failed to install Firebase CLI; continuing without it."
+  fi
+fi
+if command -v firebase >/dev/null 2>&1; then
+  echo "Firebase CLI: $(firebase --version)"
+else
+  echo "Firebase CLI not available."
+fi
+
 UV_CACHE_DIR=/tmp/uv-cache uv sync --frozen --extra dev
 if ! command -v pytest >/dev/null 2>&1; then
   echo "pytest missing; reinstalling dev dependencies..."

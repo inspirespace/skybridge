@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MSG_FILE="${1:-}"
+if [[ -z "${MSG_FILE}" || ! -f "${MSG_FILE}" ]]; then
+  echo "commit-msg hook error: missing commit message file." >&2
+  exit 1
+fi
+
+MSG="$(head -n 1 "${MSG_FILE}")"
+CONVENTIONAL_RE='^(feat|fix|chore|docs|style|refactor|perf|test|build|ci|revert)(\([a-z0-9._/-]+\))?!?: .+'
+
+if [[ "${MSG}" =~ ^Merge\  ]] || [[ "${MSG}" =~ ^Revert\  ]]; then
+  exit 0
+fi
+
+if [[ ! "${MSG}" =~ ${CONVENTIONAL_RE} ]]; then
+  cat >&2 <<'EOF'
+Commit message must follow Conventional Commits.
+Expected: type(scope): description
+Examples:
+  feat(auth): add Google sign-in
+  fix: handle npm outage in post-start
+EOF
+  exit 1
+fi
+
