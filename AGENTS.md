@@ -45,7 +45,6 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 
 ## Commit & Pull Request Guidelines
 - Use Conventional Commits (`feat:`, `fix:`, `chore:`).
-- Commit messages are enforced by the repo `commit-msg` hook at `.githooks/commit-msg` (enabled via `git config core.hooksPath .githooks`, including devcontainer startup).
 - PRs should include: a concise description, linked issue (if applicable), test results, and screenshots for UI changes.
 - Follow CONTRIBUTING.md PR format (Goal / Scope / Testing / Risk / Screenshots) when creating or editing PRs.
 - Never use escaped newline sequences (`\n`) in PR bodies; always use real line breaks.

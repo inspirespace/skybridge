@@ -7,9 +7,6 @@ bash .devcontainer/setup-venv.sh
 bash .devcontainer/setup-completion.sh
 bash .devcontainer/setup-zsh-autosuggestions.sh
 
-# Enforce repository commit hooks (Conventional Commits, etc.).
-git config core.hooksPath .githooks
-
 # Ensure Firebase CLI is available in the devcontainer shell.
 if ! command -v firebase >/dev/null 2>&1; then
   echo "Installing Firebase CLI..."
