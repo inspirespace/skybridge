@@ -9,7 +9,7 @@
         class="h-6 w-6 rounded object-cover"
       />
       <span>
-        © 2025
+        © <span data-footer-year></span>
         <a
           class="hover:text-foreground transition-colors"
           href="https://www.inspirespace.co"
@@ -94,6 +94,13 @@
     if (homeLinks.length) {
       homeLinks.forEach(function (link) {
         link.setAttribute("href", isSignedIn ? "/app/" : "/");
+      });
+    }
+    var yearNodes = document.querySelectorAll("[data-footer-year]");
+    if (yearNodes.length) {
+      var year = String(new Date().getFullYear());
+      yearNodes.forEach(function (node) {
+        node.textContent = year;
       });
     }
   })();
