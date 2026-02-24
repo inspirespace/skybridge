@@ -20,7 +20,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `docker compose up --build` — run the local dev stack (Firebase emulators, API, worker, frontend, HTTPS proxy, mocks).
 - VS Code launch configs: `Stack: Start (Docker Compose)`, `Stack: Stop (Docker Compose)`, `Stack: Build (Docker Compose)` in `.vscode/launch.json`.
 - VS Code tasks: `Compose: Up (detached)`, `Compose: Down`, `Compose: Build`, `Git: Cleanup Merged Branches` in `.vscode/tasks.json`.
-- Devcontainer startup installs Firebase CLI (`firebase-tools`) automatically when missing, so `firebase` is available in the terminal.
+- Devcontainer startup attempts to install Firebase CLI (`firebase-tools`) when missing; if npm is unreachable, setup continues and `firebase` remains unavailable until install succeeds.
 - Firebase deploy workflow lives in `.github/workflows/firebase-deploy.yml` and requires `FIREBASE_PROJECT_ID` + `FIREBASE_SERVICE_ACCOUNT` secrets.
 - Local dev runs behind `http://skybridge.localhost` with emulator subdomains (`auth.skybridge.localhost`, `firestore.skybridge.localhost`, `ui.skybridge.localhost`) instead of localhost ports.
 - `python -m src.core.cli --review` — run the CLI locally (requires Python deps).
@@ -50,6 +50,13 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Never use escaped newline sequences (`\n`) in PR bodies; always use real line breaks.
 - Work in feature branches for non-trivial changes (e.g., `feature/...`, `fix/...`), then merge into `main`.
  - When asked to open a PR, prepare the full PR (title + body) without further prompts, using the CONTRIBUTING.md format and including tests/scope/risk as applicable.
+
+## Code Review Handling
+- When asked to incorporate PR feedback, fetch the exact review comment first (via `gh` API) and implement the requested change in code.
+- Validate the change with the smallest relevant checks (for example syntax/lint/test command tied to the touched files).
+- Commit and push using a Conventional Commit message that reflects the review fix.
+- Reply directly to the review comment summarizing what changed and what validation ran.
+- Resolve the review thread after the fix is pushed and the reply is posted.
 
 ## Visual PR Screenshot Workflow
 - Canonical process is defined in `CONTRIBUTING.md` under `Visual Screenshot Workflow (required for visual PRs)`.
