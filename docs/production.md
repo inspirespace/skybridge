@@ -45,6 +45,21 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - `firebase deploy --only functions,hosting`
 Functions source lives in `functions/` and uses `functions/requirements.txt` for dependencies.
 
+## Custom domain setup (Firebase Hosting)
+Custom domains are configured in the Firebase console (not via `firebase deploy`).
+
+1. Deploy hosting to the target project first:
+   - `./scripts/firebase-deploy.sh --project <project_id>`
+2. Open Firebase Console: Hosting for your project.
+3. Click **Add custom domain** and enter your host (for example `skybridge.inspirespace.co`).
+4. Add the DNS records Firebase shows (typically TXT for ownership plus CNAME for a subdomain) at your DNS provider.
+5. Remove conflicting DNS records for the same host (`A`/`AAAA`/`CNAME` pointing elsewhere).
+6. Wait for verification and SSL provisioning to complete (can take up to 24 hours).
+
+Notes:
+- Use only one canonical hostname for production and include it in `CORS_ALLOW_ORIGINS`.
+- Keep `VITE_API_BASE_URL` pointed at the same Firebase Hosting domain users will access.
+
 ## Storage lifecycle rule
 Job artifacts must expire automatically. Apply a lifecycle rule to your storage bucket:
 - Example JSON: `docs/firebase-storage-lifecycle.json`
