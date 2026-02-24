@@ -159,6 +159,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Add a VS Code task (`Git: Cleanup Merged Branches`) for `scripts/cleanup-merged-branches.sh` to make branch cleanup accessible from the editor.
 - [x] Add `scripts/clean-workspace.sh` plus a VS Code task (`Workspace: Clean`) that removes local dependency/build artifacts (`venv`, `node_modules`, caches, coverage/test outputs, pyc files) without reinstall/rebuild steps.
 - [x] Gate Firebase deploy workflow with a preflight secrets check so CI exits successfully with a skip notice when deploy prerequisites are not configured.
+- [x] Add `scripts/firebase-deploy.sh` as the shared Firebase deploy implementation, used by both VS Code task (`Firebase: Deploy (Functions + Hosting)`) and `.github/workflows/firebase-deploy.yml`.
 - [x] Remove Terraform devcontainer feature and align VS Code Vitest settings with current `vitest.explorer` configuration keys.
 - [x] Fix merged-remote cleanup to include nested remote branch names (e.g., `feature/foo`) instead of only single-segment names.
 - [x] Remove devcontainer Copilot-uninstall hook/scripts to prevent noisy VS Code extension uninstall errors on container start.

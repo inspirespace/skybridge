@@ -20,6 +20,12 @@
       "problemMatcher": []
     },
     {
+      "label": "Firebase: Deploy (Functions + Hosting)",
+      "type": "shell",
+      "command": "./scripts/firebase-deploy.sh --project ${input:firebaseProjectId}",
+      "problemMatcher": []
+    },
+    {
       "label": "Workspace: Clean",
       "type": "shell",
       "command": "./scripts/clean-workspace.sh",
@@ -30,6 +36,14 @@
       "type": "shell",
       "command": "./scripts/cleanup-merged-branches.sh",
       "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "firebaseProjectId",
+      "type": "promptString",
+      "description": "Firebase project id for deployment",
+      "default": "skybridge-inspirespace"
     }
   ]
 }

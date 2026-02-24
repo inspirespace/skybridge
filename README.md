@@ -69,8 +69,7 @@ Required repository secrets:
 Manual deploy:
 
 ```sh
-npm --prefix src/frontend run build
-firebase deploy --only functions,hosting --project <project_id>
+./scripts/firebase-deploy.sh --project <project_id>
 ```
 
 Production checklist is in `docs/production.md`.

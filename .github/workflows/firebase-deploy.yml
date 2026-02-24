@@ -43,15 +43,7 @@ jobs:
         if: steps.preflight.outputs.ready == 'true'
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-
-      - name: Install frontend dependencies
-        if: steps.preflight.outputs.ready == 'true'
-        run: npm --prefix src/frontend ci
-
-      - name: Build frontend
-        if: steps.preflight.outputs.ready == 'true'
-        run: npm --prefix src/frontend run build
+          python-version: "3.11"
 
       - name: Install Firebase CLI
         if: steps.preflight.outputs.ready == 'true'
@@ -65,12 +57,12 @@ jobs:
           echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
           echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-service-account.json" >> "$GITHUB_ENV"
 
-      - name: Deploy functions and hosting
+      - name: Deploy functions and hosting (shared script)
         if: steps.preflight.outputs.ready == 'true'
         env:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
         run: |
-          firebase deploy --only functions,hosting --project "$FIREBASE_PROJECT_ID"
+          ./scripts/firebase-deploy.sh --project "$FIREBASE_PROJECT_ID"
 
       - name: Skip deploy (requirements not met)
         if: steps.preflight.outputs.ready != 'true'
