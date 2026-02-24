@@ -55,6 +55,59 @@ if ! command -v firebase >/dev/null 2>&1; then
   exit 1
 fi
 
+TEMP_CREDENTIALS_FILE=""
+cleanup_credentials() {
+  if [ -n "$TEMP_CREDENTIALS_FILE" ] && [ -f "$TEMP_CREDENTIALS_FILE" ]; then
+    rm -f "$TEMP_CREDENTIALS_FILE"
+  fi
+}
+trap cleanup_credentials EXIT
+
+has_firebase_auth() {
+  firebase projects:list --json >/dev/null 2>&1
+}
+
+# Allow local runs to reuse the CI auth model by passing FIREBASE_SERVICE_ACCOUNT
+# as JSON content. If GOOGLE_APPLICATION_CREDENTIALS is already set, keep it.
+if [ -n "${FIREBASE_SERVICE_ACCOUNT:-}" ] && [ -z "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]; then
+  TEMP_CREDENTIALS_FILE="$(mktemp)"
+  printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$TEMP_CREDENTIALS_FILE"
+  export GOOGLE_APPLICATION_CREDENTIALS="$TEMP_CREDENTIALS_FILE"
+fi
+
+if [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] && [ ! -f "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
+  echo "GOOGLE_APPLICATION_CREDENTIALS points to a missing file: $GOOGLE_APPLICATION_CREDENTIALS" >&2
+  exit 1
+fi
+
+# Fail fast on auth before any dependency installs/build steps.
+if ! has_firebase_auth; then
+  # VS Code tasks run with an interactive terminal; attempt login there.
+  if [ -z "${CI:-}" ] && [ -t 0 ] && [ -t 1 ]; then
+    echo "No Firebase auth found. Starting interactive login..."
+    if ! firebase login --reauth; then
+      echo "Firebase login failed; retrying with --no-localhost..."
+      firebase login --reauth --no-localhost
+    fi
+  fi
+fi
+
+if ! has_firebase_auth; then
+  cat >&2 <<'EOF'
+Firebase authentication is required before deploy.
+
+Use one of:
+  1) Interactive login (local / VS Code task):
+     firebase login --reauth
+     # if browser callback fails:
+     firebase login --reauth --no-localhost
+  2) Service account credentials:
+     export GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/firebase-service-account.json
+     # or export FIREBASE_SERVICE_ACCOUNT='<full JSON content>'
+EOF
+  exit 1
+fi
+
 PYTHON_BIN=""
 if command -v python3.11 >/dev/null 2>&1; then
   PYTHON_BIN="python3.11"

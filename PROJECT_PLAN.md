@@ -177,6 +177,8 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Add devcontainer image tooling for asset generation (ImageMagick binaries) so logo/social generation commands work in-container.
 - [x] Pre-create `/opt/venv` in the devcontainer image (`uv venv`) so VS Code can resolve `/opt/venv/bin/python` during startup (before post-start sync).
 - [x] Fix devcontainer `uv sync` `/opt/venv` permission error by refreshing venv contents in-place for Python 3.11 and hardening `/opt/venv` ownership setup.
+- [x] Add Firebase deploy auth preflight to fail fast before frontend/functions build, with local support for `firebase login`, `GOOGLE_APPLICATION_CREDENTIALS`, or `FIREBASE_SERVICE_ACCOUNT`.
+- [x] Auto-trigger Firebase interactive login from the shared deploy script when launched from VS Code task terminals, with `--no-localhost` fallback.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.

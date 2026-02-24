@@ -29,6 +29,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Devcontainer image pre-creates `/opt/venv` (`uv venv`) so VS Code can resolve `python.defaultInterpreterPath` immediately during container startup.
 - Devcontainer post-start refreshes `/opt/venv` in-place to Python `3.11` (without deleting `/opt/venv` itself) to avoid `/opt` parent-permission issues.
 - Firebase deploy workflow lives in `.github/workflows/firebase-deploy.yml` and requires `FIREBASE_PROJECT_ID` + `FIREBASE_SERVICE_ACCOUNT` secrets.
+- `scripts/firebase-deploy.sh` performs Firebase auth preflight before builds; in interactive terminals (for example VS Code tasks) it auto-runs `firebase login --reauth` when unauthenticated, with fallback `--no-localhost`, and still supports `GOOGLE_APPLICATION_CREDENTIALS` / `FIREBASE_SERVICE_ACCOUNT`.
 - Local dev runs behind `http://skybridge.localhost` with emulator subdomains (`auth.skybridge.localhost`, `firestore.skybridge.localhost`, `ui.skybridge.localhost`) instead of localhost ports.
 - `python -m src.core.cli --review` — run the CLI locally (requires Python deps).
 - CLI supports `--start-date` / `--end-date` for targeted imports (YYYY-MM-DD or ISO8601).
