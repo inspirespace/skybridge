@@ -175,6 +175,8 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Extend privacy policy wording with explicit Firebase hosting/processing details and Google Analytics disclosure (consent, cookies, transfer safeguards).
 - [x] Extend `logo:generate` to also create a repeatable 1280x640 social preview image (`src/frontend/public/social-preview.png`) and wire landing-page social meta tags to that asset.
 - [x] Add devcontainer image tooling for asset generation (ImageMagick binaries) so logo/social generation commands work in-container.
+- [x] Pre-create `/opt/venv` in the devcontainer image (`uv venv`) so VS Code can resolve `/opt/venv/bin/python` during startup (before post-start sync).
+- [x] Fix devcontainer `uv sync` `/opt/venv` permission error by refreshing venv contents in-place for Python 3.11 and hardening `/opt/venv` ownership setup.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.

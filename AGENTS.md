@@ -26,6 +26,8 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Devcontainer startup disables npm update-notifier noise (`NPM_CONFIG_UPDATE_NOTIFIER=false`) for cleaner rebuild logs.
 - Devcontainer VNC/noVNC setup is best-effort during post-start; failures are logged as warnings and do not block startup.
 - Devcontainer image includes ImageMagick binaries for frontend asset generation commands (`convert`, `identify`, etc.).
+- Devcontainer image pre-creates `/opt/venv` (`uv venv`) so VS Code can resolve `python.defaultInterpreterPath` immediately during container startup.
+- Devcontainer post-start refreshes `/opt/venv` in-place to Python `3.11` (without deleting `/opt/venv` itself) to avoid `/opt` parent-permission issues.
 - Firebase deploy workflow lives in `.github/workflows/firebase-deploy.yml` and requires `FIREBASE_PROJECT_ID` + `FIREBASE_SERVICE_ACCOUNT` secrets.
 - Local dev runs behind `http://skybridge.localhost` with emulator subdomains (`auth.skybridge.localhost`, `firestore.skybridge.localhost`, `ui.skybridge.localhost`) instead of localhost ports.
 - `python -m src.core.cli --review` — run the CLI locally (requires Python deps).

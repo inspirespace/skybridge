@@ -44,6 +44,17 @@ if [ -z "${PYTHON_BIN}" ]; then
   exit 1
 fi
 
+# /opt is not writable for non-root users, so avoid removing /opt/venv itself.
+# If the pre-created venv uses a different interpreter (e.g., 3.12), rebuild
+# the venv in-place by clearing contents only, then recreating with 3.11.
+if [ -x "/opt/venv/bin/python" ]; then
+  if ! /opt/venv/bin/python -c 'import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 11) else 1)'; then
+    echo "Refreshing /opt/venv to Python 3.11..."
+    find /opt/venv -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+    uv venv /opt/venv --python "${PYTHON_BIN}"
+  fi
+fi
+
 UV_CACHE_DIR="${UV_CACHE_DIR}" uv sync --python "${PYTHON_BIN}" --frozen --extra dev
 if ! command -v pytest >/dev/null 2>&1; then
   echo "pytest missing; reinstalling dev dependencies..."
