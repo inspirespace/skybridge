@@ -8,16 +8,16 @@ mkdir -p "${CODEX_DIR}"
 export PATH="/usr/local/share/nvm/current/bin:${PATH}"
 
 if command -v id >/dev/null 2>&1; then
-  chown -R "$(id -u):$(id -g)" "${CODEX_DIR}" || true
-  chmod -R u+rwX "${CODEX_DIR}" || true
-  chmod 700 "${CODEX_DIR}" || true
+  chown -R "$(id -u):$(id -g)" "${CODEX_DIR}" 2>/dev/null || true
+  chmod -R u+rwX "${CODEX_DIR}" 2>/dev/null || true
+  chmod 700 "${CODEX_DIR}" 2>/dev/null || true
 fi
 
 # If the volume is still owned by root, try sudo.
 if [[ ! -w "${CODEX_DIR}" ]] && command -v sudo >/dev/null 2>&1; then
-  sudo chown -R "$(id -u):$(id -g)" "${CODEX_DIR}" || true
-  sudo chmod -R u+rwX "${CODEX_DIR}" || true
-  sudo chmod 700 "${CODEX_DIR}" || true
+  sudo chown -R "$(id -u):$(id -g)" "${CODEX_DIR}" 2>/dev/null || true
+  sudo chmod -R u+rwX "${CODEX_DIR}" 2>/dev/null || true
+  sudo chmod 700 "${CODEX_DIR}" 2>/dev/null || true
 fi
 
 touch "${CODEX_DIR}/.touch" 2>/dev/null || true

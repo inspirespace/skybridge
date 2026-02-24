@@ -119,7 +119,7 @@ https://skybridge.localhost, https://*.skybridge.localhost {
       reverse_proxy firebase-emulator:8080
     }
     handle_path /api/* {
-      rewrite * /skybridge-dev/us-central1/api{uri}
+      rewrite * /skybridge-inspirespace/us-central1/api{uri}
       reverse_proxy firebase-emulator:5001
     }
     handle {

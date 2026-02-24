@@ -3,7 +3,7 @@ export const AUTH_ISSUER =
   import.meta.env.VITE_AUTH_ISSUER_URL ??
   import.meta.env.VITE_AUTH_BROWSER_ISSUER_URL ??
   "";
-export const AUTH_CLIENT_ID = import.meta.env.VITE_AUTH_CLIENT_ID ?? "skybridge-dev";
+export const AUTH_CLIENT_ID = import.meta.env.VITE_AUTH_CLIENT_ID ?? "skybridge-inspirespace";
 export const AUTH_SCOPE =
   import.meta.env.VITE_AUTH_SCOPE ?? "openid profile email offline_access";
 export const AUTH_REDIRECT_PATH =

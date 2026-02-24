@@ -140,6 +140,9 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Ensure Playwright global setup starts VNC server when launched from VS Code Testing UI.
 - [x] Fix noVNC web UI serving (use novnc_proxy/websockify --web).
 - [x] Auto-open noVNC auto-connect URL when running Playwright from VS Code.
+- [x] Fix devcontainer startup failure caused by `HISTFILE` expansion in `.devcontainer/setup-history.sh` under `set -u`.
+- [x] Fix devcontainer post-start cache permissions by using user-owned npm/uv caches (`$HOME/.cache/*`) and suppress non-fatal ownership warnings from mounted volumes.
+- [x] Harden devcontainer Python 3.11 detection in post-start (`python3.11`/absolute path/python3-version fallback) and include Python feature bin paths in remote `PATH`.
 - [x] Exclude discovery modules from coverage targets and remove discovery-specific tests.
 - [x] Refactor App shell auth UI into dedicated components/config helpers to keep `App.tsx` maintainable.
 - [x] Refresh visual polish for landing/app (route-oriented hero + denser review table styling) while keeping existing flow behavior.
@@ -157,9 +160,12 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Standardize visual PR screenshot workflow (before=`main`, deterministic app-state captures, light+dark sets, PR-context hosting, no screenshot binaries in git history).
 - [x] De-duplicate screenshot workflow docs: keep detailed procedure in `CONTRIBUTING.md` and reference it from `AGENTS.md`.
 - [x] Add a VS Code task (`Git: Cleanup Merged Branches`) for `scripts/cleanup-merged-branches.sh` to make branch cleanup accessible from the editor.
-- [x] Add `scripts/clean-workspace.sh` plus a VS Code task (`Workspace: Clean`) that removes local dependency/build artifacts (`venv`, `node_modules`, caches, coverage/test outputs, pyc files) without reinstall/rebuild steps.
+- [x] Add `scripts/clean-workspace.sh` plus a VS Code task (`Workspace: Clean`) that removes local dependency/build artifacts (`venv`, `node_modules`, caches, coverage/test outputs, pyc files) and ignored `*.log` files without reinstall/rebuild steps.
 - [x] Gate Firebase deploy workflow with a preflight secrets check so CI exits successfully with a skip notice when deploy prerequisites are not configured.
 - [x] Add `scripts/firebase-deploy.sh` as the shared Firebase deploy implementation, used by both VS Code task (`Firebase: Deploy (Functions + Hosting)`) and `.github/workflows/firebase-deploy.yml`.
+- [x] Pin devcontainer Python toolchain to `3.11` and enforce `uv sync --python 3.11` in post-start setup so local devcontainer runtime matches Firebase Functions `python311`.
+- [x] Remove the obsolete root install/uninstall build file and clean repository references so command workflows live in scripts/VS Code tasks/GitHub Actions only.
+- [x] Align Firebase project-id references to `skybridge-inspirespace` (`.firebaserc` default, emulator compose env/command, proxy rewrite path, frontend auth-client fallback, and functions env example).
 - [x] Remove Terraform devcontainer feature and align VS Code Vitest settings with current `vitest.explorer` configuration keys.
 - [x] Fix merged-remote cleanup to include nested remote branch names (e.g., `feature/foo`) instead of only single-segment names.
 - [x] Remove devcontainer Copilot-uninstall hook/scripts to prevent noisy VS Code extension uninstall errors on container start.
