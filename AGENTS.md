@@ -20,6 +20,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `docker compose up --build` — run the local dev stack (Firebase emulators, API, worker, frontend, HTTPS proxy, mocks).
 - VS Code launch configs: `Stack: Start (Docker Compose)`, `Stack: Stop (Docker Compose)`, `Stack: Build (Docker Compose)` in `.vscode/launch.json`.
 - VS Code tasks: `Compose: Up (detached)`, `Compose: Down`, `Compose: Build`, `Git: Cleanup Merged Branches` in `.vscode/tasks.json`.
+- Devcontainer startup installs Firebase CLI (`firebase-tools`) automatically when missing, so `firebase` is available in the terminal.
 - Firebase deploy workflow lives in `.github/workflows/firebase-deploy.yml` and requires `FIREBASE_PROJECT_ID` + `FIREBASE_SERVICE_ACCOUNT` secrets.
 - Local dev runs behind `http://skybridge.localhost` with emulator subdomains (`auth.skybridge.localhost`, `firestore.skybridge.localhost`, `ui.skybridge.localhost`) instead of localhost ports.
 - `python -m src.core.cli --review` — run the CLI locally (requires Python deps).

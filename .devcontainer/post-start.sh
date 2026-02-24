@@ -6,6 +6,14 @@ bash .devcontainer/setup-codex.sh
 bash .devcontainer/setup-venv.sh
 bash .devcontainer/setup-completion.sh
 bash .devcontainer/setup-zsh-autosuggestions.sh
+
+# Ensure Firebase CLI is available in the devcontainer shell.
+if ! command -v firebase >/dev/null 2>&1; then
+  echo "Installing Firebase CLI..."
+  NPM_CONFIG_CACHE=/tmp/npm-cache npm install -g firebase-tools
+fi
+echo "Firebase CLI: $(firebase --version)"
+
 UV_CACHE_DIR=/tmp/uv-cache uv sync --frozen --extra dev
 if ! command -v pytest >/dev/null 2>&1; then
   echo "pytest missing; reinstalling dev dependencies..."
