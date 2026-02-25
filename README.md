@@ -63,15 +63,17 @@ npm --prefix src/frontend run logo:generate -- path/to/new-logo.webp
 
 CI deploys live from `main` via GitHub Actions (`.github/workflows/firebase-deploy.yml`).
 Required repository secrets:
-- `FIREBASE_PROJECT_ID` (Firebase project id)
 - `FIREBASE_SERVICE_ACCOUNT` (service account JSON)
 
-Manual deploy:
+Manual deploy (zero-config: uses `.firebaserc` default project and prompts login if needed):
 
 ```sh
-./scripts/firebase-deploy.sh --project <project_id>
+./scripts/firebase-deploy.sh
 ```
 
+Project id and region come from `.firebaserc` (`projects.default` and `config.region`).
+Default Functions region is `europe-west1`.
+You can override per-run with `FIREBASE_REGION`.
 Production checklist is in `docs/production.md`.
 
 ## Docs

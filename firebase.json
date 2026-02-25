@@ -5,6 +5,7 @@
     "ignore": [
       ".git",
       "node_modules",
+      "venv",
       ".venv",
       ".pytest_cache",
       "__pycache__"
@@ -54,7 +55,13 @@
       }
     ],
     "rewrites": [
-      { "source": "/api/**", "function": "api" },
+      {
+        "source": "/api/**",
+        "function": {
+          "functionId": "api",
+          "region": "europe-west1"
+        }
+      },
       { "source": "/app/**", "destination": "/app/index.html" },
       { "source": "/privacy/**", "destination": "/privacy/index.html" },
       { "source": "/imprint/**", "destination": "/imprint/index.html" },

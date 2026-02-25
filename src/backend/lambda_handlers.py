@@ -13,6 +13,7 @@ from pydantic import ValidationError
 
 from .auth import user_id_from_event
 from .credential_store import build_credential_store
+from .env import resolve_project_id
 from .models import CredentialValidationRequest, JobAcceptRequest, JobCreateRequest
 from .object_store import build_object_store_from_env
 from .service import JobService, validate_credentials
@@ -86,7 +87,7 @@ def _pubsub_topic() -> str:
         return ""
     if topic.startswith("projects/"):
         return topic
-    project_id = os.getenv("GCP_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT") or ""
+    project_id = resolve_project_id() or ""
     if not project_id:
         return ""
     return f"projects/{project_id}/topics/{topic}"
@@ -159,7 +160,7 @@ store = JobStore(
     DATA_DIR,
     build_object_store_from_env(),
     firestore_collection=_firestore_jobs_collection(),
-    firestore_project=os.getenv("GCP_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT"),
+    firestore_project=resolve_project_id(),
 )
 service = JobService(store)
 credential_store = build_credential_store()

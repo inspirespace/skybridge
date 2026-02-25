@@ -16,9 +16,6 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 ## Required backend environment (Firebase Functions)
 - `BACKEND_PRODUCTION=true` (enables production security guards)
 - `AUTH_MODE=firebase`
-- `AUTH_ISSUER_URL=https://securetoken.google.com/<project_id>`
-- `AUTH_JWKS_URL=https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com`
-- `AUTH_AUDIENCE=<project_id>`
 - `BACKEND_ENCRYPTION_KEY=<32-byte urlsafe base64 key>`
 - `BACKEND_USE_WORKER=1`
 - `BACKEND_PUBSUB_ENABLED=1`
@@ -29,27 +26,32 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - `BACKEND_GCS_ENABLED=1`
 - `GCS_BUCKET=<bucket>`
 - `GCS_PREFIX=jobs`
-- `GCS_LOCATION=<region>`
-- `GCP_PROJECT_ID=<project_id>`
 - `CORS_ALLOW_ORIGINS=<comma separated origins>` (never use `*` in production)
+
+## Optional backend auth overrides
+- `AUTH_ISSUER_URL` / `AUTH_AUDIENCE` / `AUTH_JWKS_URL` are optional in Firebase auth mode.
+- Defaults are derived from project id (`.firebaserc` locally, runtime metadata in deployed functions).
 
 ## Frontend build configuration (Firebase)
 - `VITE_API_BASE_URL` points at your Firebase Hosting domain.
-- `VITE_AUTH_MODE=firebase`
+- `VITE_AUTH_MODE=firebase` (optional; defaults from `AUTH_MODE`)
 - `VITE_FIREBASE_API_KEY=<web api key>`
-- `VITE_FIREBASE_AUTH_DOMAIN=<project-id>.firebaseapp.com`
-- `VITE_FIREBASE_PROJECT_ID=<project_id>`
 - `VITE_FIREBASE_APP_ID=<web app id>`
+- `VITE_FIREBASE_PROJECT_ID` / `VITE_FIREBASE_AUTH_DOMAIN` are optional; by default they are derived from `.firebaserc`.
+- `VITE_FIRESTORE_JOBS_COLLECTION` and `VITE_RETENTION_DAYS` are optional; defaults come from backend globals (`FIRESTORE_JOBS_COLLECTION`, `BACKEND_RETENTION_DAYS`).
 ## Deploy
 - `npm --prefix src/frontend run build`
-- `firebase deploy --only functions,hosting`
+- `./scripts/firebase-deploy.sh`
 Functions source lives in `functions/` and uses `functions/requirements.txt` for dependencies.
+- Project id and region defaults come from `.firebaserc` (`projects.default`, `config.region`).
+- Default Functions region is `europe-west1`.
+- You can override per deploy with `FIREBASE_REGION`.
 
 ## Custom domain setup (Firebase Hosting)
 Custom domains are configured in the Firebase console (not via `firebase deploy`).
 
 1. Deploy hosting to the target project first:
-   - `./scripts/firebase-deploy.sh --project <project_id>`
+   - `./scripts/firebase-deploy.sh`
 2. Open Firebase Console: Hosting for your project.
 3. Click **Add custom domain** and enter your host (for example `skybridge.inspirespace.co`).
 4. Add the DNS records Firebase shows (typically TXT for ownership plus CNAME for a subdomain) at your DNS provider.
@@ -59,6 +61,7 @@ Custom domains are configured in the Firebase console (not via `firebase deploy`
 Notes:
 - Use only one canonical hostname for production and include it in `CORS_ALLOW_ORIGINS`.
 - Keep `VITE_API_BASE_URL` pointed at the same Firebase Hosting domain users will access.
+- Firebase Hosting is global CDN-backed; there is no dedicated EU-only Hosting region setting.
 
 ## Storage lifecycle rule
 Job artifacts must expire automatically. Apply a lifecycle rule to your storage bucket:

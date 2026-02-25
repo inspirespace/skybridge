@@ -179,6 +179,21 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Fix devcontainer `uv sync` `/opt/venv` permission error by refreshing venv contents in-place for Python 3.11 and hardening `/opt/venv` ownership setup.
 - [x] Add Firebase deploy auth preflight to fail fast before frontend/functions build, with local support for `firebase login`, `GOOGLE_APPLICATION_CREDENTIALS`, or `FIREBASE_SERVICE_ACCOUNT`.
 - [x] Auto-trigger Firebase interactive login from the shared deploy script when launched from VS Code task terminals, with `--no-localhost` fallback.
+- [x] Make Firebase deploy fully zero-config in VS Code tasks (no project prompt; default `.firebaserc` project + auto auth) and add one automatic retry for first-run API propagation failures.
+- [x] Consolidate Functions/Object storage region to EU (`europe-west1`) across production deploy and local emulator/proxy routing.
+- [x] Centralize essential Firebase defaults in `.firebaserc` (`projects.default`, `config.region`) consumed by deploy script and compose wiring.
+- [x] Remove remaining hardcoded compose/frontend Firebase project settings and source project id from `.firebaserc` (`projects.default`) so local stack + deploy + CI share one zero-config default.
+- [x] Normalize project-id resolution to a single canonical value (`FIREBASE_PROJECT_ID`) with runtime metadata auto-detection fallback for deployed Functions.
+- [x] Remove split config by deleting `.firebase.defaults`; keep both project id and region in `.firebaserc`, deriving aliases at runtime in scripts/code.
+- [x] Prune unused keys from `.env.example` files (`GCS_LOCATION`, `GCP_PROJECT_ID`, `BACKEND_QUEUE_PROVIDER`) after code-level usage audit.
+- [x] Remove project-derived env duplication: stop exporting `GOOGLE_CLOUD_PROJECT`/`GCLOUD_PROJECT`, derive Firebase auth issuer/audience defaults from project id, and make frontend auth-domain/project-id defaults come from `.firebaserc`.
+- [x] Fix Cloud Run startup failure for Firebase Functions by staging shared `src/backend` + `src/core` modules into `functions/src` during deploy packaging.
+- [x] Remove redundant frontend `VITE_*` env duplication by deriving defaults from global backend vars in `vite.config.ts` and trimming duplicate entries from `.env.example`/compose wiring.
+- [x] Centralize Firebase region derivation in shared resolvers (`src/backend/env.py`, `scripts/firebase-config.sh`) and remove duplicated inline region fallback patterns from backend/deploy callsites.
+- [x] Fix VS Code Pytest discovery fallback to `/bin/python` by pinning workspace interpreter/test runner paths to `/opt/venv`.
+- [x] Harden VS Code Pytest discovery by avoiding destructive `/opt/venv` wipes in post-start, validating pytest within `/opt/venv` (not global PATH), and wiring `/bin/python` + `.venv` fallbacks to `/opt/venv`.
+- [x] Fix local emulator API routing by aligning Hosting `/api/**` rewrite to `europe-west1` and ensuring Functions emulator can discover Python deps via `functions/venv` symlink to container-local venv.
+- [x] Fix Functions emulator startup mismatch on Alpine by adding `python3.11` alias inside container-local `functions-venv`, so Firebase Functions SDK discovery succeeds and `/api/**` rewrites resolve.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.

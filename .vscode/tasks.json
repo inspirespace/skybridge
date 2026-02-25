@@ -22,7 +22,7 @@
     {
       "label": "Firebase: Deploy (Functions + Hosting)",
       "type": "shell",
-      "command": "./scripts/firebase-deploy.sh --project ${input:firebaseProjectId}",
+      "command": "./scripts/firebase-deploy.sh",
       "problemMatcher": []
     },
     {
@@ -36,14 +36,6 @@
       "type": "shell",
       "command": "./scripts/cleanup-merged-branches.sh",
       "problemMatcher": []
-    }
-  ],
-  "inputs": [
-    {
-      "id": "firebaseProjectId",
-      "type": "promptString",
-      "description": "Firebase project id for deployment",
-      "default": "skybridge-inspirespace"
     }
   ]
 }

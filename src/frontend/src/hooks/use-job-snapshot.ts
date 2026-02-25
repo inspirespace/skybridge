@@ -7,8 +7,10 @@ const AUTH_MODE = import.meta.env.VITE_AUTH_MODE ?? "header";
 const FIRESTORE_LISTEN =
   (import.meta.env.VITE_FIRESTORE_LISTEN ?? "") === "1";
 const FIREBASE_API_KEY = import.meta.env.VITE_FIREBASE_API_KEY ?? "";
-const FIREBASE_AUTH_DOMAIN = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? "";
 const FIREBASE_PROJECT_ID = import.meta.env.VITE_FIREBASE_PROJECT_ID ?? "";
+const FIREBASE_AUTH_DOMAIN =
+  import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ??
+  (FIREBASE_PROJECT_ID ? `${FIREBASE_PROJECT_ID}.firebaseapp.com` : "");
 const FIREBASE_APP_ID = import.meta.env.VITE_FIREBASE_APP_ID ?? "";
 const FIREBASE_USE_EMULATOR =
   (import.meta.env.VITE_FIREBASE_USE_EMULATOR ?? "") === "1";

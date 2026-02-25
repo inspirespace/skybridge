@@ -16,15 +16,14 @@ jobs:
       - name: Preflight deploy requirements
         id: preflight
         env:
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
-          if [ -z "$FIREBASE_PROJECT_ID" ] || [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "reason=Missing FIREBASE_PROJECT_ID and/or FIREBASE_SERVICE_ACCOUNT secrets." >> "$GITHUB_OUTPUT"
+            echo "reason=Missing FIREBASE_SERVICE_ACCOUNT secret." >> "$GITHUB_OUTPUT"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
-            echo "reason=All required Firebase deployment secrets are present." >> "$GITHUB_OUTPUT"
+            echo "reason=Firebase deployment secret is present." >> "$GITHUB_OUTPUT"
           fi
 
       - name: Check out repository
@@ -59,10 +58,8 @@ jobs:
 
       - name: Deploy functions and hosting (shared script)
         if: steps.preflight.outputs.ready == 'true'
-        env:
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
         run: |
-          ./scripts/firebase-deploy.sh --project "$FIREBASE_PROJECT_ID"
+          ./scripts/firebase-deploy.sh
 
       - name: Skip deploy (requirements not met)
         if: steps.preflight.outputs.ready != 'true'

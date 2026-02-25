@@ -24,6 +24,7 @@ dist/
 *.egg-info/
 
 # Virtual environments
+.venv
 .venv/
 
 # Logs and local data
@@ -42,6 +43,7 @@ docker/https/certs/
 firebase-export-*/
 firebase-export-*.json
 functions/venv/
+functions/venv
 functions/.env
 
 # Lambda packages

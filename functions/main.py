@@ -17,8 +17,11 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
 from src.backend import lambda_handlers  # noqa: E402
+from src.backend.env import resolve_project_id, resolve_region  # noqa: E402
 
-options.set_global_options(region=os.getenv("GCP_REGION") or "us-central1")
+options.set_global_options(
+    region=resolve_region()
+)
 
 _ROUTES: list[tuple[str, re.Pattern[str], Callable]] = []
 
@@ -159,7 +162,7 @@ def cleanup_expired(_event: scheduler_fn.ScheduledEvent) -> None:
         return
     from google.cloud import firestore
 
-    project_id = os.getenv("GCP_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT")
+    project_id = resolve_project_id()
     client = firestore.Client(project=project_id or None)
     now = int(time.time())
     collections = [

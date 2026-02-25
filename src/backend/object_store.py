@@ -6,6 +6,8 @@ import os
 from pathlib import Path
 from typing import Any, Protocol
 
+from .env import resolve_project_id, resolve_region
+
 
 class ObjectStoreProtocol(Protocol):
     """Shared interface for object stores."""
@@ -46,11 +48,15 @@ class GcsObjectStore:
         self._prefix = prefix.strip("/")
         self._client = storage.Client(project=project_id or None)
         self._bucket = self._client.bucket(bucket)
+        resolved_location = location or resolve_region()
         if create_bucket and not os.getenv("STORAGE_EMULATOR_HOST"):
             try:
                 self._client.get_bucket(bucket)
             except NotFound:
-                self._client.create_bucket(self._bucket, location=location or "us-central1")
+                self._client.create_bucket(
+                    self._bucket,
+                    location=resolved_location,
+                )
 
     @property
     def bucket(self) -> str:
@@ -104,8 +110,8 @@ def build_object_store_from_env() -> ObjectStoreProtocol | None:
         return None
     bucket = os.getenv("GCS_BUCKET") or "skybridge-artifacts"
     prefix = os.getenv("GCS_PREFIX") or "jobs"
-    project_id = os.getenv("GCP_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT")
-    location = os.getenv("GCS_LOCATION")
+    project_id = resolve_project_id()
+    location = resolve_region()
     create_bucket = _bool_env("GCS_CREATE_BUCKET", False)
     return GcsObjectStore(
         bucket=bucket,

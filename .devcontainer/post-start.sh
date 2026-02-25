@@ -44,22 +44,41 @@ if [ -z "${PYTHON_BIN}" ]; then
   exit 1
 fi
 
-# /opt is not writable for non-root users, so avoid removing /opt/venv itself.
-# If the pre-created venv uses a different interpreter (e.g., 3.12), rebuild
-# the venv in-place by clearing contents only, then recreating with 3.11.
+# Keep the venv path stable so VS Code does not fall back to /bin/python
+# during startup if it probes interpreters while post-start is still running.
 if [ -x "/opt/venv/bin/python" ]; then
   if ! /opt/venv/bin/python -c 'import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 11) else 1)'; then
     echo "Refreshing /opt/venv to Python 3.11..."
-    find /opt/venv -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-    uv venv /opt/venv --python "${PYTHON_BIN}"
+    uv venv /opt/venv --python "${PYTHON_BIN}" --clear
   fi
 fi
 
 UV_CACHE_DIR="${UV_CACHE_DIR}" uv sync --python "${PYTHON_BIN}" --frozen --extra dev
-if ! command -v pytest >/dev/null 2>&1; then
-  echo "pytest missing; reinstalling dev dependencies..."
+if ! /opt/venv/bin/python -m pytest --version >/dev/null 2>&1; then
+  echo "pytest missing from /opt/venv; reinstalling dev dependencies..."
   UV_CACHE_DIR="${UV_CACHE_DIR}" uv sync --python "${PYTHON_BIN}" --frozen --extra dev
 fi
+
+# Some VS Code Python discovery flows still probe /bin/python directly.
+# Ensure that fallback path resolves to the project venv interpreter.
+if [ -x "/opt/venv/bin/python" ] && ! /bin/python -m pytest --version >/dev/null 2>&1; then
+  echo "Aligning /bin/python with /opt/venv/bin/python for VS Code pytest discovery..."
+  PYTHON_WRAPPER="$(mktemp)"
+  cat <<'EOF' > "${PYTHON_WRAPPER}"
+#!/usr/bin/env bash
+exec /opt/venv/bin/python "$@"
+EOF
+  chmod 0755 "${PYTHON_WRAPPER}"
+  if [ "$(id -u)" -ne 0 ] && command -v sudo >/dev/null 2>&1; then
+    sudo install -m 0755 "${PYTHON_WRAPPER}" /bin/python
+  else
+    install -m 0755 "${PYTHON_WRAPPER}" /bin/python
+  fi
+  rm -f "${PYTHON_WRAPPER}"
+fi
+
+# Mirror the canonical venv under the workspace as .venv for editor auto-detection.
+ln -sfn /opt/venv .venv
 
 # Optional: install VNC/noVNC deps for headed Playwright inside the container.
 if [ "${DEVCONTAINER_E2E_VNC:-0}" = "1" ]; then

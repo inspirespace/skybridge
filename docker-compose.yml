@@ -20,13 +20,13 @@ services:
     working_dir: /app
     volumes:
       - ./src/frontend:/app
+      - ./.firebaserc:/workspace/.firebaserc:ro
     command: ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0 --port 5173"]
     environment:
+      - FIREBASERC_FILE=/workspace/.firebaserc
       - VITE_API_BASE_URL=https://skybridge.localhost/api
-      - VITE_AUTH_MODE=firebase
+      - AUTH_MODE=${AUTH_MODE:-firebase}
       - VITE_FIREBASE_API_KEY=demo-local
-      - VITE_FIREBASE_AUTH_DOMAIN=skybridge-inspirespace.firebaseapp.com
-      - VITE_FIREBASE_PROJECT_ID=skybridge-inspirespace
       - VITE_FIREBASE_APP_ID=demo-local-app
       - VITE_FIREBASE_USE_EMULATOR=1
       - VITE_FIREBASE_AUTH_EMULATOR_HOST=https://skybridge.localhost
@@ -36,11 +36,13 @@ services:
       - VITE_FIREBASE_ENABLE_MICROSOFT=0
       - VITE_FIREBASE_ENABLE_GUEST=0
       - VITE_FIRESTORE_LISTEN=1
+      - FIRESTORE_JOBS_COLLECTION=${FIRESTORE_JOBS_COLLECTION:-skybridge-jobs}
+      - BACKEND_RETENTION_DAYS=${BACKEND_RETENTION_DAYS:-7}
       - VITE_DEV_PREFILL_CREDENTIALS=${DEV_PREFILL_CREDENTIALS}
-      - VITE_CLOUD_AHOY_EMAIL=${CLOUD_AHOY_EMAIL}
-      - VITE_CLOUD_AHOY_PASSWORD=${CLOUD_AHOY_PASSWORD}
-      - VITE_FLYSTO_EMAIL=${FLYSTO_EMAIL}
-      - VITE_FLYSTO_PASSWORD=${FLYSTO_PASSWORD}
+      - CLOUD_AHOY_EMAIL=${CLOUD_AHOY_EMAIL}
+      - CLOUD_AHOY_PASSWORD=${CLOUD_AHOY_PASSWORD}
+      - FLYSTO_EMAIL=${FLYSTO_EMAIL}
+      - FLYSTO_PASSWORD=${FLYSTO_PASSWORD}
 
   firebase-emulator:
     image: node:24-alpine
@@ -52,18 +54,14 @@ services:
       [
         "sh",
         "-c",
-        "apk add --no-cache curl python3 py3-pip py3-virtualenv openjdk21-jre && java -version && npm install -g firebase-tools@15.3.1 && if [ ! -d /workspace/functions/venv ]; then python3 -m venv /workspace/functions/venv; fi && /workspace/functions/venv/bin/python -m ensurepip --upgrade && /workspace/functions/venv/bin/python -m pip install -r /workspace/functions/requirements.txt && mkdir -p /workspace/.firebase-emulator/exports && cd /workspace/.firebase-emulator && firebase emulators:start --project skybridge-inspirespace --only auth,firestore,pubsub,storage,functions,hosting --import /workspace/.firebase-emulator/exports --export-on-exit /workspace/.firebase-emulator/exports"
+        "apk add --no-cache curl python3 py3-pip py3-virtualenv openjdk21-jre && java -version && npm install -g firebase-tools@15.7.0 && VENV_DIR=/workspace/.firebase-emulator/functions-venv && if [ ! -x \"$$VENV_DIR/bin/python\" ]; then rm -rf \"$$VENV_DIR\" && python3 -m venv \"$$VENV_DIR\"; fi && if [ -e /workspace/functions/venv ] && [ ! -L /workspace/functions/venv ]; then rm -rf /workspace/functions/venv; fi && ln -sfn \"$$VENV_DIR\" /workspace/functions/venv && ln -sfn \"$$VENV_DIR/bin/python\" \"$$VENV_DIR/bin/python3.11\" && \"$$VENV_DIR/bin/python\" -m ensurepip --upgrade && \"$$VENV_DIR/bin/python\" -m pip install -r /workspace/functions/requirements.txt && mkdir -p /workspace/.firebase-emulator/exports && PROJECT_ID=$$(sh /workspace/scripts/firebase-config.sh project) && REGION=$$(sh /workspace/scripts/firebase-config.sh region) && if [ -z \"$$PROJECT_ID\" ]; then echo 'Missing default Firebase project in .firebaserc' >&2; exit 1; fi && cd /workspace/.firebase-emulator && FIREBASE_REGION=\"$$REGION\" firebase emulators:start --project \"$$PROJECT_ID\" --only auth,firestore,pubsub,storage,functions,hosting --import /workspace/.firebase-emulator/exports --export-on-exit /workspace/.firebase-emulator/exports"
       ]
     environment:
-      - CLOUDSDK_CORE_PROJECT=skybridge-inspirespace
-      - FIREBASE_PROJECT=skybridge-inspirespace
       - FIREBASE_AUTH_EMULATOR_HOST=firebase-emulator:9099
       - AUTH_EMULATOR_TRUST_TOKENS=1
       - PUBSUB_EMULATOR_HOST=firebase-emulator:8085
       - FIRESTORE_EMULATOR_HOST=firebase-emulator:8080
       - STORAGE_EMULATOR_HOST=http://firebase-emulator:9199
-      - GCP_PROJECT_ID=skybridge-inspirespace
-      - GOOGLE_CLOUD_PROJECT=skybridge-inspirespace
       - AUTH_MODE=firebase
       - BACKEND_ENCRYPTION_KEY=${BACKEND_ENCRYPTION_KEY}
       - CORS_ALLOW_ORIGINS=https://skybridge.localhost,https://emulator.skybridge.localhost
@@ -76,7 +74,6 @@ services:
       - BACKEND_GCS_ENABLED=1
       - GCS_BUCKET=skybridge-artifacts
       - GCS_PREFIX=jobs
-      - GCS_LOCATION=us-central1
       - GCS_CREATE_BUCKET=1
       - BACKEND_CREDENTIAL_TTL=900
       - BACKEND_RECONCILE=true

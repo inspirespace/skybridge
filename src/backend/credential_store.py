@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from .crypto import decrypt_json, encrypt_json, require_encryption_key
+from .env import resolve_project_id
 
 @dataclass
 class _Entry:
@@ -113,6 +114,6 @@ def build_credential_store() -> CredentialStore | FirestoreCredentialStore:
     """Build credential store."""
     if (os.getenv("BACKEND_FIRESTORE_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
         collection = os.getenv("FIRESTORE_CREDENTIALS_COLLECTION") or "skybridge-credentials"
-        project_id = os.getenv("GCP_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT")
+        project_id = resolve_project_id()
         return FirestoreCredentialStore(collection, project_id)
     return CredentialStore()

@@ -3,6 +3,58 @@ import react from "@vitejs/plugin-react";
 import fs from "fs";
 import path from "path";
 
+function loadProjectIdFromFirebaserc(): string | null {
+  const candidates = [
+    process.env.FIREBASERC_FILE,
+    path.resolve(__dirname, ".firebaserc"),
+    path.resolve(__dirname, "../../.firebaserc"),
+  ].filter((value): value is string => Boolean(value && value.trim()));
+  for (const filePath of candidates) {
+    if (!fs.existsSync(filePath)) continue;
+    try {
+      const payload = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+      const projectId = payload?.projects?.default;
+      if (typeof projectId === "string" && projectId.trim()) {
+        return projectId.trim();
+      }
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+function setEnvDefault(target: string, ...sources: Array<string | undefined>) {
+  const current = process.env[target];
+  if (current && current.trim()) {
+    return;
+  }
+  for (const source of sources) {
+    if (source && source.trim()) {
+      process.env[target] = source.trim();
+      return;
+    }
+  }
+}
+
+const derivedProjectId =
+  process.env.FIREBASE_PROJECT_ID ?? loadProjectIdFromFirebaserc() ?? "";
+
+setEnvDefault("VITE_FIREBASE_PROJECT_ID", derivedProjectId);
+
+if (!process.env.VITE_FIREBASE_AUTH_DOMAIN && process.env.VITE_FIREBASE_PROJECT_ID) {
+  process.env.VITE_FIREBASE_AUTH_DOMAIN =
+    `${process.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com`;
+}
+
+setEnvDefault("VITE_AUTH_MODE", process.env.AUTH_MODE);
+setEnvDefault("VITE_FIRESTORE_JOBS_COLLECTION", process.env.FIRESTORE_JOBS_COLLECTION);
+setEnvDefault("VITE_RETENTION_DAYS", process.env.BACKEND_RETENTION_DAYS);
+setEnvDefault("VITE_CLOUD_AHOY_EMAIL", process.env.CLOUD_AHOY_EMAIL);
+setEnvDefault("VITE_CLOUD_AHOY_PASSWORD", process.env.CLOUD_AHOY_PASSWORD);
+setEnvDefault("VITE_FLYSTO_EMAIL", process.env.FLYSTO_EMAIL);
+setEnvDefault("VITE_FLYSTO_PASSWORD", process.env.FLYSTO_PASSWORD);
+
 // https://vite.dev/config/
 export default defineConfig({
   appType: "mpa",

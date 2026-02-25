@@ -118,9 +118,8 @@ https://skybridge.localhost, https://*.skybridge.localhost {
     handle /google.firestore.v1.Firestore/* {
       reverse_proxy firebase-emulator:8080
     }
-    handle_path /api/* {
-      rewrite * /skybridge-inspirespace/us-central1/api{uri}
-      reverse_proxy firebase-emulator:5001
+    handle /api/* {
+      reverse_proxy firebase-emulator:5002
     }
     handle {
       reverse_proxy frontend:5173

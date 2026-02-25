@@ -11,6 +11,8 @@ import jwt
 import requests
 from fastapi import HTTPException
 
+from .env import resolve_project_id
+
 
 @dataclass
 class _JwksCache:
@@ -36,7 +38,7 @@ def user_id_from_request(authorization: Optional[str], x_user_id: Optional[str])
     token = authorization.split(" ", 1)[1].strip()
     if not token:
         raise HTTPException(status_code=401, detail="Missing Authorization bearer token")
-    payload = _verify_token(token)
+    payload = _verify_token(token, mode)
     if mode == "firebase":
         user_id = payload.get("user_id") or payload.get("sub") or payload.get("email")
     else:
@@ -54,7 +56,7 @@ def user_id_from_event(event: dict[str, Any]) -> str:
     return user_id_from_request(authorization, x_user_id)
 
 
-def _verify_token(token: str) -> dict[str, Any]:
+def _verify_token(token: str, mode: str) -> dict[str, Any]:
     """Internal helper for verify token."""
     if _should_trust_emulator_tokens():
         try:
@@ -71,10 +73,14 @@ def _verify_token(token: str) -> dict[str, Any]:
         return payload
 
     issuer = _env("AUTH_ISSUER_URL")
+    if mode == "firebase" and not issuer:
+        issuer = _default_firebase_issuer()
     if not issuer:
         raise HTTPException(status_code=500, detail="AUTH_ISSUER_URL not configured")
 
     audience = _env("AUTH_AUDIENCE")
+    if mode == "firebase" and not audience:
+        audience = _default_firebase_audience()
     client_id = _env("AUTH_CLIENT_ID")
     key = _resolve_key(token, issuer)
     try:
@@ -155,6 +161,8 @@ def _jwks_uri_for_issuer(issuer: str) -> str:
     override = _env("AUTH_JWKS_URL")
     if override:
         return override
+    if issuer.startswith("https://securetoken.google.com/"):
+        return "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com"
     if _JWKS_CACHE.jwks_uri:
         return _JWKS_CACHE.jwks_uri
     config_url = issuer.rstrip("/") + "/.well-known/openid-configuration"
@@ -174,6 +182,17 @@ def _env(name: str) -> str | None:
     if value is None or value.strip() == "":
         return None
     return value.strip()
+
+
+def _default_firebase_issuer() -> str | None:
+    project_id = resolve_project_id()
+    if not project_id:
+        return None
+    return f"https://securetoken.google.com/{project_id}"
+
+
+def _default_firebase_audience() -> str | None:
+    return resolve_project_id()
 
 
 def _should_trust_emulator_tokens() -> bool:

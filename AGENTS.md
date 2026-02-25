@@ -20,6 +20,11 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `docker compose up --build` — run the local dev stack (Firebase emulators, API, worker, frontend, HTTPS proxy, mocks).
 - VS Code launch configs: `Stack: Start (Docker Compose)`, `Stack: Stop (Docker Compose)`, `Stack: Build (Docker Compose)` in `.vscode/launch.json`.
 - VS Code tasks: `Compose: Up (detached)`, `Compose: Down`, `Compose: Build`, `Firebase: Deploy (Functions + Hosting)`, `Workspace: Clean`, `Git: Cleanup Merged Branches` in `.vscode/tasks.json`.
+- `Firebase: Deploy (Functions + Hosting)` is zero-config for local use: it reads the default project from `.firebaserc`, triggers login when needed, and does not prompt for project id.
+- Firebase project id and region defaults live in `.firebaserc` (`projects.default`, `config.region`).
+- Backend code resolves project/region through shared helpers in `src/backend/env.py` (`resolve_project_id()`, `resolve_region()`); avoid per-callsite `os.getenv(...) or <default>` fallbacks for these values.
+- Frontend Firebase project/auth-domain defaults are derived from `.firebaserc` in `src/frontend/vite.config.ts`, so `VITE_FIREBASE_PROJECT_ID` and `VITE_FIREBASE_AUTH_DOMAIN` are optional unless you need overrides.
+- Frontend runtime env also derives from backend/global equivalents in `src/frontend/vite.config.ts` (`VITE_AUTH_MODE`←`AUTH_MODE`, `VITE_FIRESTORE_JOBS_COLLECTION`←`FIRESTORE_JOBS_COLLECTION`, `VITE_RETENTION_DAYS`←`BACKEND_RETENTION_DAYS`, and `VITE_*` prefill credentials ← non-`VITE_` credentials).
 - Devcontainer startup attempts to install Firebase CLI (`firebase-tools`) when missing; if npm is unreachable, setup continues and `firebase` remains unavailable until install succeeds.
 - Devcontainer tooling is pinned to Python `3.11` to match Firebase Functions runtime `python311`.
 - Devcontainer post-start uses user-owned caches (`$HOME/.cache/npm`, `$HOME/.cache/uv`) to avoid permission issues from shared `/tmp` cache directories.
@@ -28,8 +33,14 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Devcontainer image includes ImageMagick binaries for frontend asset generation commands (`convert`, `identify`, etc.).
 - Devcontainer image pre-creates `/opt/venv` (`uv venv`) so VS Code can resolve `python.defaultInterpreterPath` immediately during container startup.
 - Devcontainer post-start refreshes `/opt/venv` in-place to Python `3.11` (without deleting `/opt/venv` itself) to avoid `/opt` parent-permission issues.
-- Firebase deploy workflow lives in `.github/workflows/firebase-deploy.yml` and requires `FIREBASE_PROJECT_ID` + `FIREBASE_SERVICE_ACCOUNT` secrets.
+- Workspace VS Code settings pin Python test discovery to `/opt/venv` (`python.defaultInterpreterPath`, `python.testing.pytestPath`) so Pytest discovery does not fall back to `/bin/python`.
+- Devcontainer post-start also installs a `/bin/python` wrapper that execs `/opt/venv/bin/python` (plus a workspace `.venv` symlink to `/opt/venv`) so VS Code discovery remains stable even when extensions probe `/bin/python`.
+- Firebase deploy workflow lives in `.github/workflows/firebase-deploy.yml` and requires `FIREBASE_SERVICE_ACCOUNT` secret.
 - `scripts/firebase-deploy.sh` performs Firebase auth preflight before builds; in interactive terminals (for example VS Code tasks) it auto-runs `firebase login --reauth` when unauthenticated, with fallback `--no-localhost`, and still supports `GOOGLE_APPLICATION_CREDENTIALS` / `FIREBASE_SERVICE_ACCOUNT`.
+- `scripts/firebase-deploy.sh` stages `src/backend` and `src/core` into `functions/src` during deploy so Cloud Functions runtime includes shared Python modules, then restores prior workspace state on exit.
+- Functions region is consolidated through shared config (`FIREBASE_REGION`, default `europe-west1`) for both production deploys and local emulator/proxy routing; per-run overrides remain supported.
+- Local emulator startup keeps `functions/venv` as a symlink to a container-local venv (`.firebase-emulator/functions-venv`) so Firebase Functions discovery works even when host-created venv binaries are incompatible.
+- Local emulator startup also adds `functions-venv/bin/python3.11 -> python` so Firebase Tools can resolve Python Functions SDK checks that explicitly invoke `python3.11`.
 - Firebase Hosting custom-domain setup guidance is documented in `docs/production.md` under `Custom domain setup (Firebase Hosting)`.
 - Local dev runs behind `http://skybridge.localhost` with emulator subdomains (`auth.skybridge.localhost`, `firestore.skybridge.localhost`, `ui.skybridge.localhost`) instead of localhost ports.
 - `python -m src.core.cli --review` — run the CLI locally (requires Python deps).
