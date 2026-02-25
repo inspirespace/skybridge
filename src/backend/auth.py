@@ -38,7 +38,7 @@ def user_id_from_request(authorization: Optional[str], x_user_id: Optional[str])
     token = authorization.split(" ", 1)[1].strip()
     if not token:
         raise HTTPException(status_code=401, detail="Missing Authorization bearer token")
-    payload = _verify_token(token)
+    payload = _verify_token(token, mode)
     if mode == "firebase":
         user_id = payload.get("user_id") or payload.get("sub") or payload.get("email")
     else:

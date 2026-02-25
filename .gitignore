@@ -4,6 +4,8 @@
 .zsh/
 .env
 .pytest_cache/
+.coverage
+.coverage.*
 .DS_Store
 .cache/
 .uv/
