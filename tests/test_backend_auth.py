@@ -28,10 +28,16 @@ def reset_jwks_cache():
     auth._JWKS_CACHE.jwks_uri = None
     auth._JWKS_CACHE.keys = []
     auth._JWKS_CACHE.expires_at = 0.0
+    auth._APP_CHECK_JWKS_CACHE.keys = []
+    auth._APP_CHECK_JWKS_CACHE.expires_at = 0.0
+    auth._resolve_project_number.cache_clear()
     yield
     auth._JWKS_CACHE.jwks_uri = None
     auth._JWKS_CACHE.keys = []
     auth._JWKS_CACHE.expires_at = 0.0
+    auth._APP_CHECK_JWKS_CACHE.keys = []
+    auth._APP_CHECK_JWKS_CACHE.expires_at = 0.0
+    auth._resolve_project_number.cache_clear()
 
 
 def test_user_id_from_request_header_requires_user() -> None:
@@ -102,6 +108,30 @@ def test_user_id_from_event_reads_headers(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setenv("AUTH_MODE", "header")
     event = {"headers": {"X-User-Id": "event-user"}}
     assert auth.user_id_from_event(event) == "event-user"
+
+
+def test_user_id_from_event_requires_app_check_header(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AUTH_MODE", "firebase")
+    monkeypatch.setenv("APP_CHECK_ENFORCE", "true")
+    monkeypatch.setattr(auth, "_verify_token", lambda token, mode: {"user_id": "firebase-uid"})
+    with pytest.raises(HTTPException) as exc:
+        auth.user_id_from_event({"headers": {"Authorization": "Bearer token"}})
+    assert exc.value.status_code == 401
+    assert "App Check" in str(exc.value.detail)
+
+
+def test_user_id_from_event_accepts_valid_app_check(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AUTH_MODE", "firebase")
+    monkeypatch.setenv("APP_CHECK_ENFORCE", "true")
+    monkeypatch.setattr(auth, "_verify_app_check_token", lambda token: {"sub": "app-id"})
+    monkeypatch.setattr(auth, "_verify_token", lambda token, mode: {"user_id": "firebase-uid"})
+    event = {
+        "headers": {
+            "Authorization": "Bearer token",
+            "X-Firebase-AppCheck": "app-check-token",
+        }
+    }
+    assert auth.user_id_from_event(event) == "firebase-uid"
 
 
 def test_env_helper_strips(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -201,3 +231,8 @@ def test_verify_token_client_id_mismatch(monkeypatch: pytest.MonkeyPatch) -> Non
     with pytest.raises(HTTPException) as exc:
         auth._verify_token("token", "oidc")
     assert exc.value.status_code == 401
+
+
+def test_resolve_project_number_prefers_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FIREBASE_PROJECT_NUMBER", "123456789")
+    assert auth._resolve_project_number() == "123456789"

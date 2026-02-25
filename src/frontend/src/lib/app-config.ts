@@ -20,6 +20,12 @@ export const FIREBASE_AUTH_DOMAIN =
   import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ??
   (FIREBASE_PROJECT_ID ? `${FIREBASE_PROJECT_ID}.firebaseapp.com` : "");
 export const FIREBASE_APP_ID = import.meta.env.VITE_FIREBASE_APP_ID ?? "";
+export const FIREBASE_APP_CHECK_ENABLED =
+  (import.meta.env.VITE_FIREBASE_APP_CHECK_ENABLED ?? "") === "1";
+export const FIREBASE_APP_CHECK_SITE_KEY =
+  import.meta.env.VITE_FIREBASE_APP_CHECK_SITE_KEY ?? "";
+export const FIREBASE_APP_CHECK_DEBUG_TOKEN =
+  import.meta.env.VITE_FIREBASE_APP_CHECK_DEBUG_TOKEN ?? "";
 export const FIREBASE_EMULATOR_HOST =
   import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_HOST ?? "";
 export const FIREBASE_USE_EMULATOR =

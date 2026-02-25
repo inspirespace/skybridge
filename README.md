@@ -71,6 +71,10 @@ Manual deploy (zero-config: uses `.firebaserc` default project and prompts login
 ./scripts/firebase-deploy.sh
 ```
 
+Deploy preflight note:
+- If `APP_CHECK_ENFORCE=1`, CI deploys fail fast unless frontend App Check config is present (`VITE_FIREBASE_APP_CHECK_ENABLED=1` and `VITE_FIREBASE_APP_CHECK_SITE_KEY`).
+- Local deploys print a warning and continue.
+
 Clear Firebase resources while keeping the project (zero-config from `.firebaserc`):
 
 ```sh

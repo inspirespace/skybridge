@@ -16,6 +16,7 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 ## Required backend environment (Firebase Functions)
 - `BACKEND_PRODUCTION=true` (enables production security guards)
 - `AUTH_MODE=firebase`
+- `APP_CHECK_ENFORCE=1` (rejects API requests without valid Firebase App Check token)
 - `BACKEND_ENCRYPTION_KEY=<32-byte urlsafe base64 key>`
 - `BACKEND_USE_WORKER=1`
 - `BACKEND_PUBSUB_ENABLED=1`
@@ -37,6 +38,8 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - `VITE_AUTH_MODE=firebase` (optional; defaults from `AUTH_MODE`)
 - `VITE_FIREBASE_API_KEY=<web api key>`
 - `VITE_FIREBASE_APP_ID=<web app id>`
+- `VITE_FIREBASE_APP_CHECK_ENABLED=1`
+- `VITE_FIREBASE_APP_CHECK_SITE_KEY=<reCAPTCHA v3 site key>`
 - `VITE_FIREBASE_PROJECT_ID` / `VITE_FIREBASE_AUTH_DOMAIN` are optional; by default they are derived from `.firebaserc`.
 - `VITE_FIRESTORE_JOBS_COLLECTION` and `VITE_RETENTION_DAYS` are optional; defaults come from backend globals (`FIRESTORE_JOBS_COLLECTION`, `BACKEND_RETENTION_DAYS`).
 ## Deploy
@@ -83,6 +86,7 @@ Job artifacts must expire automatically. Apply a lifecycle rule to your storage 
 ## Security defaults
 - Firestore rules only allow authenticated reads of job documents owned by the current UID; all writes are server-only.
 - Storage rules deny all client access (artifacts are served via the API).
+- API can require Firebase App Check tokens (`APP_CHECK_ENFORCE=1`) to reduce abuse/phishing/billing-risk traffic.
 - Rate limiting is applied to `/auth/token` and `/credentials/validate` endpoints (10 requests/minute per IP).
 - Internal errors are logged but not exposed to clients.
 - Security headers (CSP, X-Frame-Options, X-Content-Type-Options) are configured in `firebase.json`.

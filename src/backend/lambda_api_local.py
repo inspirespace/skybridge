@@ -143,7 +143,7 @@ class LambdaLocalHandler(BaseHTTPRequestHandler):
             allow_origin = origins[0]
         self.send_header("Access-Control-Allow-Origin", allow_origin)
         self.send_header("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Authorization,Content-Type,X-User-Id")
+        self.send_header("Access-Control-Allow-Headers", "Authorization,Content-Type,X-User-Id,X-Firebase-AppCheck")
 
 
 def run(host: str = "0.0.0.0", port: int = 8000) -> None:

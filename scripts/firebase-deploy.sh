@@ -116,6 +116,115 @@ cleanup_all() {
 }
 trap cleanup_all EXIT
 
+normalize_env_value() {
+  local raw="$1"
+  raw="${raw#"${raw%%[![:space:]]*}"}"
+  raw="${raw%"${raw##*[![:space:]]}"}"
+  if [[ "$raw" == \"*\" ]] && [[ "$raw" == *\" ]]; then
+    raw="${raw:1:${#raw}-2}"
+  elif [[ "$raw" == \'*\' ]] && [[ "$raw" == *\' ]]; then
+    raw="${raw:1:${#raw}-2}"
+  fi
+  printf '%s' "$raw"
+}
+
+read_env_file_value() {
+  local file_path="$1"
+  local key="$2"
+  [ -f "$file_path" ] || return 1
+  local line
+  line="$(
+    awk -v key="$key" '
+      /^[[:space:]]*#/ { next }
+      /^[[:space:]]*$/ { next }
+      {
+        current=$0
+        sub(/^[[:space:]]*/, "", current)
+        sub(/^export[[:space:]]+/, "", current)
+        if (index(current, key "=") != 1) {
+          next
+        }
+        print substr(current, length(key) + 2)
+        exit
+      }
+    ' "$file_path"
+  )"
+  [ -n "$line" ] || return 1
+  normalize_env_value "$line"
+}
+
+resolve_config_value() {
+  local key="$1"
+  shift
+  local value="${!key:-}"
+  if [ -n "$value" ]; then
+    normalize_env_value "$value"
+    return 0
+  fi
+
+  local file_path
+  for file_path in "$@"; do
+    value="$(read_env_file_value "$file_path" "$key" || true)"
+    if [ -n "$value" ]; then
+      printf '%s' "$value"
+      return 0
+    fi
+  done
+  return 1
+}
+
+is_truthy_value() {
+  local value
+  value="$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')"
+  case "$value" in
+    1|true|yes|on)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+preflight_app_check_config() {
+  local enforce_value
+  enforce_value="$(resolve_config_value APP_CHECK_ENFORCE functions/.env .env || true)"
+  if ! is_truthy_value "$enforce_value"; then
+    return 0
+  fi
+
+  local app_check_enabled
+  local app_check_site_key
+  app_check_enabled="$(resolve_config_value VITE_FIREBASE_APP_CHECK_ENABLED src/frontend/.env .env || true)"
+  app_check_site_key="$(resolve_config_value VITE_FIREBASE_APP_CHECK_SITE_KEY src/frontend/.env .env || true)"
+
+  local -a missing_items=()
+  if ! is_truthy_value "$app_check_enabled"; then
+    missing_items+=("VITE_FIREBASE_APP_CHECK_ENABLED=1")
+  fi
+  if [ -z "$app_check_site_key" ]; then
+    missing_items+=("VITE_FIREBASE_APP_CHECK_SITE_KEY")
+  fi
+
+  if [ "${#missing_items[@]}" -gt 0 ]; then
+    echo "App Check preflight: APP_CHECK_ENFORCE is enabled, but frontend App Check config is incomplete." >&2
+    echo "Missing/invalid: ${missing_items[*]}" >&2
+    echo "Set these via environment variables or in .env before deploy." >&2
+    if [ -n "${CI:-}" ]; then
+      echo "Failing in CI because requests would be rejected with missing App Check tokens." >&2
+      exit 1
+    fi
+    echo "Warning: continuing local deploy; API requests may fail with 401 App Check errors." >&2
+  fi
+
+  local project_number
+  project_number="$(resolve_config_value FIREBASE_PROJECT_NUMBER functions/.env .env || true)"
+  if [ -z "$project_number" ]; then
+    echo "App Check preflight: FIREBASE_PROJECT_NUMBER is not set; backend will attempt runtime lookup." >&2
+    echo "Set FIREBASE_PROJECT_NUMBER for deterministic App Check verification configuration." >&2
+  fi
+}
+
 stage_functions_src() {
   if [ -d "$FUNCTIONS_SRC_DIR" ]; then
     FUNCTIONS_SRC_BACKUP_DIR="$(mktemp -d)"
@@ -243,6 +352,8 @@ Use one of:
 EOF
   exit 1
 fi
+
+preflight_app_check_config
 
 PYTHON_BIN=""
 if command -v python3.11 >/dev/null 2>&1; then

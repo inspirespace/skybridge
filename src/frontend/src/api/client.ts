@@ -1,3 +1,5 @@
+import { getAppCheckTokenHeader } from "@/lib/firebase-app-check";
+
 /** Type JobStatus. */
 export type JobStatus =
   | "review_queued"
@@ -146,6 +148,21 @@ export function buildAuthHeaders(auth?: AuthContext, skipAuth = false) {
   return headers;
 }
 
+async function buildRequestHeaders(
+  auth?: AuthContext,
+  skipAuth = false,
+  includeJsonContentType = true
+) {
+  const headers: Record<string, string> = {
+    ...buildAuthHeaders(auth, skipAuth),
+  };
+  if (includeJsonContentType) {
+    headers["Content-Type"] = "application/json";
+  }
+  const appCheckHeader = await getAppCheckTokenHeader();
+  return { ...headers, ...appCheckHeader };
+}
+
 async function requestJson<T>(
   path: string,
   {
@@ -164,10 +181,7 @@ async function requestJson<T>(
     retryAttempts?: number;
   } = {}
 ): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...buildAuthHeaders(auth, skipAuth),
-  };
+  const headers = await buildRequestHeaders(auth, skipAuth, true);
 
   const maxAttempts =
     typeof retryAttempts === "number"
@@ -278,10 +292,9 @@ export async function fetchArtifact(jobId: string, name: string, auth: AuthConte
 }
 
 export async function downloadArtifactsZip(jobId: string, auth: AuthContext) {
+  const headers = await buildRequestHeaders(auth, false, false);
   const response = await fetch(`${apiBaseUrl}/jobs/${jobId}/artifacts.zip`, {
-    headers: {
-      ...buildAuthHeaders(auth),
-    },
+    headers,
   });
   if (!response.ok) {
     const message = await response.text();

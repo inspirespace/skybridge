@@ -5,6 +5,7 @@ import json
 import os
 import time
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Any, Optional
 
 import jwt
@@ -22,6 +23,16 @@ class _JwksCache:
 
 
 _JWKS_CACHE = _JwksCache(keys=[])
+
+
+@dataclass
+class _AppCheckJwksCache:
+    keys: list[dict[str, Any]] = None
+    expires_at: float = 0.0
+
+
+_APP_CHECK_JWKS_CACHE = _AppCheckJwksCache(keys=[])
+_APP_CHECK_JWKS_URI = "https://firebaseappcheck.googleapis.com/v1/jwks"
 
 
 def user_id_from_request(authorization: Optional[str], x_user_id: Optional[str]) -> str:
@@ -50,6 +61,7 @@ def user_id_from_request(authorization: Optional[str], x_user_id: Optional[str])
 
 def user_id_from_event(event: dict[str, Any]) -> str:
     """Handle user id from event."""
+    _verify_app_check_from_event(event)
     headers = event.get("headers") or {}
     authorization = headers.get("Authorization") or headers.get("authorization")
     x_user_id = headers.get("X-User-Id") or headers.get("x-user-id")
@@ -220,3 +232,143 @@ def _bool_env(name: str, default: bool) -> bool:
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _verify_app_check_from_event(event: dict[str, Any]) -> None:
+    """Verify Firebase App Check token when enforcement is enabled."""
+    if not _should_enforce_app_check():
+        return
+    if _should_trust_emulator_tokens():
+        return
+
+    headers = event.get("headers") or {}
+    app_check_token = _header_value(headers, "x-firebase-appcheck")
+    if not app_check_token:
+        raise HTTPException(status_code=401, detail="Missing App Check token")
+    _verify_app_check_token(app_check_token)
+
+
+def _should_enforce_app_check() -> bool:
+    mode = (_env("AUTH_MODE") or "header").lower()
+    if mode != "firebase":
+        return False
+    return _bool_env("APP_CHECK_ENFORCE", False)
+
+
+def _header_value(headers: dict[str, Any], name: str) -> str | None:
+    for key, value in headers.items():
+        if key.lower() != name.lower():
+            continue
+        if isinstance(value, str):
+            token = value.strip()
+            return token or None
+    return None
+
+
+def _verify_app_check_token(token: str) -> dict[str, Any]:
+    project_number = _resolve_project_number()
+    if not project_number:
+        raise HTTPException(status_code=500, detail="APP_CHECK_ENFORCE requires FIREBASE_PROJECT_NUMBER")
+
+    issuer = f"https://firebaseappcheck.googleapis.com/{project_number}"
+    audience = f"projects/{project_number}"
+    key = _resolve_app_check_key(token)
+    try:
+        payload = jwt.decode(
+            token,
+            key=key,
+            algorithms=["RS256"],
+            audience=audience,
+            issuer=issuer,
+        )
+    except jwt.PyJWTError as exc:
+        raise HTTPException(status_code=401, detail=f"Invalid App Check token: {exc}") from exc
+    subject = payload.get("sub")
+    if not isinstance(subject, str) or not subject.strip():
+        raise HTTPException(status_code=401, detail="Invalid App Check token subject")
+    return payload
+
+
+def _resolve_app_check_key(token: str) -> Any:
+    header = jwt.get_unverified_header(token)
+    kid = header.get("kid")
+    if not kid:
+        raise HTTPException(status_code=401, detail="App Check token missing key id")
+
+    keys = _load_app_check_jwks()
+    for entry in keys:
+        if entry.get("kid") == kid:
+            return jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(entry))
+
+    # Force one refresh in case keys rotated.
+    _APP_CHECK_JWKS_CACHE.keys = []
+    _APP_CHECK_JWKS_CACHE.expires_at = 0
+    keys = _load_app_check_jwks()
+    for entry in keys:
+        if entry.get("kid") == kid:
+            return jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(entry))
+    raise HTTPException(status_code=401, detail="Unknown App Check token key id")
+
+
+def _load_app_check_jwks() -> list[dict[str, Any]]:
+    now = time.time()
+    if _APP_CHECK_JWKS_CACHE.expires_at > now and _APP_CHECK_JWKS_CACHE.keys:
+        return _APP_CHECK_JWKS_CACHE.keys
+
+    try:
+        response = requests.get(_APP_CHECK_JWKS_URI, timeout=10)
+        response.raise_for_status()
+        payload = response.json()
+    except requests.RequestException as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="App Check provider not ready, retry in a few seconds.",
+            headers={"Retry-After": "5"},
+        ) from exc
+
+    keys = payload.get("keys") or []
+    _APP_CHECK_JWKS_CACHE.keys = keys
+    _APP_CHECK_JWKS_CACHE.expires_at = now + 600
+    return keys
+
+
+@lru_cache(maxsize=1)
+def _resolve_project_number() -> str | None:
+    for env_name in ("FIREBASE_PROJECT_NUMBER", "GOOGLE_CLOUD_PROJECT_NUMBER", "GCP_PROJECT_NUMBER"):
+        value = _env(env_name)
+        if value:
+            return value
+
+    project_id = resolve_project_id()
+    if not project_id:
+        return None
+
+    try:
+        import google.auth
+        from google.auth.transport.requests import Request as GoogleAuthRequest
+    except Exception:
+        return None
+
+    try:
+        credentials, _ = google.auth.default(
+            scopes=["https://www.googleapis.com/auth/cloud-platform.read-only"]
+        )
+        if not credentials.valid:
+            credentials.refresh(GoogleAuthRequest())
+        token = getattr(credentials, "token", None)
+        if not token:
+            return None
+        response = requests.get(
+            f"https://cloudresourcemanager.googleapis.com/v1/projects/{project_id}",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=10,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        project_number = payload.get("projectNumber")
+        if project_number is None:
+            return None
+        resolved = str(project_number).strip()
+        return resolved or None
+    except Exception:
+        return None

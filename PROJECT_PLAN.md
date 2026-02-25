@@ -198,6 +198,8 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Fix Firebase emulator container healthcheck instability by moving emulator runtime state to a dedicated `/firebase-emulator` volume path (instead of nested `/workspace/.firebase-emulator`), disabling Gunicorn control sockets in local compose, adding Python 3.11 compatibility links (`bin/python3.11`, `lib/python3.11`) for Firebase Functions SDK discovery on Alpine Python 3.12, and auto-rebuilding stale persisted venvs whose activation scripts still reference the old mount path.
 - [x] Fix devcontainer post-start `/opt/venv` refresh failure on rebuild by retrying Python 3.11 venv refresh with `sudo` and restoring `/opt/venv` ownership to `vscode`.
 - [x] Fix CI pytest regression (270 passed / 3 failed) by restoring `user_id_from_request()` token-verify call signature to pass `mode`, while keeping `_verify_token(mode=None)` backward compatible for existing callers.
+- [x] Add optional Firebase App Check protection for API requests (frontend `X-Firebase-AppCheck` header injection + backend token verification with `APP_CHECK_ENFORCE`).
+- [x] Add Firebase deploy preflight for App Check so CI fails early when `APP_CHECK_ENFORCE=1` is set without required frontend App Check env (`VITE_FIREBASE_APP_CHECK_ENABLED=1`, `VITE_FIREBASE_APP_CHECK_SITE_KEY`).
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.

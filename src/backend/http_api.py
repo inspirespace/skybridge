@@ -62,7 +62,7 @@ app.add_middleware(
     allow_origins=_cors_origins,
     allow_credentials=False,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-User-Id"],
+    allow_headers=["Authorization", "Content-Type", "X-User-Id", "X-Firebase-AppCheck"],
 )
 
 

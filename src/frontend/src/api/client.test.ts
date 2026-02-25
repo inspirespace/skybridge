@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/firebase-app-check", () => ({
+  getAppCheckTokenHeader: vi.fn(async () => ({})),
+}));
+
 const okResponse = (payload: unknown) =>
   Promise.resolve({
     ok: true,
@@ -108,6 +112,25 @@ describe("request helpers", () => {
 
     const result = await listJobs({ userId: "pilot" });
     expect(result.jobs).toEqual([]);
+  });
+
+  it("adds App Check header when token is available", async () => {
+    vi.stubEnv("VITE_AUTH_MODE", "header");
+    const appCheck = await import("@/lib/firebase-app-check");
+    vi.mocked(appCheck.getAppCheckTokenHeader).mockResolvedValue({
+      "X-Firebase-AppCheck": "app-check-token",
+    });
+    const { listJobs } = await import("@/api/client");
+
+    const payload = { jobs: [] };
+    const fetchMock = vi.fn(() => okResponse(payload));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await listJobs({ userId: "pilot" });
+    const [, options] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect((options?.headers as Record<string, string>)?.["X-Firebase-AppCheck"]).toBe(
+      "app-check-token"
+    );
   });
 
   it("retries transient errors for GET requests", async () => {

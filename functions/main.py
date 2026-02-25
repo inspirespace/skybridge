@@ -68,7 +68,7 @@ def _cors_headers() -> dict[str, str]:
     return {
         "Access-Control-Allow-Origin": allow_origin,
         "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
-        "Access-Control-Allow-Headers": "Authorization,Content-Type,X-User-Id",
+        "Access-Control-Allow-Headers": "Authorization,Content-Type,X-User-Id,X-Firebase-AppCheck",
     }
 
 
