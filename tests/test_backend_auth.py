@@ -116,6 +116,12 @@ def test_jwks_uri_override(monkeypatch: pytest.MonkeyPatch) -> None:
     assert auth._jwks_uri_for_issuer("https://issuer") == "https://issuer/jwks"
 
 
+def test_jwks_uri_firebase_default() -> None:
+    assert auth._jwks_uri_for_issuer("https://securetoken.google.com/demo-project") == (
+        "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"
+    )
+
+
 def test_jwks_uri_from_config(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_get(url, timeout=10):
         assert url.endswith("/.well-known/openid-configuration")

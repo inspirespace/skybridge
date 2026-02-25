@@ -163,7 +163,7 @@ def _jwks_uri_for_issuer(issuer: str) -> str:
     if override:
         return override
     if issuer.startswith("https://securetoken.google.com/"):
-        return "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com"
+        return "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"
     if _JWKS_CACHE.jwks_uri:
         return _JWKS_CACHE.jwks_uri
     config_url = issuer.rstrip("/") + "/.well-known/openid-configuration"
