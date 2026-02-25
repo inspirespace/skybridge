@@ -126,6 +126,40 @@ best_effort() {
   return 0
 }
 
+clear_firestore_data() {
+  local output
+  if output="$(firebase firestore:delete --project "$PROJECT_ID" --database "(default)" --all-collections --force 2>&1)"; then
+    [ -n "$output" ] && printf '%s\n' "$output"
+    return 0
+  fi
+
+  if printf '%s' "$output" | grep -Eiq 'Unable to list collection IDs|database .* does not exist|NOT_FOUND'; then
+    echo "  - no Firestore collections found (or default database not initialized); skipping."
+    return 0
+  fi
+
+  printf '%s\n' "$output" >&2
+  echo "Warning: clearing Firestore data failed; continuing." >&2
+  return 0
+}
+
+clear_realtime_database_root() {
+  local output
+  if output="$(firebase database:remove / --project "$PROJECT_ID" --force --disable-triggers 2>&1)"; then
+    [ -n "$output" ] && printf '%s\n' "$output"
+    return 0
+  fi
+
+  if printf '%s' "$output" | grep -Eiq "haven't created a Realtime Database instance|default Realtime Database instance"; then
+    echo "  - no Realtime Database instance found; skipping."
+    return 0
+  fi
+
+  printf '%s\n' "$output" >&2
+  echo "Warning: clearing Realtime Database data failed; continuing." >&2
+  return 0
+}
+
 list_function_ids() {
   local raw
   if ! raw="$(firebase --project "$PROJECT_ID" --json functions:list 2>/dev/null || true)"; then
@@ -201,14 +235,10 @@ else
 fi
 
 echo "Clearing Firestore default database data..."
-best_effort \
-  "clearing Firestore data" \
-  firebase firestore:delete --project "$PROJECT_ID" --database "(default)" --all-collections --force
+clear_firestore_data
 
 echo "Clearing Realtime Database root..."
-best_effort \
-  "clearing Realtime Database data" \
-  firebase database:remove / --project "$PROJECT_ID" --force --disable-triggers
+clear_realtime_database_root
 
 echo "Disabling Firebase Hosting sites..."
 site_ids="$(list_hosting_sites || true)"
