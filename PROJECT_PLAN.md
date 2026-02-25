@@ -194,6 +194,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Harden VS Code Pytest discovery by avoiding destructive `/opt/venv` wipes in post-start, validating pytest within `/opt/venv` (not global PATH), and wiring `/bin/python` + `.venv` fallbacks to `/opt/venv`.
 - [x] Fix local emulator API routing by aligning Hosting `/api/**` rewrite to `europe-west1` and ensuring Functions emulator can discover Python deps via `functions/venv` symlink to container-local venv.
 - [x] Fix Functions emulator startup mismatch on Alpine by adding `python3.11` alias inside container-local `functions-venv`, so Firebase Functions SDK discovery succeeds and `/api/**` rewrites resolve.
+- [x] Fix devcontainer post-start `/opt/venv` refresh failure on rebuild by retrying Python 3.11 venv refresh with `sudo` and restoring `/opt/venv` ownership to `vscode`.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.

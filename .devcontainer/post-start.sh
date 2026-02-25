@@ -49,7 +49,17 @@ fi
 if [ -x "/opt/venv/bin/python" ]; then
   if ! /opt/venv/bin/python -c 'import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 11) else 1)'; then
     echo "Refreshing /opt/venv to Python 3.11..."
-    uv venv /opt/venv --python "${PYTHON_BIN}" --clear
+    UV_BIN="$(command -v uv)"
+    if ! "${UV_BIN}" venv /opt/venv --python "${PYTHON_BIN}" --clear; then
+      if [ "$(id -u)" -ne 0 ] && command -v sudo >/dev/null 2>&1; then
+        echo "Retrying /opt/venv refresh with sudo..."
+        sudo "${UV_BIN}" venv /opt/venv --python "${PYTHON_BIN}" --clear
+        sudo chown -R "$(id -u)":"$(id -g)" /opt/venv
+      else
+        echo "Error: failed to refresh /opt/venv and sudo is unavailable." >&2
+        exit 1
+      fi
+    fi
   fi
 fi
 
