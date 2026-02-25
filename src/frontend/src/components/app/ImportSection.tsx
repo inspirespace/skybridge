@@ -207,8 +207,8 @@ export function ImportSection({
                 {" "}
                 {retentionDays} days before deletion.
               </AlertDescription>
-              <div className="mt-4 flex flex-wrap gap-3">
-                <Button asChild size="lg" className="btn-primary-glow rounded-xl px-6">
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <Button asChild size="lg" className="btn-primary-glow shrink-0 rounded-xl px-6">
                   <a href="https://www.flysto.net/logs" target="_blank" rel="noreferrer">
                     Open FlySto
                   </a>
@@ -216,7 +216,7 @@ export function ImportSection({
                 <Button
                   size="lg"
                   variant="outline"
-                  className="btn-secondary-glass rounded-xl px-6"
+                  className="btn-secondary-glass min-w-[11.5rem] shrink-0 justify-center rounded-xl px-6"
                   onClick={onDownloadFiles}
                   disabled={actionLoading || downloadLoading}
                   aria-busy={downloadLoading}
@@ -233,7 +233,7 @@ export function ImportSection({
                     <Button
                       variant="link"
                       size="lg"
-                      className="px-2 text-destructive hover:text-destructive/85"
+                      className="shrink-0 whitespace-nowrap px-2 text-destructive transition-colors hover:text-destructive/85 disabled:opacity-100 disabled:text-destructive/60"
                       disabled={actionLoading || downloadLoading}
                     >
                       Delete results now

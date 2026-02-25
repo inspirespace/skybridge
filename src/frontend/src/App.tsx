@@ -1102,6 +1102,7 @@ export default function App() {
                   <div className="flex flex-wrap gap-2">
                     <Button
                       variant="outline"
+                      className="min-w-[11.5rem] justify-center"
                       onClick={handleDownloadFiles}
                       disabled={!jobId || actionLoading || downloadLoading}
                       aria-busy={downloadLoading}
