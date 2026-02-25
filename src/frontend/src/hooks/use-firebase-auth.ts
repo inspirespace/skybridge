@@ -39,6 +39,7 @@ export function useFirebaseAuth({
   appId,
   emulatorHost,
   useEmulator,
+  allowAnonymous,
   onError,
   onLoadingChange,
 }: {
@@ -49,6 +50,7 @@ export function useFirebaseAuth({
   appId?: string;
   emulatorHost?: string;
   useEmulator?: boolean;
+  allowAnonymous?: boolean;
   onError?: (message: string) => void;
   onLoadingChange?: (loading: boolean) => void;
 }) {
@@ -297,6 +299,18 @@ export function useFirebaseAuth({
             setEmulatorProvider(null);
             return;
           }
+          if (user.isAnonymous && !allowAnonymous) {
+            try {
+              const { signOut } = await import("firebase/auth");
+              await signOut(auth);
+            } catch {
+              // Best-effort cleanup for stale anonymous sessions.
+            }
+            clearAuth();
+            setIsAnonymous(false);
+            setEmulatorProvider(null);
+            return;
+          }
           try {
             const token = await user.getIdToken();
             setAccessToken(token);
@@ -332,6 +346,7 @@ export function useFirebaseAuth({
     appId,
     emulatorUrl,
     useEmulator,
+    allowAnonymous,
     clearAuth,
     onError,
     completeEmailLink,
@@ -360,6 +375,10 @@ export function useFirebaseAuth({
           OAuthProvider,
         } = await import("firebase/auth");
         if (provider === "anonymous") {
+          if (!allowAnonymous) {
+            onError?.("Guest sign-in is disabled.");
+            return;
+          }
           if (!auth.currentUser) {
             if (useEmulator) {
               await retryEmulatorAuth(async () => {
@@ -432,7 +451,7 @@ export function useFirebaseAuth({
         onLoadingChange?.(false);
       }
     },
-    [enabled, useEmulator, onError, onLoadingChange]
+    [allowAnonymous, enabled, useEmulator, onError, onLoadingChange]
   );
 
   const startEmailLink = React.useCallback(

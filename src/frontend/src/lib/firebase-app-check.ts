@@ -59,9 +59,12 @@ async function initAppCheck() {
     return null;
   }
 
-  const { ReCaptchaV3Provider, getAppCheck, initializeAppCheck } = await import(
-    "firebase/app-check"
-  );
+  const appCheckModule = await import("firebase/app-check");
+  const { ReCaptchaV3Provider, initializeAppCheck } = appCheckModule;
+  const getAppCheck =
+    (appCheckModule as { getAppCheck?: (app: unknown) => unknown }).getAppCheck ??
+    (appCheckModule as { default?: { getAppCheck?: (app: unknown) => unknown } }).default
+      ?.getAppCheck;
 
   if (FIREBASE_APP_CHECK_DEBUG_TOKEN && typeof window !== "undefined") {
     (window as typeof window & { FIREBASE_APPCHECK_DEBUG_TOKEN?: string }).FIREBASE_APPCHECK_DEBUG_TOKEN =
@@ -76,7 +79,10 @@ async function initAppCheck() {
   } catch (err) {
     const code = (err as { code?: string })?.code;
     if (code === "appCheck/already-initialized" || code === "app-check/already-initialized") {
-      return getAppCheck(app);
+      if (typeof getAppCheck === "function") {
+        return getAppCheck(app);
+      }
+      return null;
     }
     throw err;
   }

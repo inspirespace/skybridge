@@ -175,6 +175,7 @@ export default function App() {
     appId: FIREBASE_APP_ID || undefined,
     emulatorHost: FIREBASE_EMULATOR_HOST || undefined,
     useEmulator: FIREBASE_USE_EMULATOR,
+    allowAnonymous: FIREBASE_ENABLE_GUEST,
     onError: (message) => setActionError({ scope: "sign-in", message }),
     onLoadingChange: setActionLoading,
   });

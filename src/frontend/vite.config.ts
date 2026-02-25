@@ -47,7 +47,8 @@ if (!process.env.VITE_FIREBASE_AUTH_DOMAIN && process.env.VITE_FIREBASE_PROJECT_
     `${process.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com`;
 }
 
-setEnvDefault("VITE_AUTH_MODE", process.env.AUTH_MODE);
+const defaultAuthMode = process.env.VITEST ? "header" : "firebase";
+setEnvDefault("VITE_AUTH_MODE", process.env.AUTH_MODE, defaultAuthMode);
 setEnvDefault("VITE_FIREBASE_APP_CHECK_ENABLED", process.env.FIREBASE_APP_CHECK_ENABLED);
 setEnvDefault("VITE_FIREBASE_APP_CHECK_SITE_KEY", process.env.FIREBASE_APP_CHECK_SITE_KEY);
 setEnvDefault("VITE_FIREBASE_APP_CHECK_DEBUG_TOKEN", process.env.FIREBASE_APP_CHECK_DEBUG_TOKEN);
