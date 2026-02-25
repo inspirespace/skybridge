@@ -20,9 +20,15 @@
       "problemMatcher": []
     },
     {
-      "label": "Firebase: Deploy (Functions + Hosting)",
+      "label": "Firebase: Deploy",
       "type": "shell",
       "command": "./scripts/firebase-deploy.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "Firebase: Clear Project",
+      "type": "shell",
+      "command": "./scripts/firebase-clear-project.sh",
       "problemMatcher": []
     },
     {

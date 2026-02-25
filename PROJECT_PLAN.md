@@ -163,8 +163,9 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] De-duplicate screenshot workflow docs: keep detailed procedure in `CONTRIBUTING.md` and reference it from `AGENTS.md`.
 - [x] Add a VS Code task (`Git: Cleanup Merged Branches`) for `scripts/cleanup-merged-branches.sh` to make branch cleanup accessible from the editor.
 - [x] Add `scripts/clean-workspace.sh` plus a VS Code task (`Workspace: Clean`) that removes local dependency/build artifacts (`venv`, `node_modules`, caches, coverage/test outputs, pyc files) and ignored `*.log` files without reinstall/rebuild steps.
+- [x] Add `scripts/firebase-clear-project.sh` plus a VS Code task (`Firebase: Clear Project`) to clear Functions/Firestore/RTDB/Hosting with zero-config defaults from `.firebaserc` while keeping the Firebase project itself.
 - [x] Gate Firebase deploy workflow with a preflight secrets check so CI exits successfully with a skip notice when deploy prerequisites are not configured.
-- [x] Add `scripts/firebase-deploy.sh` as the shared Firebase deploy implementation, used by both VS Code task (`Firebase: Deploy (Functions + Hosting)`) and `.github/workflows/firebase-deploy.yml`.
+- [x] Add `scripts/firebase-deploy.sh` as the shared Firebase deploy implementation, used by both VS Code task (`Firebase: Deploy`) and `.github/workflows/firebase-deploy.yml`.
 - [x] Pin devcontainer Python toolchain to `3.11` and enforce `uv sync --python 3.11` in post-start setup so local devcontainer runtime matches Firebase Functions `python311`.
 - [x] Remove the obsolete root install/uninstall build file and clean repository references so command workflows live in scripts/VS Code tasks/GitHub Actions only.
 - [x] Align Firebase project-id references to `skybridge-inspirespace` (`.firebaserc` default, emulator compose env/command, proxy rewrite path, frontend auth-client fallback, and functions env example).

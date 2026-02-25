@@ -8,7 +8,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Keep assets in `assets/`, and config files at the repo root.
 - Inspector scripts live in `tools/inspector/` (dev-only helpers).
 - VNC helpers for Playwright live in `scripts/` (devcontainer use only).
-- User-facing scripts: `scripts/cleanup-merged-branches.sh` (branch cleanup), `scripts/clean-workspace.sh` (local dependency/build/log cleanup), and `scripts/firebase-deploy.sh` (shared local/CI Firebase deploy flow).
+- User-facing scripts: `scripts/cleanup-merged-branches.sh` (branch cleanup), `scripts/clean-workspace.sh` (local dependency/build/log cleanup), `scripts/firebase-deploy.sh` (shared local/CI Firebase deploy flow), and `scripts/firebase-clear-project.sh` (clear Firebase resources while keeping the project).
 - Shared install helper: `scripts/npm-ci-frontend.sh` (resilient frontend `npm ci` with nested strategy plus one automatic retry/cache cleanup).
 - Frontend entry points: landing page in `src/frontend/index.html`, SPA app in `src/frontend/app/index.html`, static legal pages in `src/frontend/privacy/index.html` and `src/frontend/imprint/index.html`.
 - Infrastructure-as-code is not tracked in this repository (Firebase-only deployment).
@@ -20,8 +20,9 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 ## Build, Test, and Development Commands
 - `docker compose up --build` — run the local dev stack (Firebase emulators, API, worker, frontend, HTTPS proxy, mocks).
 - VS Code launch configs: `Stack: Start (Docker Compose)`, `Stack: Stop (Docker Compose)`, `Stack: Build (Docker Compose)` in `.vscode/launch.json`.
-- VS Code tasks: `Compose: Up (detached)`, `Compose: Down`, `Compose: Build`, `Firebase: Deploy (Functions + Hosting)`, `Workspace: Clean`, `Git: Cleanup Merged Branches` in `.vscode/tasks.json`.
-- `Firebase: Deploy (Functions + Hosting)` is zero-config for local use: it reads the default project from `.firebaserc`, triggers login when needed, and does not prompt for project id.
+- VS Code tasks: `Compose: Up (detached)`, `Compose: Down`, `Compose: Build`, `Firebase: Deploy`, `Firebase: Clear Project`, `Workspace: Clean`, `Git: Cleanup Merged Branches` in `.vscode/tasks.json`.
+- `Firebase: Deploy` is zero-config for local use: it reads the default project from `.firebaserc`, triggers login when needed, and does not prompt for project id.
+- `Firebase: Clear Project` is zero-config for local use: it reads project/region defaults from `.firebaserc`, confirms interactively (unless `--force`), and clears functions/firestore/rtdb/hosting without deleting the Firebase project.
 - Firebase project id and region defaults live in `.firebaserc` (`projects.default`, `config.region`).
 - Backend code resolves project/region through shared helpers in `src/backend/env.py` (`resolve_project_id()`, `resolve_region()`); avoid per-callsite `os.getenv(...) or <default>` fallbacks for these values.
 - Frontend Firebase project/auth-domain defaults are derived from `.firebaserc` in `src/frontend/vite.config.ts`, so `VITE_FIREBASE_PROJECT_ID` and `VITE_FIREBASE_AUTH_DOMAIN` are optional unless you need overrides.

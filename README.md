@@ -71,6 +71,12 @@ Manual deploy (zero-config: uses `.firebaserc` default project and prompts login
 ./scripts/firebase-deploy.sh
 ```
 
+Clear Firebase resources while keeping the project (zero-config from `.firebaserc`):
+
+```sh
+./scripts/firebase-clear-project.sh
+```
+
 Frontend dependency install during deploy/devcontainer startup is handled by `scripts/npm-ci-frontend.sh`, which uses npm nested install strategy and one automatic retry to mitigate intermittent npm unpack `ENOENT`/tarball failures.
 
 Project id and region come from `.firebaserc` (`projects.default` and `config.region`).
