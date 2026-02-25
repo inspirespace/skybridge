@@ -65,14 +65,14 @@ def test_user_id_from_request_oidc_missing_token(monkeypatch: pytest.MonkeyPatch
 def test_user_id_from_request_oidc_valid_token(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test OIDC mode derives user id from token payload."""
     monkeypatch.setenv("AUTH_MODE", "oidc")
-    monkeypatch.setattr(auth, "_verify_token", lambda token: {"preferred_username": "pilot"})
+    monkeypatch.setattr(auth, "_verify_token", lambda token, mode: {"preferred_username": "pilot"})
     assert auth.user_id_from_request("Bearer abc", None) == "pilot"
 
 
 def test_user_id_from_request_firebase_valid_token(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test firebase mode behaves like OIDC."""
     monkeypatch.setenv("AUTH_MODE", "firebase")
-    monkeypatch.setattr(auth, "_verify_token", lambda token: {"user_id": "firebase-uid"})
+    monkeypatch.setattr(auth, "_verify_token", lambda token, mode: {"user_id": "firebase-uid"})
     assert auth.user_id_from_request("Bearer abc", None) == "firebase-uid"
 
 
@@ -91,7 +91,7 @@ def test_emulator_trust_requires_localhost(monkeypatch: pytest.MonkeyPatch) -> N
 def test_user_id_from_request_oidc_invalid_subject(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test OIDC mode rejects empty subjects."""
     monkeypatch.setenv("AUTH_MODE", "oidc")
-    monkeypatch.setattr(auth, "_verify_token", lambda token: {"preferred_username": ""})
+    monkeypatch.setattr(auth, "_verify_token", lambda token, mode: {"preferred_username": ""})
     with pytest.raises(HTTPException) as exc:
         auth.user_id_from_request("Bearer abc", None)
     assert exc.value.status_code == 401
@@ -171,14 +171,14 @@ def test_resolve_key_refreshes(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_verify_token_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("AUTH_ISSUER_URL", raising=False)
     with pytest.raises(HTTPException) as exc:
-        auth._verify_token("token")
+        auth._verify_token("token", "oidc")
     assert exc.value.status_code == 500
 
     monkeypatch.setenv("AUTH_ISSUER_URL", "https://issuer")
     monkeypatch.setattr(auth, "_resolve_key", lambda *_args: "KEY")
     monkeypatch.setattr(auth.jwt, "decode", lambda *_args, **_kwargs: (_ for _ in ()).throw(auth.jwt.PyJWTError("bad")))
     with pytest.raises(HTTPException) as exc:
-        auth._verify_token("token")
+        auth._verify_token("token", "oidc")
     assert exc.value.status_code == 401
 
 
@@ -188,10 +188,10 @@ def test_verify_token_client_id_mismatch(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setattr(auth, "_resolve_key", lambda *_args: "KEY")
     monkeypatch.setattr(auth.jwt, "decode", lambda *_args, **_kwargs: {"aud": ["other"]})
     with pytest.raises(HTTPException) as exc:
-        auth._verify_token("token")
+        auth._verify_token("token", "oidc")
     assert exc.value.status_code == 401
 
     monkeypatch.setattr(auth.jwt, "decode", lambda *_args, **_kwargs: {"azp": "other", "aud": ["client-1"]})
     with pytest.raises(HTTPException) as exc:
-        auth._verify_token("token")
+        auth._verify_token("token", "oidc")
     assert exc.value.status_code == 401

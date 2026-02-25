@@ -38,7 +38,7 @@ def user_id_from_request(authorization: Optional[str], x_user_id: Optional[str])
     token = authorization.split(" ", 1)[1].strip()
     if not token:
         raise HTTPException(status_code=401, detail="Missing Authorization bearer token")
-    payload = _verify_token(token, mode)
+    payload = _verify_token(token)
     if mode == "firebase":
         user_id = payload.get("user_id") or payload.get("sub") or payload.get("email")
     else:
@@ -56,8 +56,9 @@ def user_id_from_event(event: dict[str, Any]) -> str:
     return user_id_from_request(authorization, x_user_id)
 
 
-def _verify_token(token: str, mode: str) -> dict[str, Any]:
+def _verify_token(token: str, mode: str | None = None) -> dict[str, Any]:
     """Internal helper for verify token."""
+    resolved_mode = (mode or _env("AUTH_MODE") or "header").lower()
     if _should_trust_emulator_tokens():
         try:
             payload = jwt.decode(
@@ -73,13 +74,13 @@ def _verify_token(token: str, mode: str) -> dict[str, Any]:
         return payload
 
     issuer = _env("AUTH_ISSUER_URL")
-    if mode == "firebase" and not issuer:
+    if resolved_mode == "firebase" and not issuer:
         issuer = _default_firebase_issuer()
     if not issuer:
         raise HTTPException(status_code=500, detail="AUTH_ISSUER_URL not configured")
 
     audience = _env("AUTH_AUDIENCE")
-    if mode == "firebase" and not audience:
+    if resolved_mode == "firebase" and not audience:
         audience = _default_firebase_audience()
     client_id = _env("AUTH_CLIENT_ID")
     key = _resolve_key(token, issuer)
