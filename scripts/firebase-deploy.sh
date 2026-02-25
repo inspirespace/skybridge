@@ -76,6 +76,7 @@ FUNCTIONS_SRC_STAGED=0
 FIREBASE_JSON_PATH="firebase.json"
 FIREBASE_JSON_BACKUP_FILE=""
 FIREBASE_JSON_STAGED=0
+DEPLOY_OUTPUT_FILE=""
 
 cleanup_credentials() {
   if [ -n "$TEMP_CREDENTIALS_FILE" ] && [ -f "$TEMP_CREDENTIALS_FILE" ]; then
@@ -109,6 +110,9 @@ cleanup_all() {
   cleanup_credentials
   cleanup_staged_functions_src
   cleanup_staged_firebase_json
+  if [ -n "$DEPLOY_OUTPUT_FILE" ] && [ -f "$DEPLOY_OUTPUT_FILE" ]; then
+    rm -f "$DEPLOY_OUTPUT_FILE"
+  fi
 }
 trap cleanup_all EXIT
 
@@ -167,6 +171,36 @@ NODE
 
 has_firebase_auth() {
   firebase projects:list --json >/dev/null 2>&1
+}
+
+run_firebase_deploy() {
+  local output_file="$1"
+  set +e
+  firebase deploy --only functions,hosting --project "$PROJECT_ID" 2>&1 | tee "$output_file"
+  local status="${PIPESTATUS[0]}"
+  set -e
+  return "$status"
+}
+
+delete_trigger_mismatch_functions() {
+  local output_file="$1"
+  local found=1
+  while IFS= read -r line; do
+    if [[ "$line" == Error:\ [* ]] && [[ "$line" == *"Changing from an HTTPS function to a background triggered function is not allowed."* ]]; then
+      local descriptor="${line#Error: [}"
+      descriptor="${descriptor%%]*}"
+      local function_name="${descriptor%%(*}"
+      local region_name="${descriptor#*(}"
+      region_name="${region_name%)}"
+      if [ -z "$function_name" ] || [ -z "$region_name" ] || [ "$function_name" = "$descriptor" ]; then
+        continue
+      fi
+      echo "Detected trigger migration conflict for ${function_name}(${region_name}); deleting old function before retry..."
+      firebase functions:delete "$function_name" --region "$region_name" --project "$PROJECT_ID" --force
+      found=0
+    fi
+  done < "$output_file"
+  return "$found"
 }
 
 # Allow local runs to reuse the CI auth model by passing FIREBASE_SERVICE_ACCOUNT
@@ -238,13 +272,16 @@ rm -rf functions/venv
 functions/venv/bin/python -m pip install --upgrade pip
 functions/venv/bin/python -m pip install -r functions/requirements.txt
 
-deploy_once() {
-  firebase deploy --only functions,hosting --project "$PROJECT_ID"
-}
+DEPLOY_OUTPUT_FILE="$(mktemp)"
 
 echo "Deploying Firebase functions + hosting to project: ${PROJECT_ID} (region: ${FUNCTIONS_REGION})"
-if ! deploy_once; then
+if ! run_firebase_deploy "$DEPLOY_OUTPUT_FILE"; then
+  if delete_trigger_mismatch_functions "$DEPLOY_OUTPUT_FILE"; then
+    echo "Deleted conflicting function definitions. Retrying deploy..."
+    run_firebase_deploy "$DEPLOY_OUTPUT_FILE"
+    exit 0
+  fi
   echo "Initial deploy failed. Waiting for API/service identity propagation, then retrying once..."
   sleep 20
-  deploy_once
+  run_firebase_deploy "$DEPLOY_OUTPUT_FILE"
 fi
