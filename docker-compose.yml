@@ -46,18 +46,19 @@ services:
 
   firebase-emulator:
     image: node:24-alpine
-    working_dir: /workspace/.firebase-emulator
+    working_dir: /workspace
     volumes:
       - ./:/workspace
-      - firebase_emulator_data:/workspace/.firebase-emulator
+      - firebase_emulator_data:/firebase-emulator
     command:
       [
         "sh",
         "-c",
-        "apk add --no-cache curl python3 py3-pip py3-virtualenv openjdk21-jre && java -version && npm install -g firebase-tools@15.7.0 && VENV_DIR=/workspace/.firebase-emulator/functions-venv && if [ ! -x \"$$VENV_DIR/bin/python\" ]; then rm -rf \"$$VENV_DIR\" && python3 -m venv \"$$VENV_DIR\"; fi && if [ -e /workspace/functions/venv ] && [ ! -L /workspace/functions/venv ]; then rm -rf /workspace/functions/venv; fi && ln -sfn \"$$VENV_DIR\" /workspace/functions/venv && ln -sfn \"$$VENV_DIR/bin/python\" \"$$VENV_DIR/bin/python3.11\" && \"$$VENV_DIR/bin/python\" -m ensurepip --upgrade && \"$$VENV_DIR/bin/python\" -m pip install -r /workspace/functions/requirements.txt && mkdir -p /workspace/.firebase-emulator/exports && PROJECT_ID=$$(sh /workspace/scripts/firebase-config.sh project) && REGION=$$(sh /workspace/scripts/firebase-config.sh region) && if [ -z \"$$PROJECT_ID\" ]; then echo 'Missing default Firebase project in .firebaserc' >&2; exit 1; fi && cd /workspace/.firebase-emulator && FIREBASE_REGION=\"$$REGION\" firebase emulators:start --project \"$$PROJECT_ID\" --only auth,firestore,pubsub,storage,functions,hosting --import /workspace/.firebase-emulator/exports --export-on-exit /workspace/.firebase-emulator/exports"
+        "apk add --no-cache curl python3 py3-pip py3-virtualenv openjdk21-jre && java -version && npm install -g firebase-tools@15.7.0 && VENV_DIR=/firebase-emulator/functions-venv && if [ -f \"$$VENV_DIR/bin/activate\" ] && ! grep -q \"$$VENV_DIR\" \"$$VENV_DIR/bin/activate\"; then rm -rf \"$$VENV_DIR\"; fi && if [ ! -x \"$$VENV_DIR/bin/python\" ]; then rm -rf \"$$VENV_DIR\" && python3 -m venv \"$$VENV_DIR\"; fi && if [ -e /workspace/functions/venv ] && [ ! -L /workspace/functions/venv ]; then rm -rf /workspace/functions/venv; fi && ln -sfn \"$$VENV_DIR\" /workspace/functions/venv && ln -sfn \"$$VENV_DIR/bin/python\" \"$$VENV_DIR/bin/python3.11\" && if [ -d \"$$VENV_DIR/lib/python3.12\" ]; then ln -sfn \"$$VENV_DIR/lib/python3.12\" \"$$VENV_DIR/lib/python3.11\"; fi && \"$$VENV_DIR/bin/python\" -m ensurepip --upgrade && \"$$VENV_DIR/bin/python\" -m pip install -r /workspace/functions/requirements.txt && mkdir -p /firebase-emulator/exports && PROJECT_ID=$$(sh /workspace/scripts/firebase-config.sh project) && REGION=$$(sh /workspace/scripts/firebase-config.sh region) && if [ -z \"$$PROJECT_ID\" ]; then echo 'Missing default Firebase project in .firebaserc' >&2; exit 1; fi && cd /workspace && FIREBASE_REGION=\"$$REGION\" firebase emulators:start --config /workspace/firebase.json --project \"$$PROJECT_ID\" --only auth,firestore,pubsub,storage,functions,hosting --import /firebase-emulator/exports --export-on-exit /firebase-emulator/exports"
       ]
     environment:
       - FIREBASE_AUTH_EMULATOR_HOST=firebase-emulator:9099
+      - GUNICORN_CMD_ARGS=--no-control-socket
       - AUTH_EMULATOR_TRUST_TOKENS=1
       - PUBSUB_EMULATOR_HOST=firebase-emulator:8085
       - FIRESTORE_EMULATOR_HOST=firebase-emulator:8080

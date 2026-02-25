@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 FIREBASE_CONFIG_SCRIPT="${FIREBASE_CONFIG_SCRIPT:-scripts/firebase-config.sh}"
+FRONTEND_INSTALL_SCRIPT="${FRONTEND_INSTALL_SCRIPT:-scripts/npm-ci-frontend.sh}"
 
 usage() {
   cat <<'EOF'
@@ -53,6 +54,11 @@ export FIREBASE_PROJECT_ID="$PROJECT_ID"
 
 if ! command -v firebase >/dev/null 2>&1; then
   echo "Firebase CLI is required. Install it first (for example: npm install -g firebase-tools)." >&2
+  exit 1
+fi
+
+if [ ! -x "$FRONTEND_INSTALL_SCRIPT" ]; then
+  echo "Frontend install script is missing or not executable: $FRONTEND_INSTALL_SCRIPT" >&2
   exit 1
 fi
 
@@ -215,7 +221,7 @@ else
 fi
 
 echo "Preparing frontend dependencies..."
-npm --prefix src/frontend ci
+"$FRONTEND_INSTALL_SCRIPT"
 
 echo "Building frontend..."
 npm --prefix src/frontend run build

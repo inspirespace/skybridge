@@ -9,6 +9,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Inspector scripts live in `tools/inspector/` (dev-only helpers).
 - VNC helpers for Playwright live in `scripts/` (devcontainer use only).
 - User-facing scripts: `scripts/cleanup-merged-branches.sh` (branch cleanup), `scripts/clean-workspace.sh` (local dependency/build/log cleanup), and `scripts/firebase-deploy.sh` (shared local/CI Firebase deploy flow).
+- Shared install helper: `scripts/npm-ci-frontend.sh` (resilient frontend `npm ci` with nested strategy plus one automatic retry/cache cleanup).
 - Frontend entry points: landing page in `src/frontend/index.html`, SPA app in `src/frontend/app/index.html`, static legal pages in `src/frontend/privacy/index.html` and `src/frontend/imprint/index.html`.
 - Infrastructure-as-code is not tracked in this repository (Firebase-only deployment).
 - Firebase emulators are configured by `firebase.json` and `.firebaserc`.
@@ -29,6 +30,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Devcontainer tooling is pinned to Python `3.11` to match Firebase Functions runtime `python311`.
 - Devcontainer post-start uses user-owned caches (`$HOME/.cache/npm`, `$HOME/.cache/uv`) to avoid permission issues from shared `/tmp` cache directories.
 - Devcontainer startup disables npm update-notifier noise (`NPM_CONFIG_UPDATE_NOTIFIER=false`) for cleaner rebuild logs.
+- Devcontainer frontend dependency reinstalls run through `scripts/npm-ci-frontend.sh` so npm unpack/install is more resilient against intermittent `ENOENT`/tarball failures.
 - Devcontainer VNC/noVNC setup is best-effort during post-start; failures are logged as warnings and do not block startup.
 - Devcontainer image includes ImageMagick binaries for frontend asset generation commands (`convert`, `identify`, etc.).
 - Devcontainer image pre-creates `/opt/venv` (`uv venv`) so VS Code can resolve `python.defaultInterpreterPath` immediately during container startup.
@@ -37,10 +39,12 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Devcontainer post-start also installs a `/bin/python` wrapper that execs `/opt/venv/bin/python` (plus a workspace `.venv` symlink to `/opt/venv`) so VS Code discovery remains stable even when extensions probe `/bin/python`.
 - Firebase deploy workflow lives in `.github/workflows/firebase-deploy.yml` and requires `FIREBASE_SERVICE_ACCOUNT` secret.
 - `scripts/firebase-deploy.sh` performs Firebase auth preflight before builds; in interactive terminals (for example VS Code tasks) it auto-runs `firebase login --reauth` when unauthenticated, with fallback `--no-localhost`, and still supports `GOOGLE_APPLICATION_CREDENTIALS` / `FIREBASE_SERVICE_ACCOUNT`.
+- `scripts/firebase-deploy.sh` installs frontend dependencies via `scripts/npm-ci-frontend.sh` (nested npm strategy, cache isolation, one automatic retry) to reduce intermittent install failures.
 - `scripts/firebase-deploy.sh` stages `src/backend` and `src/core` into `functions/src` during deploy so Cloud Functions runtime includes shared Python modules, then restores prior workspace state on exit.
 - Functions region is consolidated through shared config (`FIREBASE_REGION`, default `europe-west1`) for both production deploys and local emulator/proxy routing; per-run overrides remain supported.
-- Local emulator startup keeps `functions/venv` as a symlink to a container-local venv (`.firebase-emulator/functions-venv`) so Firebase Functions discovery works even when host-created venv binaries are incompatible.
-- Local emulator startup also adds `functions-venv/bin/python3.11 -> python` so Firebase Tools can resolve Python Functions SDK checks that explicitly invoke `python3.11`.
+- Local emulator startup keeps `functions/venv` as a symlink to a container-local venv (`/firebase-emulator/functions-venv` volume path inside the container) so Firebase Functions discovery works even when host-created venv binaries are incompatible.
+- Local emulator startup also adds `functions-venv/bin/python3.11 -> python` plus `functions-venv/lib/python3.11 -> lib/python3.12` compatibility links so Firebase Tools can resolve Python Functions SDK checks that expect Python 3.11 paths.
+- Local emulator startup auto-rebuilds the container venv if `functions-venv/bin/activate` still points at an old path (for example `/workspace/.firebase-emulator/...`) to avoid Firebase Functions SDK discovery failures after mount-path migrations.
 - Firebase Hosting custom-domain setup guidance is documented in `docs/production.md` under `Custom domain setup (Firebase Hosting)`.
 - Local dev runs behind `http://skybridge.localhost` with emulator subdomains (`auth.skybridge.localhost`, `firestore.skybridge.localhost`, `ui.skybridge.localhost`) instead of localhost ports.
 - `python -m src.core.cli --review` — run the CLI locally (requires Python deps).

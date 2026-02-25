@@ -111,7 +111,7 @@ if [ -d "src/frontend" ]; then
   if [ ! -d "src/frontend/node_modules/$rollup_pkg" ]; then
     echo "Reinstalling frontend dependencies for Linux ($arch)..."
     rm -rf src/frontend/node_modules
-    (cd src/frontend && NPM_CONFIG_CACHE="${NPM_CACHE_DIR}" NPM_CONFIG_UPDATE_NOTIFIER=false npm ci)
+    NPM_CONFIG_CACHE="${NPM_CACHE_DIR}" NPM_CONFIG_UPDATE_NOTIFIER=false ./scripts/npm-ci-frontend.sh
   fi
 fi
 
