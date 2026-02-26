@@ -10,6 +10,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - VNC helpers for Playwright live in `scripts/` (devcontainer use only).
 - User-facing scripts: `scripts/cleanup-merged-branches.sh` (branch cleanup), `scripts/clean-workspace.sh` (local dependency/build/log cleanup), `scripts/firebase-deploy.sh` (shared local/CI Firebase deploy flow), and `scripts/firebase-clear-project.sh` (clear Firebase resources while keeping the project).
 - Shared install helper: `scripts/npm-ci-frontend.sh` (resilient frontend `npm ci` with nested strategy plus one automatic retry/cache cleanup).
+- Firebase emulator container bootstrap script: `scripts/firebase-emulator-start.sh` (installs emulator deps, prepares venv, and starts emulators with shared import/export dir).
 - Frontend entry points: landing page in `src/frontend/index.html`, SPA app in `src/frontend/app/index.html`, static legal pages in `src/frontend/privacy/index.html` and `src/frontend/imprint/index.html`.
 - Infrastructure-as-code is not tracked in this repository (Firebase-only deployment).
 - Firebase emulators are configured by `firebase.json` and `.firebaserc`.
@@ -45,6 +46,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `scripts/firebase-deploy.sh` stages `src/backend` and `src/core` into `functions/src` during deploy so Cloud Functions runtime includes shared Python modules, then restores prior workspace state on exit.
 - Functions region is consolidated through shared config (`FIREBASE_REGION`, default `europe-west1`) for both production deploys and local emulator/proxy routing; per-run overrides remain supported.
 - Local emulator startup keeps `functions/venv` as a symlink to a container-local venv (`/firebase-emulator/functions-venv` volume path inside the container) so Firebase Functions discovery works even when host-created venv binaries are incompatible.
+- Local emulator import/export state is consolidated in a single workspace folder: `.firebase-emulator/exports` (legacy root-level `firebase-export-*` artifacts are auto-moved to `.firebase-emulator/exports/legacy` on startup).
 - Local emulator startup also adds `functions-venv/bin/python3.11 -> python` plus `functions-venv/lib/python3.11 -> lib/python3.12` compatibility links so Firebase Tools can resolve Python Functions SDK checks that expect Python 3.11 paths.
 - Local emulator startup auto-rebuilds the container venv if `functions-venv/bin/activate` still points at an old path (for example `/workspace/.firebase-emulator/...`) to avoid Firebase Functions SDK discovery failures after mount-path migrations.
 - Firebase Hosting custom-domain setup guidance is documented in `docs/production.md` under `Custom domain setup (Firebase Hosting)`.
