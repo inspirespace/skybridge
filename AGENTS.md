@@ -8,7 +8,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Keep assets in `assets/`, and config files at the repo root.
 - Inspector scripts live in `tools/inspector/` (dev-only helpers).
 - VNC helpers for Playwright live in `scripts/` (devcontainer use only).
-- User-facing scripts: `scripts/cleanup-merged-branches.sh` (branch cleanup), `scripts/clean-workspace.sh` (local dependency/build/log cleanup), `scripts/firebase-deploy.sh` (shared local/CI Firebase deploy flow), `scripts/firebase-clear-project.sh` (clear Firebase resources while keeping the project), and `scripts/repair-docker-socket-access.sh` (fix Docker socket permissions inside devcontainer sessions).
+- User-facing scripts: `scripts/cleanup-merged-branches.sh` (branch cleanup), `scripts/clean-workspace.sh` (local dependency/build/log cleanup), `scripts/firebase-deploy.sh` (shared local/CI Firebase deploy flow), `scripts/firebase-clear-project.sh` (clear Firebase resources while keeping the project), `scripts/repair-docker-socket-access.sh` (fix Docker socket permissions inside devcontainer sessions), and `scripts/docker-compose.sh` (Docker Compose wrapper that resolves host bind paths when run from inside the devcontainer).
 - Shared install helper: `scripts/npm-ci-frontend.sh` (resilient frontend `npm ci` with nested strategy plus one automatic retry/cache cleanup).
 - Firebase emulator container bootstrap script: `scripts/firebase-emulator-start.sh` (installs emulator deps, prepares venv, and starts emulators with shared import/export dir).
 - Frontend entry points: landing page in `src/frontend/index.html`, SPA app in `src/frontend/app/index.html`, static legal pages in `src/frontend/privacy/index.html` and `src/frontend/imprint/index.html`.
@@ -21,8 +21,9 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 ## Build, Test, and Development Commands
 - `docker compose --profile dev up --build` — run the local dev stack with Vite dev server (Firebase emulators, API, worker, frontend, HTTPS proxy, mocks).
 - `docker compose --profile prod up --build` — run the local prod-like stack (app served via Firebase Hosting emulator from `src/frontend/dist`).
+- `./scripts/docker-compose.sh --profile <dev|prod> up -d --build` — preferred in devcontainer terminals/tasks so bind mounts resolve to host paths on Docker Desktop.
 - VS Code launch configs: `Stack: Start (Docker Compose)`, `Stack: Start (Docker Compose, prod-like)`, `Stack: Stop (Docker Compose)` in `.vscode/launch.json`.
-- VS Code tasks: `Compose: Up (detached)`, `Compose: Up (prod-like)`, `Compose: Down`, `Firebase: Deploy`, `Firebase: Clear Project`, `Workspace: Clean`, `Devcontainer: Repair Docker Socket Access`, `Devcontainer: Repair Docker Socket Access (Restart VS Code Server)`, `Git: Cleanup Merged Branches` in `.vscode/tasks.json`.
+- VS Code tasks: `Compose: Up (dev)`, `Compose: Up (prod)`, `Compose: Down`, `Firebase: Deploy`, `Firebase: Clear Project`, `Workspace: Clean`, `Devcontainer: Repair Docker Socket Access`, `Devcontainer: Repair Docker Socket Access (Restart VS Code Server)`, `Git: Cleanup Merged Branches` in `.vscode/tasks.json`.
 - `Firebase: Deploy` is zero-config for local use: it reads the default project from `.firebaserc`, triggers login when needed, and does not prompt for project id.
 - `Firebase: Clear Project` is zero-config for local use: it reads project/region defaults from `.firebaserc`, confirms interactively (unless `--force`), and clears functions/firestore/rtdb/hosting without deleting the Firebase project.
 - Firebase project id and region defaults live in `.firebaserc` (`projects.default`, `config.region`).

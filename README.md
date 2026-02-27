@@ -23,6 +23,10 @@ npm install -g @devcontainers/cli
 ```sh
 docker compose --profile dev up --build
 ```
+When running from inside the VS Code devcontainer, prefer:
+```sh
+./scripts/docker-compose.sh --profile dev up -d --build
+```
 
 Open https://skybridge.localhost and sign in using the Firebase Auth emulator popup (Google/Apple/Facebook buttons). The emulator UI is available at https://emulator.skybridge.localhost.
 The Firebase Functions/Hosting emulators run inside the `firebase-emulator` service.
@@ -32,6 +36,10 @@ To mirror production serving behavior locally (static bundle via Firebase Hostin
 
 ```sh
 docker compose --profile prod up --build
+```
+Devcontainer equivalent:
+```sh
+./scripts/docker-compose.sh --profile prod up -d --build
 ```
 On macOS, `.localhost` already resolves to `127.0.0.1`, so no hosts file change is needed. If your OS does not resolve `*.localhost`, add these entries to `/etc/hosts`:
 

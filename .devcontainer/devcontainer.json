@@ -95,7 +95,8 @@
     "NPM_CONFIG_UPDATE_NOTIFIER": "false",
     "VIRTUAL_ENV_DISABLE_PROMPT": "1",
     "DEVCONTAINER_E2E_VNC": "1",
-    "DISPLAY": ":99"
+    "DISPLAY": ":99",
+    "WORKSPACE_BIND_ROOT": "${localWorkspaceFolder}"
   },
   "postCreateCommand": "bash .devcontainer/post-create.sh",
   "postStartCommand": "bash .devcontainer/post-start.sh"

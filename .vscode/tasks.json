@@ -4,19 +4,19 @@
     {
       "label": "Compose: Up (dev)",
       "type": "shell",
-      "command": "docker compose --profile dev up -d --build",
+      "command": "./scripts/docker-compose.sh --profile dev up -d --build",
       "problemMatcher": []
     },
     {
       "label": "Compose: Up (prod)",
       "type": "shell",
-      "command": "docker compose --profile prod up -d --build",
+      "command": "./scripts/docker-compose.sh --profile prod up -d --build",
       "problemMatcher": []
     },
     {
       "label": "Compose: Down",
       "type": "shell",
-      "command": "docker compose --profile dev --profile prod down --remove-orphans",
+      "command": "./scripts/docker-compose.sh --profile dev --profile prod down --remove-orphans",
       "problemMatcher": []
     },
     {

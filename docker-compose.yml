@@ -9,8 +9,8 @@ services:
     environment:
       - APP_UPSTREAM=frontend-dev:5173
     volumes:
-      - ./docker/https/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./docker/https/certs:/etc/caddy/certs:ro
+      - ${WORKSPACE_BIND_ROOT:-.}/docker/https/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${WORKSPACE_BIND_ROOT:-.}/docker/https/certs:/etc/caddy/certs:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -29,8 +29,8 @@ services:
     environment:
       - APP_UPSTREAM=firebase-emulator:5002
     volumes:
-      - ./docker/https/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./docker/https/certs:/etc/caddy/certs:ro
+      - ${WORKSPACE_BIND_ROOT:-.}/docker/https/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${WORKSPACE_BIND_ROOT:-.}/docker/https/certs:/etc/caddy/certs:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -45,8 +45,8 @@ services:
     image: node:24-alpine
     working_dir: /app
     volumes:
-      - ./src/frontend:/app
-      - ./.firebaserc:/workspace/.firebaserc:ro
+      - ${WORKSPACE_BIND_ROOT:-.}/src/frontend:/app
+      - ${WORKSPACE_BIND_ROOT:-.}/.firebaserc:/workspace/.firebaserc:ro
     command: ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0 --port 5173"]
     environment:
       - FIREBASERC_FILE=/workspace/.firebaserc
@@ -76,7 +76,7 @@ services:
     image: node:24-alpine
     working_dir: /workspace
     volumes:
-      - ./:/workspace
+      - ${WORKSPACE_BIND_ROOT:-.}:/workspace
     command:
       [
         "sh",
@@ -109,7 +109,7 @@ services:
     image: node:24-alpine
     working_dir: /workspace
     volumes:
-      - ./:/workspace
+      - ${WORKSPACE_BIND_ROOT:-.}:/workspace
       - firebase_emulator_data:/firebase-emulator
     command: ["sh", "scripts/firebase-emulator-start.sh"]
     environment:
@@ -149,8 +149,8 @@ services:
         ]
       interval: 5s
       timeout: 3s
-      retries: 20
-      start_period: 20s
+      retries: 60
+      start_period: 240s
 
   mock-cloudahoy:
     build:
@@ -158,7 +158,7 @@ services:
       dockerfile: docker/backend-dev/Dockerfile
     command: ["python", "-m", "uvicorn", "src.backend.mocks.cloudahoy:app", "--host", "0.0.0.0", "--port", "8081"]
     volumes:
-      - ./:/app
+      - ${WORKSPACE_BIND_ROOT:-.}:/app
     environment:
       - MOCK_RUN_DIR=/app/tests/fixtures/run-20251228T185601Z
 
@@ -168,7 +168,7 @@ services:
       dockerfile: docker/backend-dev/Dockerfile
     command: ["python", "-m", "uvicorn", "src.backend.mocks.flysto:app", "--host", "0.0.0.0", "--port", "8082"]
     volumes:
-      - ./:/app
+      - ${WORKSPACE_BIND_ROOT:-.}:/app
     environment:
       - MOCK_RUN_DIR=/app/tests/fixtures/run-20251228T185601Z
 
