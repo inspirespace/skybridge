@@ -74,7 +74,8 @@ export function useFirebaseAuth({
       const isHttps = window.location.protocol === "https:";
       const hostname = window.location.hostname;
       if (isHttps && hostname.endsWith("skybridge.localhost")) {
-        fallback = "https://auth.skybridge.localhost";
+        // Use same-origin proxy in HTTPS local mode to avoid cross-origin CORS drift.
+        fallback = "https://skybridge.localhost";
       }
       if (window.location.protocol === "http:") {
         fallback = "http://localhost:9099";
@@ -87,13 +88,6 @@ export function useFirebaseAuth({
       emulatorHost.startsWith("https://")
     ) {
       return "http://localhost:9099";
-    }
-    if (
-      typeof window !== "undefined" &&
-      window.location.protocol === "https:" &&
-      emulatorHost === "https://skybridge.localhost"
-    ) {
-      return "https://auth.skybridge.localhost";
     }
     return emulatorHost;
   }, [useEmulator, emulatorHost]);
@@ -120,14 +114,17 @@ export function useFirebaseAuth({
     let cancelled = false;
     setEmulatorReady(false);
     (async () => {
-      for (let attempt = 0; attempt < EMULATOR_RETRY_ATTEMPTS * 3; attempt += 1) {
+      let attempt = 0;
+      while (!cancelled) {
         try {
           await checkEmulatorReady();
           if (!cancelled) setEmulatorReady(true);
           return;
-        } catch (err) {
+        } catch {
           if (cancelled) return;
-          await delay(EMULATOR_RETRY_DELAY_MS * (attempt + 1));
+          attempt += 1;
+          const waitMs = Math.min(1_000 + attempt * 500, 5_000);
+          await delay(waitMs);
         }
       }
     })();
@@ -365,10 +362,6 @@ export function useFirebaseAuth({
       const auth = authRef.current;
       if (!auth) {
         onError?.("Auth is not ready yet.");
-        return;
-      }
-      if (useEmulator && !emulatorReady) {
-        onError?.("Auth emulator is still starting. Please try again in a moment.");
         return;
       }
       onLoadingChange?.(true);

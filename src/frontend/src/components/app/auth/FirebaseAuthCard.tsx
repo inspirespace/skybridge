@@ -56,7 +56,7 @@ export function FirebaseAuthCard({
         )}
         {useEmulator && !emulatorReady && (
           <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2 text-xs text-amber-900">
-            Auth emulator is starting up. Sign-in will be available shortly.
+            Auth emulator check is still pending. You can try signing in now.
           </div>
         )}
         {!authReady && (

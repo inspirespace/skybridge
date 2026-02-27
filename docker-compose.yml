@@ -55,7 +55,7 @@ services:
       - VITE_FIREBASE_API_KEY=demo-local
       - VITE_FIREBASE_APP_ID=demo-local-app
       - VITE_FIREBASE_USE_EMULATOR=1
-      - VITE_FIREBASE_AUTH_EMULATOR_HOST=https://auth.skybridge.localhost
+      - VITE_FIREBASE_AUTH_EMULATOR_HOST=https://skybridge.localhost
       - VITE_FIREBASE_ENABLE_GOOGLE=0
       - VITE_FIREBASE_ENABLE_APPLE=0
       - VITE_FIREBASE_ENABLE_FACEBOOK=0
@@ -90,7 +90,7 @@ services:
       - VITE_FIREBASE_API_KEY=demo-local
       - VITE_FIREBASE_APP_ID=demo-local-app
       - VITE_FIREBASE_USE_EMULATOR=1
-      - VITE_FIREBASE_AUTH_EMULATOR_HOST=https://auth.skybridge.localhost
+      - VITE_FIREBASE_AUTH_EMULATOR_HOST=https://skybridge.localhost
       - VITE_FIREBASE_ENABLE_GOOGLE=0
       - VITE_FIREBASE_ENABLE_APPLE=0
       - VITE_FIREBASE_ENABLE_FACEBOOK=0

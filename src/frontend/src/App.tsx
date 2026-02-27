@@ -320,8 +320,7 @@ export default function App() {
   const importFailureMessage = hasImportEvents ? jobFailureMessage : null;
   const authButtonsDisabled =
     actionLoading ||
-    (AUTH_MODE === "firebase" &&
-      (!firebaseAuthReady || (FIREBASE_USE_EMULATOR && !firebaseEmulatorReady)));
+    (AUTH_MODE === "firebase" && !firebaseAuthReady);
   const signInError =
     actionError?.scope === "sign-in" || actionError?.scope === "global"
       ? actionError.message
