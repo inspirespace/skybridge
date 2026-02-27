@@ -5,19 +5,31 @@
       "name": "Stack: Start (Docker Compose)",
       "type": "node-terminal",
       "request": "launch",
-      "command": "docker compose up -d"
+      "command": "docker compose --profile dev up -d"
+    },
+    {
+      "name": "Stack: Start (Docker Compose, prod-like)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "docker compose --profile prod up -d"
     },
     {
       "name": "Stack: Stop (Docker Compose)",
       "type": "node-terminal",
       "request": "launch",
-      "command": "docker compose down"
+      "command": "docker compose --profile dev --profile prod down"
     },
     {
       "name": "Stack: Build (Docker Compose)",
       "type": "node-terminal",
       "request": "launch",
-      "command": "docker compose build"
+      "command": "docker compose --profile dev build"
+    },
+    {
+      "name": "Stack: Build (Docker Compose, prod-like)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "docker compose --profile prod build"
     }
   ]
 }

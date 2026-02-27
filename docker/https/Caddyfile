@@ -122,7 +122,7 @@ https://skybridge.localhost, https://*.skybridge.localhost {
       reverse_proxy firebase-emulator:5002
     }
     handle {
-      reverse_proxy frontend:5173
+      reverse_proxy {$APP_UPSTREAM:frontend-dev:5173}
     }
   }
 }

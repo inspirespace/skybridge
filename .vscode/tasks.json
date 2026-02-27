@@ -4,19 +4,31 @@
     {
       "label": "Compose: Up (detached)",
       "type": "shell",
-      "command": "docker compose up -d",
+      "command": "docker compose --profile dev up -d",
+      "problemMatcher": []
+    },
+    {
+      "label": "Compose: Up (prod-like)",
+      "type": "shell",
+      "command": "docker compose --profile prod up -d",
       "problemMatcher": []
     },
     {
       "label": "Compose: Down",
       "type": "shell",
-      "command": "docker compose down",
+      "command": "docker compose --profile dev --profile prod down",
       "problemMatcher": []
     },
     {
       "label": "Compose: Build",
       "type": "shell",
-      "command": "docker compose build",
+      "command": "docker compose --profile dev build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Compose: Build (prod-like)",
+      "type": "shell",
+      "command": "docker compose --profile prod build",
       "problemMatcher": []
     },
     {

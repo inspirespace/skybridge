@@ -1,6 +1,5 @@
 import * as React from "react";
 
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "skybridge-theme";
@@ -18,6 +17,11 @@ export function ThemeToggle({ className }: { className?: string }) {
     if (stored === "dark") {
       document.documentElement.classList.add("dark");
       setIsDark(true);
+      return;
+    }
+    if (stored === "light") {
+      document.documentElement.classList.remove("dark");
+      setIsDark(false);
     }
   }, []);
 
@@ -31,7 +35,27 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <div className={cn("flex items-center gap-2 text-xs text-muted-foreground", className)}>
       <span>Light</span>
-      <Switch checked={isDark} onCheckedChange={handleToggle} />
+      <button
+        type="button"
+        role="switch"
+        aria-checked={isDark}
+        aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+        onClick={() => handleToggle(!isDark)}
+        className={cn(
+          "inline-flex h-6 w-11 shrink-0 items-center rounded-full border border-transparent",
+          "bg-input p-0.5 transition-colors duration-200 focus-visible:outline-none",
+          "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          isDark && "bg-primary"
+        )}
+      >
+        <span
+          aria-hidden
+          className={cn(
+            "block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform duration-200",
+            isDark ? "translate-x-5" : "translate-x-0"
+          )}
+        />
+      </button>
       <span>Dark</span>
     </div>
   );

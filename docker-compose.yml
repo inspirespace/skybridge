@@ -1,27 +1,88 @@
 services:
-  caddy:
+  caddy-dev:
+    profiles:
+      - dev
     image: caddy:2.10
     ports:
       - "80:80"
       - "443:443"
+    environment:
+      - APP_UPSTREAM=frontend-dev:5173
     volumes:
       - ./docker/https/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./docker/https/certs:/etc/caddy/certs:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
-      frontend:
+      frontend-dev:
         condition: service_started
       firebase-emulator:
         condition: service_healthy
 
-  frontend:
+  caddy-prod:
+    profiles:
+      - prod
+    image: caddy:2.10
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - APP_UPSTREAM=firebase-emulator:5002
+    volumes:
+      - ./docker/https/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./docker/https/certs:/etc/caddy/certs:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      frontend-prod:
+        condition: service_started
+      firebase-emulator:
+        condition: service_healthy
+
+  frontend-dev:
+    profiles:
+      - dev
     image: node:24-alpine
     working_dir: /app
     volumes:
       - ./src/frontend:/app
       - ./.firebaserc:/workspace/.firebaserc:ro
     command: ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0 --port 5173"]
+    environment:
+      - FIREBASERC_FILE=/workspace/.firebaserc
+      - VITE_API_BASE_URL=https://skybridge.localhost/api
+      - AUTH_MODE=${AUTH_MODE:-firebase}
+      - VITE_FIREBASE_API_KEY=demo-local
+      - VITE_FIREBASE_APP_ID=demo-local-app
+      - VITE_FIREBASE_USE_EMULATOR=1
+      - VITE_FIREBASE_AUTH_EMULATOR_HOST=https://skybridge.localhost
+      - VITE_FIREBASE_ENABLE_GOOGLE=0
+      - VITE_FIREBASE_ENABLE_APPLE=0
+      - VITE_FIREBASE_ENABLE_FACEBOOK=0
+      - VITE_FIREBASE_ENABLE_MICROSOFT=0
+      - VITE_FIREBASE_ENABLE_GUEST=0
+      - VITE_FIRESTORE_LISTEN=1
+      - FIRESTORE_JOBS_COLLECTION=${FIRESTORE_JOBS_COLLECTION:-skybridge-jobs}
+      - BACKEND_RETENTION_DAYS=${BACKEND_RETENTION_DAYS:-7}
+      - VITE_DEV_PREFILL_CREDENTIALS=${DEV_PREFILL_CREDENTIALS}
+      - CLOUD_AHOY_EMAIL=${CLOUD_AHOY_EMAIL}
+      - CLOUD_AHOY_PASSWORD=${CLOUD_AHOY_PASSWORD}
+      - FLYSTO_EMAIL=${FLYSTO_EMAIL}
+      - FLYSTO_PASSWORD=${FLYSTO_PASSWORD}
+
+  frontend-prod:
+    profiles:
+      - prod
+    image: node:24-alpine
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    command:
+      [
+        "sh",
+        "-c",
+        "./scripts/npm-ci-frontend.sh && npm --prefix src/frontend exec -- vite build --watch",
+      ]
     environment:
       - FIREBASERC_FILE=/workspace/.firebaserc
       - VITE_API_BASE_URL=https://skybridge.localhost/api

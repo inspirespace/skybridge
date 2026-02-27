@@ -19,9 +19,10 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - If you adopt a different layout, document it here with concrete paths (example: `cmd/`, `internal/`, `pkg/` for Go).
 
 ## Build, Test, and Development Commands
-- `docker compose up --build` — run the local dev stack (Firebase emulators, API, worker, frontend, HTTPS proxy, mocks).
-- VS Code launch configs: `Stack: Start (Docker Compose)`, `Stack: Stop (Docker Compose)`, `Stack: Build (Docker Compose)` in `.vscode/launch.json`.
-- VS Code tasks: `Compose: Up (detached)`, `Compose: Down`, `Compose: Build`, `Firebase: Deploy`, `Firebase: Clear Project`, `Workspace: Clean`, `Git: Cleanup Merged Branches` in `.vscode/tasks.json`.
+- `docker compose --profile dev up --build` — run the local dev stack with Vite dev server (Firebase emulators, API, worker, frontend, HTTPS proxy, mocks).
+- `docker compose --profile prod up --build` — run the local prod-like stack (app served via Firebase Hosting emulator from `src/frontend/dist`).
+- VS Code launch configs: `Stack: Start (Docker Compose)`, `Stack: Start (Docker Compose, prod-like)`, `Stack: Stop (Docker Compose)`, `Stack: Build (Docker Compose)`, `Stack: Build (Docker Compose, prod-like)` in `.vscode/launch.json`.
+- VS Code tasks: `Compose: Up (detached)`, `Compose: Up (prod-like)`, `Compose: Down`, `Compose: Build`, `Compose: Build (prod-like)`, `Firebase: Deploy`, `Firebase: Clear Project`, `Workspace: Clean`, `Git: Cleanup Merged Branches` in `.vscode/tasks.json`.
 - `Firebase: Deploy` is zero-config for local use: it reads the default project from `.firebaserc`, triggers login when needed, and does not prompt for project id.
 - `Firebase: Clear Project` is zero-config for local use: it reads project/region defaults from `.firebaserc`, confirms interactively (unless `--force`), and clears functions/firestore/rtdb/hosting without deleting the Firebase project.
 - Firebase project id and region defaults live in `.firebaserc` (`projects.default`, `config.region`).
@@ -43,6 +44,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `scripts/firebase-deploy.sh` performs Firebase auth preflight before builds; in interactive terminals (for example VS Code tasks) it auto-runs `firebase login --reauth` when unauthenticated, with fallback `--no-localhost`, and still supports `GOOGLE_APPLICATION_CREDENTIALS` / `FIREBASE_SERVICE_ACCOUNT`.
 - `scripts/firebase-deploy.sh` also runs an App Check preflight: when `APP_CHECK_ENFORCE=1`, CI fails if frontend App Check vars (`VITE_FIREBASE_APP_CHECK_ENABLED=1`, `VITE_FIREBASE_APP_CHECK_SITE_KEY`) are missing; local runs warn and continue.
 - `scripts/firebase-deploy.sh` installs frontend dependencies via `scripts/npm-ci-frontend.sh` (nested npm strategy, cache isolation, one automatic retry) to reduce intermittent install failures.
+- `scripts/firebase-deploy.sh` now gates deploy on `npm --prefix src/frontend run test:runtime-smoke` to fail fast on frontend runtime crashes (for example React update-depth loops) before remote deploy.
 - `scripts/firebase-deploy.sh` stages `src/backend` and `src/core` into `functions/src` during deploy so Cloud Functions runtime includes shared Python modules, then restores prior workspace state on exit.
 - Functions region is consolidated through shared config (`FIREBASE_REGION`, default `europe-west1`) for both production deploys and local emulator/proxy routing; per-run overrides remain supported.
 - Local emulator startup keeps `functions/venv` as a symlink to a container-local venv (`/firebase-emulator/functions-venv` volume path inside the container) so Firebase Functions discovery works even when host-created venv binaries are incompatible.

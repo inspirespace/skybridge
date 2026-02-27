@@ -21,12 +21,18 @@ npm install -g @devcontainers/cli
 ```
 
 ```sh
-docker compose up --build
+docker compose --profile dev up --build
 ```
 
 Open https://skybridge.localhost and sign in using the Firebase Auth emulator popup (Google/Apple/Facebook buttons). The emulator UI is available at https://emulator.skybridge.localhost.
 The Firebase Functions/Hosting emulators run inside the `firebase-emulator` service.
 Emulator import/export data is stored in `.firebase-emulator/exports` (legacy `firebase-export-*` folders are moved there automatically).
+
+To mirror production serving behavior locally (static bundle via Firebase Hosting emulator), use:
+
+```sh
+docker compose --profile prod up --build
+```
 On macOS, `.localhost` already resolves to `127.0.0.1`, so no hosts file change is needed. If your OS does not resolve `*.localhost`, add these entries to `/etc/hosts`:
 
 ```
@@ -83,6 +89,7 @@ Clear Firebase resources while keeping the project (zero-config from `.firebaser
 ```
 
 Frontend dependency install during deploy/devcontainer startup is handled by `scripts/npm-ci-frontend.sh`, which uses npm nested install strategy and one automatic retry to mitigate intermittent npm unpack `ENOENT`/tarball failures.
+Deploys are also gated by `npm --prefix src/frontend run test:runtime-smoke`, which fails fast on frontend runtime errors before any remote Firebase changes.
 
 Project id and region come from `.firebaserc` (`projects.default` and `config.region`).
 Default Functions region is `europe-west1`.

@@ -371,6 +371,9 @@ echo "Preparing frontend dependencies..."
 echo "Building frontend..."
 npm --prefix src/frontend run build
 
+echo "Running frontend runtime smoke test..."
+npm --prefix src/frontend run test:runtime-smoke
+
 echo "Aligning Firebase Hosting rewrite region in firebase.json..."
 stage_firebase_hosting_region
 
