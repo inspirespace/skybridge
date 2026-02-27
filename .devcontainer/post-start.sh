@@ -14,6 +14,10 @@ NPM_CACHE_DIR="${HOME}/.cache/npm"
 UV_CACHE_DIR="${HOME}/.cache/uv"
 mkdir -p "${NPM_CACHE_DIR}" "${UV_CACHE_DIR}"
 
+# Docker Desktop can recreate /var/run/docker.sock with a new GID after updates/restarts.
+# Keep docker socket access stable for the remote user.
+bash ./scripts/repair-docker-socket-access.sh
+
 # Ensure Firebase CLI is available in the devcontainer shell.
 if ! command -v firebase >/dev/null 2>&1; then
   echo "Installing Firebase CLI..."

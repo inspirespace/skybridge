@@ -2,33 +2,21 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Compose: Up (detached)",
+      "label": "Compose: Up (dev)",
       "type": "shell",
-      "command": "docker compose --profile dev up -d",
+      "command": "docker compose --profile dev up -d --build",
       "problemMatcher": []
     },
     {
-      "label": "Compose: Up (prod-like)",
+      "label": "Compose: Up (prod)",
       "type": "shell",
-      "command": "docker compose --profile prod up -d",
+      "command": "docker compose --profile prod up -d --build",
       "problemMatcher": []
     },
     {
       "label": "Compose: Down",
       "type": "shell",
-      "command": "docker compose --profile dev --profile prod down",
-      "problemMatcher": []
-    },
-    {
-      "label": "Compose: Build",
-      "type": "shell",
-      "command": "docker compose --profile dev build",
-      "problemMatcher": []
-    },
-    {
-      "label": "Compose: Build (prod-like)",
-      "type": "shell",
-      "command": "docker compose --profile prod build",
+      "command": "docker compose --profile dev --profile prod down --remove-orphans",
       "problemMatcher": []
     },
     {
@@ -47,6 +35,18 @@
       "label": "Workspace: Clean",
       "type": "shell",
       "command": "./scripts/clean-workspace.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "Devcontainer: Repair Docker Socket Access",
+      "type": "shell",
+      "command": "./scripts/repair-docker-socket-access.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "Devcontainer: Repair Docker Socket Access (Restart VS Code Server)",
+      "type": "shell",
+      "command": "./scripts/repair-docker-socket-access.sh --restart-vscode-server",
       "problemMatcher": []
     },
     {
