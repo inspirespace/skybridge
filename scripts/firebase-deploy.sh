@@ -225,6 +225,214 @@ preflight_app_check_config() {
   fi
 }
 
+first_web_app_id_from_json() {
+  local file_path="$1"
+  node - "$file_path" <<'NODE'
+const fs = require("fs");
+
+const filePath = process.argv[2];
+let data;
+try {
+  data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+} catch {
+  process.exit(0);
+}
+
+const queue = [data];
+while (queue.length > 0) {
+  const current = queue.shift();
+  if (!current) continue;
+  if (Array.isArray(current)) {
+    for (const item of current) queue.push(item);
+    continue;
+  }
+  if (typeof current !== "object") continue;
+  const candidateKeys = ["appId", "appID", "app_id", "id", "name"];
+  for (const key of candidateKeys) {
+    const value = current[key];
+    if (typeof value === "string" && value.includes(":web:")) {
+      process.stdout.write(value);
+      process.exit(0);
+    }
+  }
+  for (const value of Object.values(current)) {
+    queue.push(value);
+  }
+}
+NODE
+}
+
+extract_sdk_config_values() {
+  local file_path="$1"
+  node - "$file_path" <<'NODE'
+const fs = require("fs");
+
+const filePath = process.argv[2];
+const raw = fs.readFileSync(filePath, "utf8");
+
+let apiKey = "";
+let appId = "";
+let authDomain = "";
+let projectId = "";
+
+const parseFromObject = (obj) => {
+  if (!obj || typeof obj !== "object") return false;
+  const key = obj.apiKey ?? obj.api_key ?? "";
+  const app = obj.appId ?? obj.app_id ?? "";
+  if (typeof key === "string" && key && typeof app === "string" && app) {
+    apiKey = key;
+    appId = app;
+    authDomain =
+      (typeof obj.authDomain === "string" && obj.authDomain) ||
+      (typeof obj.auth_domain === "string" && obj.auth_domain) ||
+      "";
+    projectId =
+      (typeof obj.projectId === "string" && obj.projectId) ||
+      (typeof obj.project_id === "string" && obj.project_id) ||
+      "";
+    return true;
+  }
+  return false;
+};
+
+try {
+  const parsed = JSON.parse(raw);
+  const queue = [parsed];
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current) continue;
+    if (Array.isArray(current)) {
+      for (const item of current) queue.push(item);
+      continue;
+    }
+    if (parseFromObject(current)) break;
+    if (typeof current === "object") {
+      for (const value of Object.values(current)) queue.push(value);
+    }
+  }
+} catch {
+  // Fall back to regex-based parsing for non-JSON firebase CLI output.
+}
+
+if (!apiKey) {
+  const match = raw.match(/apiKey["']?\s*[:=]\s*["']([^"']+)["']/);
+  if (match) apiKey = match[1];
+}
+if (!appId) {
+  const match = raw.match(/appId["']?\s*[:=]\s*["']([^"']+)["']/);
+  if (match) appId = match[1];
+}
+if (!authDomain) {
+  const match = raw.match(/authDomain["']?\s*[:=]\s*["']([^"']+)["']/);
+  if (match) authDomain = match[1];
+}
+if (!projectId) {
+  const match = raw.match(/projectId["']?\s*[:=]\s*["']([^"']+)["']/);
+  if (match) projectId = match[1];
+}
+
+if (apiKey) process.stdout.write(`VITE_FIREBASE_API_KEY=${apiKey}\n`);
+if (appId) process.stdout.write(`VITE_FIREBASE_APP_ID=${appId}\n`);
+if (authDomain) process.stdout.write(`VITE_FIREBASE_AUTH_DOMAIN=${authDomain}\n`);
+if (projectId) process.stdout.write(`VITE_FIREBASE_PROJECT_ID=${projectId}\n`);
+NODE
+}
+
+preflight_frontend_firebase_config() {
+  local frontend_auth_mode
+  frontend_auth_mode="$(resolve_config_value VITE_AUTH_MODE src/frontend/.env .env || true)"
+  if [ -z "$frontend_auth_mode" ]; then
+    frontend_auth_mode="$(resolve_config_value AUTH_MODE functions/.env .env || true)"
+  fi
+  if [ -z "$frontend_auth_mode" ]; then
+    frontend_auth_mode="firebase"
+  fi
+  export VITE_AUTH_MODE="$frontend_auth_mode"
+
+  local auth_mode_lc
+  auth_mode_lc="$(printf '%s' "$frontend_auth_mode" | tr '[:upper:]' '[:lower:]')"
+  if [ "$auth_mode_lc" != "firebase" ]; then
+    return 0
+  fi
+
+  local use_emulator
+  use_emulator="$(resolve_config_value VITE_FIREBASE_USE_EMULATOR src/frontend/.env .env || true)"
+  if is_truthy_value "$use_emulator"; then
+    return 0
+  fi
+
+  local api_key
+  local app_id
+  local project_id
+  local auth_domain
+  api_key="$(resolve_config_value VITE_FIREBASE_API_KEY src/frontend/.env .env || true)"
+  app_id="$(resolve_config_value VITE_FIREBASE_APP_ID src/frontend/.env .env || true)"
+  project_id="$(resolve_config_value VITE_FIREBASE_PROJECT_ID src/frontend/.env .env || true)"
+  auth_domain="$(resolve_config_value VITE_FIREBASE_AUTH_DOMAIN src/frontend/.env .env || true)"
+
+  if [ -z "$project_id" ]; then
+    project_id="$PROJECT_ID"
+  fi
+  if [ -z "$auth_domain" ] && [ -n "$project_id" ]; then
+    auth_domain="${project_id}.firebaseapp.com"
+  fi
+
+  if [ -z "$api_key" ] || [ -z "$app_id" ]; then
+    echo "Frontend Firebase config missing (api key/app id). Attempting to resolve from Firebase web app..." >&2
+    local apps_json_file
+    local sdk_config_file
+    apps_json_file="$(mktemp)"
+    sdk_config_file="$(mktemp)"
+    if firebase apps:list WEB --project "$PROJECT_ID" --json >"$apps_json_file" 2>/dev/null; then
+      local resolved_app_id
+      resolved_app_id="$(first_web_app_id_from_json "$apps_json_file" || true)"
+      if [ -z "$resolved_app_id" ]; then
+        resolved_app_id="$app_id"
+      fi
+      if [ -n "$resolved_app_id" ] && firebase apps:sdkconfig WEB "$resolved_app_id" --project "$PROJECT_ID" >"$sdk_config_file" 2>/dev/null; then
+        while IFS='=' read -r key value; do
+          case "$key" in
+            VITE_FIREBASE_API_KEY)
+              [ -z "$api_key" ] && api_key="$value"
+              ;;
+            VITE_FIREBASE_APP_ID)
+              [ -z "$app_id" ] && app_id="$value"
+              ;;
+            VITE_FIREBASE_AUTH_DOMAIN)
+              [ -z "$auth_domain" ] && auth_domain="$value"
+              ;;
+            VITE_FIREBASE_PROJECT_ID)
+              [ -z "$project_id" ] && project_id="$value"
+              ;;
+          esac
+        done < <(extract_sdk_config_values "$sdk_config_file")
+      fi
+    fi
+    rm -f "$apps_json_file" "$sdk_config_file"
+  fi
+
+  if [ -z "$api_key" ] || [ -z "$app_id" ] || [ -z "$project_id" ]; then
+    cat >&2 <<'EOF'
+Frontend Firebase config is incomplete for production Firebase auth.
+Required:
+  - VITE_FIREBASE_API_KEY
+  - VITE_FIREBASE_APP_ID
+  - VITE_FIREBASE_PROJECT_ID (or .firebaserc projects.default)
+
+Set these in environment/.env, or ensure the Firebase project has at least one WEB app
+so the deploy script can auto-resolve sdk config via Firebase CLI.
+EOF
+    exit 1
+  fi
+
+  export VITE_FIREBASE_API_KEY="$api_key"
+  export VITE_FIREBASE_APP_ID="$app_id"
+  export VITE_FIREBASE_PROJECT_ID="$project_id"
+  if [ -n "$auth_domain" ]; then
+    export VITE_FIREBASE_AUTH_DOMAIN="$auth_domain"
+  fi
+}
+
 stage_functions_src() {
   if [ -d "$FUNCTIONS_SRC_DIR" ]; then
     FUNCTIONS_SRC_BACKUP_DIR="$(mktemp -d)"
@@ -354,6 +562,7 @@ EOF
 fi
 
 preflight_app_check_config
+preflight_frontend_firebase_config
 
 PYTHON_BIN=""
 if command -v python3.11 >/dev/null 2>&1; then

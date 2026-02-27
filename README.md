@@ -89,6 +89,7 @@ Manual deploy (zero-config: uses `.firebaserc` default project and prompts login
 Deploy preflight note:
 - If `APP_CHECK_ENFORCE=1`, CI deploys fail fast unless frontend App Check config is present (`VITE_FIREBASE_APP_CHECK_ENABLED=1` and `VITE_FIREBASE_APP_CHECK_SITE_KEY`).
 - Local deploys print a warning and continue.
+- In `firebase` auth mode without emulator, deploy fails fast if frontend Firebase web config is incomplete (`VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_PROJECT_ID`). The deploy script attempts best-effort auto-resolution from Firebase Web App SDK config.
 
 Clear Firebase resources while keeping the project (zero-config from `.firebaserc`):
 

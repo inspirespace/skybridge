@@ -42,6 +42,7 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - `VITE_FIREBASE_APP_CHECK_SITE_KEY=<reCAPTCHA v3 site key>`
 - `VITE_FIREBASE_PROJECT_ID` / `VITE_FIREBASE_AUTH_DOMAIN` are optional; by default they are derived from `.firebaserc`.
 - `VITE_FIRESTORE_JOBS_COLLECTION` and `VITE_RETENTION_DAYS` are optional; defaults come from backend globals (`FIRESTORE_JOBS_COLLECTION`, `BACKEND_RETENTION_DAYS`).
+- Deploy preflight (`scripts/firebase-deploy.sh`) fails fast if required Firebase web config is missing in non-emulator Firebase mode and will attempt best-effort auto-resolution from `firebase apps:sdkconfig` (first WEB app in the project).
 ## Deploy
 - `npm --prefix src/frontend run build`
 - `./scripts/firebase-deploy.sh`
