@@ -1167,6 +1167,11 @@ export default function App() {
                     Firebase Auth is taking longer than expected to initialize.
                     Check your local stack and refresh this page.
                   </AlertDescription>
+                  {signInError && (
+                    <p className="mt-2 text-xs font-medium text-amber-950 dark:text-amber-200">
+                      Details: {signInError}
+                    </p>
+                  )}
                   <div className="mt-3">
                     <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
                       Reload

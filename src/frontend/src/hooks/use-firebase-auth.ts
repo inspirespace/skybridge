@@ -74,7 +74,7 @@ export function useFirebaseAuth({
       const isHttps = window.location.protocol === "https:";
       const hostname = window.location.hostname;
       if (isHttps && hostname.endsWith("skybridge.localhost")) {
-        fallback = window.location.origin;
+        fallback = "https://auth.skybridge.localhost";
       }
       if (window.location.protocol === "http:") {
         fallback = "http://localhost:9099";
@@ -87,6 +87,13 @@ export function useFirebaseAuth({
       emulatorHost.startsWith("https://")
     ) {
       return "http://localhost:9099";
+    }
+    if (
+      typeof window !== "undefined" &&
+      window.location.protocol === "https:" &&
+      emulatorHost === "https://skybridge.localhost"
+    ) {
+      return "https://auth.skybridge.localhost";
     }
     return emulatorHost;
   }, [useEmulator, emulatorHost]);
