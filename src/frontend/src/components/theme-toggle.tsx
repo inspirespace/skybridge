@@ -3,33 +3,47 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "skybridge-theme";
+type ThemePreference = "dark" | "light" | null;
+
+function getStoredThemePreference(): ThemePreference {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    return stored === "dark" || stored === "light" ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+function resolvePreferredDarkMode(root: HTMLElement): boolean {
+  const stored = getStoredThemePreference();
+  if (stored === "dark") return true;
+  if (stored === "light") return false;
+  if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+  return root.classList.contains("dark");
+}
 
 /** Render ThemeToggle component. */
 export function ThemeToggle({ className }: { className?: string }) {
   const [isDark, setIsDark] = React.useState<boolean>(() => {
     if (typeof window === "undefined") return false;
-    return document.documentElement.classList.contains("dark");
+    const root = document.documentElement;
+    const prefersDark = resolvePreferredDarkMode(root);
+    root.classList.toggle("dark", prefersDark);
+    return prefersDark;
   });
-
-  React.useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === "dark") {
-      document.documentElement.classList.add("dark");
-      setIsDark(true);
-      return;
-    }
-    if (stored === "light") {
-      document.documentElement.classList.remove("dark");
-      setIsDark(false);
-    }
-  }, []);
 
   /** Handle handleToggle. */
   const handleToggle = (checked: boolean) => {
     setIsDark(checked);
     document.documentElement.classList.toggle("dark", checked);
-    window.localStorage.setItem(STORAGE_KEY, checked ? "dark" : "light");
+    try {
+      window.localStorage.setItem(STORAGE_KEY, checked ? "dark" : "light");
+    } catch {
+      // Ignore storage access failures and keep runtime toggle behavior.
+    }
   };
 
   return (

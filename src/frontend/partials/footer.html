@@ -56,17 +56,30 @@
     var root = document.documentElement;
     var toggle = document.getElementById("theme-switch");
     var thumb = document.querySelector("[data-thumb]");
-    var stored = localStorage.getItem(storageKey);
-    if (stored === "dark") {
-      root.classList.add("dark");
-      if (toggle) toggle.setAttribute("aria-checked", "true");
-      if (toggle) toggle.setAttribute("data-state", "checked");
-      if (thumb) thumb.setAttribute("data-state", "checked");
+    var stored = null;
+    try {
+      stored = localStorage.getItem(storageKey);
+    } catch (_error) {
+      stored = null;
     }
+    var prefersDark = false;
+    if (stored === "dark") {
+      prefersDark = true;
+    } else if (stored !== "light" && typeof window.matchMedia === "function") {
+      prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+    root.classList.toggle("dark", prefersDark);
+    if (toggle) toggle.setAttribute("aria-checked", prefersDark ? "true" : "false");
+    if (toggle) toggle.setAttribute("data-state", prefersDark ? "checked" : "unchecked");
+    if (thumb) thumb.setAttribute("data-state", prefersDark ? "checked" : "unchecked");
     if (toggle) {
       toggle.addEventListener("click", function () {
         var isDark = root.classList.toggle("dark");
-        localStorage.setItem(storageKey, isDark ? "dark" : "light");
+        try {
+          localStorage.setItem(storageKey, isDark ? "dark" : "light");
+        } catch (_error) {
+          // Ignore storage access failures and keep runtime toggle behavior.
+        }
         toggle.setAttribute("aria-checked", isDark ? "true" : "false");
         toggle.setAttribute("data-state", isDark ? "checked" : "unchecked");
         if (thumb) thumb.setAttribute("data-state", isDark ? "checked" : "unchecked");

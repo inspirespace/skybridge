@@ -35,6 +35,23 @@
     />
     <meta name="theme-color" content="#f7f9fc" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0b1120" media="(prefers-color-scheme: dark)" />
+    <script>
+      (() => {
+        const storageKey = "skybridge-theme";
+        let stored = null;
+        try {
+          stored = window.localStorage.getItem(storageKey);
+        } catch (_error) {
+          stored = null;
+        }
+        const prefersDark =
+          stored === "dark" ||
+          (stored !== "light" &&
+            typeof window.matchMedia === "function" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", prefersDark);
+      })();
+    </script>
     <link rel="stylesheet" href="/src/index.css" />
     <script type="application/ld+json">
       {

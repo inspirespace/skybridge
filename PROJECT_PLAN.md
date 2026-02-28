@@ -200,6 +200,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Fix CI pytest regression (270 passed / 3 failed) by restoring `user_id_from_request()` token-verify call signature to pass `mode`, while keeping `_verify_token(mode=None)` backward compatible for existing callers.
 - [x] Add optional Firebase App Check protection for API requests (frontend `X-Firebase-AppCheck` header injection + backend token verification with `APP_CHECK_ENFORCE`).
 - [x] Add Firebase deploy preflight for App Check so CI fails early when `APP_CHECK_ENFORCE=1` is set without required frontend App Check env (`VITE_FIREBASE_APP_CHECK_ENABLED=1`, `VITE_FIREBASE_APP_CHECK_SITE_KEY`).
+- [x] Initialize theme from host system preference when no saved theme exists, including first paint and toggle state across SPA + static pages.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.
