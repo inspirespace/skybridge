@@ -43,6 +43,10 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - `VITE_FIREBASE_PROJECT_ID` / `VITE_FIREBASE_AUTH_DOMAIN` are optional; by default they are derived from `.firebaserc`.
 - `VITE_FIRESTORE_JOBS_COLLECTION` and `VITE_RETENTION_DAYS` are optional; defaults come from backend globals (`FIRESTORE_JOBS_COLLECTION`, `BACKEND_RETENTION_DAYS`).
 - Deploy preflight (`scripts/firebase-deploy.sh`) fails fast if required Firebase web config is missing in non-emulator Firebase mode and will attempt best-effort auto-resolution from `firebase apps:sdkconfig` (first WEB app in the project).
+- Optional: set `FIREBASE_WEB_APP_ID` to force which Firebase WEB app deploy preflight should use for sdkconfig lookup.
+- Deploy preflight also validates passwordless email-link sign-in mode (`signIn.email.enabled=true`, `signIn.email.passwordRequired=false`) when `FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN=1` (default).
+- Auto-enable defaults to ON (`FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN=1` when unset); set `FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN=0` to disable auto-patching.
+- Auth preflight verification/auto-enable uses Google ADC (`GOOGLE_APPLICATION_CREDENTIALS`) and falls back to Firebase CLI login token cache.
 ## Deploy
 - `npm --prefix src/frontend run build`
 - `./scripts/firebase-deploy.sh`

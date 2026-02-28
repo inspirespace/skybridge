@@ -20,6 +20,20 @@ Install the Dev Containers CLI with:
 npm install -g @devcontainers/cli
 ```
 
+### Fresh clone quickstart (zero-config flow)
+
+Run this once after cloning (or when switching to a new Firebase project):
+
+```sh
+npm install -g firebase-tools
+firebase login
+firebase use --add
+```
+
+Notes:
+- `firebase use --add` persists your selected project in `.firebaserc` (`projects.default`), which all local scripts/tasks use automatically.
+- If you already know the id, you can run `firebase use <project-id>` instead.
+
 ```sh
 docker compose --profile dev up --build
 ```
@@ -28,9 +42,11 @@ When running from inside the VS Code devcontainer, prefer:
 ./scripts/docker-compose.sh --profile dev up -d --build
 ```
 
-Open https://skybridge.localhost and sign in using the Firebase Auth emulator popup (Google/Apple/Facebook buttons). The emulator UI is available at https://emulator.skybridge.localhost.
+Open https://skybridge.localhost and sign in using passwordless email link flow. The Auth emulator simulates email links locally, and the emulator UI is available at https://emulator.skybridge.localhost.
 The Firebase Functions/Hosting emulators run inside the `firebase-emulator` service.
 Emulator import/export data is stored in `.firebase-emulator/exports` (legacy `firebase-export-*` folders are moved there automatically).
+Auth emulator parity note:
+- By default (`FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN=1`), emulator startup enforces the same email-link sign-in mode as production (`signIn.email.enabled=true`, `passwordRequired=false`) via `.firebase-emulator/exports/auth_export/config.json`.
 
 To mirror production serving behavior locally (static bundle via Firebase Hosting emulator), use:
 
@@ -86,10 +102,21 @@ Manual deploy (zero-config: uses `.firebaserc` default project and prompts login
 ./scripts/firebase-deploy.sh
 ```
 
+VS Code equivalent:
+- Run task: `Firebase: Deploy`
+
+First deploy behavior (out of the box):
+- If you are not logged in, the script prompts and runs `firebase login --reauth`.
+- If Firebase Auth email-link mode is not enabled, deploy preflight auto-enables it by default.
+- If frontend Firebase web config is missing, deploy preflight auto-resolves it from Firebase web app config (and creates a WEB app when required).
+
 Deploy preflight note:
 - If `APP_CHECK_ENFORCE=1`, CI deploys fail fast unless frontend App Check config is present (`VITE_FIREBASE_APP_CHECK_ENABLED=1` and `VITE_FIREBASE_APP_CHECK_SITE_KEY`).
 - Local deploys print a warning and continue.
 - In `firebase` auth mode without emulator, deploy fails fast if frontend Firebase web config is incomplete (`VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_PROJECT_ID`). The deploy script attempts best-effort auto-resolution from Firebase Web App SDK config.
+- If your project has multiple Firebase web apps, set `FIREBASE_WEB_APP_ID` to force which app is used for SDK config resolution during deploy preflight.
+- In `firebase` auth mode without emulator, deploy preflight also verifies passwordless email-link provider config (`signIn.email.enabled=true`, `signIn.email.passwordRequired=false`) when `FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN=1` (default). Auto-enable is ON by default (`FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN=1` when unset) and can be disabled explicitly with `FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN=0`.
+- Auth provider verification/auto-enable uses either Google ADC (`GOOGLE_APPLICATION_CREDENTIALS`) or Firebase CLI login token cache (`firebase login`). In CI this is enforced; local runs warn and continue only when neither source is available.
 
 Clear Firebase resources while keeping the project (zero-config from `.firebaserc`):
 

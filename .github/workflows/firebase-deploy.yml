@@ -58,6 +58,8 @@ jobs:
 
       - name: Deploy functions and hosting (shared script)
         if: steps.preflight.outputs.ready == 'true'
+        env:
+          FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN: "1"
         run: |
           ./scripts/firebase-deploy.sh
 

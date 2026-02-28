@@ -5,6 +5,14 @@ WORKSPACE_DIR="${WORKSPACE_DIR:-$(pwd)}"
 VENV_DIR="/firebase-emulator/functions-venv"
 EXPORT_ROOT="${WORKSPACE_DIR}/.firebase-emulator/exports"
 LEGACY_ROOT="${EXPORT_ROOT}/legacy"
+REQUIRE_EMAIL_LINK_SIGNIN="${FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN:-1}"
+
+is_truthy() {
+  case "$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')" in
+    1|true|yes|on) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
 echo "Installing firebase emulator dependencies..."
 apk add --no-cache curl python3 py3-pip py3-virtualenv openjdk21-jre
@@ -44,6 +52,41 @@ for legacy_file in "${WORKSPACE_DIR}"/firebase-export-*.json; do
     mv "${legacy_file}" "${LEGACY_ROOT}/$(basename "${legacy_file}")"
   fi
 done
+
+if is_truthy "${REQUIRE_EMAIL_LINK_SIGNIN}"; then
+  AUTH_EXPORT_DIR="${EXPORT_ROOT}/auth_export"
+  AUTH_CONFIG_FILE="${AUTH_EXPORT_DIR}/config.json"
+  mkdir -p "${AUTH_EXPORT_DIR}"
+  if [ ! -f "${AUTH_CONFIG_FILE}" ]; then
+    echo '{}' >"${AUTH_CONFIG_FILE}"
+  fi
+  node - "${AUTH_CONFIG_FILE}" <<'NODE'
+const fs = require("fs");
+
+const filePath = process.argv[2];
+let config = {};
+try {
+  config = JSON.parse(fs.readFileSync(filePath, "utf8"));
+} catch {
+  config = {};
+}
+
+const signIn = config.signIn && typeof config.signIn === "object" ? config.signIn : {};
+const email = signIn.email && typeof signIn.email === "object" ? signIn.email : {};
+
+config.signIn = {
+  ...signIn,
+  allowDuplicateEmails: false,
+  email: {
+    ...email,
+    enabled: true,
+    passwordRequired: false,
+  },
+};
+
+fs.writeFileSync(filePath, `${JSON.stringify(config)}\n`);
+NODE
+fi
 
 PROJECT_ID="$(sh "${WORKSPACE_DIR}/scripts/firebase-config.sh" project)"
 REGION="$(sh "${WORKSPACE_DIR}/scripts/firebase-config.sh" region)"

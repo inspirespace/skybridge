@@ -186,6 +186,161 @@ is_truthy_value() {
   esac
 }
 
+google_access_token() {
+  local token
+  token="$(
+    python3 - <<'PY' 2>/dev/null
+import os
+import sys
+
+try:
+    from google.auth.transport.requests import Request
+    from google.oauth2 import service_account
+    import google.auth
+except Exception:
+    sys.exit(1)
+
+scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+credentials = None
+credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
+
+if credentials_path and os.path.isfile(credentials_path):
+    credentials = service_account.Credentials.from_service_account_file(
+        credentials_path, scopes=scopes
+    )
+else:
+    try:
+        credentials, _ = google.auth.default(scopes=scopes)
+    except Exception:
+        sys.exit(1)
+
+if credentials is None:
+    sys.exit(1)
+
+try:
+    credentials.refresh(Request())
+except Exception:
+    sys.exit(1)
+
+token = getattr(credentials, "token", "")
+if not token:
+    sys.exit(1)
+print(token)
+PY
+  )" || true
+  if [ -n "$token" ]; then
+    printf '%s' "$token"
+    return 0
+  fi
+
+  token="$(
+    node - <<'NODE' 2>/dev/null
+const fs = require("fs");
+const path = require("path");
+
+const candidates = [];
+if (process.env.XDG_CONFIG_HOME) {
+  candidates.push(
+    path.join(process.env.XDG_CONFIG_HOME, "configstore", "firebase-tools.json")
+  );
+}
+if (process.env.HOME) {
+  candidates.push(
+    path.join(process.env.HOME, ".config", "configstore", "firebase-tools.json")
+  );
+  candidates.push(
+    path.join(
+      process.env.HOME,
+      "Library",
+      "Preferences",
+      "configstore",
+      "firebase-tools.json"
+    )
+  );
+}
+
+for (const filePath of candidates) {
+  if (!fs.existsSync(filePath)) continue;
+  try {
+    const payload = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    const token =
+      payload?.tokens?.access_token ||
+      payload?.tokens?.accessToken ||
+      payload?.user?.tokens?.access_token ||
+      payload?.user?.tokens?.accessToken ||
+      "";
+    const expiresAt = Number(
+      payload?.tokens?.expires_at ??
+        payload?.user?.tokens?.expires_at ??
+        0
+    );
+    if (!token || typeof token !== "string") continue;
+    if (!expiresAt || Number.isNaN(expiresAt) || expiresAt > Date.now() + 60_000) {
+      process.stdout.write(token);
+      process.exit(0);
+    }
+    // Token may still be valid even if local expiry metadata is stale.
+    process.stdout.write(token);
+    process.exit(0);
+  } catch {
+    continue;
+  }
+}
+process.exit(1);
+NODE
+  )" || true
+  if [ -n "$token" ]; then
+    printf '%s' "$token"
+    return 0
+  fi
+
+  return 1
+}
+
+get_identity_platform_config() {
+  local token="$1"
+  local output_file="$2"
+  curl -fsS \
+    -H "Authorization: Bearer ${token}" \
+    "https://identitytoolkit.googleapis.com/admin/v2/projects/${PROJECT_ID}/config" \
+    >"$output_file"
+}
+
+ensure_email_link_signin_enabled() {
+  local token="$1"
+  curl -fsS \
+    -X PATCH \
+    -H "Authorization: Bearer ${token}" \
+    -H "Content-Type: application/json" \
+    "https://identitytoolkit.googleapis.com/admin/v2/projects/${PROJECT_ID}/config?updateMask=signIn.email.enabled,signIn.email.passwordRequired" \
+    -d '{"signIn":{"email":{"enabled":true,"passwordRequired":false}}}' \
+    >/dev/null
+}
+
+extract_email_signin_flags() {
+  local file_path="$1"
+  node - "$file_path" <<'NODE'
+const fs = require("fs");
+
+const filePath = process.argv[2];
+let parsed;
+try {
+  parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
+} catch {
+  process.exit(1);
+}
+
+const email = parsed?.signIn?.email ?? {};
+const enabled = email?.enabled === true ? "1" : "0";
+let passwordRequired = "";
+if (email?.passwordRequired === true) passwordRequired = "1";
+if (email?.passwordRequired === false) passwordRequired = "0";
+
+process.stdout.write(`EMAIL_ENABLED=${enabled}\n`);
+process.stdout.write(`EMAIL_PASSWORD_REQUIRED=${passwordRequired}\n`);
+NODE
+}
+
 preflight_app_check_config() {
   local enforce_value
   enforce_value="$(resolve_config_value APP_CHECK_ENFORCE functions/.env .env || true)"
@@ -225,6 +380,122 @@ preflight_app_check_config() {
   fi
 }
 
+preflight_firebase_auth_signin_config() {
+  local frontend_auth_mode
+  frontend_auth_mode="$(resolve_config_value VITE_AUTH_MODE src/frontend/.env .env || true)"
+  if [ -z "$frontend_auth_mode" ]; then
+    frontend_auth_mode="$(resolve_config_value AUTH_MODE functions/.env .env || true)"
+  fi
+  if [ -z "$frontend_auth_mode" ]; then
+    frontend_auth_mode="firebase"
+  fi
+  local auth_mode_lc
+  auth_mode_lc="$(printf '%s' "$frontend_auth_mode" | tr '[:upper:]' '[:lower:]')"
+  if [ "$auth_mode_lc" != "firebase" ]; then
+    return 0
+  fi
+
+  local use_emulator
+  use_emulator="$(resolve_config_value VITE_FIREBASE_USE_EMULATOR src/frontend/.env .env || true)"
+  if is_truthy_value "$use_emulator"; then
+    return 0
+  fi
+
+  local require_email_link
+  local auto_enable_email_link
+  require_email_link="$(resolve_config_value FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN functions/.env .env || true)"
+  auto_enable_email_link="$(resolve_config_value FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN functions/.env .env || true)"
+  if [ -z "$require_email_link" ]; then
+    require_email_link="1"
+  fi
+  if [ -z "$auto_enable_email_link" ]; then
+    auto_enable_email_link="1"
+  fi
+  if ! is_truthy_value "$require_email_link"; then
+    return 0
+  fi
+
+  local token
+  token="$(google_access_token || true)"
+  if [ -z "$token" ]; then
+    cat >&2 <<'EOF'
+Firebase Auth preflight: could not acquire Google access token to verify sign-in provider configuration.
+Checked:
+  - Application Default Credentials (GOOGLE_APPLICATION_CREDENTIALS / ADC)
+  - Firebase CLI local login token cache (~/.config/configstore/firebase-tools.json)
+EOF
+    if [ -n "${CI:-}" ]; then
+      echo "Failing in CI because Firebase Auth provider checks are required." >&2
+      exit 1
+    fi
+    echo "Warning: continuing local deploy without automated provider verification." >&2
+    return 0
+  fi
+
+  local config_file
+  config_file="$(mktemp)"
+  local after_file
+  after_file="$(mktemp)"
+  local email_enabled=""
+  local password_required=""
+  if ! get_identity_platform_config "$token" "$config_file"; then
+    rm -f "$config_file" "$after_file"
+    echo "Failed to fetch Firebase Auth config from Identity Toolkit API." >&2
+    if [ -n "${CI:-}" ]; then
+      exit 1
+    fi
+    echo "Warning: continuing local deploy without automated provider verification." >&2
+    return 0
+  fi
+
+  while IFS='=' read -r key value; do
+    case "$key" in
+      EMAIL_ENABLED) email_enabled="$value" ;;
+      EMAIL_PASSWORD_REQUIRED) password_required="$value" ;;
+    esac
+  done < <(extract_email_signin_flags "$config_file")
+
+  local ok=0
+  if [ "$email_enabled" = "1" ] && [ "$password_required" = "0" ]; then
+    ok=1
+  fi
+
+  if [ "$ok" -ne 1 ] && is_truthy_value "$auto_enable_email_link"; then
+    echo "Firebase Auth preflight: enabling passwordless email link sign-in on project ${PROJECT_ID}..." >&2
+    if ensure_email_link_signin_enabled "$token" && get_identity_platform_config "$token" "$after_file"; then
+      email_enabled=""
+      password_required=""
+      while IFS='=' read -r key value; do
+        case "$key" in
+          EMAIL_ENABLED) email_enabled="$value" ;;
+          EMAIL_PASSWORD_REQUIRED) password_required="$value" ;;
+        esac
+      done < <(extract_email_signin_flags "$after_file")
+      if [ "$email_enabled" = "1" ] && [ "$password_required" = "0" ]; then
+        ok=1
+      fi
+    fi
+  fi
+
+  rm -f "$config_file" "$after_file"
+
+  if [ "$ok" -ne 1 ]; then
+    cat >&2 <<EOF
+Firebase Auth preflight failed for project ${PROJECT_ID}.
+Expected sign-in config:
+  - signIn.email.enabled = true
+  - signIn.email.passwordRequired = false (email link sign-in enabled)
+
+Fix options:
+  1) Firebase Console -> Authentication -> Sign-in method:
+     - Enable "Email/Password"
+     - Enable "Email link (passwordless sign-in)"
+  2) Set FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN=1 and rerun deploy.
+EOF
+    exit 1
+  fi
+}
+
 first_web_app_id_from_json() {
   local file_path="$1"
   node - "$file_path" <<'NODE'
@@ -238,6 +509,18 @@ try {
   process.exit(0);
 }
 
+const normalizeAppId = (value) => {
+  if (typeof value !== "string") return "";
+  if (value.includes("/webApps/")) {
+    const parts = value.split("/");
+    return parts[parts.length - 1] || "";
+  }
+  return value;
+};
+
+const looksLikeWebAppId = (value) =>
+  typeof value === "string" && value.includes(":web:");
+
 const queue = [data];
 while (queue.length > 0) {
   const current = queue.shift();
@@ -247,17 +530,53 @@ while (queue.length > 0) {
     continue;
   }
   if (typeof current !== "object") continue;
+
+  const platform = typeof current.platform === "string" ? current.platform.toUpperCase() : "";
   const candidateKeys = ["appId", "appID", "app_id", "id", "name"];
+  if (platform === "WEB") {
+    for (const key of candidateKeys) {
+      const raw = current[key];
+      const appId = normalizeAppId(raw);
+      if (looksLikeWebAppId(appId)) {
+        process.stdout.write(appId);
+        process.exit(0);
+      }
+    }
+  }
+
   for (const key of candidateKeys) {
-    const value = current[key];
-    if (typeof value === "string" && value.includes(":web:")) {
-      process.stdout.write(value);
+    const raw = current[key];
+    const appId = normalizeAppId(raw);
+    if (looksLikeWebAppId(appId)) {
+      process.stdout.write(appId);
       process.exit(0);
     }
   }
+
   for (const value of Object.values(current)) {
     queue.push(value);
   }
+}
+NODE
+}
+
+first_web_app_id_from_text() {
+  local file_path="$1"
+  node - "$file_path" <<'NODE'
+const fs = require("fs");
+
+const filePath = process.argv[2];
+let raw = "";
+try {
+  raw = fs.readFileSync(filePath, "utf8");
+} catch {
+  process.exit(0);
+}
+
+const appIdPattern = /\b\d+:\d+:web:[A-Za-z0-9]+\b/g;
+const matches = raw.match(appIdPattern);
+if (matches && matches.length > 0) {
+  process.stdout.write(matches[0]);
 }
 NODE
 }
@@ -365,10 +684,12 @@ preflight_frontend_firebase_config() {
   local app_id
   local project_id
   local auth_domain
+  local explicit_web_app_id
   api_key="$(resolve_config_value VITE_FIREBASE_API_KEY src/frontend/.env .env || true)"
   app_id="$(resolve_config_value VITE_FIREBASE_APP_ID src/frontend/.env .env || true)"
   project_id="$(resolve_config_value VITE_FIREBASE_PROJECT_ID src/frontend/.env .env || true)"
   auth_domain="$(resolve_config_value VITE_FIREBASE_AUTH_DOMAIN src/frontend/.env .env || true)"
+  explicit_web_app_id="$(resolve_config_value FIREBASE_WEB_APP_ID src/frontend/.env .env || true)"
 
   if [ -z "$project_id" ]; then
     project_id="$PROJECT_ID"
@@ -380,16 +701,60 @@ preflight_frontend_firebase_config() {
   if [ -z "$api_key" ] || [ -z "$app_id" ]; then
     echo "Frontend Firebase config missing (api key/app id). Attempting to resolve from Firebase web app..." >&2
     local apps_json_file
+    local apps_text_file
+    local create_json_file
+    local create_text_file
     local sdk_config_file
+    local apps_err_file
+    local resolved_app_id
     apps_json_file="$(mktemp)"
+    apps_text_file="$(mktemp)"
+    create_json_file="$(mktemp)"
+    create_text_file="$(mktemp)"
     sdk_config_file="$(mktemp)"
-    if firebase apps:list WEB --project "$PROJECT_ID" --json >"$apps_json_file" 2>/dev/null; then
-      local resolved_app_id
+    apps_err_file="$(mktemp)"
+    resolved_app_id=""
+
+    if [ -n "$explicit_web_app_id" ]; then
+      resolved_app_id="$explicit_web_app_id"
+    fi
+
+    if [ -z "$resolved_app_id" ] && firebase apps:list --project "$PROJECT_ID" --json >"$apps_json_file" 2>"$apps_err_file"; then
       resolved_app_id="$(first_web_app_id_from_json "$apps_json_file" || true)"
-      if [ -z "$resolved_app_id" ]; then
-        resolved_app_id="$app_id"
+    fi
+
+    if [ -z "$resolved_app_id" ] && [ -s "$apps_json_file" ]; then
+      resolved_app_id="$(first_web_app_id_from_text "$apps_json_file" || true)"
+    fi
+
+    if [ -z "$resolved_app_id" ] && firebase apps:list WEB --project "$PROJECT_ID" >"$apps_text_file" 2>>"$apps_err_file"; then
+      resolved_app_id="$(first_web_app_id_from_text "$apps_text_file" || true)"
+    fi
+
+    if [ -z "$resolved_app_id" ] && [ -n "$app_id" ]; then
+      resolved_app_id="$app_id"
+    fi
+
+    if [ -z "$resolved_app_id" ]; then
+      echo "No Firebase WEB app found in project ${PROJECT_ID}; creating one for frontend auth..." >&2
+      if firebase apps:create WEB "${PROJECT_ID}-web" --project "$PROJECT_ID" --json >"$create_json_file" 2>>"$apps_err_file"; then
+        resolved_app_id="$(first_web_app_id_from_json "$create_json_file" || true)"
       fi
-      if [ -n "$resolved_app_id" ] && firebase apps:sdkconfig WEB "$resolved_app_id" --project "$PROJECT_ID" >"$sdk_config_file" 2>/dev/null; then
+
+      if [ -z "$resolved_app_id" ] && [ -s "$create_json_file" ]; then
+        resolved_app_id="$(first_web_app_id_from_text "$create_json_file" || true)"
+      fi
+
+      if [ -z "$resolved_app_id" ] && firebase apps:list WEB --project "$PROJECT_ID" >"$apps_text_file" 2>>"$apps_err_file"; then
+        resolved_app_id="$(first_web_app_id_from_text "$apps_text_file" || true)"
+      fi
+
+      if [ -z "$resolved_app_id" ] && firebase apps:create WEB "${PROJECT_ID}-web" --project "$PROJECT_ID" >"$create_text_file" 2>>"$apps_err_file"; then
+        resolved_app_id="$(first_web_app_id_from_text "$create_text_file" || true)"
+      fi
+    fi
+
+    if [ -n "$resolved_app_id" ] && firebase apps:sdkconfig WEB "$resolved_app_id" --project "$PROJECT_ID" >"$sdk_config_file" 2>>"$apps_err_file"; then
         while IFS='=' read -r key value; do
           case "$key" in
             VITE_FIREBASE_API_KEY)
@@ -406,9 +771,19 @@ preflight_frontend_firebase_config() {
               ;;
           esac
         done < <(extract_sdk_config_values "$sdk_config_file")
+    fi
+
+    if [ -z "$api_key" ] || [ -z "$app_id" ]; then
+      if [ -n "$resolved_app_id" ]; then
+        echo "Resolved Firebase WEB app id: $resolved_app_id (sdk config still missing apiKey/appId)." >&2
+      fi
+      if [ -s "$apps_err_file" ]; then
+        echo "Firebase WEB app resolution diagnostics:" >&2
+        sed 's/^/  /' "$apps_err_file" >&2
       fi
     fi
-    rm -f "$apps_json_file" "$sdk_config_file"
+
+    rm -f "$apps_json_file" "$apps_text_file" "$create_json_file" "$create_text_file" "$sdk_config_file" "$apps_err_file"
   fi
 
   if [ -z "$api_key" ] || [ -z "$app_id" ] || [ -z "$project_id" ]; then
@@ -562,6 +937,7 @@ EOF
 fi
 
 preflight_app_check_config
+preflight_firebase_auth_signin_config
 preflight_frontend_firebase_config
 
 PYTHON_BIN=""
