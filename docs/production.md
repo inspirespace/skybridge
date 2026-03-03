@@ -46,6 +46,7 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - Optional: set `FIREBASE_WEB_APP_ID` to force which Firebase WEB app deploy preflight should use for sdkconfig lookup.
 - Deploy preflight also validates passwordless email-link sign-in mode (`signIn.email.enabled=true`, `signIn.email.passwordRequired=false`) when `FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN=1` (default).
 - Auto-enable defaults to ON (`FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN=1` when unset); set `FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN=0` to disable auto-patching.
+- Optional: `FIREBASE_AUTH_EMAIL_APP_NAME` controls the display name used for Firebase Auth emails (mapped to project display name; default `Skybridge`).
 - Auth preflight verification/auto-enable uses Google ADC (`GOOGLE_APPLICATION_CREDENTIALS`) and falls back to Firebase CLI login token cache.
 ## Deploy
 - `npm --prefix src/frontend run build`

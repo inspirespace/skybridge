@@ -32,6 +32,7 @@ def _route(method: str, pattern: str, handler: Callable) -> None:
 
 
 def _register_routes() -> None:
+    _route("POST", r"^/auth/token$", lambda_handlers.auth_token_handler)
     _route("POST", r"^/credentials/validate$", lambda_handlers.validate_credentials_handler)
     _route("POST", r"^/jobs$", lambda_handlers.create_job_handler)
     _route("GET", r"^/jobs$", lambda_handlers.list_jobs_handler)
@@ -143,14 +144,13 @@ def worker(event: pubsub_fn.CloudEvent[pubsub_fn.MessagePublishedData]) -> None:
     except Exception:
         return
     lambda_handlers._process_queue_payload(data)
-    _route("POST", r"^/auth/token$", lambda_handlers.auth_token_handler)
 
 
 @scheduler_fn.on_schedule(schedule="every 24 hours")
 def cleanup_expired(_event: scheduler_fn.ScheduledEvent) -> None:
     # Cleanup job records (Firestore or local).
     try:
-        lambda_handlers.store.cleanup_expired()
+        lambda_handlers._get_store().cleanup_expired()
     except Exception:
         pass
     if (os.getenv("BACKEND_FIRESTORE_ENABLED") or "false").lower() not in {

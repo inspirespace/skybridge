@@ -648,7 +648,13 @@ export function useFirebaseAuth({
         const { sendSignInLinkToEmail } = await import("firebase/auth");
         const redirectUrl =
           typeof window !== "undefined"
-            ? `${window.location.origin}/app/?emailLink=1`
+            ? (() => {
+                const url = new URL("/app/", window.location.origin);
+                url.searchParams.set("emailLink", "1");
+                // Keep an explicit email hint for link-completion when browser storage is unavailable.
+                url.searchParams.set("email", email);
+                return url.toString();
+              })()
             : "";
         if (!redirectUrl) {
           onError?.("Email link sign-in is unavailable in this environment.");

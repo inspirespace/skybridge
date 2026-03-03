@@ -27,7 +27,6 @@ import { ConnectSection } from "@/components/app/ConnectSection";
 import { ReviewSection } from "@/components/app/ReviewSection";
 import { ImportSection } from "@/components/app/ImportSection";
 import { FirebaseAuthCard } from "@/components/app/auth/FirebaseAuthCard";
-import { FirebaseAuthDialog } from "@/components/app/auth/FirebaseAuthDialog";
 import { GuestUpgradeCard } from "@/components/app/auth/GuestUpgradeCard";
 import type { ProviderFlags } from "@/components/app/auth/FirebaseProviderButtons";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -179,7 +178,6 @@ export default function App() {
     onError: (message) => setActionError({ scope: "sign-in", message }),
     onLoadingChange: setActionLoading,
   });
-  const [showAuthDialog, setShowAuthDialog] = React.useState(false);
   const [authInitTimedOut, setAuthInitTimedOut] = React.useState(false);
   const [emailAddress, setEmailAddress] = React.useState("");
   const [emailLinkNotice, setEmailLinkNotice] = React.useState<string | null>(null);
@@ -195,6 +193,16 @@ export default function App() {
     []
   );
   const hasOptionalProviders = Object.values(providerFlags).some(Boolean);
+  const focusFirebaseAuthCard = React.useCallback(() => {
+    if (typeof window === "undefined") return;
+    const card = document.getElementById("firebase-auth-card");
+    if (!card) return;
+    card.scrollIntoView({ behavior: "smooth", block: "start" });
+    const emailInput = card.querySelector("input");
+    if (emailInput instanceof HTMLInputElement) {
+      emailInput.focus({ preventScroll: true });
+    }
+  }, []);
 
   const [cloudahoyEmail, setCloudahoyEmail] = React.useState("");
   const [cloudahoyPassword, setCloudahoyPassword] = React.useState("");
@@ -262,10 +270,7 @@ export default function App() {
       emailLinkAutoRef.current = true;
       void completeFirebaseEmailLink(storedEmail);
     }
-    if (!flow.signedIn) {
-      setShowAuthDialog(true);
-    }
-  }, [firebaseEmailLinkPending, flow.signedIn, emailAddress, completeFirebaseEmailLink]);
+  }, [firebaseEmailLinkPending, emailAddress, completeFirebaseEmailLink]);
 
   React.useEffect(() => {
     if (!flow.signedIn) return;
@@ -467,7 +472,7 @@ export default function App() {
       return;
     }
     if (AUTH_MODE === "firebase") {
-      setShowAuthDialog(true);
+      focusFirebaseAuthCard();
       return;
     }
     const nextUserId = "pilot@skybridge.dev";
@@ -476,7 +481,7 @@ export default function App() {
     setActionError(null);
     const stored = readSessionValue(OPEN_STEP_KEY) ?? undefined;
     setManualOpen(stored ?? "connect");
-  }, [startOidcLogin, setHeaderUserId, setManualOpen]);
+  }, [startOidcLogin, focusFirebaseAuthCard, setHeaderUserId, setManualOpen]);
 
   const handleFirebaseLogin = React.useCallback(
     (
@@ -566,11 +571,7 @@ export default function App() {
     if (flow.signedIn || typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("signin") !== "1") return;
-    if (AUTH_MODE === "firebase") {
-      setShowAuthDialog(true);
-    } else {
-      handleSignIn();
-    }
+    handleSignIn();
     if (AUTH_MODE !== "oidc") {
       params.delete("signin");
       const nextSearch = params.toString();
@@ -581,12 +582,6 @@ export default function App() {
       );
     }
   }, [flow.signedIn, handleSignIn]);
-
-  React.useEffect(() => {
-    if (flow.signedIn) {
-      setShowAuthDialog(false);
-    }
-  }, [flow.signedIn]);
 
   /** Handle handleConnectReview. */
   const handleConnectReview = async () => {
@@ -1058,27 +1053,9 @@ export default function App() {
               </Button>
             )}
             {!flow.signedIn && AUTH_MODE === "firebase" && firebaseAuthReady && (
-              <FirebaseAuthDialog
-                open={showAuthDialog}
-                onOpenChange={setShowAuthDialog}
-                signInError={signInError}
-                authReady={firebaseAuthReady}
-                emulatorReady={firebaseEmulatorReady}
-                useEmulator={FIREBASE_USE_EMULATOR}
-                hasOptionalProviders={hasOptionalProviders}
-                emailAddress={emailAddress}
-                onEmailChange={setEmailAddress}
-                onSendLink={handleEmailLink}
-                onCompleteLink={handleEmailLinkComplete}
-                emailLinkPending={firebaseEmailLinkPending}
-                emailLinkNotice={emailLinkNotice}
-                emailLinkUrl={emailLinkUrl}
-                authButtonsDisabled={authButtonsDisabled}
-                providers={providerFlags}
-                onProvider={handleFirebaseLogin}
-                actionLoading={actionLoading}
-                triggerLabel="Sign up / Sign in"
-              />
+              <Button size="sm" onClick={handleSignIn}>
+                Sign up / Sign in
+              </Button>
             )}
             {flow.connected && (
               <AlertDialog>
@@ -1200,23 +1177,25 @@ export default function App() {
                 </Card>
               )}
               {AUTH_MODE === "firebase" && firebaseAuthReady && (
-                <FirebaseAuthCard
-                  signInError={signInError}
-                  authReady={firebaseAuthReady}
-                  useEmulator={FIREBASE_USE_EMULATOR}
-                  emulatorReady={firebaseEmulatorReady}
-                  hasOptionalProviders={hasOptionalProviders}
-                  emailAddress={emailAddress}
-                  onEmailChange={setEmailAddress}
-                  onSendLink={handleEmailLink}
-                  onCompleteLink={handleEmailLinkComplete}
-                  emailLinkPending={firebaseEmailLinkPending}
-                  emailLinkNotice={emailLinkNotice}
-                  emailLinkUrl={emailLinkUrl}
-                  authButtonsDisabled={authButtonsDisabled}
-                  providers={providerFlags}
-                  onProvider={handleFirebaseLogin}
-                />
+                <div id="firebase-auth-card">
+                  <FirebaseAuthCard
+                    signInError={signInError}
+                    authReady={firebaseAuthReady}
+                    useEmulator={FIREBASE_USE_EMULATOR}
+                    emulatorReady={firebaseEmulatorReady}
+                    hasOptionalProviders={hasOptionalProviders}
+                    emailAddress={emailAddress}
+                    onEmailChange={setEmailAddress}
+                    onSendLink={handleEmailLink}
+                    onCompleteLink={handleEmailLinkComplete}
+                    emailLinkPending={firebaseEmailLinkPending}
+                    emailLinkNotice={emailLinkNotice}
+                    emailLinkUrl={emailLinkUrl}
+                    authButtonsDisabled={authButtonsDisabled}
+                    providers={providerFlags}
+                    onProvider={handleFirebaseLogin}
+                  />
+                </div>
               )}
             </div>
           )}

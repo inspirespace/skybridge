@@ -186,6 +186,47 @@ is_truthy_value() {
   esac
 }
 
+normalize_domain_candidate() {
+  local value
+  value="$(normalize_env_value "${1:-}")"
+  value="$(printf '%s' "$value" | tr '[:upper:]' '[:lower:]')"
+  value="${value#http://}"
+  value="${value#https://}"
+  value="${value%%/*}"
+  value="${value%%:*}"
+  value="${value#[}"
+  value="${value%]}"
+  printf '%s' "$value"
+}
+
+domain_list_contains() {
+  local list="$1"
+  local candidate="$2"
+  if [ -z "$candidate" ]; then
+    return 1
+  fi
+  printf '%s\n' "$list" | grep -Fxq "$candidate"
+}
+
+domain_list_add() {
+  local var_name="$1"
+  local raw_value="$2"
+  local normalized current
+  normalized="$(normalize_domain_candidate "$raw_value")"
+  if [ -z "$normalized" ]; then
+    return 0
+  fi
+  current="${!var_name:-}"
+  if domain_list_contains "$current" "$normalized"; then
+    return 0
+  fi
+  if [ -z "$current" ]; then
+    printf -v "$var_name" '%s' "$normalized"
+  else
+    printf -v "$var_name" '%s\n%s' "$current" "$normalized"
+  fi
+}
+
 google_access_token() {
   local token
   token="$(
@@ -304,6 +345,174 @@ get_identity_platform_config() {
     -H "Authorization: Bearer ${token}" \
     "https://identitytoolkit.googleapis.com/admin/v2/projects/${PROJECT_ID}/config" \
     >"$output_file"
+}
+
+get_project_metadata() {
+  local token="$1"
+  local output_file="$2"
+  curl -fsS \
+    -H "Authorization: Bearer ${token}" \
+    "https://cloudresourcemanager.googleapis.com/v3/projects/${PROJECT_ID}" \
+    >"$output_file"
+}
+
+extract_project_display_name() {
+  local file_path="$1"
+  node - "$file_path" <<'NODE'
+const fs = require("fs");
+
+const filePath = process.argv[2];
+let parsed;
+try {
+  parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
+} catch {
+  process.exit(1);
+}
+
+const displayName =
+  (typeof parsed?.displayName === "string" && parsed.displayName.trim()) ||
+  (typeof parsed?.display_name === "string" && parsed.display_name.trim()) ||
+  "";
+if (displayName) {
+  process.stdout.write(displayName);
+}
+NODE
+}
+
+set_project_display_name() {
+  local token="$1"
+  local display_name="$2"
+  local endpoint="https://cloudresourcemanager.googleapis.com/v3/projects/${PROJECT_ID}"
+  local response_file http_code body
+
+  body="$(
+    node - "$display_name" <<'NODE'
+const displayName = process.argv[2] ?? "";
+process.stdout.write(JSON.stringify({ displayName }));
+NODE
+  )"
+
+  response_file="$(mktemp)"
+  http_code="$(
+    curl -sS \
+      -o "$response_file" \
+      -w "%{http_code}" \
+      -X PATCH \
+      -H "Authorization: Bearer ${token}" \
+      -H "Content-Type: application/json" \
+      "${endpoint}?updateMask=displayName" \
+      -d "${body}" || true
+  )"
+  if [ "$http_code" -ge 200 ] 2>/dev/null && [ "$http_code" -lt 300 ] 2>/dev/null; then
+    rm -f "$response_file"
+    return 0
+  fi
+  echo "Failed to set project display name (HTTP ${http_code}): $(cat "$response_file" 2>/dev/null || true)" >&2
+  rm -f "$response_file"
+  return 1
+}
+
+extract_authorized_domains() {
+  local file_path="$1"
+  node - "$file_path" <<'NODE'
+const fs = require("fs");
+
+const filePath = process.argv[2];
+let parsed;
+try {
+  parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
+} catch {
+  process.exit(1);
+}
+
+const domains = Array.isArray(parsed?.authorizedDomains)
+  ? parsed.authorizedDomains
+  : Array.isArray(parsed?.authorized_domains)
+    ? parsed.authorized_domains
+    : [];
+
+for (const value of domains) {
+  if (typeof value !== "string") continue;
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) continue;
+  process.stdout.write(`${normalized}\n`);
+}
+NODE
+}
+
+discover_hosting_domains() {
+  local token="$1"
+  local project_id="$2"
+  node - "$token" "$project_id" <<'NODE'
+const token = process.argv[2];
+const projectId = process.argv[3];
+
+const headers = { Authorization: `Bearer ${token}` };
+const domains = new Set();
+
+const addDomain = (value) => {
+  if (typeof value !== "string") return;
+  let normalized = value.trim().toLowerCase();
+  if (!normalized) return;
+  try {
+    if (normalized.startsWith("http://") || normalized.startsWith("https://")) {
+      normalized = new URL(normalized).hostname.toLowerCase();
+    }
+  } catch {
+    // Keep raw value fallback below.
+  }
+  normalized = normalized.replace(/\/.*$/, "").replace(/:\d+$/, "");
+  if (!normalized) return;
+  domains.add(normalized);
+};
+
+const fetchJson = async (url) => {
+  const response = await fetch(url, { headers });
+  if (!response.ok) {
+    throw new Error(String(response.status));
+  }
+  return response.json();
+};
+
+(async () => {
+  try {
+    const sitesPayload = await fetchJson(
+      `https://firebasehosting.googleapis.com/v1beta1/projects/${encodeURIComponent(projectId)}/sites`
+    );
+    const sites = Array.isArray(sitesPayload?.sites) ? sitesPayload.sites : [];
+    for (const site of sites) {
+      addDomain(site?.defaultUrl);
+      if (typeof site?.name !== "string" || !site.name) continue;
+      try {
+        const customPayload = await fetchJson(
+          `https://firebasehosting.googleapis.com/v1beta1/${site.name}/customDomains`
+        );
+        const customDomains = Array.isArray(customPayload?.customDomains)
+          ? customPayload.customDomains
+          : [];
+        for (const entry of customDomains) {
+          addDomain(entry?.domainName);
+          if (typeof entry?.name === "string") {
+            const marker = "/customDomains/";
+            const markerIndex = entry.name.lastIndexOf(marker);
+            if (markerIndex >= 0) {
+              addDomain(entry.name.slice(markerIndex + marker.length));
+            }
+          }
+        }
+      } catch {
+        // Best-effort: keep deploy flow resilient when custom domain listing is unavailable.
+      }
+    }
+  } catch {
+    // Best-effort: no-op when Hosting API cannot be queried.
+  }
+
+  for (const domain of domains) {
+    process.stdout.write(`${domain}\n`);
+  }
+})();
+NODE
 }
 
 ensure_email_link_signin_enabled() {
@@ -564,6 +773,70 @@ EOF
     fi
     exit 1
   fi
+}
+
+preflight_firebase_auth_email_app_name() {
+  local frontend_auth_mode
+  frontend_auth_mode="$(resolve_config_value VITE_AUTH_MODE src/frontend/.env .env || true)"
+  if [ -z "$frontend_auth_mode" ]; then
+    frontend_auth_mode="$(resolve_config_value AUTH_MODE functions/.env .env || true)"
+  fi
+  if [ -z "$frontend_auth_mode" ]; then
+    frontend_auth_mode="firebase"
+  fi
+  local auth_mode_lc
+  auth_mode_lc="$(printf '%s' "$frontend_auth_mode" | tr '[:upper:]' '[:lower:]')"
+  if [ "$auth_mode_lc" != "firebase" ]; then
+    return 0
+  fi
+
+  local use_emulator
+  use_emulator="$(resolve_config_value VITE_FIREBASE_USE_EMULATOR src/frontend/.env .env || true)"
+  if is_truthy_value "$use_emulator"; then
+    return 0
+  fi
+
+  local app_name
+  app_name="$(resolve_config_value FIREBASE_AUTH_EMAIL_APP_NAME functions/.env .env || true)"
+  if [ -z "$app_name" ]; then
+    app_name="Skybridge"
+  fi
+  app_name="$(normalize_env_value "$app_name")"
+  if [ -z "$app_name" ]; then
+    return 0
+  fi
+
+  local token
+  token="$(google_access_token || true)"
+  if [ -z "$token" ]; then
+    echo "Firebase Auth email-name preflight: could not acquire Google access token." >&2
+    echo "Warning: continuing deploy without enforcing project display name '${app_name}'." >&2
+    return 0
+  fi
+
+  local project_file current_name
+  project_file="$(mktemp)"
+  if ! get_project_metadata "$token" "$project_file"; then
+    rm -f "$project_file"
+    echo "Firebase Auth email-name preflight: failed to fetch project metadata." >&2
+    echo "Warning: continuing deploy; auth emails may still show the project id." >&2
+    return 0
+  fi
+  current_name="$(extract_project_display_name "$project_file" || true)"
+  rm -f "$project_file"
+
+  if [ "$current_name" = "$app_name" ]; then
+    return 0
+  fi
+
+  if set_project_display_name "$token" "$app_name"; then
+    echo "Firebase Auth email-name preflight: set project display name to '${app_name}'." >&2
+    return 0
+  fi
+
+  echo "Warning: unable to set project display name to '${app_name}'." >&2
+  echo "Auth emails may still use the project id for %APP_NAME%." >&2
+  return 0
 }
 
 first_web_app_id_from_json() {
@@ -878,6 +1151,147 @@ EOF
   fi
 }
 
+preflight_firebase_auth_authorized_domains() {
+  local frontend_auth_mode
+  frontend_auth_mode="$(resolve_config_value VITE_AUTH_MODE src/frontend/.env .env || true)"
+  if [ -z "$frontend_auth_mode" ]; then
+    frontend_auth_mode="$(resolve_config_value AUTH_MODE functions/.env .env || true)"
+  fi
+  if [ -z "$frontend_auth_mode" ]; then
+    frontend_auth_mode="firebase"
+  fi
+  local auth_mode_lc
+  auth_mode_lc="$(printf '%s' "$frontend_auth_mode" | tr '[:upper:]' '[:lower:]')"
+  if [ "$auth_mode_lc" != "firebase" ]; then
+    return 0
+  fi
+
+  local use_emulator
+  use_emulator="$(resolve_config_value VITE_FIREBASE_USE_EMULATOR src/frontend/.env .env || true)"
+  if is_truthy_value "$use_emulator"; then
+    return 0
+  fi
+
+  local require_authorized_domains
+  require_authorized_domains="$(resolve_config_value FIREBASE_REQUIRE_AUTHORIZED_DOMAINS functions/.env .env || true)"
+  if [ -z "$require_authorized_domains" ]; then
+    require_authorized_domains="1"
+  fi
+
+  local token
+  token="$(google_access_token || true)"
+  if [ -z "$token" ]; then
+    cat >&2 <<'EOF'
+Firebase Auth authorized-domains preflight: could not acquire Google access token.
+Checked:
+  - Application Default Credentials (GOOGLE_APPLICATION_CREDENTIALS / ADC)
+  - Firebase CLI local login token cache (~/.config/configstore/firebase-tools.json)
+EOF
+    if is_truthy_value "$require_authorized_domains"; then
+      echo "Failing deploy because FIREBASE_REQUIRE_AUTHORIZED_DOMAINS=1." >&2
+      exit 1
+    fi
+    echo "Warning: continuing local deploy without automated authorized-domain verification." >&2
+    return 0
+  fi
+
+  local config_file
+  config_file="$(mktemp)"
+  if ! get_identity_platform_config "$token" "$config_file"; then
+    rm -f "$config_file"
+    echo "Failed to fetch Firebase Auth config from Identity Toolkit API for authorized-domain check." >&2
+    if is_truthy_value "$require_authorized_domains"; then
+      echo "Failing deploy because FIREBASE_REQUIRE_AUTHORIZED_DOMAINS=1." >&2
+      exit 1
+    fi
+    echo "Warning: continuing local deploy without automated authorized-domain verification." >&2
+    return 0
+  fi
+
+  local project_for_domains default_firebaseapp default_webapp
+  local current_domains expected_required_domains expected_optional_domains
+  local missing_required_domains missing_optional_domains
+  local explicit_domains hosting_domains domain
+
+  project_for_domains="${VITE_FIREBASE_PROJECT_ID:-${PROJECT_ID}}"
+  default_firebaseapp="${project_for_domains}.firebaseapp.com"
+  default_webapp="${project_for_domains}.web.app"
+  current_domains="$(extract_authorized_domains "$config_file" || true)"
+  expected_required_domains=""
+  expected_optional_domains=""
+  missing_required_domains=""
+  missing_optional_domains=""
+
+  # Optional: defaults are usually implicitly allowed; do not hard-fail if absent from API response.
+  domain_list_add expected_optional_domains "$default_firebaseapp"
+  domain_list_add expected_optional_domains "$default_webapp"
+  domain_list_add expected_optional_domains "${VITE_FIREBASE_AUTH_DOMAIN:-}"
+
+  explicit_domains="$(resolve_config_value FIREBASE_AUTHORIZED_DOMAINS functions/.env .env || true)"
+  if [ -n "$explicit_domains" ]; then
+    while IFS= read -r domain; do
+      [ -z "$domain" ] && continue
+      domain_list_add expected_required_domains "$domain"
+    done < <(printf '%s' "$explicit_domains" | tr ',' '\n')
+  fi
+
+  hosting_domains="$(discover_hosting_domains "$token" "${VITE_FIREBASE_PROJECT_ID:-${PROJECT_ID}}" || true)"
+  if [ -n "$hosting_domains" ]; then
+    while IFS= read -r domain; do
+      [ -z "$domain" ] && continue
+      if [ "$domain" = "$default_firebaseapp" ] || [ "$domain" = "$default_webapp" ]; then
+        domain_list_add expected_optional_domains "$domain"
+      else
+        domain_list_add expected_required_domains "$domain"
+      fi
+    done <<< "$hosting_domains"
+  fi
+
+  while IFS= read -r domain; do
+    [ -z "$domain" ] && continue
+    if ! domain_list_contains "$current_domains" "$domain"; then
+      domain_list_add missing_required_domains "$domain"
+    fi
+  done <<< "$expected_required_domains"
+
+  while IFS= read -r domain; do
+    [ -z "$domain" ] && continue
+    if ! domain_list_contains "$current_domains" "$domain"; then
+      domain_list_add missing_optional_domains "$domain"
+    fi
+  done <<< "$expected_optional_domains"
+
+  rm -f "$config_file"
+
+  if [ -n "$missing_required_domains" ]; then
+    echo "Firebase Auth authorized-domains preflight found missing required domains:" >&2
+    printf '%s\n' "$missing_required_domains" | sed 's/^/  - /' >&2
+    cat >&2 <<'EOF'
+Fix options:
+  1) Configure Firebase Auth authorized domains in Console, then rerun deploy.
+  2) To bypass locally (not recommended), set FIREBASE_REQUIRE_AUTHORIZED_DOMAINS=0.
+EOF
+    cat >&2 <<EOF
+Manual Console steps:
+  - Open: https://console.firebase.google.com/project/${PROJECT_ID}/authentication/settings
+  - Under "Authorized domains", click "Add domain"
+  - Add each missing required domain listed above (hostnames only; no https:// and no path)
+  - Wait ~1-2 minutes for propagation, then rerun deploy
+  - Optional: keep FIREBASE_AUTHORIZED_DOMAINS in .env to document expected domains for this project
+EOF
+    if is_truthy_value "$require_authorized_domains"; then
+      echo "Failing deploy because FIREBASE_REQUIRE_AUTHORIZED_DOMAINS=1." >&2
+      exit 1
+    fi
+    echo "Warning: continuing deploy (FIREBASE_REQUIRE_AUTHORIZED_DOMAINS=0)." >&2
+  fi
+
+  if [ -n "$missing_optional_domains" ]; then
+    echo "Firebase Auth authorized-domains preflight warning: some optional/default domains are not listed by API:" >&2
+    printf '%s\n' "$missing_optional_domains" | sed 's/^/  - /' >&2
+  fi
+}
+
 stage_functions_src() {
   if [ -d "$FUNCTIONS_SRC_DIR" ]; then
     FUNCTIONS_SRC_BACKUP_DIR="$(mktemp -d)"
@@ -1035,7 +1449,9 @@ fi
 
 preflight_app_check_config
 preflight_firebase_auth_signin_config
+preflight_firebase_auth_email_app_name
 preflight_frontend_firebase_config
+preflight_firebase_auth_authorized_domains
 
 PYTHON_BIN=""
 if command -v python3.11 >/dev/null 2>&1; then

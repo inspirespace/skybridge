@@ -55,7 +55,7 @@ def _load_job(job_id: str, user_id: str):
     except ValueError:
         return None
     try:
-        job = store.load_job(job_uuid)
+        job = _get_store().load_job(job_uuid)
     except (FileNotFoundError, ValueError, ValidationError):
         return None
     if job.user_id != user_id:
@@ -156,14 +156,9 @@ def _handle_error(exc: Exception) -> dict[str, Any]:
 
 
 DATA_DIR = Path(os.environ.get("BACKEND_DATA_DIR", "/tmp/backend/jobs"))
-store = JobStore(
-    DATA_DIR,
-    build_object_store_from_env(),
-    firestore_collection=_firestore_jobs_collection(),
-    firestore_project=resolve_project_id(),
-)
-service = JobService(store)
-credential_store = build_credential_store()
+_store: JobStore | None = None
+_service: JobService | None = None
+_credential_store = None
 _pubsub_client = None
 _ACTIVE_JOB_STATUSES = {
     "review_queued",
@@ -171,6 +166,35 @@ _ACTIVE_JOB_STATUSES = {
     "import_queued",
     "import_running",
 }
+
+
+def _get_store() -> JobStore:
+    """Initialize store lazily to keep function discovery lightweight."""
+    global _store
+    if _store is None:
+        _store = JobStore(
+            DATA_DIR,
+            build_object_store_from_env(),
+            firestore_collection=_firestore_jobs_collection(),
+            firestore_project=resolve_project_id(),
+        )
+    return _store
+
+
+def _get_service() -> JobService:
+    """Initialize service lazily."""
+    global _service
+    if _service is None:
+        _service = JobService(_get_store())
+    return _service
+
+
+def _get_credential_store():
+    """Initialize credential store lazily."""
+    global _credential_store
+    if _credential_store is None:
+        _credential_store = build_credential_store()
+    return _credential_store
 
 
 def create_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
@@ -181,6 +205,8 @@ def create_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
             return _response(401, {"detail": "Missing authentication"})
         body = json.loads(event.get("body") or "{}")
         payload = JobCreateRequest.model_validate(body)
+        store = _get_store()
+        service = _get_service()
         existing_jobs = store.list_jobs(user_id)
         if any(job.status in _ACTIVE_JOB_STATUSES for job in existing_jobs):
             return _response(429, {"detail": "Job already in progress"})
@@ -189,7 +215,7 @@ def create_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         job.start_date = payload.start_date
         job.end_date = payload.end_date
         job.max_flights = payload.max_flights
-        token = credential_store.issue(
+        token = _get_credential_store().issue(
             job_id=str(job.job_id),
             purpose="review",
             credentials=payload.credentials.model_dump(),
@@ -210,7 +236,7 @@ def list_jobs_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         user_id = _user_id(event)
         if not user_id:
             return _response(401, {"detail": "Missing authentication"})
-        jobs = store.list_jobs(user_id)
+        jobs = _get_store().list_jobs(user_id)
         return _response(200, {"jobs": [job.model_dump() for job in jobs]})
     except Exception as exc:
         return _handle_error(exc)
@@ -261,6 +287,7 @@ def accept_review_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
         job = _load_job(job_id, user_id)
         if not job:
             return _response(404, {"detail": "Job not found"})
+        store = _get_store()
         review_path = store.job_dir(job.job_id) / "review.json"
         has_import_events = any(
             getattr(event, "phase", None) == "import"
@@ -279,7 +306,7 @@ def accept_review_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
                 return _response(409, {"detail": "Review not ready"})
         body = json.loads(event.get("body") or "{}")
         payload = JobAcceptRequest.model_validate(body)
-        token = credential_store.issue(
+        token = _get_credential_store().issue(
             job_id=str(job.job_id),
             purpose="import",
             credentials=payload.credentials.model_dump(),
@@ -306,7 +333,7 @@ def list_artifacts_handler(event: dict[str, Any], _context: Any) -> dict[str, An
         job = _load_job(job_id, user_id)
         if not job:
             return _response(404, {"detail": "Job not found"})
-        artifacts = store.list_artifacts(job.job_id)
+        artifacts = _get_store().list_artifacts(job.job_id)
         return _response(200, {"artifacts": artifacts})
     except Exception as exc:
         return _handle_error(exc)
@@ -326,7 +353,7 @@ def read_artifact_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
         job = _load_job(job_id, user_id)
         if not job:
             return _response(404, {"detail": "Job not found"})
-        data = store.load_artifact(job.job_id, artifact_name)
+        data = _get_store().load_artifact(job.job_id, artifact_name)
         return _response(200, data)
     except (FileNotFoundError, ValueError):
         return _response(404, {"detail": "Artifact not found"})
@@ -346,7 +373,7 @@ def delete_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         job = _load_job(job_id, user_id)
         if not job:
             return _response(404, {"detail": "Job not found"})
-        store.delete_job(job.job_id, user_id=user_id)
+        _get_store().delete_job(job.job_id, user_id=user_id)
         return _response(200, {"deleted": True})
     except Exception as exc:
         return _handle_error(exc)
@@ -419,6 +446,7 @@ def download_artifacts_zip_handler(event: dict[str, Any], _context: Any) -> dict
         import tempfile
         import zipfile
 
+        store = _get_store()
         job_dir = store.job_dir(job_uuid)
         if not job_dir.exists() and not store.object_store:
             return _response(404, {"detail": "Job not found"})
@@ -490,12 +518,13 @@ def _process_queue_payload(payload: dict[str, Any]) -> None:
     except ValueError:
         return
     try:
+        store = _get_store()
         job = store.load_job(job_uuid)
     except FileNotFoundError:
         return
     creds = None
     if token:
-        creds = credential_store.claim(token, str(job_uuid), purpose)
+        creds = _get_credential_store().claim(token, str(job_uuid), purpose)
     if not creds:
         if job.status in {"review_running", "review_ready", "import_running", "completed"}:
             return
@@ -512,10 +541,10 @@ def _process_queue_payload(payload: dict[str, Any]) -> None:
                 end_date=job.end_date,
                 max_flights=job.max_flights,
             )
-            service.generate_review(job_uuid, request)
+            _get_service().generate_review(job_uuid, request)
         else:
             request = JobAcceptRequest(credentials=creds)
-            service.accept_review(job_uuid, request)
+            _get_service().accept_review(job_uuid, request)
     except Exception as exc:
         job.status = "failed"
         job.error_message = f"Worker failed: {exc}"
