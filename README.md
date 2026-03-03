@@ -96,6 +96,10 @@ CI deploys live from `main` via GitHub Actions (`.github/workflows/firebase-depl
 Required repository secrets:
 - `FIREBASE_SERVICE_ACCOUNT` (service account JSON)
 
+CI and local deploy share the same implementation path:
+- both invoke `./scripts/firebase-deploy.sh`
+- the workflow only provides runtime/tooling and trigger wiring
+
 Manual deploy (zero-config: uses `.firebaserc` default project and prompts login if needed):
 
 ```sh

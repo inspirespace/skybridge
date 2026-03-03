@@ -12,26 +12,13 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
     steps:
-      - name: Preflight deploy requirements
-        id: preflight
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: |
-          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "reason=Missing FIREBASE_SERVICE_ACCOUNT secret." >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-            echo "reason=Firebase deployment secret is present." >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Check out repository
-        if: steps.preflight.outputs.ready == 'true'
         uses: actions/checkout@v4
 
       - name: Set up Node
-        if: steps.preflight.outputs.ready == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -39,31 +26,13 @@ jobs:
           cache-dependency-path: src/frontend/package-lock.json
 
       - name: Set up Python
-        if: steps.preflight.outputs.ready == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install Firebase CLI
-        if: steps.preflight.outputs.ready == 'true'
         run: npm install -g firebase-tools@15.3.1
 
-      - name: Authenticate to Firebase
-        if: steps.preflight.outputs.ready == 'true'
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: |
-          echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
-          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-service-account.json" >> "$GITHUB_ENV"
-
       - name: Deploy functions and hosting (shared script)
-        if: steps.preflight.outputs.ready == 'true'
-        env:
-          FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN: "1"
         run: |
           ./scripts/firebase-deploy.sh
-
-      - name: Skip deploy (requirements not met)
-        if: steps.preflight.outputs.ready != 'true'
-        run: |
-          echo "::notice title=Firebase deploy skipped::${{ steps.preflight.outputs.reason }}"

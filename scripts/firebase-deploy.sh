@@ -308,13 +308,45 @@ get_identity_platform_config() {
 
 ensure_email_link_signin_enabled() {
   local token="$1"
-  curl -fsS \
-    -X PATCH \
-    -H "Authorization: Bearer ${token}" \
-    -H "Content-Type: application/json" \
-    "https://identitytoolkit.googleapis.com/admin/v2/projects/${PROJECT_ID}/config?updateMask=signIn.email.enabled,signIn.email.passwordRequired" \
-    -d '{"signIn":{"email":{"enabled":true,"passwordRequired":false}}}' \
-    >/dev/null
+  local endpoint="https://identitytoolkit.googleapis.com/admin/v2/projects/${PROJECT_ID}/config"
+  local body mask response_file http_code
+  local last_body=""
+  local last_code=""
+
+  for mask in \
+    "signIn.email.enabled,signIn.email.passwordRequired" \
+    "sign_in.email.enabled,sign_in.email.password_required"
+  do
+    if [ "$mask" = "signIn.email.enabled,signIn.email.passwordRequired" ]; then
+      body='{"signIn":{"email":{"enabled":true,"passwordRequired":false}}}'
+    else
+      body='{"sign_in":{"email":{"enabled":true,"password_required":false}}}'
+    fi
+
+    response_file="$(mktemp)"
+    http_code="$(
+      curl -sS \
+        -o "$response_file" \
+        -w "%{http_code}" \
+        -X PATCH \
+        -H "Authorization: Bearer ${token}" \
+        -H "Content-Type: application/json" \
+        "${endpoint}?updateMask=${mask}" \
+        -d "${body}" || true
+    )"
+    if [ "$http_code" -ge 200 ] 2>/dev/null && [ "$http_code" -lt 300 ] 2>/dev/null; then
+      rm -f "$response_file"
+      return 0
+    fi
+    last_code="$http_code"
+    last_body="$(cat "$response_file" 2>/dev/null || true)"
+    rm -f "$response_file"
+  done
+
+  if [ -n "$last_body" ]; then
+    echo "Firebase Auth preflight auto-enable request failed (HTTP ${last_code}): ${last_body}" >&2
+  fi
+  return 1
 }
 
 extract_email_signin_flags() {
@@ -330,15 +362,28 @@ try {
   process.exit(1);
 }
 
-const email = parsed?.signIn?.email ?? {};
+const signIn = parsed?.signIn ?? parsed?.sign_in ?? {};
+const email = signIn?.email ?? {};
 const enabled = email?.enabled === true ? "1" : "0";
-let passwordRequired = "";
-if (email?.passwordRequired === true) passwordRequired = "1";
-if (email?.passwordRequired === false) passwordRequired = "0";
+const passwordRequired =
+  email?.passwordRequired === true || email?.password_required === true ? "1" : "0";
 
 process.stdout.write(`EMAIL_ENABLED=${enabled}\n`);
 process.stdout.write(`EMAIL_PASSWORD_REQUIRED=${passwordRequired}\n`);
 NODE
+}
+
+read_email_signin_flags() {
+  local file_path="$1"
+  local email_enabled=""
+  local email_password_required=""
+  while IFS='=' read -r key value; do
+    case "$key" in
+      EMAIL_ENABLED) email_enabled="$value" ;;
+      EMAIL_PASSWORD_REQUIRED) email_password_required="$value" ;;
+    esac
+  done < <(extract_email_signin_flags "$file_path")
+  printf '%s,%s' "$email_enabled" "$email_password_required"
 }
 
 preflight_app_check_config() {
@@ -436,8 +481,10 @@ EOF
   config_file="$(mktemp)"
   local after_file
   after_file="$(mktemp)"
+  local flags
   local email_enabled=""
   local password_required=""
+  local auto_enable_attempted=0
   if ! get_identity_platform_config "$token" "$config_file"; then
     rm -f "$config_file" "$after_file"
     echo "Failed to fetch Firebase Auth config from Identity Toolkit API." >&2
@@ -448,12 +495,9 @@ EOF
     return 0
   fi
 
-  while IFS='=' read -r key value; do
-    case "$key" in
-      EMAIL_ENABLED) email_enabled="$value" ;;
-      EMAIL_PASSWORD_REQUIRED) password_required="$value" ;;
-    esac
-  done < <(extract_email_signin_flags "$config_file")
+  flags="$(read_email_signin_flags "$config_file")"
+  email_enabled="${flags%%,*}"
+  password_required="${flags#*,}"
 
   local ok=0
   if [ "$email_enabled" = "1" ] && [ "$password_required" = "0" ]; then
@@ -461,37 +505,63 @@ EOF
   fi
 
   if [ "$ok" -ne 1 ] && is_truthy_value "$auto_enable_email_link"; then
+    auto_enable_attempted=1
     echo "Firebase Auth preflight: enabling passwordless email link sign-in on project ${PROJECT_ID}..." >&2
     if ensure_email_link_signin_enabled "$token" && get_identity_platform_config "$token" "$after_file"; then
-      email_enabled=""
-      password_required=""
-      while IFS='=' read -r key value; do
-        case "$key" in
-          EMAIL_ENABLED) email_enabled="$value" ;;
-          EMAIL_PASSWORD_REQUIRED) password_required="$value" ;;
-        esac
-      done < <(extract_email_signin_flags "$after_file")
+      flags="$(read_email_signin_flags "$after_file")"
+      email_enabled="${flags%%,*}"
+      password_required="${flags#*,}"
       if [ "$email_enabled" = "1" ] && [ "$password_required" = "0" ]; then
         ok=1
       fi
     fi
   fi
 
+  if [ "$ok" -ne 1 ]; then
+    # Provider changes can take a few seconds to propagate; retry briefly.
+    local retry=1
+    while [ "$retry" -le 5 ]; do
+      sleep 2
+      if get_identity_platform_config "$token" "$after_file"; then
+        flags="$(read_email_signin_flags "$after_file")"
+        email_enabled="${flags%%,*}"
+        password_required="${flags#*,}"
+        if [ "$email_enabled" = "1" ] && [ "$password_required" = "0" ]; then
+          ok=1
+          break
+        fi
+      fi
+      retry=$((retry + 1))
+    done
+  fi
+
   rm -f "$config_file" "$after_file"
 
   if [ "$ok" -ne 1 ]; then
+    local observed_enabled observed_password_required
+    observed_enabled="${email_enabled:-<unset>}"
+    observed_password_required="${password_required:-<unset>}"
     cat >&2 <<EOF
 Firebase Auth preflight failed for project ${PROJECT_ID}.
 Expected sign-in config:
   - signIn.email.enabled = true
   - signIn.email.passwordRequired = false (email link sign-in enabled)
 
+Observed via Identity Toolkit API:
+  - signIn.email.enabled = ${observed_enabled}
+  - signIn.email.passwordRequired = ${observed_password_required}
+
 Fix options:
   1) Firebase Console -> Authentication -> Sign-in method:
      - Enable "Email/Password"
      - Enable "Email link (passwordless sign-in)"
-  2) Set FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN=1 and rerun deploy.
+  2) Re-run deploy (auto-enable is ON by default).
 EOF
+    if [ "$auto_enable_attempted" -eq 1 ]; then
+      echo "Auto-enable was attempted but provider config did not converge yet." >&2
+    else
+      echo "Auto-enable is currently disabled (FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN=0)." >&2
+    fi
     exit 1
   fi
 }
@@ -895,6 +965,33 @@ delete_trigger_mismatch_functions() {
   return "$found"
 }
 
+sanitize_functions_source_for_deploy() {
+  local removed_any=0
+  local path=""
+
+  while IFS= read -r path; do
+    [ -z "$path" ] && continue
+    rm -f "$path"
+    removed_any=1
+  done < <(find functions -type s -print 2>/dev/null || true)
+
+  while IFS= read -r path; do
+    [ -z "$path" ] && continue
+    rm -f "$path"
+    removed_any=1
+  done < <(find functions -type p -print 2>/dev/null || true)
+
+  while IFS= read -r path; do
+    [ -z "$path" ] && continue
+    rm -f "$path"
+    removed_any=1
+  done < <(find functions -path 'functions/venv' -prune -o -type l -print 2>/dev/null || true)
+
+  if [ "$removed_any" -eq 1 ]; then
+    echo "Sanitized functions source tree (removed sockets/fifos/symlinks) before Firebase upload."
+  fi
+}
+
 # Allow local runs to reuse the CI auth model by passing FIREBASE_SERVICE_ACCOUNT
 # as JSON content. If GOOGLE_APPLICATION_CREDENTIALS is already set, keep it.
 if [ -n "${FIREBASE_SERVICE_ACCOUNT:-}" ] && [ -z "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]; then
@@ -967,9 +1064,11 @@ stage_functions_src
 
 echo "Preparing functions virtual environment with ${PYTHON_BIN}..."
 rm -rf functions/venv
-"$PYTHON_BIN" -m venv functions/venv
+"$PYTHON_BIN" -m venv --copies functions/venv
 functions/venv/bin/python -m pip install --upgrade pip
 functions/venv/bin/python -m pip install -r functions/requirements.txt
+
+sanitize_functions_source_for_deploy
 
 DEPLOY_OUTPUT_FILE="$(mktemp)"
 
