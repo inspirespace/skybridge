@@ -125,6 +125,15 @@ export function ConnectSection({
                 <Label htmlFor="cloudahoy-email">Email</Label>
                 <Input
                   id="cloudahoy-email"
+                  name="cloudahoy-import-email"
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-bwignore="true"
+                  data-form-type="other"
                   placeholder="Email"
                   disabled={connectLocked}
                   value={cloudahoyEmail}
@@ -134,6 +143,12 @@ export function ConnectSection({
                 <Input
                   id="cloudahoy-password"
                   type="password"
+                  name="cloudahoy-import-password"
+                  autoComplete="new-password"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-bwignore="true"
+                  data-form-type="other"
                   placeholder="Password"
                   disabled={connectLocked}
                   value={cloudahoyPassword}
@@ -148,6 +163,15 @@ export function ConnectSection({
                 <Label htmlFor="flysto-email">Email</Label>
                 <Input
                   id="flysto-email"
+                  name="flysto-import-email"
+                  autoComplete="off"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-bwignore="true"
+                  data-form-type="other"
                   placeholder="Email"
                   disabled={connectLocked}
                   value={flystoEmail}
@@ -157,6 +181,12 @@ export function ConnectSection({
                 <Input
                   id="flysto-password"
                   type="password"
+                  name="flysto-import-password"
+                  autoComplete="new-password"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-bwignore="true"
+                  data-form-type="other"
                   placeholder="Password"
                   disabled={connectLocked}
                   value={flystoPassword}
