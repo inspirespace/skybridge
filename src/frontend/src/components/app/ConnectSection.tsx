@@ -1,3 +1,5 @@
+import * as React from "react";
+
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AccordionContent,
@@ -74,6 +76,15 @@ export function ConnectSection({
   connectError?: string | null;
   onRefresh: () => void;
 }) {
+  const [cloudahoyPasswordArmed, setCloudahoyPasswordArmed] = React.useState(false);
+  const [flystoPasswordArmed, setFlystoPasswordArmed] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!connectLocked) return;
+    setCloudahoyPasswordArmed(false);
+    setFlystoPasswordArmed(false);
+  }, [connectLocked]);
+
   return (
     <AccordionItem
       value="connect"
@@ -118,6 +129,25 @@ export function ConnectSection({
           </Alert>
 
           <div className="grid gap-4 md:grid-cols-2">
+            {/* Decoy login fields to divert aggressive password managers. */}
+            <div className="sr-only" aria-hidden="true">
+              <input
+                type="text"
+                name="username"
+                autoComplete="username"
+                tabIndex={-1}
+                defaultValue=""
+                readOnly
+              />
+              <input
+                type="password"
+                name="password"
+                autoComplete="current-password"
+                tabIndex={-1}
+                defaultValue=""
+                readOnly
+              />
+            </div>
             <div className="space-y-2">
               <div className="text-sm font-semibold text-foreground">CloudAhoy</div>
               <div className="relative space-y-3 overflow-hidden rounded-xl border border-border/40 bg-muted/30 p-4 dark:border-[hsl(var(--sky-accent))]/15 dark:bg-[hsl(var(--cockpit-dark))]/40">
@@ -125,7 +155,7 @@ export function ConnectSection({
                 <Label htmlFor="cloudahoy-email">Email</Label>
                 <Input
                   id="cloudahoy-email"
-                  name="cloudahoy-import-email"
+                  name="cloudahoy-import-id"
                   autoComplete="off"
                   autoCapitalize="none"
                   autoCorrect="off"
@@ -143,12 +173,16 @@ export function ConnectSection({
                 <Input
                   id="cloudahoy-password"
                   type="password"
-                  name="cloudahoy-import-password"
-                  autoComplete="new-password"
+                  name="cloudahoy-secret"
+                  autoComplete="off"
                   data-lpignore="true"
                   data-1p-ignore="true"
                   data-bwignore="true"
                   data-form-type="other"
+                  readOnly={!connectLocked && !cloudahoyPasswordArmed}
+                  onFocus={() => setCloudahoyPasswordArmed(true)}
+                  onPointerDown={() => setCloudahoyPasswordArmed(true)}
+                  onKeyDown={() => setCloudahoyPasswordArmed(true)}
                   placeholder="Password"
                   disabled={connectLocked}
                   value={cloudahoyPassword}
@@ -163,7 +197,7 @@ export function ConnectSection({
                 <Label htmlFor="flysto-email">Email</Label>
                 <Input
                   id="flysto-email"
-                  name="flysto-import-email"
+                  name="flysto-import-id"
                   autoComplete="off"
                   autoCapitalize="none"
                   autoCorrect="off"
@@ -181,12 +215,16 @@ export function ConnectSection({
                 <Input
                   id="flysto-password"
                   type="password"
-                  name="flysto-import-password"
-                  autoComplete="new-password"
+                  name="flysto-secret"
+                  autoComplete="off"
                   data-lpignore="true"
                   data-1p-ignore="true"
                   data-bwignore="true"
                   data-form-type="other"
+                  readOnly={!connectLocked && !flystoPasswordArmed}
+                  onFocus={() => setFlystoPasswordArmed(true)}
+                  onPointerDown={() => setFlystoPasswordArmed(true)}
+                  onKeyDown={() => setFlystoPasswordArmed(true)}
                   placeholder="Password"
                   disabled={connectLocked}
                   value={flystoPassword}

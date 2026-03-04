@@ -203,6 +203,10 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Initialize theme from host system preference when no saved theme exists, including first paint and toggle state across SPA + static pages.
 - [x] Streamline Firebase email-link sign-in UX: use inline auth card on `/app` (no duplicate modal), prefill email-link completion from redirect email hint, and add deploy preflight to align auth email `%APP_NAME%` branding via project display name.
 - [x] Reduce password-manager save prompts on CloudAhoy/FlySto credential fields by adding `autocomplete` suppression plus manager-specific ignore attributes (`data-lpignore`, `data-1p-ignore`, `data-bwignore`).
+- [x] Further harden credential fields against password-manager prompts by adding decoy hidden login inputs and a readOnly-until-user-interaction pattern for CloudAhoy/FlySto password fields.
+- [x] Remove unused `FirebaseAuthDialog` component file to prevent accidental reintroduction of auth modal behavior on `/app`.
+- [x] Add deploy-time Firebase Auth email-template branding fallback (zero-config default) so email-link copy stays branded when `%APP_NAME%` resolves to project/site IDs.
+- [x] Fix production API base fallback to same-origin `/api` (instead of `https://skybridge.localhost/api`) to prevent CSP `connect-src` failures on deployed domains.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.

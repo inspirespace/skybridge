@@ -104,8 +104,9 @@ export type CredentialValidationResponse = {
   ok: boolean;
 };
 
-export const apiBaseUrl =
-  import.meta.env.VITE_API_BASE_URL ?? "https://skybridge.localhost/api";
+const configuredApiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
+const rawApiBaseUrl = configuredApiBaseUrl || "/api";
+export const apiBaseUrl = rawApiBaseUrl.replace(/\/+$/, "");
 
 const authMode = import.meta.env.VITE_AUTH_MODE ?? "header";
 const RETRY_ATTEMPTS = Number.parseInt(

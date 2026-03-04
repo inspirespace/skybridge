@@ -50,6 +50,13 @@ describe("buildAuthHeaders", () => {
   });
 });
 
+describe("api base URL", () => {
+  it("defaults to same-origin /api when unset", async () => {
+    const { apiBaseUrl } = await import("@/api/client");
+    expect(apiBaseUrl).toBe("/api");
+  });
+});
+
 describe("request helpers", () => {
   it("propagates json error details and status", async () => {
     vi.stubEnv("VITE_AUTH_MODE", "header");

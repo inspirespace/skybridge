@@ -34,7 +34,7 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - Defaults are derived from project id (`.firebaserc` locally, runtime metadata in deployed functions).
 
 ## Frontend build configuration (Firebase)
-- `VITE_API_BASE_URL` points at your Firebase Hosting domain.
+- `VITE_API_BASE_URL` is optional; default is same-origin `/api` (recommended with Firebase Hosting rewrites).
 - `VITE_AUTH_MODE=firebase` (optional; defaults from `AUTH_MODE`)
 - `VITE_FIREBASE_API_KEY=<web api key>`
 - `VITE_FIREBASE_APP_ID=<web app id>`
@@ -47,6 +47,7 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - Deploy preflight also validates passwordless email-link sign-in mode (`signIn.email.enabled=true`, `signIn.email.passwordRequired=false`) when `FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN=1` (default).
 - Auto-enable defaults to ON (`FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN=1` when unset); set `FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN=0` to disable auto-patching.
 - Optional: `FIREBASE_AUTH_EMAIL_APP_NAME` controls the display name used for Firebase Auth emails (mapped to project display name; default `Skybridge`).
+- Optional: `FIREBASE_AUTO_PATCH_EMAIL_TEMPLATE_BRANDING=0` disables deploy-time email-template branding fallback (default is enabled).
 - Auth preflight verification/auto-enable uses Google ADC (`GOOGLE_APPLICATION_CREDENTIALS`) and falls back to Firebase CLI login token cache.
 ## Deploy
 - `npm --prefix src/frontend run build`
@@ -69,7 +70,7 @@ Custom domains are configured in the Firebase console (not via `firebase deploy`
 
 Notes:
 - Use only one canonical hostname for production and include it in `CORS_ALLOW_ORIGINS`.
-- Keep `VITE_API_BASE_URL` pointed at the same Firebase Hosting domain users will access.
+- Keep `VITE_API_BASE_URL` as `/api` (or, if overridden, point it at the same Firebase Hosting domain users access).
 - Firebase Hosting is global CDN-backed; there is no dedicated EU-only Hosting region setting.
 
 ## Storage lifecycle rule

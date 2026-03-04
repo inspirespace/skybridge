@@ -412,6 +412,58 @@ NODE
   return 1
 }
 
+build_email_brand_template_json() {
+  local app_name="$1"
+  node - "$app_name" <<'NODE'
+const appName = process.argv[2] || "Skybridge";
+const template = {
+  subject: `Continue with ${appName}`,
+  body: [
+    "Hello,",
+    "",
+    `Use this link to continue with ${appName}:`,
+    "",
+    "%LINK%",
+    "",
+    "If you did not request this email, you can safely ignore it.",
+    "",
+    "Thanks,",
+    "",
+    `Your ${appName} team`,
+  ].join("\n"),
+  bodyFormat: "PLAIN_TEXT",
+  senderDisplayName: appName,
+};
+process.stdout.write(JSON.stringify(template));
+NODE
+}
+
+patch_identity_platform_config() {
+  local token="$1"
+  local update_mask="$2"
+  local body="$3"
+  local endpoint="https://identitytoolkit.googleapis.com/admin/v2/projects/${PROJECT_ID}/config"
+  local response_file http_code
+
+  response_file="$(mktemp)"
+  http_code="$(
+    curl -sS \
+      -o "$response_file" \
+      -w "%{http_code}" \
+      -X PATCH \
+      -H "Authorization: Bearer ${token}" \
+      -H "Content-Type: application/json" \
+      "${endpoint}?updateMask=${update_mask}" \
+      -d "${body}" || true
+  )"
+  if [ "$http_code" -ge 200 ] 2>/dev/null && [ "$http_code" -lt 300 ] 2>/dev/null; then
+    rm -f "$response_file"
+    return 0
+  fi
+  rm -f "$response_file"
+  return 1
+}
+
 extract_authorized_domains() {
   local file_path="$1"
   node - "$file_path" <<'NODE'
@@ -555,6 +607,49 @@ ensure_email_link_signin_enabled() {
   if [ -n "$last_body" ]; then
     echo "Firebase Auth preflight auto-enable request failed (HTTP ${last_code}): ${last_body}" >&2
   fi
+  return 1
+}
+
+ensure_email_auth_template_branding() {
+  local token="$1"
+  local app_name="$2"
+  local template_json
+  local body
+  local update_mask
+
+  template_json="$(build_email_brand_template_json "$app_name")"
+  if [ -z "$template_json" ]; then
+    return 1
+  fi
+
+  # Newer API shape observed in some projects for dedicated email-link sign-in templates.
+  update_mask="notification.sendEmail.emailSignInTemplate.subject,notification.sendEmail.emailSignInTemplate.body,notification.sendEmail.emailSignInTemplate.bodyFormat,notification.sendEmail.emailSignInTemplate.senderDisplayName"
+  body="$(printf '{"notification":{"sendEmail":{"emailSignInTemplate":%s}}}' "$template_json")"
+  if patch_identity_platform_config "$token" "$update_mask" "$body"; then
+    return 0
+  fi
+
+  # Snake_case fallback for backend compatibility drift.
+  update_mask="notification.send_email.email_sign_in_template.subject,notification.send_email.email_sign_in_template.body,notification.send_email.email_sign_in_template.body_format,notification.send_email.email_sign_in_template.sender_display_name"
+  body="$(printf '{"notification":{"send_email":{"email_sign_in_template":%s}}}' "$template_json")"
+  if patch_identity_platform_config "$token" "$update_mask" "$body"; then
+    return 0
+  fi
+
+  # Fallback to verify-email template path used by Firebase Auth in many projects.
+  update_mask="notification.sendEmail.verifyEmailTemplate.subject,notification.sendEmail.verifyEmailTemplate.body,notification.sendEmail.verifyEmailTemplate.bodyFormat,notification.sendEmail.verifyEmailTemplate.senderDisplayName"
+  body="$(printf '{"notification":{"sendEmail":{"verifyEmailTemplate":%s}}}' "$template_json")"
+  if patch_identity_platform_config "$token" "$update_mask" "$body"; then
+    return 0
+  fi
+
+  # Snake_case fallback for verify-email template path.
+  update_mask="notification.send_email.verify_email_template.subject,notification.send_email.verify_email_template.body,notification.send_email.verify_email_template.body_format,notification.send_email.verify_email_template.sender_display_name"
+  body="$(printf '{"notification":{"send_email":{"verify_email_template":%s}}}' "$template_json")"
+  if patch_identity_platform_config "$token" "$update_mask" "$body"; then
+    return 0
+  fi
+
   return 1
 }
 
@@ -836,6 +931,64 @@ preflight_firebase_auth_email_app_name() {
 
   echo "Warning: unable to set project display name to '${app_name}'." >&2
   echo "Auth emails may still use the project id for %APP_NAME%." >&2
+  return 0
+}
+
+preflight_firebase_auth_email_template_branding() {
+  local frontend_auth_mode
+  frontend_auth_mode="$(resolve_config_value VITE_AUTH_MODE src/frontend/.env .env || true)"
+  if [ -z "$frontend_auth_mode" ]; then
+    frontend_auth_mode="$(resolve_config_value AUTH_MODE functions/.env .env || true)"
+  fi
+  if [ -z "$frontend_auth_mode" ]; then
+    frontend_auth_mode="firebase"
+  fi
+  local auth_mode_lc
+  auth_mode_lc="$(printf '%s' "$frontend_auth_mode" | tr '[:upper:]' '[:lower:]')"
+  if [ "$auth_mode_lc" != "firebase" ]; then
+    return 0
+  fi
+
+  local use_emulator
+  use_emulator="$(resolve_config_value VITE_FIREBASE_USE_EMULATOR src/frontend/.env .env || true)"
+  if is_truthy_value "$use_emulator"; then
+    return 0
+  fi
+
+  local auto_patch
+  auto_patch="$(resolve_config_value FIREBASE_AUTO_PATCH_EMAIL_TEMPLATE_BRANDING functions/.env .env || true)"
+  if [ -z "$auto_patch" ]; then
+    auto_patch="1"
+  fi
+  if ! is_truthy_value "$auto_patch"; then
+    return 0
+  fi
+
+  local app_name
+  app_name="$(resolve_config_value FIREBASE_AUTH_EMAIL_APP_NAME functions/.env .env || true)"
+  if [ -z "$app_name" ]; then
+    app_name="Skybridge"
+  fi
+  app_name="$(normalize_env_value "$app_name")"
+  if [ -z "$app_name" ]; then
+    return 0
+  fi
+
+  local token
+  token="$(google_access_token || true)"
+  if [ -z "$token" ]; then
+    echo "Firebase Auth email-template preflight: could not acquire Google access token." >&2
+    echo "Warning: continuing deploy without template branding fallback for '${app_name}'." >&2
+    return 0
+  fi
+
+  if ensure_email_auth_template_branding "$token" "$app_name"; then
+    echo "Firebase Auth email-template preflight: template branding fallback set to '${app_name}'." >&2
+    return 0
+  fi
+
+  echo "Warning: unable to patch Firebase Auth email template branding fallback." >&2
+  echo "Auth emails may still resolve %APP_NAME% to the project/site identifier." >&2
   return 0
 }
 
@@ -1450,6 +1603,7 @@ fi
 preflight_app_check_config
 preflight_firebase_auth_signin_config
 preflight_firebase_auth_email_app_name
+preflight_firebase_auth_email_template_branding
 preflight_frontend_firebase_config
 preflight_firebase_auth_authorized_domains
 
