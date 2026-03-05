@@ -165,7 +165,6 @@ export default function App() {
     authReady: firebaseAuthReady,
     emailLinkPending: firebaseEmailLinkPending,
     signOut: signOutFirebase,
-    clearAuth: clearFirebaseAuth,
   } = useFirebaseAuth({
     enabled: AUTH_MODE === "firebase",
     apiKey: FIREBASE_API_KEY,
@@ -759,11 +758,11 @@ export default function App() {
       clearOidcAuth();
     }
     if (AUTH_MODE === "firebase") {
-      clearFirebaseAuth();
+      void signOutFirebase();
     }
     setShowAllFlights(false);
     setActionError(null);
-  }, [AUTH_MODE, clearOidcAuth, clearFirebaseAuth, setHeaderUserId]);
+  }, [AUTH_MODE, clearOidcAuth, signOutFirebase, setHeaderUserId]);
 
   React.useEffect(() => {
     if (!jobError || !isSignedIn) return;
