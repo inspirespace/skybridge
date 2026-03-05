@@ -347,123 +347,6 @@ get_identity_platform_config() {
     >"$output_file"
 }
 
-get_project_metadata() {
-  local token="$1"
-  local output_file="$2"
-  curl -fsS \
-    -H "Authorization: Bearer ${token}" \
-    "https://cloudresourcemanager.googleapis.com/v3/projects/${PROJECT_ID}" \
-    >"$output_file"
-}
-
-extract_project_display_name() {
-  local file_path="$1"
-  node - "$file_path" <<'NODE'
-const fs = require("fs");
-
-const filePath = process.argv[2];
-let parsed;
-try {
-  parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
-} catch {
-  process.exit(1);
-}
-
-const displayName =
-  (typeof parsed?.displayName === "string" && parsed.displayName.trim()) ||
-  (typeof parsed?.display_name === "string" && parsed.display_name.trim()) ||
-  "";
-if (displayName) {
-  process.stdout.write(displayName);
-}
-NODE
-}
-
-set_project_display_name() {
-  local token="$1"
-  local display_name="$2"
-  local endpoint="https://cloudresourcemanager.googleapis.com/v3/projects/${PROJECT_ID}"
-  local response_file http_code body
-
-  body="$(
-    node - "$display_name" <<'NODE'
-const displayName = process.argv[2] ?? "";
-process.stdout.write(JSON.stringify({ displayName }));
-NODE
-  )"
-
-  response_file="$(mktemp)"
-  http_code="$(
-    curl -sS \
-      -o "$response_file" \
-      -w "%{http_code}" \
-      -X PATCH \
-      -H "Authorization: Bearer ${token}" \
-      -H "Content-Type: application/json" \
-      "${endpoint}?updateMask=displayName" \
-      -d "${body}" || true
-  )"
-  if [ "$http_code" -ge 200 ] 2>/dev/null && [ "$http_code" -lt 300 ] 2>/dev/null; then
-    rm -f "$response_file"
-    return 0
-  fi
-  echo "Failed to set project display name (HTTP ${http_code}): $(cat "$response_file" 2>/dev/null || true)" >&2
-  rm -f "$response_file"
-  return 1
-}
-
-build_email_brand_template_json() {
-  local app_name="$1"
-  node - "$app_name" <<'NODE'
-const appName = process.argv[2] || "Skybridge";
-const template = {
-  subject: `Continue with ${appName}`,
-  body: [
-    "Hello,",
-    "",
-    `Use this link to continue with ${appName}:`,
-    "",
-    "%LINK%",
-    "",
-    "If you did not request this email, you can safely ignore it.",
-    "",
-    "Thanks,",
-    "",
-    `Your ${appName} team`,
-  ].join("\n"),
-  bodyFormat: "PLAIN_TEXT",
-  senderDisplayName: appName,
-};
-process.stdout.write(JSON.stringify(template));
-NODE
-}
-
-patch_identity_platform_config() {
-  local token="$1"
-  local update_mask="$2"
-  local body="$3"
-  local endpoint="https://identitytoolkit.googleapis.com/admin/v2/projects/${PROJECT_ID}/config"
-  local response_file http_code
-
-  response_file="$(mktemp)"
-  http_code="$(
-    curl -sS \
-      -o "$response_file" \
-      -w "%{http_code}" \
-      -X PATCH \
-      -H "Authorization: Bearer ${token}" \
-      -H "Content-Type: application/json" \
-      "${endpoint}?updateMask=${update_mask}" \
-      -d "${body}" || true
-  )"
-  if [ "$http_code" -ge 200 ] 2>/dev/null && [ "$http_code" -lt 300 ] 2>/dev/null; then
-    rm -f "$response_file"
-    return 0
-  fi
-  rm -f "$response_file"
-  return 1
-}
-
 extract_authorized_domains() {
   local file_path="$1"
   node - "$file_path" <<'NODE'
@@ -567,92 +450,6 @@ const fetchJson = async (url) => {
 NODE
 }
 
-ensure_email_link_signin_enabled() {
-  local token="$1"
-  local endpoint="https://identitytoolkit.googleapis.com/admin/v2/projects/${PROJECT_ID}/config"
-  local body mask response_file http_code
-  local last_body=""
-  local last_code=""
-
-  for mask in \
-    "signIn.email.enabled,signIn.email.passwordRequired" \
-    "sign_in.email.enabled,sign_in.email.password_required"
-  do
-    if [ "$mask" = "signIn.email.enabled,signIn.email.passwordRequired" ]; then
-      body='{"signIn":{"email":{"enabled":true,"passwordRequired":false}}}'
-    else
-      body='{"sign_in":{"email":{"enabled":true,"password_required":false}}}'
-    fi
-
-    response_file="$(mktemp)"
-    http_code="$(
-      curl -sS \
-        -o "$response_file" \
-        -w "%{http_code}" \
-        -X PATCH \
-        -H "Authorization: Bearer ${token}" \
-        -H "Content-Type: application/json" \
-        "${endpoint}?updateMask=${mask}" \
-        -d "${body}" || true
-    )"
-    if [ "$http_code" -ge 200 ] 2>/dev/null && [ "$http_code" -lt 300 ] 2>/dev/null; then
-      rm -f "$response_file"
-      return 0
-    fi
-    last_code="$http_code"
-    last_body="$(cat "$response_file" 2>/dev/null || true)"
-    rm -f "$response_file"
-  done
-
-  if [ -n "$last_body" ]; then
-    echo "Firebase Auth preflight auto-enable request failed (HTTP ${last_code}): ${last_body}" >&2
-  fi
-  return 1
-}
-
-ensure_email_auth_template_branding() {
-  local token="$1"
-  local app_name="$2"
-  local template_json
-  local body
-  local update_mask
-
-  template_json="$(build_email_brand_template_json "$app_name")"
-  if [ -z "$template_json" ]; then
-    return 1
-  fi
-
-  # Newer API shape observed in some projects for dedicated email-link sign-in templates.
-  update_mask="notification.sendEmail.emailSignInTemplate.subject,notification.sendEmail.emailSignInTemplate.body,notification.sendEmail.emailSignInTemplate.bodyFormat,notification.sendEmail.emailSignInTemplate.senderDisplayName"
-  body="$(printf '{"notification":{"sendEmail":{"emailSignInTemplate":%s}}}' "$template_json")"
-  if patch_identity_platform_config "$token" "$update_mask" "$body"; then
-    return 0
-  fi
-
-  # Snake_case fallback for backend compatibility drift.
-  update_mask="notification.send_email.email_sign_in_template.subject,notification.send_email.email_sign_in_template.body,notification.send_email.email_sign_in_template.body_format,notification.send_email.email_sign_in_template.sender_display_name"
-  body="$(printf '{"notification":{"send_email":{"email_sign_in_template":%s}}}' "$template_json")"
-  if patch_identity_platform_config "$token" "$update_mask" "$body"; then
-    return 0
-  fi
-
-  # Fallback to verify-email template path used by Firebase Auth in many projects.
-  update_mask="notification.sendEmail.verifyEmailTemplate.subject,notification.sendEmail.verifyEmailTemplate.body,notification.sendEmail.verifyEmailTemplate.bodyFormat,notification.sendEmail.verifyEmailTemplate.senderDisplayName"
-  body="$(printf '{"notification":{"sendEmail":{"verifyEmailTemplate":%s}}}' "$template_json")"
-  if patch_identity_platform_config "$token" "$update_mask" "$body"; then
-    return 0
-  fi
-
-  # Snake_case fallback for verify-email template path.
-  update_mask="notification.send_email.verify_email_template.subject,notification.send_email.verify_email_template.body,notification.send_email.verify_email_template.body_format,notification.send_email.verify_email_template.sender_display_name"
-  body="$(printf '{"notification":{"send_email":{"verify_email_template":%s}}}' "$template_json")"
-  if patch_identity_platform_config "$token" "$update_mask" "$body"; then
-    return 0
-  fi
-
-  return 1
-}
-
 extract_email_signin_flags() {
   local file_path="$1"
   node - "$file_path" <<'NODE'
@@ -729,6 +526,71 @@ preflight_app_check_config() {
   fi
 }
 
+print_firebase_auth_setup_overview() {
+  local frontend_auth_mode
+  frontend_auth_mode="$(resolve_config_value VITE_AUTH_MODE src/frontend/.env .env || true)"
+  if [ -z "$frontend_auth_mode" ]; then
+    frontend_auth_mode="$(resolve_config_value AUTH_MODE functions/.env .env || true)"
+  fi
+  if [ -z "$frontend_auth_mode" ]; then
+    frontend_auth_mode="firebase"
+  fi
+  local auth_mode_lc
+  auth_mode_lc="$(printf '%s' "$frontend_auth_mode" | tr '[:upper:]' '[:lower:]')"
+  if [ "$auth_mode_lc" != "firebase" ]; then
+    return 0
+  fi
+
+  local use_emulator
+  use_emulator="$(resolve_config_value VITE_FIREBASE_USE_EMULATOR src/frontend/.env .env || true)"
+  if is_truthy_value "$use_emulator"; then
+    return 0
+  fi
+
+  local app_name project_for_domains auth_domain explicit_domains
+  app_name="$(resolve_config_value FIREBASE_AUTH_EMAIL_APP_NAME functions/.env .env || true)"
+  if [ -z "$app_name" ]; then
+    app_name="Skybridge"
+  fi
+  app_name="$(normalize_env_value "$app_name")"
+  if [ -z "$app_name" ]; then
+    app_name="Skybridge"
+  fi
+
+  project_for_domains="${VITE_FIREBASE_PROJECT_ID:-${PROJECT_ID}}"
+  auth_domain="${VITE_FIREBASE_AUTH_DOMAIN:-${project_for_domains}.firebaseapp.com}"
+  explicit_domains="$(resolve_config_value FIREBASE_AUTHORIZED_DOMAINS functions/.env .env || true)"
+
+  cat >&2 <<EOF
+Firebase Auth manual setup overview for project ${project_for_domains}:
+  1) Sign-in method (required):
+     - Enable "Email/Password"
+     - Enable "Email link (passwordless sign-in)"
+     - Console: https://console.firebase.google.com/project/${PROJECT_ID}/authentication/providers
+  2) Email template branding (required for friendly app naming):
+     - Open the "Email address sign-in" template in Firebase Console
+     - Set sender/app display name to "${app_name}" (or your preferred friendly name)
+     - Update subject/body copy so emails say your brand instead of project ids
+     - Console: https://console.firebase.google.com/project/${PROJECT_ID}/authentication/templates
+  3) Authorized domains for email-link continueUrl (required):
+     - Ensure these are present in Authentication -> Settings:
+       - ${auth_domain}
+       - ${project_for_domains}.web.app
+     - Console: https://console.firebase.google.com/project/${PROJECT_ID}/authentication/settings
+EOF
+
+  if [ -n "$explicit_domains" ]; then
+    echo "  - Additional domains from FIREBASE_AUTHORIZED_DOMAINS:" >&2
+    while IFS= read -r domain; do
+      domain="$(normalize_domain_candidate "$domain")"
+      [ -z "$domain" ] && continue
+      echo "    - $domain" >&2
+    done < <(printf '%s' "$explicit_domains" | tr ',' '\n')
+  fi
+
+  echo "Deploy preflight verifies sign-in mode and authorized domains only; it does not auto-patch Firebase Auth templates or project naming." >&2
+}
+
 preflight_firebase_auth_signin_config() {
   local frontend_auth_mode
   frontend_auth_mode="$(resolve_config_value VITE_AUTH_MODE src/frontend/.env .env || true)"
@@ -751,14 +613,9 @@ preflight_firebase_auth_signin_config() {
   fi
 
   local require_email_link
-  local auto_enable_email_link
   require_email_link="$(resolve_config_value FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN functions/.env .env || true)"
-  auto_enable_email_link="$(resolve_config_value FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN functions/.env .env || true)"
   if [ -z "$require_email_link" ]; then
     require_email_link="1"
-  fi
-  if [ -z "$auto_enable_email_link" ]; then
-    auto_enable_email_link="1"
   fi
   if ! is_truthy_value "$require_email_link"; then
     return 0
@@ -783,14 +640,11 @@ EOF
 
   local config_file
   config_file="$(mktemp)"
-  local after_file
-  after_file="$(mktemp)"
   local flags
   local email_enabled=""
   local password_required=""
-  local auto_enable_attempted=0
   if ! get_identity_platform_config "$token" "$config_file"; then
-    rm -f "$config_file" "$after_file"
+    rm -f "$config_file"
     echo "Failed to fetch Firebase Auth config from Identity Toolkit API." >&2
     if [ -n "${CI:-}" ]; then
       exit 1
@@ -808,26 +662,13 @@ EOF
     ok=1
   fi
 
-  if [ "$ok" -ne 1 ] && is_truthy_value "$auto_enable_email_link"; then
-    auto_enable_attempted=1
-    echo "Firebase Auth preflight: enabling passwordless email link sign-in on project ${PROJECT_ID}..." >&2
-    if ensure_email_link_signin_enabled "$token" && get_identity_platform_config "$token" "$after_file"; then
-      flags="$(read_email_signin_flags "$after_file")"
-      email_enabled="${flags%%,*}"
-      password_required="${flags#*,}"
-      if [ "$email_enabled" = "1" ] && [ "$password_required" = "0" ]; then
-        ok=1
-      fi
-    fi
-  fi
-
   if [ "$ok" -ne 1 ]; then
-    # Provider changes can take a few seconds to propagate; retry briefly.
+    # Manual provider changes can take a few seconds to propagate; retry briefly.
     local retry=1
     while [ "$retry" -le 5 ]; do
       sleep 2
-      if get_identity_platform_config "$token" "$after_file"; then
-        flags="$(read_email_signin_flags "$after_file")"
+      if get_identity_platform_config "$token" "$config_file"; then
+        flags="$(read_email_signin_flags "$config_file")"
         email_enabled="${flags%%,*}"
         password_required="${flags#*,}"
         if [ "$email_enabled" = "1" ] && [ "$password_required" = "0" ]; then
@@ -839,7 +680,7 @@ EOF
     done
   fi
 
-  rm -f "$config_file" "$after_file"
+  rm -f "$config_file"
 
   if [ "$ok" -ne 1 ]; then
     local observed_enabled observed_password_required
@@ -859,137 +700,10 @@ Fix options:
   1) Firebase Console -> Authentication -> Sign-in method:
      - Enable "Email/Password"
      - Enable "Email link (passwordless sign-in)"
-  2) Re-run deploy (auto-enable is ON by default).
+  2) Re-run deploy after the setting is saved.
 EOF
-    if [ "$auto_enable_attempted" -eq 1 ]; then
-      echo "Auto-enable was attempted but provider config did not converge yet." >&2
-    else
-      echo "Auto-enable is currently disabled (FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN=0)." >&2
-    fi
     exit 1
   fi
-}
-
-preflight_firebase_auth_email_app_name() {
-  local frontend_auth_mode
-  frontend_auth_mode="$(resolve_config_value VITE_AUTH_MODE src/frontend/.env .env || true)"
-  if [ -z "$frontend_auth_mode" ]; then
-    frontend_auth_mode="$(resolve_config_value AUTH_MODE functions/.env .env || true)"
-  fi
-  if [ -z "$frontend_auth_mode" ]; then
-    frontend_auth_mode="firebase"
-  fi
-  local auth_mode_lc
-  auth_mode_lc="$(printf '%s' "$frontend_auth_mode" | tr '[:upper:]' '[:lower:]')"
-  if [ "$auth_mode_lc" != "firebase" ]; then
-    return 0
-  fi
-
-  local use_emulator
-  use_emulator="$(resolve_config_value VITE_FIREBASE_USE_EMULATOR src/frontend/.env .env || true)"
-  if is_truthy_value "$use_emulator"; then
-    return 0
-  fi
-
-  local app_name
-  app_name="$(resolve_config_value FIREBASE_AUTH_EMAIL_APP_NAME functions/.env .env || true)"
-  if [ -z "$app_name" ]; then
-    app_name="Skybridge"
-  fi
-  app_name="$(normalize_env_value "$app_name")"
-  if [ -z "$app_name" ]; then
-    return 0
-  fi
-
-  local token
-  token="$(google_access_token || true)"
-  if [ -z "$token" ]; then
-    echo "Firebase Auth email-name preflight: could not acquire Google access token." >&2
-    echo "Warning: continuing deploy without enforcing project display name '${app_name}'." >&2
-    return 0
-  fi
-
-  local project_file current_name
-  project_file="$(mktemp)"
-  if ! get_project_metadata "$token" "$project_file"; then
-    rm -f "$project_file"
-    echo "Firebase Auth email-name preflight: failed to fetch project metadata." >&2
-    echo "Warning: continuing deploy; auth emails may still show the project id." >&2
-    return 0
-  fi
-  current_name="$(extract_project_display_name "$project_file" || true)"
-  rm -f "$project_file"
-
-  if [ "$current_name" = "$app_name" ]; then
-    return 0
-  fi
-
-  if set_project_display_name "$token" "$app_name"; then
-    echo "Firebase Auth email-name preflight: set project display name to '${app_name}'." >&2
-    return 0
-  fi
-
-  echo "Warning: unable to set project display name to '${app_name}'." >&2
-  echo "Auth emails may still use the project id for %APP_NAME%." >&2
-  return 0
-}
-
-preflight_firebase_auth_email_template_branding() {
-  local frontend_auth_mode
-  frontend_auth_mode="$(resolve_config_value VITE_AUTH_MODE src/frontend/.env .env || true)"
-  if [ -z "$frontend_auth_mode" ]; then
-    frontend_auth_mode="$(resolve_config_value AUTH_MODE functions/.env .env || true)"
-  fi
-  if [ -z "$frontend_auth_mode" ]; then
-    frontend_auth_mode="firebase"
-  fi
-  local auth_mode_lc
-  auth_mode_lc="$(printf '%s' "$frontend_auth_mode" | tr '[:upper:]' '[:lower:]')"
-  if [ "$auth_mode_lc" != "firebase" ]; then
-    return 0
-  fi
-
-  local use_emulator
-  use_emulator="$(resolve_config_value VITE_FIREBASE_USE_EMULATOR src/frontend/.env .env || true)"
-  if is_truthy_value "$use_emulator"; then
-    return 0
-  fi
-
-  local auto_patch
-  auto_patch="$(resolve_config_value FIREBASE_AUTO_PATCH_EMAIL_TEMPLATE_BRANDING functions/.env .env || true)"
-  if [ -z "$auto_patch" ]; then
-    auto_patch="1"
-  fi
-  if ! is_truthy_value "$auto_patch"; then
-    return 0
-  fi
-
-  local app_name
-  app_name="$(resolve_config_value FIREBASE_AUTH_EMAIL_APP_NAME functions/.env .env || true)"
-  if [ -z "$app_name" ]; then
-    app_name="Skybridge"
-  fi
-  app_name="$(normalize_env_value "$app_name")"
-  if [ -z "$app_name" ]; then
-    return 0
-  fi
-
-  local token
-  token="$(google_access_token || true)"
-  if [ -z "$token" ]; then
-    echo "Firebase Auth email-template preflight: could not acquire Google access token." >&2
-    echo "Warning: continuing deploy without template branding fallback for '${app_name}'." >&2
-    return 0
-  fi
-
-  if ensure_email_auth_template_branding "$token" "$app_name"; then
-    echo "Firebase Auth email-template preflight: template branding fallback set to '${app_name}'." >&2
-    return 0
-  fi
-
-  echo "Warning: unable to patch Firebase Auth email template branding fallback." >&2
-  echo "Auth emails may still resolve %APP_NAME% to the project/site identifier." >&2
-  return 0
 }
 
 first_web_app_id_from_json() {
@@ -1601,10 +1315,9 @@ EOF
 fi
 
 preflight_app_check_config
-preflight_firebase_auth_signin_config
-preflight_firebase_auth_email_app_name
-preflight_firebase_auth_email_template_branding
 preflight_frontend_firebase_config
+print_firebase_auth_setup_overview
+preflight_firebase_auth_signin_config
 preflight_firebase_auth_authorized_domains
 
 PYTHON_BIN=""

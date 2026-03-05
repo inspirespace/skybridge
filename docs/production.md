@@ -45,10 +45,9 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - Deploy preflight (`scripts/firebase-deploy.sh`) fails fast if required Firebase web config is missing in non-emulator Firebase mode and will attempt best-effort auto-resolution from `firebase apps:sdkconfig` (first WEB app in the project).
 - Optional: set `FIREBASE_WEB_APP_ID` to force which Firebase WEB app deploy preflight should use for sdkconfig lookup.
 - Deploy preflight also validates passwordless email-link sign-in mode (`signIn.email.enabled=true`, `signIn.email.passwordRequired=false`) when `FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN=1` (default).
-- Auto-enable defaults to ON (`FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN=1` when unset); set `FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN=0` to disable auto-patching.
-- Optional: `FIREBASE_AUTH_EMAIL_APP_NAME` controls the display name used for Firebase Auth emails (mapped to project display name; default `Skybridge`).
-- Optional: `FIREBASE_AUTO_PATCH_EMAIL_TEMPLATE_BRANDING=0` disables deploy-time email-template branding fallback (default is enabled).
-- Auth preflight verification/auto-enable uses Google ADC (`GOOGLE_APPLICATION_CREDENTIALS`) and falls back to Firebase CLI login token cache.
+- Deploy preflight prints a manual Firebase Auth setup overview (sign-in method, email template branding name, authorized domains) and keeps template naming/configuration manual in Firebase Console.
+- Optional: `FIREBASE_AUTH_EMAIL_APP_NAME` sets the friendly app name shown in that setup overview (default `Skybridge`).
+- Auth preflight verification uses Google ADC (`GOOGLE_APPLICATION_CREDENTIALS`) and falls back to Firebase CLI login token cache.
 ## Deploy
 - `npm --prefix src/frontend run build`
 - `./scripts/firebase-deploy.sh`
@@ -89,6 +88,9 @@ Job artifacts must expire automatically. Apply a lifecycle rule to your storage 
 ## Firebase Auth setup notes
 - Enable Google/Apple/Facebook providers in the Firebase console.
 - Apple sign-in requires an Apple Developer Program membership and a Services ID.
+- Enable Email/Password and Email link (passwordless) in **Authentication -> Sign-in method**.
+- Set a friendly sender/app name and subject/body copy in **Authentication -> Templates -> Email address sign-in** (for example `Skybridge`).
+- Add all continue-url hostnames in **Authentication -> Settings -> Authorized domains** (including custom Hosting domains).
 
 ## Security defaults
 - Firestore rules only allow authenticated reads of job documents owned by the current UID; all writes are server-only.

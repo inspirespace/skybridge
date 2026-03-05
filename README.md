@@ -113,18 +113,17 @@ VS Code equivalent:
 
 First deploy behavior (out of the box):
 - If you are not logged in, the script prompts and runs `firebase login --reauth`.
-- If Firebase Auth email-link mode is not enabled, deploy preflight auto-enables it by default.
 - If frontend Firebase web config is missing, deploy preflight auto-resolves it from Firebase web app config (and creates a WEB app when required).
+- In Firebase auth mode (non-emulator), deploy preflight prints a manual Firebase Auth setup overview (sign-in method, email template branding, authorized domains).
 
 Deploy preflight note:
 - If `APP_CHECK_ENFORCE=1`, CI deploys fail fast unless frontend App Check config is present (`VITE_FIREBASE_APP_CHECK_ENABLED=1` and `VITE_FIREBASE_APP_CHECK_SITE_KEY`).
 - Local deploys print a warning and continue.
 - In `firebase` auth mode without emulator, deploy fails fast if frontend Firebase web config is incomplete (`VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_PROJECT_ID`). The deploy script attempts best-effort auto-resolution from Firebase Web App SDK config.
 - If your project has multiple Firebase web apps, set `FIREBASE_WEB_APP_ID` to force which app is used for SDK config resolution during deploy preflight.
-- In `firebase` auth mode without emulator, deploy preflight also verifies passwordless email-link provider config (`signIn.email.enabled=true`, `signIn.email.passwordRequired=false`) when `FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN=1` (default). Auto-enable is ON by default (`FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN=1` when unset) and can be disabled explicitly with `FIREBASE_AUTO_ENABLE_EMAIL_LINK_SIGNIN=0`.
-- Deploy preflight also aligns Firebase Auth email branding by setting the Google Cloud project display name (used as `%APP_NAME%` fallback in Auth emails) from `FIREBASE_AUTH_EMAIL_APP_NAME` (defaults to `Skybridge`).
-- Deploy preflight also applies a zero-config Firebase Auth email-template branding fallback (default ON via `FIREBASE_AUTO_PATCH_EMAIL_TEMPLATE_BRANDING=1`) so email-link messages use branded copy even when `%APP_NAME%` resolves to a project/site identifier.
-- Auth provider verification/auto-enable uses either Google ADC (`GOOGLE_APPLICATION_CREDENTIALS`) or Firebase CLI login token cache (`firebase login`). In CI this is enforced; local runs warn and continue only when neither source is available.
+- In `firebase` auth mode without emulator, deploy preflight verifies passwordless email-link provider config (`signIn.email.enabled=true`, `signIn.email.passwordRequired=false`) when `FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN=1` (default).
+- Deploy preflight does not auto-patch Firebase Auth templates or project display name. Configure friendly app/template names in Firebase Console.
+- Auth provider verification uses either Google ADC (`GOOGLE_APPLICATION_CREDENTIALS`) or Firebase CLI login token cache (`firebase login`). In CI this is enforced; local runs warn and continue only when neither source is available.
 - Deploy preflight also verifies Firebase Auth `authorizedDomains` for email-link `continueUrl` hosts. Custom Hosting domains are enforced as required; default project domains are treated as best-effort (warning-only) because Firebase may allow them implicitly without listing them in API output. Add explicit domains via `FIREBASE_AUTHORIZED_DOMAINS` (comma-separated) when needed.
 - Authorized-domain enforcement is strict by default (`FIREBASE_REQUIRE_AUTHORIZED_DOMAINS=1` unless explicitly overridden).
 

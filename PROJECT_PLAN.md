@@ -201,11 +201,11 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Add optional Firebase App Check protection for API requests (frontend `X-Firebase-AppCheck` header injection + backend token verification with `APP_CHECK_ENFORCE`).
 - [x] Add Firebase deploy preflight for App Check so CI fails early when `APP_CHECK_ENFORCE=1` is set without required frontend App Check env (`VITE_FIREBASE_APP_CHECK_ENABLED=1`, `VITE_FIREBASE_APP_CHECK_SITE_KEY`).
 - [x] Initialize theme from host system preference when no saved theme exists, including first paint and toggle state across SPA + static pages.
-- [x] Streamline Firebase email-link sign-in UX: use inline auth card on `/app` (no duplicate modal), prefill email-link completion from redirect email hint, and add deploy preflight to align auth email `%APP_NAME%` branding via project display name.
+- [x] Streamline Firebase email-link sign-in UX: use inline auth card on `/app` (no duplicate modal) and prefill email-link completion from redirect email hint.
 - [x] Reduce password-manager save prompts on CloudAhoy/FlySto credential fields by adding `autocomplete` suppression plus manager-specific ignore attributes (`data-lpignore`, `data-1p-ignore`, `data-bwignore`).
 - [x] Further harden credential fields against password-manager prompts by adding decoy hidden login inputs and a readOnly-until-user-interaction pattern for CloudAhoy/FlySto password fields.
 - [x] Remove unused `FirebaseAuthDialog` component file to prevent accidental reintroduction of auth modal behavior on `/app`.
-- [x] Add deploy-time Firebase Auth email-template branding fallback (zero-config default) so email-link copy stays branded when `%APP_NAME%` resolves to project/site IDs.
+- [x] Remove deploy-time Firebase Auth branding auto-patching and switch deploy preflight to manual setup guidance (email-link mode, template naming, authorized domains) plus verification-only checks.
 - [x] Fix production API base fallback to same-origin `/api` (instead of fixed local-domain API URLs) to prevent CSP `connect-src` failures on deployed domains.
 - [x] Simplify backend runtime paths by removing unused local/Cloud Run HTTP adapters (`src/backend/lambda_api_local.py`, `src/backend/http_api.py`, `src/backend/http_worker.py`), keeping Firebase Functions as the only backend runtime while retaining compose-based dev mock services.
 
