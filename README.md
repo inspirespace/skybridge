@@ -117,6 +117,7 @@ First deploy behavior (out of the box):
 - In Firebase auth mode (non-emulator), deploy preflight prints a manual Firebase Auth setup overview (sign-in method, email template branding, authorized domains).
 
 Deploy preflight note:
+- Deploy script validates required local/devcontainer CLI tools first (`firebase`, `npm`, `node`, `curl`, `awk`, `sed`, `grep`, `find`) and fails fast with explicit missing-tool output.
 - If `APP_CHECK_ENFORCE=1`, CI deploys fail fast unless frontend App Check config is present (`VITE_FIREBASE_APP_CHECK_ENABLED=1` and `VITE_FIREBASE_APP_CHECK_SITE_KEY`).
 - Local deploys print a warning and continue.
 - In `firebase` auth mode without emulator, deploy fails fast if frontend Firebase web config is incomplete (`VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_PROJECT_ID`). The deploy script attempts best-effort auto-resolution from Firebase Web App SDK config.

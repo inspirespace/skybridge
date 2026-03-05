@@ -210,6 +210,11 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Document Firebase Console prerequisite that Auth template "Public-facing name" is editable only when Google sign-in provider is enabled (deploy overview + docs).
 - [x] Fix deploy authorized-domain setup overview to merge/dedupe `FIREBASE_AUTHORIZED_DOMAINS` across env sources so all configured domains (for example `.app` and `.co`) are shown and validated.
 - [x] Reduce deploy-time Git noise by staging shared backend modules under ignored `functions/_deploy_src/src` (instead of tracked `functions/src`) and updating Functions import path fallback accordingly.
+- [x] Harden deploy authorized-domain config parsing to merge all `FIREBASE_AUTHORIZED_DOMAINS` entries (including repeated keys) across env sources, and label setup output as merged-source values.
+- [x] Fix deploy authorized-domain parser dropping the final value without trailing newline (for comma-separated env values), so `.app,.co` entries both render in setup output and verification.
+- [x] Add deploy preflight toolchain check to fail fast with explicit missing-command list when required CLI utilities are not present in the devcontainer/runtime.
+- [x] Add repository EOL normalization for shell/python files (`.gitattributes`) to prevent CRLF-related shell execution artifacts in deploy scripts.
+- [x] Fix Cloud Functions startup path resolution in `functions/main.py` for deployed runtime (`/workspace` source root), so staged modules under `functions/_deploy_src/src` are importable and containers start on `PORT=8080`.
 - [x] Fix production API base fallback to same-origin `/api` (instead of fixed local-domain API URLs) to prevent CSP `connect-src` failures on deployed domains.
 - [x] Simplify backend runtime paths by removing unused local/Cloud Run HTTP adapters (`src/backend/lambda_api_local.py`, `src/backend/http_api.py`, `src/backend/http_worker.py`), keeping Firebase Functions as the only backend runtime while retaining compose-based dev mock services.
 

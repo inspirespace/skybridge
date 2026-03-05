@@ -19,6 +19,24 @@ Options:
 EOF
 }
 
+require_deploy_toolchain() {
+  local -a required_tools=("firebase" "npm" "node" "curl" "awk" "sed" "grep" "find")
+  local -a missing_tools=()
+  local tool
+  for tool in "${required_tools[@]}"; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+      missing_tools+=("$tool")
+    fi
+  done
+  if [ "${#missing_tools[@]}" -eq 0 ]; then
+    return 0
+  fi
+  echo "Firebase deploy preflight: required tools are missing from the current environment." >&2
+  printf 'Missing tools: %s\n' "${missing_tools[*]}" >&2
+  echo "Run deploy from the configured devcontainer (or install these tools there)." >&2
+  exit 1
+}
+
 PROJECT_ID="${FIREBASE_PROJECT_ID:-$(sh "$FIREBASE_CONFIG_SCRIPT" project 2>/dev/null || true)}"
 
 while [ "$#" -gt 0 ]; do
@@ -43,6 +61,8 @@ while [ "$#" -gt 0 ]; do
       ;;
   esac
 done
+
+require_deploy_toolchain
 
 if [ -z "$PROJECT_ID" ]; then
   echo "Firebase project id is required. Set FIREBASE_PROJECT_ID or pass --project <id>." >&2
@@ -153,6 +173,29 @@ read_env_file_value() {
   normalize_env_value "$line"
 }
 
+read_env_file_values() {
+  local file_path="$1"
+  local key="$2"
+  [ -f "$file_path" ] || return 1
+  awk -v key="$key" '
+    /^[[:space:]]*#/ { next }
+    /^[[:space:]]*$/ { next }
+    {
+      current=$0
+      sub(/^[[:space:]]*/, "", current)
+      sub(/^export[[:space:]]+/, "", current)
+      if (index(current, key "=") != 1) {
+        next
+      }
+      print substr(current, length(key) + 2)
+    }
+  ' "$file_path" | while IFS= read -r line; do
+    line="$(normalize_env_value "$line")"
+    [ -z "$line" ] && continue
+    printf '%s\n' "$line"
+  done
+}
+
 resolve_config_value() {
   local key="$1"
   shift
@@ -229,7 +272,7 @@ domain_list_add() {
 
 split_domain_values() {
   local raw="$1"
-  printf '%s' "$raw" | tr ',;' '\n' | while IFS= read -r line; do
+  printf '%s' "$raw" | tr ',;' '\n' | while IFS= read -r line || [ -n "$line" ]; do
     line="$(normalize_env_value "$line")"
     [ -z "$line" ] && continue
     for token in $line; do
@@ -253,12 +296,13 @@ collect_authorized_domains_config() {
   fi
 
   for file_path in functions/.env .env; do
-    raw="$(read_env_file_value "$file_path" FIREBASE_AUTHORIZED_DOMAINS || true)"
-    [ -z "$raw" ] && continue
-    while IFS= read -r candidate; do
-      [ -z "$candidate" ] && continue
-      domain_list_add merged "$candidate"
-    done < <(split_domain_values "$raw")
+    while IFS= read -r raw; do
+      [ -z "$raw" ] && continue
+      while IFS= read -r candidate; do
+        [ -z "$candidate" ] && continue
+        domain_list_add merged "$candidate"
+      done < <(split_domain_values "$raw")
+    done < <(read_env_file_values "$file_path" FIREBASE_AUTHORIZED_DOMAINS || true)
   done
 
   printf '%s' "$merged"
@@ -618,7 +662,7 @@ Firebase Auth manual setup overview for project ${project_for_domains}:
 EOF
 
   if [ -n "$explicit_domains" ]; then
-    echo "  - Additional domains from FIREBASE_AUTHORIZED_DOMAINS:" >&2
+    echo "  - Additional domains from FIREBASE_AUTHORIZED_DOMAINS (merged env + functions/.env + .env):" >&2
     while IFS= read -r domain; do
       domain="$(normalize_domain_candidate "$domain")"
       [ -z "$domain" ] && continue

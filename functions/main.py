@@ -12,12 +12,19 @@ from typing import Any, Callable
 from firebase_functions import https_fn, pubsub_fn, scheduler_fn, options
 from flask import Request, Response
 
-ROOT = Path(__file__).resolve().parents[1]
-DEPLOY_STAGING_ROOT = ROOT / "_deploy_src"
+FUNCTIONS_ROOT = Path(__file__).resolve().parent
+REPO_ROOT = FUNCTIONS_ROOT.parent
+DEPLOY_STAGING_ROOT = FUNCTIONS_ROOT / "_deploy_src"
+
+# Prefer deploy-staged modules when present (Cloud Functions deploy packaging).
 if DEPLOY_STAGING_ROOT.is_dir() and str(DEPLOY_STAGING_ROOT) not in sys.path:
     sys.path.insert(0, str(DEPLOY_STAGING_ROOT))
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))
+
+# Keep local-repo imports working in emulator/dev shells.
+if str(FUNCTIONS_ROOT) not in sys.path:
+    sys.path.append(str(FUNCTIONS_ROOT))
+if str(REPO_ROOT) not in sys.path:
+    sys.path.append(str(REPO_ROOT))
 
 from src.backend import lambda_handlers  # noqa: E402
 from src.backend.cors import resolve_cors_origins, select_allow_origin  # noqa: E402
