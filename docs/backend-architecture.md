@@ -9,6 +9,12 @@ The backend is serverless. In production, the stack targets Firebase (Functions 
 - **Queue** (Pub/Sub): decouples API from long-running work.
 - **State** (Firestore): job metadata + credential claims.
 - **Artifacts** (Cloud Storage): review/import outputs and logs.
+- **Dev-only mocks** (`src/backend/mocks/*` via `docker-compose.yml`): optional local stubs for CloudAhoy/FlySto.
+
+## Runtime boundary
+- Production backend runtime is Firebase Functions only.
+- Local emulator backend runtime is also Firebase Functions only.
+- There is no separate backend HTTP server runtime in `src/backend`.
 
 ## Local parity
 `docker-compose.yml` runs local equivalents of production services so the flow matches Firebase.

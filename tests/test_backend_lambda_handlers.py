@@ -41,7 +41,10 @@ def _job(status: str, job_id=None):
 @pytest.fixture()
 def store(tmp_path, monkeypatch: pytest.MonkeyPatch):
     store = JobStore(tmp_path)
-    monkeypatch.setattr(handlers, "store", store)
+    monkeypatch.setattr(handlers, "_store", store)
+    monkeypatch.setattr(handlers, "_service", None)
+    monkeypatch.setattr(handlers, "_credential_store", None)
+    monkeypatch.setattr(handlers, "_pubsub_client", None)
     return store
 
 
@@ -52,11 +55,17 @@ def test_list_jobs_handler_requires_auth(store):
 
 def test_create_job_handler(store, monkeypatch: pytest.MonkeyPatch):
     job = _job("review_ready")
-    job_json = job.model_dump(mode="json")
-    monkeypatch.setattr(handlers.service, "create_job", lambda user_id: job)
-    monkeypatch.setattr(handlers.service, "generate_review", lambda job_id, payload: job)
-    from src.backend.models import JobRecord
-    monkeypatch.setattr(JobRecord, "model_dump", lambda self, *args, **kwargs: job_json)
+
+    class _DummyService:
+        def create_job(self, user_id: str):
+            return job
+
+    class _DummyCredentialStore:
+        def issue(self, **_kwargs):
+            return "token"
+
+    monkeypatch.setattr(handlers, "_service", _DummyService())
+    monkeypatch.setattr(handlers, "_credential_store", _DummyCredentialStore())
 
     payload = {
         "credentials": {

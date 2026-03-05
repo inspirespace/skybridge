@@ -29,3 +29,5 @@ Requirements:
 - CLI entrypoint: `./cloudahoy2flysto` (interactive, guided migration flow).
 - API handlers: `src/backend/lambda_handlers.py`
 - Firebase Functions: `functions/main.py`
+- Backend runtime adapter: Firebase Functions only (no alternate HTTP server runtime in `src/backend`).
+- Local mocks: `src/backend/mocks/` served by compose-only dev services (`mock-cloudahoy`, `mock-flysto`).

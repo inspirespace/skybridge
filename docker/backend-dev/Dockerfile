@@ -16,4 +16,5 @@ COPY src ./src
 ENV PATH="/venv/bin:${PATH}" \
     PYTHONUNBUFFERED=1
 
-CMD ["python", "-m", "src.backend.lambda_api_local"]
+# Base image for local mock services (mock-cloudahoy and mock-flysto).
+# The service command is provided by docker-compose.

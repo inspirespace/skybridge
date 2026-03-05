@@ -207,6 +207,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Remove unused `FirebaseAuthDialog` component file to prevent accidental reintroduction of auth modal behavior on `/app`.
 - [x] Add deploy-time Firebase Auth email-template branding fallback (zero-config default) so email-link copy stays branded when `%APP_NAME%` resolves to project/site IDs.
 - [x] Fix production API base fallback to same-origin `/api` (instead of fixed local-domain API URLs) to prevent CSP `connect-src` failures on deployed domains.
+- [x] Simplify backend runtime paths by removing unused local/Cloud Run HTTP adapters (`src/backend/lambda_api_local.py`, `src/backend/http_api.py`, `src/backend/http_worker.py`), keeping Firebase Functions as the only backend runtime while retaining compose-based dev mock services.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.

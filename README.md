@@ -47,6 +47,8 @@ The Firebase Functions/Hosting emulators run inside the `firebase-emulator` serv
 Emulator import/export data is stored in `.firebase-emulator/exports` (legacy `firebase-export-*` folders are moved there automatically).
 Auth emulator parity note:
 - By default (`FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN=1`), emulator startup enforces the same email-link sign-in mode as production (`signIn.email.enabled=true`, `passwordRequired=false`) via `.firebase-emulator/exports/auth_export/config.json`.
+- Backend runtime path is Firebase Functions only (`functions/main.py`) for both production and local emulator runs.
+- `mock-cloudahoy` and `mock-flysto` are dev-only helper services used by mock mode (`DEV_USE_MOCKS=1`) and are not production runtime components.
 
 To mirror production serving behavior locally (static bundle via Firebase Hosting emulator), use:
 
