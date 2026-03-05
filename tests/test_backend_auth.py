@@ -82,6 +82,17 @@ def test_user_id_from_request_firebase_valid_token(monkeypatch: pytest.MonkeyPat
     assert auth.user_id_from_request("Bearer abc", None) == "firebase-uid"
 
 
+def test_user_id_from_request_defaults_to_firebase_on_functions_runtime(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test deployed functions default to firebase auth when AUTH_MODE is unset."""
+    monkeypatch.delenv("AUTH_MODE", raising=False)
+    monkeypatch.setenv("K_SERVICE", "skybridge-api")
+    monkeypatch.setattr(auth, "resolve_project_id", lambda: "demo-project")
+    monkeypatch.setattr(auth, "_verify_token", lambda token, mode: {"user_id": "firebase-uid"})
+    assert auth.user_id_from_request("Bearer abc", None) == "firebase-uid"
+
+
 def test_emulator_trust_requires_flag(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("FIREBASE_AUTH_EMULATOR_HOST", "localhost:9099")
     monkeypatch.setenv("AUTH_EMULATOR_TRUST_TOKENS", "false")

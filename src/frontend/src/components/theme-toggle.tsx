@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "skybridge-theme";
 type ThemePreference = "dark" | "light" | null;
+const DARK_MODE_MEDIA_QUERY = "(prefers-color-scheme: dark)";
 
 function getStoredThemePreference(): ThemePreference {
   if (typeof window === "undefined") return null;
@@ -15,30 +16,68 @@ function getStoredThemePreference(): ThemePreference {
   }
 }
 
-function resolvePreferredDarkMode(root: HTMLElement): boolean {
-  const stored = getStoredThemePreference();
-  if (stored === "dark") return true;
-  if (stored === "light") return false;
+function getSystemPrefersDarkMode() {
   if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return window.matchMedia(DARK_MODE_MEDIA_QUERY).matches;
   }
-  return root.classList.contains("dark");
+  if (typeof document === "undefined") {
+    return false;
+  }
+  return document.documentElement.classList.contains("dark");
+}
+
+function resolveThemeSelection(preference: ThemePreference) {
+  if (preference === "dark") return true;
+  if (preference === "light") return false;
+  return getSystemPrefersDarkMode();
 }
 
 /** Render ThemeToggle component. */
 export function ThemeToggle({ className }: { className?: string }) {
+  const [themePreference, setThemePreference] = React.useState<ThemePreference>(() =>
+    getStoredThemePreference()
+  );
   const [isDark, setIsDark] = React.useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     const root = document.documentElement;
-    const prefersDark = resolvePreferredDarkMode(root);
+    const prefersDark = resolveThemeSelection(getStoredThemePreference());
     root.classList.toggle("dark", prefersDark);
     return prefersDark;
   });
 
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const root = document.documentElement;
+    const nextIsDark = resolveThemeSelection(themePreference);
+    root.classList.toggle("dark", nextIsDark);
+    setIsDark(nextIsDark);
+  }, [themePreference]);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mediaQuery = window.matchMedia(DARK_MODE_MEDIA_QUERY);
+    const handleChange = (event: MediaQueryListEvent) => {
+      if (themePreference !== null) return;
+      document.documentElement.classList.toggle("dark", event.matches);
+      setIsDark(event.matches);
+    };
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", handleChange);
+    } else if (typeof mediaQuery.addListener === "function") {
+      mediaQuery.addListener(handleChange);
+    }
+    return () => {
+      if (typeof mediaQuery.removeEventListener === "function") {
+        mediaQuery.removeEventListener("change", handleChange);
+      } else if (typeof mediaQuery.removeListener === "function") {
+        mediaQuery.removeListener(handleChange);
+      }
+    };
+  }, [themePreference]);
+
   /** Handle handleToggle. */
   const handleToggle = (checked: boolean) => {
-    setIsDark(checked);
-    document.documentElement.classList.toggle("dark", checked);
+    setThemePreference(checked ? "dark" : "light");
     try {
       window.localStorage.setItem(STORAGE_KEY, checked ? "dark" : "light");
     } catch {

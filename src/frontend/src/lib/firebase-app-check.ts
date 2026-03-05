@@ -9,6 +9,10 @@ import {
   FIREBASE_PROJECT_ID,
   FIREBASE_USE_EMULATOR,
 } from "@/lib/app-config";
+import {
+  getEffectiveFirebaseWebConfig,
+  resolveFirebaseRuntimeConfig,
+} from "@/lib/firebase-config";
 
 let appCheckInitPromise: Promise<any | null> | null = null;
 let warnedUnavailable = false;
@@ -29,14 +33,23 @@ async function resolveFirebaseApp() {
   if (existing.length > 0) {
     return existing[0];
   }
-  if (!FIREBASE_API_KEY || !FIREBASE_AUTH_DOMAIN || !FIREBASE_PROJECT_ID) {
-    return null;
-  }
-  return initializeApp({
+  const runtimeConfig = await resolveFirebaseRuntimeConfig();
+  const config = getEffectiveFirebaseWebConfig({
     apiKey: FIREBASE_API_KEY,
     authDomain: FIREBASE_AUTH_DOMAIN,
     projectId: FIREBASE_PROJECT_ID,
-    appId: FIREBASE_APP_ID || undefined,
+    appId: FIREBASE_APP_ID,
+    runtimeConfig,
+    useEmulator: FIREBASE_USE_EMULATOR,
+  });
+  if (!config.apiKey || !config.authDomain || !config.projectId) {
+    return null;
+  }
+  return initializeApp({
+    apiKey: config.apiKey,
+    authDomain: config.authDomain,
+    projectId: config.projectId,
+    appId: config.appId || undefined,
   });
 }
 

@@ -1,5 +1,10 @@
 import * as React from "react";
 
+import {
+  getEffectiveFirebaseWebConfig,
+  resolveFirebaseRuntimeConfig,
+  type FirebaseWebConfig,
+} from "@/lib/firebase-config";
 import { resolveAuthEmulatorBaseUrl } from "@/lib/runtime-endpoints";
 
 const EMULATOR_RETRY_ATTEMPTS = 3;
@@ -56,13 +61,6 @@ export function useFirebaseAuth({
   onError?: (message: string) => void;
   onLoadingChange?: (loading: boolean) => void;
 }) {
-  type RuntimeFirebaseConfig = {
-    apiKey: string;
-    authDomain: string;
-    projectId: string;
-    appId?: string;
-  };
-
   const [accessToken, setAccessToken] = React.useState<string | null>(() =>
     null
   );
@@ -75,152 +73,57 @@ export function useFirebaseAuth({
   const [userId, setUserId] = React.useState<string | null>(null);
   const [emailLinkPending, setEmailLinkPending] = React.useState(false);
   const [authReady, setAuthReady] = React.useState(false);
-  const [runtimeConfig, setRuntimeConfig] = React.useState<RuntimeFirebaseConfig | null>(null);
+  const [runtimeConfig, setRuntimeConfig] = React.useState<FirebaseWebConfig | null>(null);
   const [runtimeConfigAttempted, setRuntimeConfigAttempted] = React.useState(false);
   const [runtimeConfigError, setRuntimeConfigError] = React.useState<string | null>(null);
   const authRef = React.useRef<ReturnType<typeof import("firebase/auth").getAuth> | null>(null);
-  const effectiveApiKey = React.useMemo(() => {
-    const configured = apiKey?.trim() ?? "";
-    if (configured) return configured;
-    const runtime = runtimeConfig?.apiKey?.trim() ?? "";
-    if (runtime) return runtime;
-    return useEmulator ? "demo-local" : "";
-  }, [apiKey, runtimeConfig?.apiKey, useEmulator]);
-  const effectiveProjectId = React.useMemo(() => {
-    const configured = projectId?.trim() ?? "";
-    if (configured) return configured;
-    const runtime = runtimeConfig?.projectId?.trim() ?? "";
-    if (runtime) return runtime;
-    return useEmulator ? "demo-local" : "";
-  }, [projectId, runtimeConfig?.projectId, useEmulator]);
-  const effectiveAuthDomain = React.useMemo(() => {
-    const configured = authDomain?.trim() ?? "";
-    if (configured) return configured;
-    const runtime = runtimeConfig?.authDomain?.trim() ?? "";
-    if (runtime) return runtime;
-    return effectiveProjectId ? `${effectiveProjectId}.firebaseapp.com` : "";
-  }, [authDomain, runtimeConfig?.authDomain, effectiveProjectId]);
-  const effectiveAppId = React.useMemo(() => {
-    const configured = appId?.trim() ?? "";
-    if (configured) return configured;
-    const runtime = runtimeConfig?.appId?.trim() ?? "";
-    if (runtime) return runtime;
-    return useEmulator ? "demo-local-app" : "";
-  }, [appId, runtimeConfig?.appId, useEmulator]);
+  const effectiveConfig = React.useMemo(
+    () =>
+      getEffectiveFirebaseWebConfig({
+        apiKey,
+        authDomain,
+        projectId,
+        appId,
+        runtimeConfig,
+        useEmulator,
+      }),
+    [apiKey, authDomain, projectId, appId, runtimeConfig, useEmulator]
+  );
+  const effectiveApiKey = effectiveConfig.apiKey;
+  const effectiveProjectId = effectiveConfig.projectId;
+  const effectiveAuthDomain = effectiveConfig.authDomain;
+  const effectiveAppId = effectiveConfig.appId;
+  const hasConfiguredFirebaseConfig = React.useMemo(() => {
+    const configuredApiKey = apiKey?.trim() ?? "";
+    const configuredProjectId = projectId?.trim() ?? "";
+    const configuredAuthDomain = authDomain?.trim() ?? "";
+    return Boolean(
+      configuredApiKey &&
+        configuredProjectId &&
+        (configuredAuthDomain || configuredProjectId)
+    );
+  }, [apiKey, authDomain, projectId]);
 
   React.useEffect(() => {
     if (!enabled) return;
-    if (effectiveApiKey && effectiveAuthDomain && effectiveProjectId) {
+    if (hasConfiguredFirebaseConfig) {
       setRuntimeConfigAttempted(true);
       setRuntimeConfigError(null);
       return;
     }
     if (typeof window === "undefined") return;
 
-    const readGlobalRuntimeConfig = (): RuntimeFirebaseConfig | null => {
-      const defaultsRaw = (
-        window as Window & {
-          __FIREBASE_DEFAULTS__?: unknown;
-        }
-      ).__FIREBASE_DEFAULTS__;
-      if (!defaultsRaw) return null;
-
-      let defaults = defaultsRaw;
-      if (typeof defaultsRaw === "string") {
-        try {
-          defaults = JSON.parse(defaultsRaw);
-        } catch {
-          return null;
-        }
-      }
-
-      const root =
-        typeof defaults === "object" && defaults
-          ? ((defaults as { config?: unknown }).config ?? defaults)
-          : defaults;
-      if (!root || typeof root !== "object") return null;
-
-      const asString = (value: unknown) =>
-        typeof value === "string" ? value.trim() : "";
-      const candidate = root as {
-        apiKey?: unknown;
-        authDomain?: unknown;
-        projectId?: unknown;
-        appId?: unknown;
-      };
-      const apiKeyValue = asString(candidate.apiKey);
-      const authDomainValue = asString(candidate.authDomain);
-      const projectIdValue = asString(candidate.projectId);
-      const appIdValue = asString(candidate.appId);
-
-      if (!apiKeyValue || !projectIdValue) return null;
-      return {
-        apiKey: apiKeyValue,
-        authDomain: authDomainValue,
-        projectId: projectIdValue,
-        appId: appIdValue,
-      };
-    };
-
-    const mergeRuntimeConfig = (resolved: RuntimeFirebaseConfig) => {
-      setRuntimeConfig((prev) => {
-        const nextApiKey = resolved.apiKey || prev?.apiKey || "";
-        const nextAuthDomain = resolved.authDomain || prev?.authDomain || "";
-        const nextProjectId = resolved.projectId || prev?.projectId || "";
-        const nextAppId = resolved.appId || prev?.appId || "";
-        if (
-          prev?.apiKey === nextApiKey &&
-          prev?.authDomain === nextAuthDomain &&
-          prev?.projectId === nextProjectId &&
-          prev?.appId === nextAppId
-        ) {
-          return prev;
-        }
-        return {
-          apiKey: nextApiKey,
-          authDomain: nextAuthDomain,
-          projectId: nextProjectId,
-          appId: nextAppId,
-        };
-      });
-    };
-
-    const globalConfig = readGlobalRuntimeConfig();
-    if (globalConfig) {
-      mergeRuntimeConfig(globalConfig);
-      setRuntimeConfigAttempted(true);
-      setRuntimeConfigError(null);
-      return;
-    }
-
     let cancelled = false;
     (async () => {
       try {
-        const response = await fetch("/__/firebase/init.json", {
-          method: "GET",
-          cache: "no-store",
-        });
-        if (!response.ok) {
-          if (!cancelled) {
-            setRuntimeConfigError(`init.json returned ${response.status}`);
-          }
+        const resolved = await resolveFirebaseRuntimeConfig();
+        if (cancelled) return;
+        if (!resolved) {
+          setRuntimeConfigError("Firebase init config unavailable");
           return;
         }
-        const payload = await response.json();
-        const resolved: RuntimeFirebaseConfig = {
-          apiKey: typeof payload?.apiKey === "string" ? payload.apiKey : "",
-          authDomain: typeof payload?.authDomain === "string" ? payload.authDomain : "",
-          projectId: typeof payload?.projectId === "string" ? payload.projectId : "",
-          appId: typeof payload?.appId === "string" ? payload.appId : "",
-        };
-        if (!cancelled) {
-          if (!resolved.apiKey || !resolved.projectId) {
-            setRuntimeConfigError("init.json did not include apiKey/projectId");
-          } else {
-            mergeRuntimeConfig(resolved);
-            setRuntimeConfigError(null);
-          }
-        }
+        setRuntimeConfig(resolved);
+        setRuntimeConfigError(null);
       } catch (err) {
         if (!cancelled) {
           const message =
@@ -237,7 +140,7 @@ export function useFirebaseAuth({
     return () => {
       cancelled = true;
     };
-  }, [enabled, effectiveApiKey, effectiveAuthDomain, effectiveProjectId]);
+  }, [enabled, hasConfiguredFirebaseConfig]);
 
   const emulatorUrl = React.useMemo(() => {
     return resolveAuthEmulatorBaseUrl({

@@ -108,7 +108,7 @@ export type CredentialValidationResponse = {
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 export const apiBaseUrl = resolveApiBaseUrl(configuredApiBaseUrl);
 
-const authMode = import.meta.env.VITE_AUTH_MODE ?? "header";
+const authMode = import.meta.env.VITE_AUTH_MODE ?? "firebase";
 const RETRY_ATTEMPTS = Number.parseInt(
   import.meta.env.VITE_API_RETRY_ATTEMPTS ?? "4",
   10

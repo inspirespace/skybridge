@@ -4,7 +4,7 @@ import { getJob, type AuthContext, type JobRecord, type JobStatus } from "@/api/
 import { patchFirebaseEmulatorRequests } from "@/lib/firebase-emulator";
 import { resolveFirestoreEmulatorHostPort } from "@/lib/runtime-endpoints";
 
-const AUTH_MODE = import.meta.env.VITE_AUTH_MODE ?? "header";
+const AUTH_MODE = import.meta.env.VITE_AUTH_MODE ?? "firebase";
 const FIRESTORE_LISTEN =
   (import.meta.env.VITE_FIRESTORE_LISTEN ?? "") === "1";
 const FIREBASE_API_KEY = import.meta.env.VITE_FIREBASE_API_KEY ?? "";

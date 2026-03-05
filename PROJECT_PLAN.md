@@ -201,6 +201,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Add optional Firebase App Check protection for API requests (frontend `X-Firebase-AppCheck` header injection + backend token verification with `APP_CHECK_ENFORCE`).
 - [x] Add Firebase deploy preflight for App Check so CI fails early when `APP_CHECK_ENFORCE=1` is set without required frontend App Check env (`VITE_FIREBASE_APP_CHECK_ENABLED=1`, `VITE_FIREBASE_APP_CHECK_SITE_KEY`).
 - [x] Initialize theme from host system preference when no saved theme exists, including first paint and toggle state across SPA + static pages.
+- [x] Fix deployed Firebase auth bootstrap by defaulting Cloud Functions runtime auth to `firebase` when `AUTH_MODE` is omitted in production, reuse Firebase Hosting runtime config for App Check initialization, and keep the theme synced with live system appearance changes when no explicit override is stored.
 - [x] Streamline Firebase email-link sign-in UX: use inline auth card on `/app` (no duplicate modal) and prefill email-link completion from redirect email hint.
 - [x] Reduce password-manager save prompts on CloudAhoy/FlySto credential fields by adding `autocomplete` suppression plus manager-specific ignore attributes (`data-lpignore`, `data-1p-ignore`, `data-bwignore`).
 - [x] Further harden credential fields against password-manager prompts by adding decoy hidden login inputs for CloudAhoy/FlySto forms.

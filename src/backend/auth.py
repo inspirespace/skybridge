@@ -37,7 +37,7 @@ _APP_CHECK_JWKS_URI = "https://firebaseappcheck.googleapis.com/v1/jwks"
 
 def user_id_from_request(authorization: Optional[str], x_user_id: Optional[str]) -> str:
     """Handle user id from request."""
-    mode = (_env("AUTH_MODE") or "header").lower()
+    mode = _auth_mode()
     if mode == "header":
         if not x_user_id:
             raise HTTPException(status_code=401, detail="Missing X-User-Id header")
@@ -70,7 +70,7 @@ def user_id_from_event(event: dict[str, Any]) -> str:
 
 def _verify_token(token: str, mode: str | None = None) -> dict[str, Any]:
     """Internal helper for verify token."""
-    resolved_mode = (mode or _env("AUTH_MODE") or "header").lower()
+    resolved_mode = (mode or _auth_mode()).lower()
     if _should_trust_emulator_tokens():
         try:
             payload = jwt.decode(
@@ -197,6 +197,20 @@ def _env(name: str) -> str | None:
     return value.strip()
 
 
+def _auth_mode() -> str:
+    """Resolve auth mode with a safe cloud-runtime default."""
+    configured = _env("AUTH_MODE")
+    if configured:
+        return configured.lower()
+    if (
+        _bool_env("BACKEND_PRODUCTION", False)
+        or _env("K_SERVICE")
+        or _env("FUNCTION_TARGET")
+    ) and resolve_project_id():
+        return "firebase"
+    return "header"
+
+
 def _default_firebase_issuer() -> str | None:
     project_id = resolve_project_id()
     if not project_id:
@@ -249,7 +263,7 @@ def _verify_app_check_from_event(event: dict[str, Any]) -> None:
 
 
 def _should_enforce_app_check() -> bool:
-    mode = (_env("AUTH_MODE") or "header").lower()
+    mode = _auth_mode()
     if mode != "firebase":
         return False
     return _bool_env("APP_CHECK_ENFORCE", False)

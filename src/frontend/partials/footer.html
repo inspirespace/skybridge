@@ -53,36 +53,54 @@
 <script>
   (function () {
     var storageKey = "skybridge-theme";
+    var mediaQuery =
+      typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-color-scheme: dark)")
+        : null;
     var root = document.documentElement;
     var toggle = document.getElementById("theme-switch");
     var thumb = document.querySelector("[data-thumb]");
-    var stored = null;
-    try {
-      stored = localStorage.getItem(storageKey);
-    } catch (_error) {
-      stored = null;
+    function readStoredThemePreference() {
+      try {
+        var stored = localStorage.getItem(storageKey);
+        return stored === "dark" || stored === "light" ? stored : null;
+      } catch (_error) {
+        return null;
+      }
     }
-    var prefersDark = false;
-    if (stored === "dark") {
-      prefersDark = true;
-    } else if (stored !== "light" && typeof window.matchMedia === "function") {
-      prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    function applyTheme(isDark) {
+      root.classList.toggle("dark", Boolean(isDark));
+      if (toggle) toggle.setAttribute("aria-checked", isDark ? "true" : "false");
+      if (toggle) toggle.setAttribute("data-state", isDark ? "checked" : "unchecked");
+      if (thumb) thumb.setAttribute("data-state", isDark ? "checked" : "unchecked");
     }
-    root.classList.toggle("dark", prefersDark);
-    if (toggle) toggle.setAttribute("aria-checked", prefersDark ? "true" : "false");
-    if (toggle) toggle.setAttribute("data-state", prefersDark ? "checked" : "unchecked");
-    if (thumb) thumb.setAttribute("data-state", prefersDark ? "checked" : "unchecked");
+    function resolveThemeSelection() {
+      var stored = readStoredThemePreference();
+      if (stored === "dark") return true;
+      if (stored === "light") return false;
+      return mediaQuery ? mediaQuery.matches : false;
+    }
+    applyTheme(resolveThemeSelection());
+    if (mediaQuery) {
+      var syncToSystem = function (event) {
+        if (readStoredThemePreference() !== null) return;
+        applyTheme(event.matches);
+      };
+      if (typeof mediaQuery.addEventListener === "function") {
+        mediaQuery.addEventListener("change", syncToSystem);
+      } else if (typeof mediaQuery.addListener === "function") {
+        mediaQuery.addListener(syncToSystem);
+      }
+    }
     if (toggle) {
       toggle.addEventListener("click", function () {
-        var isDark = root.classList.toggle("dark");
+        var isDark = !root.classList.contains("dark");
+        applyTheme(isDark);
         try {
           localStorage.setItem(storageKey, isDark ? "dark" : "light");
         } catch (_error) {
           // Ignore storage access failures and keep runtime toggle behavior.
         }
-        toggle.setAttribute("aria-checked", isDark ? "true" : "false");
-        toggle.setAttribute("data-state", isDark ? "checked" : "unchecked");
-        if (thumb) thumb.setAttribute("data-state", isDark ? "checked" : "unchecked");
       });
     }
     var appButtons = document.querySelectorAll("[data-go-app]");

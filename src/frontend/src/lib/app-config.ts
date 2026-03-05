@@ -1,4 +1,4 @@
-export const AUTH_MODE = import.meta.env.VITE_AUTH_MODE ?? "header";
+export const AUTH_MODE = import.meta.env.VITE_AUTH_MODE ?? "firebase";
 export const AUTH_ISSUER =
   import.meta.env.VITE_AUTH_ISSUER_URL ??
   import.meta.env.VITE_AUTH_BROWSER_ISSUER_URL ??
