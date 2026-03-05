@@ -2,21 +2,16 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Callable
 from urllib.parse import urlparse
 
 from . import lambda_handlers
-
-
-def _allowed_origins() -> list[str]:
-    raw = os.getenv("CORS_ALLOW_ORIGINS") or "https://skybridge.localhost"
-    origins = [origin.strip() for origin in raw.split(",") if origin.strip()]
-    return origins or ["https://skybridge.localhost"]
+from .cors import resolve_cors_origins, select_allow_origin
 
 _ROUTES: list[tuple[str, re.Pattern[str], Callable]] = []
+_ALLOWED_ORIGINS, _ALLOWED_ORIGIN_REGEX = resolve_cors_origins()
 
 
 def _route(method: str, pattern: str, handler: Callable) -> None:
@@ -134,13 +129,7 @@ class LambdaLocalHandler(BaseHTTPRequestHandler):
     def _send_cors_headers(self) -> None:
         """Apply CORS headers for local dev."""
         origin = self.headers.get("Origin") or ""
-        origins = _allowed_origins()
-        if "*" in origins:
-            allow_origin = "*"
-        elif origin in origins:
-            allow_origin = origin
-        else:
-            allow_origin = origins[0]
+        allow_origin = select_allow_origin(origin, _ALLOWED_ORIGINS, _ALLOWED_ORIGIN_REGEX)
         self.send_header("Access-Control-Allow-Origin", allow_origin)
         self.send_header("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Authorization,Content-Type,X-User-Id,X-Firebase-AppCheck")

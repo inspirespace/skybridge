@@ -30,69 +30,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <script>
-      (() => {
-        if (location.protocol !== "https:") return;
-        if (!location.hostname.endsWith("skybridge.localhost")) return;
-        const hosts = [
-          "skybridge.localhost",
-          "firestore.skybridge.localhost",
-          "auth.skybridge.localhost",
-          "storage.skybridge.localhost",
-          "functions.skybridge.localhost",
-          "hosting.skybridge.localhost",
-        ];
-        const rewrite = (rawUrl) => {
-          const url = String(rawUrl ?? "");
-          for (const host of hosts) {
-            const prefix = `http://${host}`;
-            if (url.startsWith(prefix)) {
-              return url.replace(prefix, `https://${host}`);
-            }
-          }
-          return url;
-        };
-        const originalOpen = XMLHttpRequest.prototype.open;
-        XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
-          return originalOpen.call(
-            this,
-            method,
-            rewrite(url),
-            async ?? true,
-            user ?? null,
-            password ?? null
-          );
-        };
-        const originalFetch = window.fetch.bind(window);
-        window.fetch = (input, init) => {
-          const url =
-            typeof input === "string"
-              ? input
-              : input instanceof URL
-                ? input.toString()
-                : input.url;
-          const nextUrl = rewrite(url);
-          if (nextUrl !== url) {
-            if (typeof input === "string") {
-              return originalFetch(nextUrl, init);
-            }
-            if (input instanceof URL) {
-              return originalFetch(new URL(nextUrl), init);
-            }
-            const nextRequest = new Request(nextUrl, input);
-            return originalFetch(nextRequest, init);
-          }
-          return originalFetch(input, init);
-        };
-        if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
-          const originalBeacon = navigator.sendBeacon.bind(navigator);
-          navigator.sendBeacon = (url, data) => {
-            const nextUrl = rewrite(typeof url === "string" ? url : url.toString());
-            return originalBeacon(nextUrl, data);
-          };
-        }
-      })();
-    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

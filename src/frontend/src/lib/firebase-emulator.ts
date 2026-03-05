@@ -1,34 +1,26 @@
+import {
+  rewriteHttpToHttpsForRuntimeHost,
+  type RuntimeLocationLike,
+} from "@/lib/runtime-endpoints";
+
 const FIREBASE_USE_EMULATOR =
   (import.meta.env.VITE_FIREBASE_USE_EMULATOR ?? "") === "1";
 
-const PROXY_HOSTS = [
-  "skybridge.localhost",
-  "firestore.skybridge.localhost",
-  "auth.skybridge.localhost",
-  "storage.skybridge.localhost",
-  "functions.skybridge.localhost",
-  "hosting.skybridge.localhost",
-];
-
 const PATCH_FLAG = "__skybridgeFirebaseEmulatorProxyPatched";
 
-const rewriteEmulatorUrl = (url: string) => {
-  for (const host of PROXY_HOSTS) {
-    const prefix = `http://${host}`;
-    if (url.startsWith(prefix)) {
-      return url.replace(prefix, `https://${host}`);
-    }
-  }
-  return url;
-};
-
-export const patchFirebaseEmulatorRequests = () => {
+export const patchFirebaseEmulatorRequests = (runtimeLocation?: RuntimeLocationLike) => {
   if (!FIREBASE_USE_EMULATOR) return;
   if (typeof window === "undefined") return;
-  if (window.location.protocol !== "https:") return;
-  if (!window.location.hostname.endsWith("skybridge.localhost")) return;
+  const activeLocation = runtimeLocation ?? {
+    origin: window.location.origin,
+    protocol: window.location.protocol,
+    hostname: window.location.hostname,
+  };
+  if (activeLocation.protocol !== "https:") return;
   if ((window as unknown as Record<string, boolean>)[PATCH_FLAG]) return;
   (window as unknown as Record<string, boolean>)[PATCH_FLAG] = true;
+  const rewriteEmulatorUrl = (url: string) =>
+    rewriteHttpToHttpsForRuntimeHost({ url, runtimeLocation: activeLocation });
 
   const originalOpen = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function openProxy(

@@ -10,6 +10,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from . import lambda_handlers
+from .cors import resolve_cors_origins
 from .rate_limit import RateLimiter
 
 _logger = logging.getLogger(__name__)
@@ -19,22 +20,6 @@ app = FastAPI(title="Skybridge API")
 # Rate limiters for sensitive endpoints (10 requests per 60 seconds per IP)
 _auth_rate_limiter = RateLimiter(window_seconds=60, max_events=10)
 _credentials_rate_limiter = RateLimiter(window_seconds=60, max_events=10)
-
-
-def _cors_config() -> list[str]:
-    raw = os.getenv("CORS_ALLOW_ORIGINS") or "https://skybridge.localhost"
-    origins = [origin.strip() for origin in raw.split(",") if origin.strip()]
-    if not origins:
-        origins = ["https://skybridge.localhost"]
-    if "*" in origins:
-        # Log warning if wildcard CORS is configured
-        if os.getenv("BACKEND_PRODUCTION", "").lower() in {"1", "true", "yes", "on"}:
-            _logger.warning(
-                "SECURITY WARNING: CORS_ALLOW_ORIGINS contains '*' in production. "
-                "This allows requests from any origin. Configure explicit origins instead."
-            )
-        return ["*"]
-    return origins
 
 
 def _get_client_ip(request: Request) -> str:
@@ -56,10 +41,17 @@ def _get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-_cors_origins = _cors_config()
+_cors_origins, _cors_origin_regex = resolve_cors_origins()
+if "*" in _cors_origins:
+    if os.getenv("BACKEND_PRODUCTION", "").lower() in {"1", "true", "yes", "on"}:
+        _logger.warning(
+            "SECURITY WARNING: CORS_ALLOW_ORIGINS contains '*' in production. "
+            "This allows requests from any origin. Configure explicit origins instead."
+        )
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
+    allow_origin_regex=_cors_origin_regex,
     allow_credentials=False,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-User-Id", "X-Firebase-AppCheck"],

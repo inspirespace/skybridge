@@ -1,4 +1,5 @@
 import { getAppCheckTokenHeader } from "@/lib/firebase-app-check";
+import { resolveApiBaseUrl } from "@/lib/runtime-endpoints";
 
 /** Type JobStatus. */
 export type JobStatus =
@@ -104,9 +105,8 @@ export type CredentialValidationResponse = {
   ok: boolean;
 };
 
-const configuredApiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
-const rawApiBaseUrl = configuredApiBaseUrl || "/api";
-export const apiBaseUrl = rawApiBaseUrl.replace(/\/+$/, "");
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
+export const apiBaseUrl = resolveApiBaseUrl(configuredApiBaseUrl);
 
 const authMode = import.meta.env.VITE_AUTH_MODE ?? "header";
 const RETRY_ATTEMPTS = Number.parseInt(

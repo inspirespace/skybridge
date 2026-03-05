@@ -1,5 +1,7 @@
 import * as React from "react";
 
+import { resolveAuthEmulatorBaseUrl } from "@/lib/runtime-endpoints";
+
 const EMULATOR_RETRY_ATTEMPTS = 3;
 const EMULATOR_RETRY_DELAY_MS = 600;
 
@@ -238,28 +240,10 @@ export function useFirebaseAuth({
   }, [enabled, effectiveApiKey, effectiveAuthDomain, effectiveProjectId]);
 
   const emulatorUrl = React.useMemo(() => {
-    if (!useEmulator) return undefined;
-    let fallback = "http://localhost:9099";
-    if (typeof window !== "undefined") {
-      const isHttps = window.location.protocol === "https:";
-      const hostname = window.location.hostname;
-      if (isHttps && hostname.endsWith("skybridge.localhost")) {
-        // Use same-origin proxy in HTTPS local mode to avoid cross-origin CORS drift.
-        fallback = "https://skybridge.localhost";
-      }
-      if (window.location.protocol === "http:") {
-        fallback = "http://localhost:9099";
-      }
-    }
-    if (!emulatorHost) return fallback;
-    if (
-      typeof window !== "undefined" &&
-      window.location.protocol === "http:" &&
-      emulatorHost.startsWith("https://")
-    ) {
-      return "http://localhost:9099";
-    }
-    return emulatorHost;
+    return resolveAuthEmulatorBaseUrl({
+      useEmulator,
+      explicitHost: emulatorHost,
+    });
   }, [useEmulator, emulatorHost]);
 
   const checkEmulatorReady = React.useCallback(async () => {

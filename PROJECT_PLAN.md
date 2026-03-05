@@ -101,7 +101,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [ ] Q3 Confirm whether CloudAhoy/FlySto require fixed egress IP allowlisting (may require NAT).
 
 ## Blockers
-- [x] Local Firebase emulator stack re-verified after moving emulator access behind `*.skybridge.localhost` subdomains to avoid host port conflicts.
+- [x] Local Firebase emulator stack re-verified after moving emulator access behind configurable domain subdomains to avoid host port conflicts.
 
 ## Maintenance Notes
 - [x] Show download preparation progress and lock download actions while artifacts are fetched.
@@ -206,7 +206,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Further harden credential fields against password-manager prompts by adding decoy hidden login inputs and a readOnly-until-user-interaction pattern for CloudAhoy/FlySto password fields.
 - [x] Remove unused `FirebaseAuthDialog` component file to prevent accidental reintroduction of auth modal behavior on `/app`.
 - [x] Add deploy-time Firebase Auth email-template branding fallback (zero-config default) so email-link copy stays branded when `%APP_NAME%` resolves to project/site IDs.
-- [x] Fix production API base fallback to same-origin `/api` (instead of `https://skybridge.localhost/api`) to prevent CSP `connect-src` failures on deployed domains.
+- [x] Fix production API base fallback to same-origin `/api` (instead of fixed local-domain API URLs) to prevent CSP `connect-src` failures on deployed domains.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.

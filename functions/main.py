@@ -17,6 +17,7 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
 from src.backend import lambda_handlers  # noqa: E402
+from src.backend.cors import resolve_cors_origins, select_allow_origin  # noqa: E402
 from src.backend.env import resolve_project_id, resolve_region  # noqa: E402
 
 options.set_global_options(
@@ -24,6 +25,7 @@ options.set_global_options(
 )
 
 _ROUTES: list[tuple[str, re.Pattern[str], Callable]] = []
+_ALLOWED_ORIGINS, _ALLOWED_ORIGIN_REGEX = resolve_cors_origins()
 
 
 def _route(method: str, pattern: str, handler: Callable) -> None:
@@ -60,12 +62,8 @@ def _register_routes() -> None:
     _route("DELETE", r"^/jobs/(?P<job_id>[^/]+)$", lambda_handlers.delete_job_handler)
 
 
-def _cors_headers() -> dict[str, str]:
-    raw = os.getenv("CORS_ALLOW_ORIGINS") or "https://skybridge.localhost"
-    origins = [origin.strip() for origin in raw.split(",") if origin.strip()]
-    if not origins:
-        origins = ["https://skybridge.localhost"]
-    allow_origin = "*" if "*" in origins else origins[0]
+def _cors_headers(origin: str | None = None) -> dict[str, str]:
+    allow_origin = select_allow_origin(origin or "", _ALLOWED_ORIGINS, _ALLOWED_ORIGIN_REGEX)
     return {
         "Access-Control-Allow-Origin": allow_origin,
         "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
@@ -100,7 +98,7 @@ def _invoke(
     headers = payload.get("headers") or {}
     is_b64 = payload.get("isBase64Encoded", False)
     data = payload.get("body", "")
-    headers = {**headers, **_cors_headers()}
+    headers = {**headers, **_cors_headers(request.headers.get("Origin"))}
     if isinstance(data, dict):
         data = json.dumps(data)
     if is_b64:
@@ -117,7 +115,7 @@ _register_routes()
 @https_fn.on_request()
 def api(request: Request) -> Response:
     if request.method == "OPTIONS":
-        return Response(status=204, headers=_cors_headers())
+        return Response(status=204, headers=_cors_headers(request.headers.get("Origin")))
     method = request.method.upper()
     path = _normalize_path(request)
     for route_method, pattern, handler in _ROUTES:
@@ -127,7 +125,11 @@ def api(request: Request) -> Response:
         if not match:
             continue
         return _invoke(handler, request, match.groupdict())
-    return Response(response=json.dumps({"detail": "Not found"}), status=404, headers=_cors_headers())
+    return Response(
+        response=json.dumps({"detail": "Not found"}),
+        status=404,
+        headers=_cors_headers(request.headers.get("Origin")),
+    )
 
 
 @pubsub_fn.on_message_published(topic=os.getenv("PUBSUB_TOPIC") or "skybridge-job-queue")
