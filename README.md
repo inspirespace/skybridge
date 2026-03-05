@@ -123,6 +123,7 @@ Deploy preflight note:
 - If your project has multiple Firebase web apps, set `FIREBASE_WEB_APP_ID` to force which app is used for SDK config resolution during deploy preflight.
 - In `firebase` auth mode without emulator, deploy preflight verifies passwordless email-link provider config (`signIn.email.enabled=true`, `signIn.email.passwordRequired=false`) when `FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN=1` (default).
 - Deploy preflight does not auto-patch Firebase Auth templates or project display name. Configure friendly app/template names in Firebase Console.
+- Firebase Console currently requires Google sign-in provider to be enabled before the Auth template "Public-facing name" can be edited.
 - Auth provider verification uses either Google ADC (`GOOGLE_APPLICATION_CREDENTIALS`) or Firebase CLI login token cache (`firebase login`). In CI this is enforced; local runs warn and continue only when neither source is available.
 - Deploy preflight also verifies Firebase Auth `authorizedDomains` for email-link `continueUrl` hosts. Custom Hosting domains are enforced as required; default project domains are treated as best-effort (warning-only) because Firebase may allow them implicitly without listing them in API output. Add explicit domains via `FIREBASE_AUTHORIZED_DOMAINS` (comma-separated) when needed.
 - Authorized-domain enforcement is strict by default (`FIREBASE_REQUIRE_AUTHORIZED_DOMAINS=1` unless explicitly overridden).

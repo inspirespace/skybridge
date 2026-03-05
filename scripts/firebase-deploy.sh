@@ -70,7 +70,7 @@ fi
 export FIREBASE_REGION="$FUNCTIONS_REGION"
 
 TEMP_CREDENTIALS_FILE=""
-FUNCTIONS_SRC_DIR="functions/src"
+FUNCTIONS_SRC_DIR="functions/_deploy_src/src"
 FUNCTIONS_SRC_BACKUP_DIR=""
 FUNCTIONS_SRC_STAGED=0
 FIREBASE_JSON_PATH="firebase.json"
@@ -225,6 +225,43 @@ domain_list_add() {
   else
     printf -v "$var_name" '%s\n%s' "$current" "$normalized"
   fi
+}
+
+split_domain_values() {
+  local raw="$1"
+  printf '%s' "$raw" | tr ',;' '\n' | while IFS= read -r line; do
+    line="$(normalize_env_value "$line")"
+    [ -z "$line" ] && continue
+    for token in $line; do
+      printf '%s\n' "$token"
+    done
+  done
+}
+
+collect_authorized_domains_config() {
+  local merged=""
+  local raw=""
+  local candidate=""
+  local file_path
+
+  raw="$(normalize_env_value "${FIREBASE_AUTHORIZED_DOMAINS:-}")"
+  if [ -n "$raw" ]; then
+    while IFS= read -r candidate; do
+      [ -z "$candidate" ] && continue
+      domain_list_add merged "$candidate"
+    done < <(split_domain_values "$raw")
+  fi
+
+  for file_path in functions/.env .env; do
+    raw="$(read_env_file_value "$file_path" FIREBASE_AUTHORIZED_DOMAINS || true)"
+    [ -z "$raw" ] && continue
+    while IFS= read -r candidate; do
+      [ -z "$candidate" ] && continue
+      domain_list_add merged "$candidate"
+    done < <(split_domain_values "$raw")
+  done
+
+  printf '%s' "$merged"
 }
 
 google_access_token() {
@@ -559,7 +596,7 @@ print_firebase_auth_setup_overview() {
 
   project_for_domains="${VITE_FIREBASE_PROJECT_ID:-${PROJECT_ID}}"
   auth_domain="${VITE_FIREBASE_AUTH_DOMAIN:-${project_for_domains}.firebaseapp.com}"
-  explicit_domains="$(resolve_config_value FIREBASE_AUTHORIZED_DOMAINS functions/.env .env || true)"
+  explicit_domains="$(collect_authorized_domains_config || true)"
 
   cat >&2 <<EOF
 Firebase Auth manual setup overview for project ${project_for_domains}:
@@ -569,6 +606,7 @@ Firebase Auth manual setup overview for project ${project_for_domains}:
      - Console: https://console.firebase.google.com/project/${PROJECT_ID}/authentication/providers
   2) Email template branding (required for friendly app naming):
      - Open the "Email address sign-in" template in Firebase Console
+     - Prerequisite: enable Google sign-in provider to unlock "Public-facing name"
      - Set sender/app display name to "${app_name}" (or your preferred friendly name)
      - Update subject/body copy so emails say your brand instead of project ids
      - Console: https://console.firebase.google.com/project/${PROJECT_ID}/authentication/templates
@@ -585,7 +623,7 @@ EOF
       domain="$(normalize_domain_candidate "$domain")"
       [ -z "$domain" ] && continue
       echo "    - $domain" >&2
-    done < <(printf '%s' "$explicit_domains" | tr ',' '\n')
+    done < <(printf '%s\n' "$explicit_domains")
   fi
 
   echo "Deploy preflight verifies sign-in mode and authorized domains only; it does not auto-patch Firebase Auth templates or project naming." >&2
@@ -1094,12 +1132,12 @@ EOF
   domain_list_add expected_optional_domains "$default_webapp"
   domain_list_add expected_optional_domains "${VITE_FIREBASE_AUTH_DOMAIN:-}"
 
-  explicit_domains="$(resolve_config_value FIREBASE_AUTHORIZED_DOMAINS functions/.env .env || true)"
+  explicit_domains="$(collect_authorized_domains_config || true)"
   if [ -n "$explicit_domains" ]; then
     while IFS= read -r domain; do
       [ -z "$domain" ] && continue
       domain_list_add expected_required_domains "$domain"
-    done < <(printf '%s' "$explicit_domains" | tr ',' '\n')
+    done < <(printf '%s\n' "$explicit_domains")
   fi
 
   hosting_domains="$(discover_hosting_domains "$token" "${VITE_FIREBASE_PROJECT_ID:-${PROJECT_ID}}" || true)"
@@ -1342,7 +1380,7 @@ npm --prefix src/frontend run test:runtime-smoke
 echo "Aligning Firebase Hosting rewrite region in firebase.json..."
 stage_firebase_hosting_region
 
-echo "Staging shared runtime modules into functions source..."
+echo "Staging shared runtime modules into functions deploy source..."
 stage_functions_src
 
 echo "Preparing functions virtual environment with ${PYTHON_BIN}..."

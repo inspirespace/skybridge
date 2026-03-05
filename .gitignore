@@ -46,6 +46,7 @@ firebase-export-*/
 firebase-export-*.json
 functions/venv/
 functions/venv
+functions/_deploy_src/
 functions/.env
 
 # Lambda packages

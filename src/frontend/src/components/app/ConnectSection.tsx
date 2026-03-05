@@ -1,5 +1,3 @@
-import * as React from "react";
-
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   AccordionContent,
@@ -76,15 +74,6 @@ export function ConnectSection({
   connectError?: string | null;
   onRefresh: () => void;
 }) {
-  const [cloudahoyPasswordArmed, setCloudahoyPasswordArmed] = React.useState(false);
-  const [flystoPasswordArmed, setFlystoPasswordArmed] = React.useState(false);
-
-  React.useEffect(() => {
-    if (!connectLocked) return;
-    setCloudahoyPasswordArmed(false);
-    setFlystoPasswordArmed(false);
-  }, [connectLocked]);
-
   return (
     <AccordionItem
       value="connect"
@@ -179,10 +168,6 @@ export function ConnectSection({
                   data-1p-ignore="true"
                   data-bwignore="true"
                   data-form-type="other"
-                  readOnly={!connectLocked && !cloudahoyPasswordArmed}
-                  onFocus={() => setCloudahoyPasswordArmed(true)}
-                  onPointerDown={() => setCloudahoyPasswordArmed(true)}
-                  onKeyDown={() => setCloudahoyPasswordArmed(true)}
                   placeholder="Password"
                   disabled={connectLocked}
                   value={cloudahoyPassword}
@@ -221,10 +206,6 @@ export function ConnectSection({
                   data-1p-ignore="true"
                   data-bwignore="true"
                   data-form-type="other"
-                  readOnly={!connectLocked && !flystoPasswordArmed}
-                  onFocus={() => setFlystoPasswordArmed(true)}
-                  onPointerDown={() => setFlystoPasswordArmed(true)}
-                  onKeyDown={() => setFlystoPasswordArmed(true)}
                   placeholder="Password"
                   disabled={connectLocked}
                   value={flystoPassword}

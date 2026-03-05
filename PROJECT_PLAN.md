@@ -203,9 +203,13 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Initialize theme from host system preference when no saved theme exists, including first paint and toggle state across SPA + static pages.
 - [x] Streamline Firebase email-link sign-in UX: use inline auth card on `/app` (no duplicate modal) and prefill email-link completion from redirect email hint.
 - [x] Reduce password-manager save prompts on CloudAhoy/FlySto credential fields by adding `autocomplete` suppression plus manager-specific ignore attributes (`data-lpignore`, `data-1p-ignore`, `data-bwignore`).
-- [x] Further harden credential fields against password-manager prompts by adding decoy hidden login inputs and a readOnly-until-user-interaction pattern for CloudAhoy/FlySto password fields.
+- [x] Further harden credential fields against password-manager prompts by adding decoy hidden login inputs for CloudAhoy/FlySto forms.
+- [x] Restore Playwright e2e compatibility for Connect credentials by removing the readOnly arming gate from password inputs while keeping decoy fields plus password-manager ignore attributes.
 - [x] Remove unused `FirebaseAuthDialog` component file to prevent accidental reintroduction of auth modal behavior on `/app`.
 - [x] Remove deploy-time Firebase Auth branding auto-patching and switch deploy preflight to manual setup guidance (email-link mode, template naming, authorized domains) plus verification-only checks.
+- [x] Document Firebase Console prerequisite that Auth template "Public-facing name" is editable only when Google sign-in provider is enabled (deploy overview + docs).
+- [x] Fix deploy authorized-domain setup overview to merge/dedupe `FIREBASE_AUTHORIZED_DOMAINS` across env sources so all configured domains (for example `.app` and `.co`) are shown and validated.
+- [x] Reduce deploy-time Git noise by staging shared backend modules under ignored `functions/_deploy_src/src` (instead of tracked `functions/src`) and updating Functions import path fallback accordingly.
 - [x] Fix production API base fallback to same-origin `/api` (instead of fixed local-domain API URLs) to prevent CSP `connect-src` failures on deployed domains.
 - [x] Simplify backend runtime paths by removing unused local/Cloud Run HTTP adapters (`src/backend/lambda_api_local.py`, `src/backend/http_api.py`, `src/backend/http_worker.py`), keeping Firebase Functions as the only backend runtime while retaining compose-based dev mock services.
 

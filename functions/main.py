@@ -13,6 +13,9 @@ from firebase_functions import https_fn, pubsub_fn, scheduler_fn, options
 from flask import Request, Response
 
 ROOT = Path(__file__).resolve().parents[1]
+DEPLOY_STAGING_ROOT = ROOT / "_deploy_src"
+if DEPLOY_STAGING_ROOT.is_dir() and str(DEPLOY_STAGING_ROOT) not in sys.path:
+    sys.path.insert(0, str(DEPLOY_STAGING_ROOT))
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 

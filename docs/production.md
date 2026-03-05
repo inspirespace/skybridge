@@ -46,6 +46,7 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - Optional: set `FIREBASE_WEB_APP_ID` to force which Firebase WEB app deploy preflight should use for sdkconfig lookup.
 - Deploy preflight also validates passwordless email-link sign-in mode (`signIn.email.enabled=true`, `signIn.email.passwordRequired=false`) when `FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN=1` (default).
 - Deploy preflight prints a manual Firebase Auth setup overview (sign-in method, email template branding name, authorized domains) and keeps template naming/configuration manual in Firebase Console.
+- Firebase Console currently requires Google sign-in provider to be enabled before Auth template "Public-facing name" can be edited.
 - Optional: `FIREBASE_AUTH_EMAIL_APP_NAME` sets the friendly app name shown in that setup overview (default `Skybridge`).
 - Auth preflight verification uses Google ADC (`GOOGLE_APPLICATION_CREDENTIALS`) and falls back to Firebase CLI login token cache.
 ## Deploy
@@ -89,6 +90,7 @@ Job artifacts must expire automatically. Apply a lifecycle rule to your storage 
 - Enable Google/Apple/Facebook providers in the Firebase console.
 - Apple sign-in requires an Apple Developer Program membership and a Services ID.
 - Enable Email/Password and Email link (passwordless) in **Authentication -> Sign-in method**.
+- Enable Google sign-in provider if you need to edit **Public-facing name** in Auth email templates.
 - Set a friendly sender/app name and subject/body copy in **Authentication -> Templates -> Email address sign-in** (for example `Skybridge`).
 - Add all continue-url hostnames in **Authentication -> Settings -> Authorized domains** (including custom Hosting domains).
 
