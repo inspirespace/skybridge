@@ -1,7 +1,7 @@
 """Tests for lambda handlers."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import json
@@ -55,9 +55,11 @@ def test_list_jobs_handler_requires_auth(store):
 
 def test_create_job_handler(store, monkeypatch: pytest.MonkeyPatch):
     job = _job("review_ready")
+    seen = {}
 
     class _DummyService:
         def create_job(self, user_id: str):
+            seen["create_user_id"] = user_id
             return job
 
     class _DummyCredentialStore:
@@ -66,6 +68,12 @@ def test_create_job_handler(store, monkeypatch: pytest.MonkeyPatch):
 
     monkeypatch.setattr(handlers, "_service", _DummyService())
     monkeypatch.setattr(handlers, "_credential_store", _DummyCredentialStore())
+    monkeypatch.setattr(handlers, "_enqueue_job", lambda *args, **kwargs: seen.setdefault("enqueued", True))
+    monkeypatch.setattr(
+        handlers,
+        "resolve_job_queue_topic_path",
+        lambda: "projects/demo-project/topics/skybridge-job-queue",
+    )
 
     payload = {
         "credentials": {
@@ -77,6 +85,115 @@ def test_create_job_handler(store, monkeypatch: pytest.MonkeyPatch):
     }
     response = handlers.create_job_handler(_event("pilot", payload), None)
     assert response["statusCode"] == 201
+    assert seen["create_user_id"] == "pilot"
+    assert seen["enqueued"] is True
+
+
+def test_create_job_handler_requires_worker_queue(store, monkeypatch: pytest.MonkeyPatch):
+    payload = {
+        "credentials": {
+            "cloudahoy_username": "pilot",
+            "cloudahoy_password": "secret",
+            "flysto_username": "pilot",
+            "flysto_password": "secret",
+        }
+    }
+    monkeypatch.setattr(handlers, "resolve_job_queue_topic_path", lambda: None)
+
+    response = handlers.create_job_handler(_event("pilot", payload), None)
+
+    assert response["statusCode"] == 500
+    assert "Firebase project id is not configured for the worker queue." in response["body"]
+
+
+def test_accept_review_handler_enqueues(store, monkeypatch: pytest.MonkeyPatch):
+    job = _job("review_ready")
+    job.status = "review_ready"
+    store.save_job(job)
+    store.write_artifact(job.job_id, "review.json", {"review_id": "review-1", "items": []})
+
+    seen = {}
+
+    class _DummyCredentialStore:
+        def issue(self, **_kwargs):
+            return "import-token"
+
+    monkeypatch.setattr(handlers, "_credential_store", _DummyCredentialStore())
+    monkeypatch.setattr(handlers, "_enqueue_job", lambda *args, **kwargs: seen.setdefault("enqueued", True))
+    monkeypatch.setattr(
+        handlers,
+        "resolve_job_queue_topic_path",
+        lambda: "projects/demo-project/topics/skybridge-job-queue",
+    )
+
+    payload = {
+        "credentials": {
+            "cloudahoy_username": "pilot",
+            "cloudahoy_password": "secret",
+            "flysto_username": "pilot",
+            "flysto_password": "secret",
+        }
+    }
+    response = handlers.accept_review_handler(
+        _event("pilot", payload, job_id=str(job.job_id)),
+        None,
+    )
+
+    assert response["statusCode"] == 200
+    assert seen["enqueued"] is True
+
+
+def test_get_job_handler_marks_stale_queued_job_failed(store, monkeypatch: pytest.MonkeyPatch):
+    job = _job("review_queued")
+    job.updated_at = datetime.now(timezone.utc) - timedelta(minutes=10)
+    store.save_job(job)
+    monkeypatch.setattr(handlers, "QUEUE_STALE_TIMEOUT_SECONDS", 60)
+
+    response = handlers.get_job_handler(_event("pilot", job_id=str(job.job_id)), None)
+
+    assert response["statusCode"] == 200
+    assert "worker did not start" in response["body"]
+
+
+def test_create_job_handler_marks_job_failed_when_enqueue_fails(store, monkeypatch: pytest.MonkeyPatch):
+    job = _job("review_ready")
+
+    class _DummyService:
+        def create_job(self, user_id: str):
+            assert user_id == "pilot"
+            return job
+
+    class _DummyCredentialStore:
+        def issue(self, **_kwargs):
+            return "token"
+
+    monkeypatch.setattr(handlers, "_service", _DummyService())
+    monkeypatch.setattr(handlers, "_credential_store", _DummyCredentialStore())
+    monkeypatch.setattr(
+        handlers,
+        "resolve_job_queue_topic_path",
+        lambda: "projects/demo-project/topics/skybridge-job-queue",
+    )
+
+    def _raise_enqueue(*_args, **_kwargs):
+        raise handlers.LambdaHttpError(500, "publish failed")
+
+    monkeypatch.setattr(handlers, "_enqueue_job", _raise_enqueue)
+
+    payload = {
+        "credentials": {
+            "cloudahoy_username": "pilot",
+            "cloudahoy_password": "secret",
+            "flysto_username": "pilot",
+            "flysto_password": "secret",
+        }
+    }
+    response = handlers.create_job_handler(_event("pilot", payload), None)
+
+    assert response["statusCode"] == 500
+    saved_job = store.load_job(job.job_id)
+    assert saved_job.status == "failed"
+    assert saved_job.error_message == "publish failed"
 
 
 def test_get_job_handler_returns_404(store):

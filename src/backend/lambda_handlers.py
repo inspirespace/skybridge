@@ -14,12 +14,14 @@ from pydantic import ValidationError
 from .auth import user_id_from_event
 from .credential_store import build_credential_store
 from .env import resolve_project_id
-from .models import CredentialValidationRequest, JobAcceptRequest, JobCreateRequest
+from .models import CredentialValidationRequest, JobAcceptRequest, JobCreateRequest, ProgressEvent
 from .object_store import build_object_store_from_env
+from .queue import resolve_job_queue_topic_path
 from .service import JobService, validate_credentials
 from .store import JobStore
 
 _logger = logging.getLogger(__name__)
+QUEUE_STALE_TIMEOUT_SECONDS = 120
 
 
 def _json_default(value: Any) -> str:
@@ -75,22 +77,9 @@ def _credential_ttl() -> int:
     return int(os.getenv("BACKEND_CREDENTIAL_TTL") or "900")
 
 
-def _use_queue() -> bool:
-    """Internal helper for use queue."""
-    return (os.getenv("BACKEND_PUBSUB_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}
-
-
 def _pubsub_topic() -> str:
     """Internal helper for pubsub topic."""
-    topic = os.getenv("PUBSUB_TOPIC") or ""
-    if not topic:
-        return ""
-    if topic.startswith("projects/"):
-        return topic
-    project_id = resolve_project_id() or ""
-    if not project_id:
-        return ""
-    return f"projects/{project_id}/topics/{topic}"
+    return resolve_job_queue_topic_path() or ""
 
 
 def _get_pubsub_client():
@@ -114,13 +103,64 @@ class LambdaHttpError(Exception):
 
 def _enqueue_job(job_id: UUID, purpose: str, token: str) -> None:
     """Internal helper for enqueue job."""
-    if not _use_queue():
-        return
     payload = json.dumps({"job_id": str(job_id), "purpose": purpose, "token": token}).encode("utf-8")
     topic = _pubsub_topic()
     if not topic:
-        raise LambdaHttpError(500, "PUBSUB_TOPIC not configured")
+        raise LambdaHttpError(500, "Firebase project id is not configured for the worker queue.")
     _get_pubsub_client().publish(topic, payload).result(timeout=10)
+
+
+def _ensure_worker_queue_ready() -> None:
+    """Fail fast when the Firebase worker queue cannot be resolved."""
+    if _pubsub_topic():
+        return
+    raise LambdaHttpError(500, "Firebase project id is not configured for the worker queue.")
+
+
+def _mark_enqueue_failed(job, *, phase: str, detail: str) -> None:
+    """Persist immediate queue handoff failures on the job record."""
+    job.status = "failed"
+    job.updated_at = datetime.now(timezone.utc)
+    job.progress_stage = f"{phase.title()} queue handoff failed"
+    job.progress_log.append(
+        ProgressEvent(
+            phase=phase,
+            stage=job.progress_stage,
+            percent=job.progress_percent,
+            status="failed",
+            created_at=job.updated_at,
+        )
+    )
+    job.error_message = detail
+    _get_store().save_job(job)
+
+
+def _fail_stale_queued_job(job):
+    """Mark jobs failed when Firebase worker delivery never starts."""
+    purpose = "review" if job.status == "review_queued" else "import" if job.status == "import_queued" else None
+    if not purpose:
+        return job
+    timeout_seconds = QUEUE_STALE_TIMEOUT_SECONDS
+    age_seconds = (datetime.now(timezone.utc) - job.updated_at).total_seconds()
+    if age_seconds < timeout_seconds:
+        return job
+    job.updated_at = datetime.now(timezone.utc)
+    job.status = "failed"
+    job.progress_stage = f"{purpose.title()} worker did not start"
+    job.progress_log.append(
+        ProgressEvent(
+            phase=purpose,
+            stage=job.progress_stage,
+            percent=job.progress_percent,
+            status="failed",
+            created_at=job.updated_at,
+        )
+    )
+    job.error_message = (
+        f"{purpose.title()} worker did not start. Check Firebase Pub/Sub/Eventarc configuration."
+    )
+    _get_store().save_job(job)
+    return job
 
 
 def _set_queued(job, *, phase: str) -> None:
@@ -130,13 +170,13 @@ def _set_queued(job, *, phase: str) -> None:
     job.progress_stage = "Queued"
     job.updated_at = datetime.now(timezone.utc)
     job.progress_log.append(
-        {
-            "phase": phase,
-            "stage": "Queued",
-            "percent": 5,
-            "status": job.status,
-            "created_at": job.updated_at,
-        }
+        ProgressEvent(
+            phase=phase,
+            stage="Queued",
+            percent=5,
+            status=job.status,
+            created_at=job.updated_at,
+        )
     )
 
 
@@ -210,6 +250,7 @@ def create_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         existing_jobs = store.list_jobs(user_id)
         if any(job.status in _ACTIVE_JOB_STATUSES for job in existing_jobs):
             return _response(429, {"detail": "Job already in progress"})
+        _ensure_worker_queue_ready()
         store.delete_jobs_for_user(user_id)
         job = service.create_job(user_id)
         job.start_date = payload.start_date
@@ -224,7 +265,22 @@ def create_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         _set_queued(job, phase="review")
         store.save_job(job)
         store.write_token(job.job_id, "review", token)
-        _enqueue_job(job.job_id, "review", token)
+        try:
+            _enqueue_job(job.job_id, "review", token)
+        except LambdaHttpError as exc:
+            _mark_enqueue_failed(job, phase="review", detail=exc.detail)
+            raise
+        except Exception as exc:
+            _logger.exception("Failed to enqueue review job %s", job.job_id)
+            _mark_enqueue_failed(
+                job,
+                phase="review",
+                detail="Review queue handoff failed. Check Firebase Pub/Sub permissions/configuration.",
+            )
+            raise LambdaHttpError(
+                500,
+                "Review queue handoff failed. Check Firebase Pub/Sub permissions/configuration.",
+            ) from exc
         return _response(201, job.model_dump())
     except Exception as exc:
         return _handle_error(exc)
@@ -236,7 +292,7 @@ def list_jobs_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         user_id = _user_id(event)
         if not user_id:
             return _response(401, {"detail": "Missing authentication"})
-        jobs = _get_store().list_jobs(user_id)
+        jobs = [_fail_stale_queued_job(job) for job in _get_store().list_jobs(user_id)]
         return _response(200, {"jobs": [job.model_dump() for job in jobs]})
     except Exception as exc:
         return _handle_error(exc)
@@ -270,6 +326,7 @@ def get_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         job = _load_job(job_id, user_id)
         if not job:
             return _response(404, {"detail": "Job not found"})
+        job = _fail_stale_queued_job(job)
         return _response(200, job.model_dump())
     except Exception as exc:
         return _handle_error(exc)
@@ -304,6 +361,7 @@ def accept_review_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
                 and not has_import_events
             ):
                 return _response(409, {"detail": "Review not ready"})
+        _ensure_worker_queue_ready()
         body = json.loads(event.get("body") or "{}")
         payload = JobAcceptRequest.model_validate(body)
         token = _get_credential_store().issue(
@@ -315,7 +373,22 @@ def accept_review_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
         _set_queued(job, phase="import")
         store.save_job(job)
         store.write_token(job.job_id, "import", token)
-        _enqueue_job(job.job_id, "import", token)
+        try:
+            _enqueue_job(job.job_id, "import", token)
+        except LambdaHttpError as exc:
+            _mark_enqueue_failed(job, phase="import", detail=exc.detail)
+            raise
+        except Exception as exc:
+            _logger.exception("Failed to enqueue import job %s", job.job_id)
+            _mark_enqueue_failed(
+                job,
+                phase="import",
+                detail="Import queue handoff failed. Check Firebase Pub/Sub permissions/configuration.",
+            )
+            raise LambdaHttpError(
+                500,
+                "Import queue handoff failed. Check Firebase Pub/Sub permissions/configuration.",
+            ) from exc
         return _response(200, job.model_dump())
     except Exception as exc:
         return _handle_error(exc)

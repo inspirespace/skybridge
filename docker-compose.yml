@@ -122,9 +122,6 @@ services:
       - AUTH_MODE=firebase
       - BACKEND_ENCRYPTION_KEY=${BACKEND_ENCRYPTION_KEY}
       - CORS_ALLOW_ORIGINS=https://skybridge.localhost,https://emulator.skybridge.localhost
-      - BACKEND_USE_WORKER=true
-      - BACKEND_PUBSUB_ENABLED=1
-      - PUBSUB_TOPIC=skybridge-job-queue
       - BACKEND_FIRESTORE_ENABLED=1
       - FIRESTORE_JOBS_COLLECTION=skybridge-jobs
       - FIRESTORE_CREDENTIALS_COLLECTION=skybridge-credentials

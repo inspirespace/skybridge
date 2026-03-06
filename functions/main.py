@@ -29,6 +29,7 @@ if str(REPO_ROOT) not in sys.path:
 from src.backend import lambda_handlers  # noqa: E402
 from src.backend.cors import resolve_cors_origins, select_allow_origin  # noqa: E402
 from src.backend.env import resolve_project_id, resolve_region  # noqa: E402
+from src.backend.queue import JOB_QUEUE_TOPIC  # noqa: E402
 
 options.set_global_options(
     region=resolve_region()
@@ -142,7 +143,7 @@ def api(request: Request) -> Response:
     )
 
 
-@pubsub_fn.on_message_published(topic=os.getenv("PUBSUB_TOPIC") or "skybridge-job-queue")
+@pubsub_fn.on_message_published(topic=JOB_QUEUE_TOPIC)
 def worker(event: pubsub_fn.CloudEvent[pubsub_fn.MessagePublishedData]) -> None:
     message = event.data.message
     payload = message.data

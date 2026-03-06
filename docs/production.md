@@ -9,7 +9,7 @@ This is a checklist of what production needs, not a step-by-step deployment guid
   - Credentials collection: documents keyed by `token` with TTL configured.
 - **Cloud Scheduler** (auto-created by Functions schedule) for daily TTL cleanup.
 - **Firebase Storage** bucket for job artifacts (add a lifecycle rule; 7 days suggested).
-- **Pub/Sub** topic for review/import jobs (Functions 2nd gen trigger).
+- **Pub/Sub** topic `skybridge-job-queue` for review/import jobs (Functions 2nd gen trigger; fixed by code, not a runtime toggle).
 - **Firebase Hosting** for SPA + API rewrites.
   - `/api/**` rewrites to the `api` function (see `firebase.json`).
 
@@ -18,9 +18,6 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - `AUTH_MODE=firebase`
 - `APP_CHECK_ENFORCE=1` (rejects API requests without valid Firebase App Check token)
 - `BACKEND_ENCRYPTION_KEY=<32-byte urlsafe base64 key>`
-- `BACKEND_USE_WORKER=1`
-- `BACKEND_PUBSUB_ENABLED=1`
-- `PUBSUB_TOPIC=<topic name>`
 - `BACKEND_FIRESTORE_ENABLED=1`
 - `FIRESTORE_JOBS_COLLECTION=skybridge-jobs`
 - `FIRESTORE_CREDENTIALS_COLLECTION=skybridge-credentials`
