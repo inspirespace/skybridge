@@ -9,27 +9,61 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-from firebase_functions import https_fn, pubsub_fn, scheduler_fn, options
-from flask import Request, Response
-
 FUNCTIONS_ROOT = Path(__file__).resolve().parent
 REPO_ROOT = FUNCTIONS_ROOT.parent
 DEPLOY_STAGING_ROOT = FUNCTIONS_ROOT / "_deploy_src"
 
-# Prefer deploy-staged modules when present (Cloud Functions deploy packaging).
-if DEPLOY_STAGING_ROOT.is_dir() and str(DEPLOY_STAGING_ROOT) not in sys.path:
-    sys.path.insert(0, str(DEPLOY_STAGING_ROOT))
 
-# Keep local-repo imports working in emulator/dev shells.
-if str(FUNCTIONS_ROOT) not in sys.path:
-    sys.path.append(str(FUNCTIONS_ROOT))
-if str(REPO_ROOT) not in sys.path:
-    sys.path.append(str(REPO_ROOT))
+def _should_prefer_deploy_staging() -> bool:
+    """Use deploy-staged modules only inside deployed Cloud Functions runtime."""
+    return DEPLOY_STAGING_ROOT.is_dir() and bool(os.getenv("K_SERVICE"))
+
+
+def _prepend_sys_path(path: Path) -> None:
+    value = str(path)
+    while value in sys.path:
+        sys.path.remove(value)
+    sys.path.insert(0, value)
+
+
+def _discard_sys_path(path: Path) -> None:
+    value = str(path)
+    while value in sys.path:
+        sys.path.remove(value)
+
+
+def _configure_import_paths() -> None:
+    prefer_deploy_staging = _should_prefer_deploy_staging()
+    if not prefer_deploy_staging:
+        _discard_sys_path(DEPLOY_STAGING_ROOT)
+    _prepend_sys_path(FUNCTIONS_ROOT)
+    # Force the live repo tree ahead of any installed third-party `src` package.
+    _prepend_sys_path(REPO_ROOT)
+    if prefer_deploy_staging:
+        _prepend_sys_path(DEPLOY_STAGING_ROOT)
+
+
+def _clear_src_modules() -> None:
+    # Some Functions emulator subprocesses can preload an unrelated top-level
+    # `src` package before this module runs. Drop those entries so our repo
+    # package is always imported from the configured source roots above.
+    for module_name in list(sys.modules):
+        if module_name == "src" or module_name.startswith("src."):
+            sys.modules.pop(module_name, None)
+
+
+_configure_import_paths()
+_clear_src_modules()
+
+from firebase_functions import https_fn, pubsub_fn, scheduler_fn, options
+from flask import Request, Response
 
 from src.backend import lambda_handlers  # noqa: E402
 from src.backend.cors import resolve_cors_origins, select_allow_origin  # noqa: E402
 from src.backend.env import resolve_project_id, resolve_region  # noqa: E402
 from src.backend.queue import JOB_QUEUE_TOPIC  # noqa: E402
+
+WORKER_TIMEOUT_SEC = 540
 
 options.set_global_options(
     region=resolve_region()
@@ -142,7 +176,7 @@ def api(request: Request) -> Response:
     )
 
 
-@pubsub_fn.on_message_published(topic=JOB_QUEUE_TOPIC)
+@pubsub_fn.on_message_published(topic=JOB_QUEUE_TOPIC, timeout_sec=WORKER_TIMEOUT_SEC)
 def worker(event: pubsub_fn.CloudEvent[pubsub_fn.MessagePublishedData]) -> None:
     message = event.data.message
     payload = message.data

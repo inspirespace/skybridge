@@ -121,7 +121,6 @@ services:
       - CORS_ALLOW_ORIGINS=https://skybridge.localhost,https://emulator.skybridge.localhost
       - FIRESTORE_JOBS_COLLECTION=skybridge-jobs
       - FIRESTORE_CREDENTIALS_COLLECTION=skybridge-credentials
-      - GCS_BUCKET=skybridge-artifacts
       - GCS_PREFIX=jobs
       - FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN=${FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN:-1}
       - BACKEND_CREDENTIAL_TTL=900
@@ -135,7 +134,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "node -e \"http=require('http'); const req=http.get('http://localhost:9099',res=>process.exit(0)); req.on('error',()=>process.exit(1));\"",
+          "AUTH_STATUS=$$(curl -s -o /dev/null -w '%{http_code}' http://localhost:9099/ || true); API_STATUS=$$(curl -s -o /dev/null -w '%{http_code}' http://localhost:5002/api/jobs || true); [ \"$$AUTH_STATUS\" = \"200\" ] && [ \"$$API_STATUS\" = \"401\" ]",
         ]
       interval: 5s
       timeout: 3s

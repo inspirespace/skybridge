@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Any, Protocol
 
-from .env import resolve_project_id
+from .env import resolve_project_id, resolve_storage_bucket
 
 
 class ObjectStoreProtocol(Protocol):
@@ -92,15 +92,17 @@ class GcsObjectStore:
             self._bucket.delete_blobs(blobs)
 
 
-def build_object_store_from_env() -> ObjectStoreProtocol | None:
+def build_object_store_from_env() -> ObjectStoreProtocol:
     """Build object store from env."""
-    bucket = os.getenv("GCS_BUCKET")
-    if not bucket or not bucket.strip():
-        raise RuntimeError("GCS_BUCKET is required for Firebase Storage artifacts.")
+    bucket = resolve_storage_bucket()
+    if not bucket:
+        raise RuntimeError(
+            "Firebase Storage bucket could not be resolved. Set GCS_BUCKET, provide FIREBASE_CONFIG storageBucket, or configure FIREBASE_PROJECT_ID."
+        )
     prefix = os.getenv("GCS_PREFIX") or "jobs"
     project_id = resolve_project_id()
     return GcsObjectStore(
-        bucket=bucket.strip(),
+        bucket=bucket,
         prefix=prefix,
         project_id=project_id,
     )

@@ -202,7 +202,13 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Add Firebase deploy preflight for App Check so CI fails early when `APP_CHECK_ENFORCE=1` is set without required frontend App Check env (`VITE_FIREBASE_APP_CHECK_ENABLED=1`, `VITE_FIREBASE_APP_CHECK_SITE_KEY`).
 - [x] Initialize theme from host system preference when no saved theme exists, including first paint and toggle state across SPA + static pages.
 - [x] Simplify runtime to Firebase-only auth/storage/queue behavior by removing legacy auth/storage/version toggles, keeping the fixed Firebase worker queue path (`skybridge-job-queue`), reusing Firebase Hosting runtime config for App Check initialization, and keeping the theme synced with live system appearance changes when no explicit override is stored.
+- [x] Fix production Firebase job API initialization by deriving the Storage bucket from Firebase runtime config (`FIREBASE_CONFIG.storageBucket`) instead of requiring explicit `GCS_BUCKET` in deployed Functions.
+- [x] Remove local `GCS_BUCKET` wiring and unify Firebase Storage bucket resolution across emulator and production: explicit override, then `FIREBASE_CONFIG.storageBucket`, then the default bucket derived from the active Firebase project id.
+- [x] Fix local Firebase Functions emulator source loading by ignoring stale `functions/_deploy_src` staging during emulator/dev runs and only preferring that path in deployed Cloud Functions runtime.
+- [x] Tighten local Firebase emulator healthcheck so dev/proxy startup waits for both Auth and `/api/jobs` rewrite availability instead of exposing the app before Functions is ready.
+- [x] Increase the Firebase worker timeout budget and emit incremental review progress during CloudAhoy export generation so long real-data reviews do not die silently at `Preparing review`.
 - [x] Streamline Firebase email-link sign-in UX: use inline auth card on `/app` (no duplicate modal) and prefill email-link completion from redirect email hint.
+- [x] Improve sign-in email field UX by submitting on Enter and enabling native browser email autofill/suggestions without wrapping the field in a login form that triggers Safari password-manager takeover.
 - [x] Reduce password-manager save prompts on CloudAhoy/FlySto credential fields by adding `autocomplete` suppression plus manager-specific ignore attributes (`data-lpignore`, `data-1p-ignore`, `data-bwignore`).
 - [x] Further harden credential fields against password-manager prompts by adding decoy hidden login inputs for CloudAhoy/FlySto forms.
 - [x] Restore Playwright e2e compatibility for Connect credentials by removing the readOnly arming gate from password inputs while keeping decoy fields plus password-manager ignore attributes.

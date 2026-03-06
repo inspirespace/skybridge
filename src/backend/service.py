@@ -88,6 +88,9 @@ class JobService:
                 payload.end_date,
                 payload.max_flights,
             )
+            if summaries is None:
+                summaries = cloudahoy.list_flights(limit=payload.max_flights)
+            total_summaries = len(summaries)
             _append_progress(
                 job,
                 phase="review",
@@ -97,6 +100,19 @@ class JobService:
             )
             self._store.save_job(job)
 
+            def _progress_review_item(index: int, total: int, _summary: CoreFlightSummary) -> None:
+                if total <= 0:
+                    return
+                percent = 45 + int((index / total) * 35)
+                _append_progress(
+                    job,
+                    phase="review",
+                    stage=f"Preparing review ({index}/{total})",
+                    percent=min(max(percent, 45), 80),
+                    status="review_running",
+                )
+                self._store.save_job(job)
+
             items, review_id = prepare_review(
                 cloudahoy=cloudahoy,
                 summaries=summaries,
@@ -104,6 +120,7 @@ class JobService:
                 state=state,
                 force=False,
                 output_path=review_path,
+                progress=_progress_review_item if total_summaries else None,
             )
             _append_progress(
                 job,

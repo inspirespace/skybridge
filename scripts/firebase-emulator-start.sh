@@ -6,6 +6,7 @@ VENV_DIR="/firebase-emulator/functions-venv"
 EXPORT_ROOT="${WORKSPACE_DIR}/.firebase-emulator/exports"
 LEGACY_ROOT="${EXPORT_ROOT}/legacy"
 REQUIRE_EMAIL_LINK_SIGNIN="${FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN:-1}"
+DEPLOY_STAGING_DIR="${WORKSPACE_DIR}/functions/_deploy_src"
 
 is_truthy() {
   case "$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')" in
@@ -18,6 +19,11 @@ echo "Installing firebase emulator dependencies..."
 apk add --no-cache curl python3 py3-pip py3-virtualenv openjdk21-jre
 java -version
 npm install -g firebase-tools@15.7.0
+
+if [ -d "${DEPLOY_STAGING_DIR}" ]; then
+  echo "Removing stale deploy staging from local emulator startup..."
+  rm -rf "${DEPLOY_STAGING_DIR}"
+fi
 
 echo "Preparing functions venv at ${VENV_DIR}..."
 if [ -f "${VENV_DIR}/bin/activate" ] && ! grep -q "${VENV_DIR}" "${VENV_DIR}/bin/activate"; then

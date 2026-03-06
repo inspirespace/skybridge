@@ -19,7 +19,6 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - `BACKEND_ENCRYPTION_KEY=<32-byte urlsafe base64 key>`
 - `FIRESTORE_JOBS_COLLECTION=skybridge-jobs`
 - `FIRESTORE_CREDENTIALS_COLLECTION=skybridge-credentials`
-- `GCS_BUCKET=<bucket>`
 - `GCS_PREFIX=jobs`
 - `CORS_ALLOW_ORIGINS=<comma separated origins>` (never use `*` in production)
 
@@ -31,6 +30,7 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - `VITE_FIREBASE_APP_CHECK_SITE_KEY=<reCAPTCHA v3 site key>`
 - `VITE_FIREBASE_PROJECT_ID` / `VITE_FIREBASE_AUTH_DOMAIN` are optional; by default they are derived from `.firebaserc`.
 - `VITE_FIRESTORE_JOBS_COLLECTION` and `VITE_RETENTION_DAYS` are optional; defaults come from backend globals (`FIRESTORE_JOBS_COLLECTION`, `BACKEND_RETENTION_DAYS`).
+- `GCS_BUCKET` is optional override only; otherwise the backend uses `FIREBASE_CONFIG.storageBucket` or the default Firebase bucket derived from the active project id.
 - Deploy preflight (`scripts/firebase-deploy.sh`) fails fast if required Firebase web config is missing in non-emulator Firebase mode and will attempt best-effort auto-resolution from `firebase apps:sdkconfig` (first WEB app in the project).
 - Optional: set `FIREBASE_WEB_APP_ID` to force which Firebase WEB app deploy preflight should use for sdkconfig lookup.
 - Deploy preflight also validates passwordless email-link sign-in mode (`signIn.email.enabled=true`, `signIn.email.passwordRequired=false`) when `FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN=1` (default).

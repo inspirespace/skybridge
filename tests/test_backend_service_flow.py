@@ -118,6 +118,74 @@ def test_generate_review_failure_marks_job_failed(job_service: JobService, monke
     assert "Review failed" in result.error_message
 
 
+def test_generate_review_reports_incremental_progress(
+    job_service: JobService,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Generate review should emit per-flight review progress while building artifacts."""
+    job = job_service.create_job("pilot")
+
+    summaries = [
+        CoreFlightSummary(
+            id="flight-1",
+            started_at=datetime(2026, 1, 5, 9, 0, tzinfo=timezone.utc),
+            duration_seconds=3600,
+            aircraft_type="C172",
+            tail_number="N123",
+        ),
+        CoreFlightSummary(
+            id="flight-2",
+            started_at=datetime(2026, 1, 6, 9, 0, tzinfo=timezone.utc),
+            duration_seconds=1800,
+            aircraft_type="C172",
+            tail_number="N124",
+        ),
+    ]
+
+    def fake_build_cloudahoy(payload, exports_dir: Path):
+        exports_dir.mkdir(parents=True, exist_ok=True)
+        return FakeCloudAhoy(summaries)
+
+    def fake_prepare_review(**kwargs):
+        progress = kwargs["progress"]
+        for index, summary in enumerate(summaries, start=1):
+            progress(index, len(summaries), summary)
+        output_path = kwargs["output_path"]
+        output_path.write_text(json.dumps({"review_id": "review-123", "items": []}))
+        items = [
+            FakeReviewItem(
+                flight_id="flight-1",
+                started_at=datetime(2026, 1, 5, 9, 0, tzinfo=timezone.utc),
+                duration_seconds=3600,
+                tail_number="N123",
+                metadata={},
+                status="ok",
+                message=None,
+            ),
+            FakeReviewItem(
+                flight_id="flight-2",
+                started_at=datetime(2026, 1, 6, 9, 0, tzinfo=timezone.utc),
+                duration_seconds=1800,
+                tail_number="N124",
+                metadata={},
+                status="ok",
+                message=None,
+            ),
+        ]
+        return items, "review-123"
+
+    monkeypatch.setattr(service_mod, "_build_cloudahoy_client", fake_build_cloudahoy)
+    monkeypatch.setattr(service_mod, "prepare_review", fake_prepare_review)
+
+    payload = JobCreateRequest(credentials=_credentials())
+    result = job_service.generate_review(job.job_id, payload)
+
+    assert result.status == "review_ready"
+    stored = job_service._store.load_job(job.job_id)
+    assert any(event.stage == "Preparing review (1/2)" for event in stored.progress_log)
+    assert stored.review_summary is not None
+
+
 def test_accept_review_missing_review_manifest(job_service: JobService) -> None:
     """Accept review should fail when review manifest is missing."""
     job = job_service.create_job("pilot")

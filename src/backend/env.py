@@ -54,6 +54,40 @@ def _firebaserc_string(*path: str) -> str | None:
 
 
 @lru_cache(maxsize=1)
+def _read_firebase_config() -> dict[str, Any] | None:
+    raw = _clean_env("FIREBASE_CONFIG")
+    if not raw:
+        return None
+    try:
+        if raw.lstrip().startswith("{"):
+            payload = json.loads(raw)
+        else:
+            payload = json.loads(Path(raw).expanduser().read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if isinstance(payload, dict):
+        return payload
+    return None
+
+
+def _firebase_config_string(*path: str) -> str | None:
+    payload = _read_firebase_config()
+    if not payload:
+        return None
+    current: Any = payload
+    for part in path:
+        if not isinstance(current, dict):
+            return None
+        current = current.get(part)
+        if current is None:
+            return None
+    if not isinstance(current, str):
+        return None
+    cleaned = current.strip()
+    return cleaned or None
+
+
+@lru_cache(maxsize=1)
 def resolve_project_id() -> str | None:
     """Resolve project id from env, .firebaserc, or runtime credentials."""
     project_id = _clean_env("FIREBASE_PROJECT_ID")
@@ -70,6 +104,23 @@ def resolve_project_id() -> str | None:
             return project_id
     except Exception:
         return None
+    return None
+
+
+@lru_cache(maxsize=1)
+def resolve_storage_bucket() -> str | None:
+    """Resolve Firebase Storage bucket from env/runtime config/default project bucket."""
+    explicit_bucket = _clean_env("GCS_BUCKET") or _clean_env("FIREBASE_STORAGE_BUCKET")
+    if explicit_bucket:
+        return explicit_bucket
+
+    firebase_bucket = _firebase_config_string("storageBucket")
+    if firebase_bucket:
+        return firebase_bucket
+
+    project_id = resolve_project_id()
+    if project_id:
+        return f"{project_id}.firebasestorage.app"
     return None
 
 

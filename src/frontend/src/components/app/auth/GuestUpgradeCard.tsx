@@ -31,6 +31,10 @@ export function GuestUpgradeCard({
     { key: "microsoft" as const, enabled: providers.microsoft },
     { key: "facebook" as const, enabled: providers.facebook },
   ].filter((provider) => provider.enabled);
+  const handleEmailSubmit = () => {
+    if (actionLoading) return;
+    emailAction();
+  };
 
   return (
     <Card className="mb-4 rounded-xl border border-amber-200 bg-amber-50/60 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100">
@@ -63,12 +67,31 @@ export function GuestUpgradeCard({
         </div>
         <div className="flex w-full max-w-xl gap-2">
           <input
+            id="guest-upgrade-email"
+            name="email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            enterKeyHint="send"
             className="h-11 w-full rounded-lg border border-amber-200 bg-white px-3 text-sm text-amber-900 shadow-sm focus:border-amber-300 focus:outline-none"
             placeholder="you@example.com"
             value={emailAddress}
             onChange={(event) => onEmailChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              handleEmailSubmit();
+            }}
           />
-          <Button variant="outline" className="h-11 px-4" onClick={emailAction}>
+          <Button
+            variant="outline"
+            className="h-11 px-4"
+            onClick={handleEmailSubmit}
+            disabled={actionLoading}
+          >
             {emailActionLabel}
           </Button>
         </div>

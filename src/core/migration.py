@@ -84,6 +84,7 @@ def prepare_review(
     state: MigrationState | None = None,
     force: bool = False,
     output_path: Path | None = None,
+    progress: Callable[[int, int, FlightSummary], None] | None = None,
 ) -> tuple[list[ReviewItem], str]:
     """Handle prepare review."""
     summaries = summaries or cloudahoy.list_flights(limit=max_flights)
@@ -94,7 +95,8 @@ def prepare_review(
     import_run_at = datetime.now(timezone.utc)
     import_tag = f"cloudahoy:{_format_timestamp_tag(import_run_at)}"
 
-    for summary in summaries:
+    total_summaries = len(summaries)
+    for index, summary in enumerate(summaries, start=1):
         if state and not force:
             record = state.get(summary.id)
             if record and record.status == "ok":
@@ -120,6 +122,8 @@ def prepare_review(
                         has_kml=False,
                     )
                 )
+                if progress:
+                    progress(index, total_summaries, summary)
                 continue
 
         output_id = summary.fd_id
@@ -159,6 +163,8 @@ def prepare_review(
                 has_kml=has_kml,
             )
         )
+        if progress:
+            progress(index, total_summaries, summary)
 
     review_id = _compute_review_id(items)
     if output_path:
