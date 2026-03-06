@@ -42,7 +42,7 @@ describe("useJobSnapshot", () => {
       makeJob("review_running")
     );
 
-    const auth = { userId: "pilot" };
+    const auth = { token: "token" };
     const { result } = renderHook(() => useJobSnapshot("job-123", auth));
 
     await flushUpdates();
@@ -57,7 +57,7 @@ describe("useJobSnapshot", () => {
       makeJob("review_running")
     );
 
-    const auth = { userId: "pilot" };
+    const auth = { token: "token" };
     let intervalCallback: (() => void) | null = null;
     vi.spyOn(window, "setInterval").mockImplementation((callback) => {
       intervalCallback = callback as () => void;
@@ -87,7 +87,7 @@ describe("useJobSnapshot", () => {
       makeJob("completed")
     );
 
-    const auth = { userId: "pilot" };
+    const auth = { token: "token" };
     let intervalCallback: TimerHandler | null = null;
     vi.spyOn(window, "setInterval").mockImplementation((callback) => {
       intervalCallback = callback;

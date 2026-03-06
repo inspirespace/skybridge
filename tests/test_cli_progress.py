@@ -49,7 +49,6 @@ def _config():
             "flysto_base_url": "https://example.test",
             "flysto_log_upload_url": None,
             "flysto_include_metadata": True,
-            "flysto_api_version": None,
             "flysto_min_request_interval": 0,
             "flysto_max_request_retries": 1,
         },

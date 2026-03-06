@@ -1,5 +1,4 @@
 import {
-  AUTH_MODE,
   FIREBASE_API_KEY,
   FIREBASE_APP_CHECK_DEBUG_TOKEN,
   FIREBASE_APP_CHECK_ENABLED,
@@ -54,7 +53,7 @@ async function resolveFirebaseApp() {
 }
 
 async function initAppCheck() {
-  if (AUTH_MODE !== "firebase" || !FIREBASE_APP_CHECK_ENABLED) {
+  if (!FIREBASE_APP_CHECK_ENABLED) {
     return null;
   }
   if (!FIREBASE_APP_CHECK_SITE_KEY) {

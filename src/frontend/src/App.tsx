@@ -17,9 +17,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { AppFooter } from "@/components/app/AppFooter";
@@ -54,16 +51,8 @@ import {
   formatLastUpdate,
 } from "@/lib/format";
 import { isAuthExpiredError } from "@/lib/auth-helpers";
-import { useOidcAuth } from "@/hooks/use-oidc-auth";
 import { useFirebaseAuth } from "@/hooks/use-firebase-auth";
 import {
-  AUTH_CLIENT_ID,
-  AUTH_ISSUER,
-  AUTH_LOGOUT_URL,
-  AUTH_MODE,
-  AUTH_PROVIDER_PARAM,
-  AUTH_REDIRECT_PATH,
-  AUTH_SCOPE,
   DEV_CLOUD_AHOY_EMAIL,
   DEV_CLOUD_AHOY_PASSWORD,
   DEV_FLYSTO_EMAIL,
@@ -84,10 +73,8 @@ import {
 } from "@/lib/app-config";
 import { parseISODateInput } from "@/lib/date-input";
 
-const USER_ID_KEY = "skybridge_user_id";
 const JOB_ID_KEY = "skybridge_job_id";
 const OPEN_STEP_KEY = "skybridge_open_step";
-const FORCE_LOGIN_KEY = "skybridge_force_login";
 const EMAIL_LINK_EMAIL_KEY = "skybridge_email_link_email";
 
 const readSessionValue = (key: string) =>
@@ -124,9 +111,6 @@ export default function App() {
   const [jobId, setJobId] = React.useState<string | null>(() =>
     readSessionValue(JOB_ID_KEY)
   );
-  const [headerUserId, setHeaderUserId] = React.useState<string | null>(() =>
-    readSessionValue(USER_ID_KEY)
-  );
   const [showAllFlights, setShowAllFlights] = React.useState(false);
   const [actionError, setActionError] = React.useState<{
     scope: "sign-in" | "connect" | "review" | "import" | "global";
@@ -139,22 +123,6 @@ export default function App() {
   const [actionLoading, setActionLoading] = React.useState(false);
   const [downloadLoading, setDownloadLoading] = React.useState(false);
   const {
-    accessToken,
-    startLogin: startOidcLogin,
-    signOut: signOutOidc,
-    clearAuth: clearOidcAuth,
-  } = useOidcAuth({
-    enabled: AUTH_MODE === "oidc",
-    issuer: AUTH_ISSUER,
-    clientId: AUTH_CLIENT_ID,
-    scope: AUTH_SCOPE,
-    redirectPath: AUTH_REDIRECT_PATH,
-    providerParam: AUTH_PROVIDER_PARAM,
-    logoutUrl: AUTH_LOGOUT_URL,
-    onError: (message) => setActionError({ scope: "sign-in", message }),
-    onLoadingChange: setActionLoading,
-  });
-  const {
     accessToken: firebaseToken,
     startLogin: startFirebaseLogin,
     startEmailLink: startFirebaseEmailLink,
@@ -166,7 +134,7 @@ export default function App() {
     emailLinkPending: firebaseEmailLinkPending,
     signOut: signOutFirebase,
   } = useFirebaseAuth({
-    enabled: AUTH_MODE === "firebase",
+    enabled: true,
     apiKey: FIREBASE_API_KEY,
     authDomain: FIREBASE_AUTH_DOMAIN,
     projectId: FIREBASE_PROJECT_ID,
@@ -213,21 +181,14 @@ export default function App() {
   const startDate = parseISODateInput(startDateInput);
   const endDate = parseISODateInput(endDateInput);
 
-  const activeAccessToken = AUTH_MODE === "firebase" ? firebaseToken : accessToken;
-  const isSignedIn =
-    AUTH_MODE === "oidc" || AUTH_MODE === "firebase"
-      ? Boolean(activeAccessToken)
-      : Boolean(headerUserId);
+  const activeAccessToken = firebaseToken;
+  const isSignedIn = Boolean(activeAccessToken);
   const isAnonymous =
-    AUTH_MODE === "firebase" &&
     firebaseAnonymous &&
     !(FIREBASE_USE_EMULATOR && firebaseEmulatorProvider && firebaseEmulatorProvider !== "anonymous");
   const auth = React.useMemo<AuthContext>(
-    () =>
-      AUTH_MODE === "oidc" || AUTH_MODE === "firebase"
-        ? { token: activeAccessToken }
-        : { userId: headerUserId },
-    [activeAccessToken, headerUserId]
+    () => ({ token: activeAccessToken }),
+    [activeAccessToken]
   );
 
   const { data: job, error: jobError, refresh } = useJobSnapshot(isSignedIn ? jobId : null, auth);
@@ -280,7 +241,6 @@ export default function App() {
   }, [flow.signedIn]);
 
   React.useEffect(() => {
-    if (AUTH_MODE !== "firebase") return;
     if (firebaseAuthReady) {
       setAuthInitTimedOut(false);
       return;
@@ -289,7 +249,7 @@ export default function App() {
       setAuthInitTimedOut(true);
     }, 10000);
     return () => window.clearTimeout(timeout);
-  }, [AUTH_MODE, firebaseAuthReady]);
+  }, [firebaseAuthReady]);
 
   const reviewSummary = job?.review_summary ?? null;
   const flights = reviewSummary?.flights ?? [];
@@ -322,9 +282,7 @@ export default function App() {
     job?.status === "failed" ? job.error_message ?? "Job failed." : null;
   const reviewFailureMessage = !hasImportEvents ? jobFailureMessage : null;
   const importFailureMessage = hasImportEvents ? jobFailureMessage : null;
-  const authButtonsDisabled =
-    actionLoading ||
-    (AUTH_MODE === "firebase" && !firebaseAuthReady);
+  const authButtonsDisabled = actionLoading || !firebaseAuthReady;
   const signInError =
     actionError?.scope === "sign-in" || actionError?.scope === "global"
       ? actionError.message
@@ -466,21 +424,8 @@ export default function App() {
   /** Handle handleSignIn. */
   const handleSignIn = React.useCallback(() => {
     setActionError(null);
-    if (AUTH_MODE === "oidc") {
-      startOidcLogin();
-      return;
-    }
-    if (AUTH_MODE === "firebase") {
-      focusFirebaseAuthCard();
-      return;
-    }
-    const nextUserId = "pilot@skybridge.dev";
-    setSessionValue(USER_ID_KEY, nextUserId);
-    setHeaderUserId(nextUserId);
-    setActionError(null);
-    const stored = readSessionValue(OPEN_STEP_KEY) ?? undefined;
-    setManualOpen(stored ?? "connect");
-  }, [startOidcLogin, focusFirebaseAuthCard, setHeaderUserId, setManualOpen]);
+    focusFirebaseAuthCard();
+  }, [focusFirebaseAuthCard]);
 
   const handleFirebaseLogin = React.useCallback(
     (
@@ -550,36 +495,18 @@ export default function App() {
     await completeFirebaseEmailLink(email);
   }, [emailAddress, completeFirebaseEmailLink]);
 
-  const isSignInRedirect =
-    typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).get("signin") === "1";
-  const isAuthCallback =
-    typeof window !== "undefined" &&
-    (() => {
-      const url = new URL(window.location.href);
-      const redirectPathTrimmed = AUTH_REDIRECT_PATH.endsWith("/")
-        ? AUTH_REDIRECT_PATH.slice(0, -1)
-        : AUTH_REDIRECT_PATH;
-      const currentPath = url.pathname.endsWith("/")
-        ? url.pathname.slice(0, -1)
-        : url.pathname;
-      return currentPath.endsWith(redirectPathTrimmed);
-    })();
-
   React.useEffect(() => {
     if (flow.signedIn || typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("signin") !== "1") return;
     handleSignIn();
-    if (AUTH_MODE !== "oidc") {
-      params.delete("signin");
-      const nextSearch = params.toString();
-      window.history.replaceState(
-        {},
-        document.title,
-        `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}`
-      );
-    }
+    params.delete("signin");
+    const nextSearch = params.toString();
+    window.history.replaceState(
+      {},
+      document.title,
+      `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}`
+    );
   }, [flow.signedIn, handleSignIn]);
 
   /** Handle handleConnectReview. */
@@ -735,34 +662,17 @@ export default function App() {
     setJobId(null);
     setShowAllFlights(false);
     setActionError(null);
-    if (AUTH_MODE === "oidc") {
-      setSessionValue(FORCE_LOGIN_KEY, "1");
-      signOutOidc();
-      return;
-    }
-    if (AUTH_MODE === "firebase") {
-      void signOutFirebase();
-      return;
-    }
-    removeSessionValue(USER_ID_KEY);
-    setHeaderUserId(null);
+    void signOutFirebase();
   };
 
   const handleTokenExpired = React.useCallback(() => {
-    removeSessionValue(USER_ID_KEY);
     removeSessionValue(JOB_ID_KEY);
     clearEmailLinkEmail();
-    setHeaderUserId(null);
     setJobId(null);
-    if (AUTH_MODE === "oidc") {
-      clearOidcAuth();
-    }
-    if (AUTH_MODE === "firebase") {
-      void signOutFirebase();
-    }
+    void signOutFirebase();
     setShowAllFlights(false);
     setActionError(null);
-  }, [AUTH_MODE, clearOidcAuth, signOutFirebase, setHeaderUserId]);
+  }, [signOutFirebase]);
 
   React.useEffect(() => {
     if (!jobError || !isSignedIn) return;
@@ -993,14 +903,7 @@ export default function App() {
   const completedSteps = navSteps.filter((step) => step.done).length;
   const checklistProgress = (completedSteps / navSteps.length) * 100;
 
-  const isRedirectScreen =
-    !flow.signedIn && AUTH_MODE === "oidc" && (isSignInRedirect || isAuthCallback);
-  const authInitializing =
-    AUTH_MODE === "firebase" && !firebaseAuthReady && !authInitTimedOut;
-
-  if (isRedirectScreen) {
-    return <div className="min-h-screen bg-background" />;
-  }
+  const authInitializing = !firebaseAuthReady && !authInitTimedOut;
 
   return (
     <div className="app-shell relative min-h-screen flex flex-col text-foreground">
@@ -1046,12 +949,7 @@ export default function App() {
             </span>
           </a>
           <div className="flex items-center gap-2 sm:gap-4">
-            {!flow.signedIn && AUTH_MODE !== "firebase" && (
-              <Button size="sm" onClick={handleSignIn}>
-                Sign up / Sign in
-              </Button>
-            )}
-            {!flow.signedIn && AUTH_MODE === "firebase" && firebaseAuthReady && (
+            {!flow.signedIn && firebaseAuthReady && (
               <Button size="sm" onClick={handleSignIn}>
                 Sign up / Sign in
               </Button>
@@ -1117,91 +1015,62 @@ export default function App() {
       </header>
 
       <main className="container relative z-10 flex-1 pb-16 pt-5 lg:pb-8">
-        {!flow.signedIn &&
-          AUTH_MODE === "oidc" &&
-          (isSignInRedirect || isAuthCallback) && (
-          <div className="min-h-[60vh]" />
+        {!flow.signedIn && (
+          <div className="mx-auto max-w-3xl space-y-4">
+            {authInitializing && (
+              <div className="flex min-h-[40vh] items-center justify-center">
+                <div className="text-center space-y-3">
+                  <div className="h-8 w-8 mx-auto rounded-full border-2 border-[hsl(var(--horizon))]/30 border-t-[hsl(var(--horizon))] animate-spin" />
+                  <p className="text-sm text-muted-foreground">Loading...</p>
+                </div>
+              </div>
+            )}
+            {!firebaseAuthReady && authInitTimedOut && (
+              <Alert className="border-amber-300 bg-amber-50/80 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+                <AlertTitle>Sign-in initialization delayed</AlertTitle>
+                <AlertDescription>
+                  Firebase Auth is taking longer than expected to initialize.
+                  Check your local stack and refresh this page.
+                </AlertDescription>
+                {signInError && (
+                  <p className="mt-2 text-xs font-medium text-amber-950 dark:text-amber-200">
+                    Details: {signInError}
+                  </p>
+                )}
+                <div className="mt-3">
+                  <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
+                    Reload
+                  </Button>
+                </div>
+              </Alert>
+            )}
+            {firebaseAuthReady && (
+              <div id="firebase-auth-card">
+                <FirebaseAuthCard
+                  signInError={signInError}
+                  authReady={firebaseAuthReady}
+                  useEmulator={FIREBASE_USE_EMULATOR}
+                  emulatorReady={firebaseEmulatorReady}
+                  hasOptionalProviders={hasOptionalProviders}
+                  emailAddress={emailAddress}
+                  onEmailChange={setEmailAddress}
+                  onSendLink={handleEmailLink}
+                  onCompleteLink={handleEmailLinkComplete}
+                  emailLinkPending={firebaseEmailLinkPending}
+                  emailLinkNotice={emailLinkNotice}
+                  emailLinkUrl={emailLinkUrl}
+                  authButtonsDisabled={authButtonsDisabled}
+                  providers={providerFlags}
+                  onProvider={handleFirebaseLogin}
+                />
+              </div>
+            )}
+          </div>
         )}
-
-        {!flow.signedIn &&
-          !(AUTH_MODE === "oidc" && (isSignInRedirect || isAuthCallback)) && (
-            <div className="mx-auto max-w-3xl space-y-4">
-              {/* Show loading state while Firebase Auth is initializing */}
-              {authInitializing && (
-                <div className="flex min-h-[40vh] items-center justify-center">
-                  <div className="text-center space-y-3">
-                    <div className="h-8 w-8 mx-auto rounded-full border-2 border-[hsl(var(--horizon))]/30 border-t-[hsl(var(--horizon))] animate-spin" />
-                    <p className="text-sm text-muted-foreground">Loading...</p>
-                  </div>
-                </div>
-              )}
-              {AUTH_MODE === "firebase" && !firebaseAuthReady && authInitTimedOut && (
-                <Alert className="border-amber-300 bg-amber-50/80 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
-                  <AlertTitle>Sign-in initialization delayed</AlertTitle>
-                  <AlertDescription>
-                    Firebase Auth is taking longer than expected to initialize.
-                    Check your local stack and refresh this page.
-                  </AlertDescription>
-                  {signInError && (
-                    <p className="mt-2 text-xs font-medium text-amber-950 dark:text-amber-200">
-                      Details: {signInError}
-                    </p>
-                  )}
-                  <div className="mt-3">
-                    <Button size="sm" variant="outline" onClick={() => window.location.reload()}>
-                      Reload
-                    </Button>
-                  </div>
-                </Alert>
-              )}
-              {AUTH_MODE !== "firebase" && (
-                <Card className="glass-card rounded-2xl border-border/40 dark:border-[hsl(var(--sky-accent))]/20">
-                  <CardHeader className="space-y-2">
-                    <CardTitle className="text-xl">Sign in to start your import</CardTitle>
-                    <CardDescription>
-                      Identify your job and keep your progress in sync across devices.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {signInError && (
-                      <Alert className="border-rose-200 bg-rose-50/70 text-rose-900 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-100">
-                        <AlertTitle>Sign-in failed</AlertTitle>
-                        <AlertDescription>{signInError}</AlertDescription>
-                      </Alert>
-                    )}
-                    <Button onClick={handleSignIn} disabled={actionLoading} className="btn-primary-glow">
-                      Sign up / Sign in
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-              {AUTH_MODE === "firebase" && firebaseAuthReady && (
-                <div id="firebase-auth-card">
-                  <FirebaseAuthCard
-                    signInError={signInError}
-                    authReady={firebaseAuthReady}
-                    useEmulator={FIREBASE_USE_EMULATOR}
-                    emulatorReady={firebaseEmulatorReady}
-                    hasOptionalProviders={hasOptionalProviders}
-                    emailAddress={emailAddress}
-                    onEmailChange={setEmailAddress}
-                    onSendLink={handleEmailLink}
-                    onCompleteLink={handleEmailLinkComplete}
-                    emailLinkPending={firebaseEmailLinkPending}
-                    emailLinkNotice={emailLinkNotice}
-                    emailLinkUrl={emailLinkUrl}
-                    authButtonsDisabled={authButtonsDisabled}
-                    providers={providerFlags}
-                    onProvider={handleFirebaseLogin}
-                  />
-                </div>
-              )}
-            </div>
-          )}
 
         {flow.signedIn && (
           <>
-            {AUTH_MODE === "firebase" && isAnonymous && (
+            {isAnonymous && (
               <GuestUpgradeCard
                 providers={providerFlags}
                 onProvider={(provider) => handleFirebaseLogin(provider, { link: true })}

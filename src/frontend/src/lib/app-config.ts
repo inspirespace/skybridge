@@ -1,19 +1,3 @@
-export const AUTH_MODE = import.meta.env.VITE_AUTH_MODE ?? "firebase";
-export const AUTH_ISSUER =
-  import.meta.env.VITE_AUTH_ISSUER_URL ??
-  import.meta.env.VITE_AUTH_BROWSER_ISSUER_URL ??
-  "";
-export const AUTH_CLIENT_ID =
-  import.meta.env.VITE_AUTH_CLIENT_ID ??
-  import.meta.env.VITE_FIREBASE_PROJECT_ID ??
-  "";
-export const AUTH_SCOPE =
-  import.meta.env.VITE_AUTH_SCOPE ?? "openid profile email offline_access";
-export const AUTH_REDIRECT_PATH =
-  import.meta.env.VITE_AUTH_REDIRECT_PATH ?? "/app/auth/callback";
-export const AUTH_PROVIDER_PARAM = import.meta.env.VITE_AUTH_PROVIDER_PARAM ?? "kc_idp_hint";
-export const AUTH_LOGOUT_URL = import.meta.env.VITE_AUTH_LOGOUT_URL ?? "";
-
 export const FIREBASE_API_KEY = import.meta.env.VITE_FIREBASE_API_KEY ?? "";
 export const FIREBASE_PROJECT_ID = import.meta.env.VITE_FIREBASE_PROJECT_ID ?? "";
 export const FIREBASE_AUTH_DOMAIN =

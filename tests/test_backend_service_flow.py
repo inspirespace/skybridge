@@ -133,7 +133,7 @@ def test_accept_review_missing_review_manifest(job_service: JobService) -> None:
 
 
 def test_accept_review_success(job_service: JobService, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Accept review should produce import report when reconciliation disabled."""
+    """Accept review should produce import report after finalization."""
     job = job_service.create_job("pilot")
     job.status = "review_ready"
     job_service._store.save_job(job)
@@ -152,9 +152,13 @@ def test_accept_review_success(job_service: JobService, monkeypatch: pytest.Monk
     }
     (job_dir / "review.json").write_text(json.dumps(review_payload))
 
-    monkeypatch.setenv("BACKEND_RECONCILE", "0")
     monkeypatch.setattr(service_mod, "_build_cloudahoy_client", lambda *args, **kwargs: FakeCloudAhoy([]))
     monkeypatch.setattr(service_mod, "_build_flysto_client", lambda *args, **kwargs: FakeFlySto())
+    monkeypatch.setattr(service_mod, "_maybe_wait_for_processing", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(service_mod, "verify_import_report", lambda *_args, **_kwargs: {"missing": 0})
+    monkeypatch.setattr(service_mod, "reconcile_aircraft_from_report", lambda *_args, **_kwargs: 0)
+    monkeypatch.setattr(service_mod, "reconcile_crew_from_report", lambda *_args, **_kwargs: 0)
+    monkeypatch.setattr(service_mod, "reconcile_metadata_from_report", lambda *_args, **_kwargs: 0)
 
     def fake_migrate_flights(**kwargs):
         report_path = kwargs["report_path"]

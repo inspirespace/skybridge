@@ -608,20 +608,6 @@ preflight_app_check_config() {
 }
 
 print_firebase_auth_setup_overview() {
-  local frontend_auth_mode
-  frontend_auth_mode="$(resolve_config_value VITE_AUTH_MODE src/frontend/.env .env || true)"
-  if [ -z "$frontend_auth_mode" ]; then
-    frontend_auth_mode="$(resolve_config_value AUTH_MODE functions/.env .env || true)"
-  fi
-  if [ -z "$frontend_auth_mode" ]; then
-    frontend_auth_mode="firebase"
-  fi
-  local auth_mode_lc
-  auth_mode_lc="$(printf '%s' "$frontend_auth_mode" | tr '[:upper:]' '[:lower:]')"
-  if [ "$auth_mode_lc" != "firebase" ]; then
-    return 0
-  fi
-
   local use_emulator
   use_emulator="$(resolve_config_value VITE_FIREBASE_USE_EMULATOR src/frontend/.env .env || true)"
   if is_truthy_value "$use_emulator"; then
@@ -674,20 +660,6 @@ EOF
 }
 
 preflight_firebase_auth_signin_config() {
-  local frontend_auth_mode
-  frontend_auth_mode="$(resolve_config_value VITE_AUTH_MODE src/frontend/.env .env || true)"
-  if [ -z "$frontend_auth_mode" ]; then
-    frontend_auth_mode="$(resolve_config_value AUTH_MODE functions/.env .env || true)"
-  fi
-  if [ -z "$frontend_auth_mode" ]; then
-    frontend_auth_mode="firebase"
-  fi
-  local auth_mode_lc
-  auth_mode_lc="$(printf '%s' "$frontend_auth_mode" | tr '[:upper:]' '[:lower:]')"
-  if [ "$auth_mode_lc" != "firebase" ]; then
-    return 0
-  fi
-
   local use_emulator
   use_emulator="$(resolve_config_value VITE_FIREBASE_USE_EMULATOR src/frontend/.env .env || true)"
   if is_truthy_value "$use_emulator"; then
@@ -950,22 +922,6 @@ NODE
 }
 
 preflight_frontend_firebase_config() {
-  local frontend_auth_mode
-  frontend_auth_mode="$(resolve_config_value VITE_AUTH_MODE src/frontend/.env .env || true)"
-  if [ -z "$frontend_auth_mode" ]; then
-    frontend_auth_mode="$(resolve_config_value AUTH_MODE functions/.env .env || true)"
-  fi
-  if [ -z "$frontend_auth_mode" ]; then
-    frontend_auth_mode="firebase"
-  fi
-  export VITE_AUTH_MODE="$frontend_auth_mode"
-
-  local auth_mode_lc
-  auth_mode_lc="$(printf '%s' "$frontend_auth_mode" | tr '[:upper:]' '[:lower:]')"
-  if [ "$auth_mode_lc" != "firebase" ]; then
-    return 0
-  fi
-
   local use_emulator
   use_emulator="$(resolve_config_value VITE_FIREBASE_USE_EMULATOR src/frontend/.env .env || true)"
   if is_truthy_value "$use_emulator"; then
@@ -1101,20 +1057,6 @@ EOF
 }
 
 preflight_firebase_auth_authorized_domains() {
-  local frontend_auth_mode
-  frontend_auth_mode="$(resolve_config_value VITE_AUTH_MODE src/frontend/.env .env || true)"
-  if [ -z "$frontend_auth_mode" ]; then
-    frontend_auth_mode="$(resolve_config_value AUTH_MODE functions/.env .env || true)"
-  fi
-  if [ -z "$frontend_auth_mode" ]; then
-    frontend_auth_mode="firebase"
-  fi
-  local auth_mode_lc
-  auth_mode_lc="$(printf '%s' "$frontend_auth_mode" | tr '[:upper:]' '[:lower:]')"
-  if [ "$auth_mode_lc" != "firebase" ]; then
-    return 0
-  fi
-
   local use_emulator
   use_emulator="$(resolve_config_value VITE_FIREBASE_USE_EMULATOR src/frontend/.env .env || true)"
   if is_truthy_value "$use_emulator"; then

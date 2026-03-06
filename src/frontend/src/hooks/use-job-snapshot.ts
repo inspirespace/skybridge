@@ -4,7 +4,6 @@ import { getJob, type AuthContext, type JobRecord, type JobStatus } from "@/api/
 import { patchFirebaseEmulatorRequests } from "@/lib/firebase-emulator";
 import { resolveFirestoreEmulatorHostPort } from "@/lib/runtime-endpoints";
 
-const AUTH_MODE = import.meta.env.VITE_AUTH_MODE ?? "firebase";
 const FIRESTORE_LISTEN =
   (import.meta.env.VITE_FIRESTORE_LISTEN ?? "") === "1";
 const FIREBASE_API_KEY = import.meta.env.VITE_FIREBASE_API_KEY ?? "";
@@ -38,7 +37,6 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
   const [lastSnapshotAt, setLastSnapshotAt] = React.useState<number | null>(null);
   const lastListenerState = React.useRef<string | null>(null);
   const firestoreListenEnabled =
-    AUTH_MODE === "firebase" &&
     FIRESTORE_LISTEN &&
     Boolean(FIREBASE_PROJECT_ID) &&
     Boolean(FIREBASE_AUTH_DOMAIN);

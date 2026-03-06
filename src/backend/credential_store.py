@@ -1,13 +1,9 @@
-"""Short-lived credential store for worker jobs.
-
-Credentials are issued with a TTL and can be claimed once by the worker.
-Backed by in-memory dict (dev) or Firestore (GCP).
-"""
+"""Short-lived credential store for worker jobs."""
 from __future__ import annotations
 
+import os
 import secrets
 import time
-import os
 from datetime import datetime, timezone
 from dataclasses import dataclass
 from typing import Optional
@@ -110,10 +106,8 @@ class FirestoreCredentialStore:
         return _claim(transaction)
 
 
-def build_credential_store() -> CredentialStore | FirestoreCredentialStore:
+def build_credential_store() -> FirestoreCredentialStore:
     """Build credential store."""
-    if (os.getenv("BACKEND_FIRESTORE_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
-        collection = os.getenv("FIRESTORE_CREDENTIALS_COLLECTION") or "skybridge-credentials"
-        project_id = resolve_project_id()
-        return FirestoreCredentialStore(collection, project_id)
-    return CredentialStore()
+    collection = os.getenv("FIRESTORE_CREDENTIALS_COLLECTION") or "skybridge-credentials"
+    project_id = resolve_project_id()
+    return FirestoreCredentialStore(collection, project_id)

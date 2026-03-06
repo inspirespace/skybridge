@@ -67,9 +67,7 @@ def _load_job(job_id: str, user_id: str):
 
 def _firestore_jobs_collection() -> str | None:
     """Internal helper for Firestore jobs collection."""
-    if (os.getenv("BACKEND_FIRESTORE_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
-        return os.getenv("FIRESTORE_JOBS_COLLECTION") or "skybridge-jobs"
-    return None
+    return os.getenv("FIRESTORE_JOBS_COLLECTION") or "skybridge-jobs"
 
 
 def _credential_ttl() -> int:
@@ -448,51 +446,6 @@ def delete_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
             return _response(404, {"detail": "Job not found"})
         _get_store().delete_job(job.job_id, user_id=user_id)
         return _response(200, {"deleted": True})
-    except Exception as exc:
-        return _handle_error(exc)
-
-
-def auth_token_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
-    """Exchange or refresh OIDC tokens via the provider."""
-    try:
-        token_url = os.getenv("AUTH_TOKEN_URL") or ""
-        if not token_url:
-            return _response(500, {"detail": "AUTH_TOKEN_URL not configured"})
-        body = json.loads(event.get("body") or "{}")
-        refresh_token = body.get("refresh_token")
-        code = body.get("code")
-        verifier = body.get("code_verifier")
-        redirect_uri = body.get("redirect_uri")
-        client_id = os.getenv("AUTH_CLIENT_ID") or ""
-        if refresh_token:
-            data = {
-                "grant_type": "refresh_token",
-                "client_id": client_id,
-                "refresh_token": refresh_token,
-            }
-        else:
-            if not code or not verifier or not redirect_uri:
-                return _response(400, {"detail": "Missing code verifier or redirect"})
-            data = {
-                "grant_type": "authorization_code",
-                "client_id": client_id,
-                "code": code,
-                "redirect_uri": redirect_uri,
-                "code_verifier": verifier,
-            }
-        import requests
-
-        response = requests.post(token_url, data=data, timeout=15)
-        if not response.ok:
-            # Log the actual OAuth error for debugging, return generic message to client
-            _logger.warning("OAuth token exchange failed: status=%d body=%s", response.status_code, response.text)
-            # Map common OAuth errors to user-friendly messages
-            if response.status_code == 400:
-                return _response(400, {"detail": "Invalid or expired authorization code."})
-            if response.status_code == 401:
-                return _response(401, {"detail": "Authentication failed."})
-            return _response(502, {"detail": "Authentication service error. Please try again."})
-        return _response(200, response.json())
     except Exception as exc:
         return _handle_error(exc)
 

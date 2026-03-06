@@ -45,7 +45,6 @@ def _route(method: str, pattern: str, handler: Callable) -> None:
 
 
 def _register_routes() -> None:
-    _route("POST", r"^/auth/token$", lambda_handlers.auth_token_handler)
     _route("POST", r"^/credentials/validate$", lambda_handlers.validate_credentials_handler)
     _route("POST", r"^/jobs$", lambda_handlers.create_job_handler)
     _route("GET", r"^/jobs$", lambda_handlers.list_jobs_handler)
@@ -78,7 +77,7 @@ def _cors_headers(origin: str | None = None) -> dict[str, str]:
     return {
         "Access-Control-Allow-Origin": allow_origin,
         "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
-        "Access-Control-Allow-Headers": "Authorization,Content-Type,X-User-Id,X-Firebase-AppCheck",
+        "Access-Control-Allow-Headers": "Authorization,Content-Type,X-Firebase-AppCheck",
     }
 
 
@@ -166,13 +165,6 @@ def cleanup_expired(_event: scheduler_fn.ScheduledEvent) -> None:
         lambda_handlers._get_store().cleanup_expired()
     except Exception:
         pass
-    if (os.getenv("BACKEND_FIRESTORE_ENABLED") or "false").lower() not in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }:
-        return
     from google.cloud import firestore
 
     project_id = resolve_project_id()

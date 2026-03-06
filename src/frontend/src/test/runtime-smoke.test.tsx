@@ -10,7 +10,6 @@ describe("runtime smoke", () => {
       render(<App />);
 
       await screen.findByText(/SKYBRIDGE/i);
-      await screen.findAllByRole("button", { name: /sign up \/ sign in/i });
 
       await waitFor(() => {
         const messages = errorSpy.mock.calls

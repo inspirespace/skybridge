@@ -260,7 +260,7 @@ class JobService:
                 failed_count=failed_count,
             )
 
-            if _bool_env("BACKEND_RECONCILE", True) and not _bool_env("DRY_RUN", False):
+            if not _bool_env("DRY_RUN", False):
                 _append_progress(
                     job,
                     phase="import",
@@ -365,7 +365,6 @@ def _build_flysto_client(payload: JobAcceptRequest) -> FlyStoClient:
         upload_url=_env("FLYSTO_LOG_UPLOAD_URL"),
         session_cookie=_env("FLYSTO_SESSION_COOKIE"),
         include_metadata=include_metadata,
-        api_version=_env("FLYSTO_API_VERSION"),
         email=payload.credentials.flysto_username,
         password=payload.credentials.flysto_password,
         min_request_interval=min_request_interval,

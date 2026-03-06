@@ -15,24 +15,16 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 
 ## Required backend environment (Firebase Functions)
 - `BACKEND_PRODUCTION=true` (enables production security guards)
-- `AUTH_MODE=firebase`
 - `APP_CHECK_ENFORCE=1` (rejects API requests without valid Firebase App Check token)
 - `BACKEND_ENCRYPTION_KEY=<32-byte urlsafe base64 key>`
-- `BACKEND_FIRESTORE_ENABLED=1`
 - `FIRESTORE_JOBS_COLLECTION=skybridge-jobs`
 - `FIRESTORE_CREDENTIALS_COLLECTION=skybridge-credentials`
-- `BACKEND_GCS_ENABLED=1`
 - `GCS_BUCKET=<bucket>`
 - `GCS_PREFIX=jobs`
 - `CORS_ALLOW_ORIGINS=<comma separated origins>` (never use `*` in production)
 
-## Optional backend auth overrides
-- `AUTH_ISSUER_URL` / `AUTH_AUDIENCE` / `AUTH_JWKS_URL` are optional in Firebase auth mode.
-- Defaults are derived from project id (`.firebaserc` locally, runtime metadata in deployed functions).
-
 ## Frontend build configuration (Firebase)
 - `VITE_API_BASE_URL` is optional; default is same-origin `/api` (recommended with Firebase Hosting rewrites).
-- `VITE_AUTH_MODE=firebase` (optional; defaults from `AUTH_MODE`)
 - `VITE_FIREBASE_API_KEY=<web api key>`
 - `VITE_FIREBASE_APP_ID=<web app id>`
 - `VITE_FIREBASE_APP_CHECK_ENABLED=1`
@@ -95,7 +87,7 @@ Job artifacts must expire automatically. Apply a lifecycle rule to your storage 
 - Firestore rules only allow authenticated reads of job documents owned by the current UID; all writes are server-only.
 - Storage rules deny all client access (artifacts are served via the API).
 - API can require Firebase App Check tokens (`APP_CHECK_ENFORCE=1`) to reduce abuse/phishing/billing-risk traffic.
-- Rate limiting is applied to `/auth/token` and `/credentials/validate` endpoints (10 requests/minute per IP).
+- Rate limiting is applied to `/credentials/validate` (10 requests/minute per IP).
 - Internal errors are logged but not exposed to clients.
 - Security headers (CSP, X-Frame-Options, X-Content-Type-Options) are configured in `firebase.json`.
 

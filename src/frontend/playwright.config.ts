@@ -29,8 +29,11 @@ export default defineConfig({
     url: "http://localhost:4173",
     reuseExistingServer: true,
     env: {
-      VITE_AUTH_MODE: "header",
       VITE_API_BASE_URL: "http://localhost:8000/api",
+      VITE_FIREBASE_API_KEY: "demo-local",
+      VITE_FIREBASE_APP_ID: "demo-local-app",
+      VITE_FIREBASE_PROJECT_ID: "demo-local",
+      VITE_FIREBASE_AUTH_DOMAIN: "demo-local.firebaseapp.com",
     },
   },
   projects: [

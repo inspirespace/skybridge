@@ -40,7 +40,6 @@ afterEach(async () => {
 
 describe("getAppCheckTokenHeader", () => {
   it("uses Firebase Hosting runtime config when build-time config is absent", async () => {
-    vi.stubEnv("VITE_AUTH_MODE", "firebase");
     vi.stubEnv("VITE_FIREBASE_APP_CHECK_ENABLED", "1");
     vi.stubEnv("VITE_FIREBASE_APP_CHECK_SITE_KEY", "site-key");
     vi.stubGlobal(

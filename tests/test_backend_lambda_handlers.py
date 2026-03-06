@@ -13,7 +13,7 @@ from src.backend.store import JobStore
 
 
 def _event(user_id: str | None, body: dict | None = None, job_id: str | None = None, artifact: str | None = None):
-    headers = {"X-User-Id": user_id} if user_id else {}
+    headers = {"Authorization": f"Bearer {user_id}-token"} if user_id else {}
     params = {}
     if job_id:
         params["job_id"] = job_id
@@ -45,6 +45,13 @@ def store(tmp_path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(handlers, "_service", None)
     monkeypatch.setattr(handlers, "_credential_store", None)
     monkeypatch.setattr(handlers, "_pubsub_client", None)
+    monkeypatch.setattr(
+        handlers,
+        "user_id_from_event",
+        lambda event: "pilot"
+        if (event.get("headers") or {}).get("Authorization")
+        else (_ for _ in ()).throw(Exception("missing auth")),
+    )
     return store
 
 

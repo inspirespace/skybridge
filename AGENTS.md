@@ -29,7 +29,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Firebase project id and region defaults live in `.firebaserc` (`projects.default`, `config.region`).
 - Backend code resolves project/region through shared helpers in `src/backend/env.py` (`resolve_project_id()`, `resolve_region()`); avoid per-callsite `os.getenv(...) or <default>` fallbacks for these values.
 - Frontend Firebase project/auth-domain defaults are derived from `.firebaserc` in `src/frontend/vite.config.ts`, so `VITE_FIREBASE_PROJECT_ID` and `VITE_FIREBASE_AUTH_DOMAIN` are optional unless you need overrides.
-- Frontend runtime env also derives from backend/global equivalents in `src/frontend/vite.config.ts` (`VITE_AUTH_MODE`←`AUTH_MODE` with safe default `firebase` for build/dev and `header` for Vitest, `VITE_FIRESTORE_JOBS_COLLECTION`←`FIRESTORE_JOBS_COLLECTION`, `VITE_RETENTION_DAYS`←`BACKEND_RETENTION_DAYS`, and `VITE_*` prefill credentials ← non-`VITE_` credentials).
+- Frontend runtime env also derives from backend/global equivalents in `src/frontend/vite.config.ts` (`VITE_FIRESTORE_JOBS_COLLECTION`←`FIRESTORE_JOBS_COLLECTION`, `VITE_RETENTION_DAYS`←`BACKEND_RETENTION_DAYS`, and `VITE_*` prefill credentials ← non-`VITE_` credentials).
 - Devcontainer startup attempts to install Firebase CLI (`firebase-tools`) when missing; if npm is unreachable, setup continues and `firebase` remains unavailable until install succeeds.
 - Devcontainer tooling is pinned to Python `3.11` to match Firebase Functions runtime `python311`.
 - Devcontainer post-start uses user-owned caches (`$HOME/.cache/npm`, `$HOME/.cache/uv`) to avoid permission issues from shared `/tmp` cache directories.

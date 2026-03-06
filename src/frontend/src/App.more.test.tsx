@@ -5,33 +5,8 @@ vi.mock("@/hooks/use-job-snapshot", () => ({
   useJobSnapshot: vi.fn(),
 }));
 
-vi.mock("@/hooks/use-oidc-auth", () => ({
-  useOidcAuth: vi.fn(() => ({
-    accessToken: null,
-    idToken: null,
-    userId: null,
-    setUserId: vi.fn(),
-    setAccessToken: vi.fn(),
-    setIdToken: vi.fn(),
-    startLogin: vi.fn(),
-    signOut: vi.fn(),
-    clearAuth: vi.fn(),
-  })),
-}));
-
 vi.mock("@/hooks/use-firebase-auth", () => ({
-  useFirebaseAuth: vi.fn(() => ({
-    accessToken: null,
-    startLogin: vi.fn(),
-    startEmailLink: vi.fn(),
-    completeEmailLink: vi.fn(),
-    isAnonymous: false,
-    emulatorProvider: null,
-    emulatorReady: true,
-    emailLinkPending: false,
-    signOut: vi.fn(),
-    clearAuth: vi.fn(),
-  })),
+  useFirebaseAuth: vi.fn(),
 }));
 
 vi.mock("@/api/client", () => ({
@@ -43,21 +18,47 @@ vi.mock("@/api/client", () => ({
   downloadArtifactsZip: vi.fn(async () => new Blob(["zip"])),
 }));
 
-import { useJobSnapshot } from "@/hooks/use-job-snapshot";
-import { deleteJob, downloadArtifactsZip } from "@/api/client";
 import App from "@/App";
+import { deleteJob, downloadArtifactsZip } from "@/api/client";
+import { useJobSnapshot } from "@/hooks/use-job-snapshot";
+import { useFirebaseAuth } from "@/hooks/use-firebase-auth";
+import type { JobRecord } from "@/api/client";
 
-const USER_ID_KEY = "skybridge_user_id";
 const JOB_ID_KEY = "skybridge_job_id";
 
-afterEach(() => {
-  vi.restoreAllMocks();
-  vi.resetAllMocks();
-  vi.unstubAllGlobals();
-  sessionStorage.clear();
-});
+function firebaseAuthState(overrides: Record<string, unknown> = {}) {
+  return {
+    accessToken: "token",
+    idToken: null,
+    startLogin: vi.fn(),
+    startEmailLink: vi.fn(),
+    completeEmailLink: vi.fn(),
+    isAnonymous: false,
+    emulatorProvider: null,
+    emulatorReady: true,
+    authReady: true,
+    userId: null,
+    emailLinkPending: false,
+    signOut: vi.fn(),
+    clearAuth: vi.fn(),
+    ...overrides,
+  };
+}
 
-function baseJob(overrides: Record<string, unknown>) {
+function jobSnapshotState(overrides: Record<string, unknown> = {}) {
+  return {
+    data: null,
+    loading: false,
+    error: null,
+    refresh: vi.fn(async () => undefined),
+    listenerFailed: false,
+    listenerActive: false,
+    lastSnapshotAt: null,
+    ...overrides,
+  };
+}
+
+function baseJob(overrides: Partial<JobRecord>): JobRecord {
   return {
     job_id: "job-123",
     user_id: "pilot",
@@ -76,18 +77,23 @@ function baseJob(overrides: Record<string, unknown>) {
   };
 }
 
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.resetAllMocks();
+  vi.unstubAllGlobals();
+  sessionStorage.clear();
+});
+
 describe("App UI flows", () => {
   it("returns to connect step immediately while edit-filter delete is in flight", async () => {
-    sessionStorage.setItem(USER_ID_KEY, "pilot");
     sessionStorage.setItem(JOB_ID_KEY, "job-123");
 
     const neverSettles = new Promise<never>(() => {});
-    (deleteJob as unknown as ReturnType<typeof vi.fn>).mockReturnValue(neverSettles);
-    (useJobSnapshot as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: baseJob({ status: "review_ready" }),
-      error: null,
-      refresh: vi.fn(),
-    });
+    vi.mocked(deleteJob).mockReturnValue(neverSettles);
+    vi.mocked(useFirebaseAuth).mockReturnValue(firebaseAuthState());
+    vi.mocked(useJobSnapshot).mockReturnValue(
+      jobSnapshotState({ data: baseJob({ status: "review_ready" }) })
+    );
 
     render(<App />);
 
@@ -100,21 +106,18 @@ describe("App UI flows", () => {
   });
 
   it("renders import results and allows download", async () => {
-    sessionStorage.setItem(USER_ID_KEY, "pilot");
     sessionStorage.setItem(JOB_ID_KEY, "job-123");
+    vi.mocked(useFirebaseAuth).mockReturnValue(firebaseAuthState());
+    vi.mocked(useJobSnapshot).mockReturnValue(
+      jobSnapshotState({
+        data: baseJob({
+          status: "completed",
+          import_report: { imported_count: 1, skipped_count: 0, failed_count: 0 },
+        }),
+      })
+    );
 
-    (useJobSnapshot as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: baseJob({
-        status: "completed",
-        import_report: { imported_count: 1, skipped_count: 0, failed_count: 0 },
-      }),
-      error: null,
-      refresh: vi.fn(),
-    });
-
-    const clickMock = vi
-      .spyOn(HTMLAnchorElement.prototype, "click")
-      .mockImplementation(() => {});
+    const clickMock = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     const createObjectURL = vi.fn(() => "blob:download");
     const revokeObjectURL = vi.fn();
     Object.defineProperty(window.URL, "createObjectURL", {
@@ -139,14 +142,13 @@ describe("App UI flows", () => {
   });
 
   it("shows review failure message when job failed before import", async () => {
-    sessionStorage.setItem(USER_ID_KEY, "pilot");
     sessionStorage.setItem(JOB_ID_KEY, "job-123");
-
-    (useJobSnapshot as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      data: baseJob({ status: "failed", error_message: "Review failed" }),
-      error: null,
-      refresh: vi.fn(),
-    });
+    vi.mocked(useFirebaseAuth).mockReturnValue(firebaseAuthState());
+    vi.mocked(useJobSnapshot).mockReturnValue(
+      jobSnapshotState({
+        data: baseJob({ status: "failed", error_message: "Review failed" }),
+      })
+    );
 
     render(<App />);
 

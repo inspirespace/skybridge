@@ -111,9 +111,7 @@
         window.location.assign(target);
       });
     });
-    var isSignedIn = Boolean(
-      localStorage.getItem("skybridge_access_token") || localStorage.getItem("skybridge_user_id")
-    );
+    var isSignedIn = false;
     var backLinks = document.querySelectorAll("[data-back-link]");
     if (backLinks.length) {
       backLinks.forEach(function (link) {
