@@ -612,13 +612,21 @@ export default function App() {
       });
   };
 
+  const clearImportCredentials = React.useCallback(() => {
+    setCloudahoyEmail("");
+    setCloudahoyPassword("");
+    setFlystoEmail("");
+    setFlystoPassword("");
+  }, []);
+
   /** Handle clearLocalState. */
-  const clearLocalState = () => {
+  const clearLocalState = React.useCallback(() => {
     removeSessionValue(JOB_ID_KEY);
     setJobId(null);
     setShowAllFlights(false);
     setActionError(null);
-  };
+    clearImportCredentials();
+  }, [clearImportCredentials]);
 
   /** Handle handleStartOverConfirm. */
   const handleStartOverConfirm = async () => {
@@ -657,22 +665,16 @@ export default function App() {
 
   /** Handle handleSignOut. */
   const handleSignOut = () => {
-    removeSessionValue(JOB_ID_KEY);
+    clearLocalState();
     clearEmailLinkEmail();
-    setJobId(null);
-    setShowAllFlights(false);
-    setActionError(null);
     void signOutFirebase();
   };
 
   const handleTokenExpired = React.useCallback(() => {
-    removeSessionValue(JOB_ID_KEY);
+    clearLocalState();
     clearEmailLinkEmail();
-    setJobId(null);
     void signOutFirebase();
-    setShowAllFlights(false);
-    setActionError(null);
-  }, [signOutFirebase]);
+  }, [clearLocalState, signOutFirebase]);
 
   React.useEffect(() => {
     if (!jobError || !isSignedIn) return;
@@ -789,8 +791,7 @@ export default function App() {
     setActionNotice(null);
     try {
       await deleteJob(jobId, auth);
-      removeSessionValue(JOB_ID_KEY);
-      setJobId(null);
+      clearLocalState();
       setActionNotice({
         scope: "global",
         message: "Results deleted. You can start a new import any time.",
@@ -801,8 +802,7 @@ export default function App() {
         return;
       }
       if ((err as Error & { status?: number }).status === 404) {
-        removeSessionValue(JOB_ID_KEY);
-        setJobId(null);
+        clearLocalState();
         return;
       }
       setActionError({
