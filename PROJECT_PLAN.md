@@ -213,6 +213,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Further harden credential fields against password-manager prompts by adding decoy hidden login inputs for CloudAhoy/FlySto forms.
 - [x] Restore Playwright e2e compatibility for Connect credentials by removing the readOnly arming gate from password inputs while keeping decoy fields plus password-manager ignore attributes.
 - [x] Replace the hidden CloudAhoy/FlySto login decoys with less login-like field semantics (`new-password`, no form names) and clear temporary import credentials on delete/sign-out/token-expiry so Safari stops prompting to save them on close.
+- [x] Fix deployed Firebase email-link auth on the custom Hosting domain by allowing Firebase Auth helper iframe/script origins in Hosting CSP (`*.firebaseapp.com`, `*.web.app`, `apis.google.com`, `www.google.com`, `www.gstatic.com`) and lock that into regression coverage.
 - [x] Remove unused `FirebaseAuthDialog` component file to prevent accidental reintroduction of auth modal behavior on `/app`.
 - [x] Remove deploy-time Firebase Auth branding auto-patching and switch deploy preflight to manual setup guidance (email-link mode, template naming, authorized domains) plus verification-only checks.
 - [x] Document Firebase Console prerequisite that Auth template "Public-facing name" is editable only when Google sign-in provider is enabled (deploy overview + docs).

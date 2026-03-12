@@ -82,6 +82,7 @@ Job artifacts must expire automatically. Apply a lifecycle rule to your storage 
 - Enable Google sign-in provider if you need to edit **Public-facing name** in Auth email templates.
 - Set a friendly sender/app name and subject/body copy in **Authentication -> Templates -> Email address sign-in** (for example `Skybridge`).
 - Add all continue-url hostnames in **Authentication -> Settings -> Authorized domains** (including custom Hosting domains).
+- Keep the Hosting CSP compatible with Firebase Auth helpers on custom domains: allow the auth iframe domains (`https://*.firebaseapp.com`, `https://*.web.app`) plus Google helper/recaptcha origins used by `/__/auth/*` (`https://apis.google.com`, `https://www.google.com`, `https://www.gstatic.com`).
 
 ## Security defaults
 - Firestore rules only allow authenticated reads of job documents owned by the current UID; all writes are server-only.
@@ -89,7 +90,7 @@ Job artifacts must expire automatically. Apply a lifecycle rule to your storage 
 - API can require Firebase App Check tokens (`APP_CHECK_ENFORCE=1`) to reduce abuse/phishing/billing-risk traffic.
 - Rate limiting is applied to `/credentials/validate` (10 requests/minute per IP).
 - Internal errors are logged but not exposed to clients.
-- Security headers (CSP, X-Frame-Options, X-Content-Type-Options) are configured in `firebase.json`.
+- Security headers (CSP, X-Frame-Options, X-Content-Type-Options) are configured in `firebase.json`; the CSP intentionally includes Firebase Auth helper origins required for custom-domain sign-in flows.
 
 ## Security environment variables
 - `BACKEND_PRODUCTION=true` — **Required in production.** Prevents emulator token bypass regardless of other settings.
