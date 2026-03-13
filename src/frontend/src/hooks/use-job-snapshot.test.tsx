@@ -59,10 +59,12 @@ describe("useJobSnapshot", () => {
 
     const auth = { token: "token" };
     let intervalCallback: (() => void) | null = null;
-    vi.spyOn(window, "setInterval").mockImplementation((callback) => {
-      intervalCallback = callback as () => void;
-      return 1 as unknown as number;
-    });
+    vi.spyOn(window, "setInterval").mockImplementation(
+      ((callback: TimerHandler, _delay?: number, ..._args: any[]) => {
+        intervalCallback = callback as () => void;
+        return 1;
+      }) as unknown as typeof window.setInterval
+    );
     vi.spyOn(window, "clearInterval").mockImplementation(() => undefined);
 
     renderHook(() => useJobSnapshot("job-123", auth));
@@ -89,10 +91,12 @@ describe("useJobSnapshot", () => {
 
     const auth = { token: "token" };
     let intervalCallback: TimerHandler | null = null;
-    vi.spyOn(window, "setInterval").mockImplementation((callback) => {
-      intervalCallback = callback;
-      return 1 as unknown as number;
-    });
+    vi.spyOn(window, "setInterval").mockImplementation(
+      ((callback: TimerHandler, _delay?: number, ..._args: any[]) => {
+        intervalCallback = callback;
+        return 1;
+      }) as unknown as typeof window.setInterval
+    );
     vi.spyOn(window, "clearInterval").mockImplementation(() => undefined);
 
     renderHook(() => useJobSnapshot("job-123", auth));
