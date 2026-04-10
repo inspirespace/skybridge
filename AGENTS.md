@@ -22,7 +22,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `docker compose --profile dev up --build` — run the local dev stack with Vite dev server (Firebase emulators, API, worker, frontend, HTTPS proxy, mocks).
 - `docker compose --profile prod up --build` — run the local prod-like stack (app served via Firebase Hosting emulator from `src/frontend/dist`).
 - `./scripts/docker-compose.sh --profile <dev|prod> up -d --build` — preferred in devcontainer terminals/tasks so bind mounts resolve to host paths on Docker Desktop.
-- VS Code launch configs: `Stack: Start (Docker Compose)`, `Stack: Start (Docker Compose, prod-like)`, `Stack: Stop (Docker Compose)` in `.vscode/launch.json`.
+- VS Code launch configs: `Stack: Start (Docker Compose - dev)`, `Stack: Start (Docker Compose - prod)`, `Stack: Stop (Docker Compose)` in `.vscode/launch.json`.
 - VS Code tasks: `Compose: Up (dev)`, `Compose: Up (prod)`, `Compose: Down`, `Firebase: Deploy`, `Firebase: Clear Project`, `Workspace: Clean`, `Devcontainer: Repair Docker Socket Access`, `Devcontainer: Repair Docker Socket Access (Restart VS Code Server)`, `Git: Cleanup Merged Branches` in `.vscode/tasks.json`.
 - `Firebase: Deploy` is zero-config for local use: it reads the default project from `.firebaserc`, triggers login when needed, and does not prompt for project id.
 - `Firebase: Clear Project` is zero-config for local use: it reads project/region defaults from `.firebaserc`, confirms interactively (unless `--force`), clears functions/firestore/rtdb/hosting, deletes Cloud Storage buckets in the project after clearing their objects, and can prompt for `gcloud auth application-default login` when local Storage cleanup lacks Google ADC.
