@@ -2,13 +2,13 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Stack: Start (Docker Compose - dev)",
+      "name": "Compose: Up (dev)",
       "type": "node-terminal",
       "request": "launch",
       "command": "./scripts/docker-compose.sh --profile dev up --build"
     },
     {
-      "name": "Stack: Start (Docker Compose - prod)",
+      "name": "Compose: Up (prod)",
       "type": "node-terminal",
       "request": "launch",
       "command": "./scripts/docker-compose.sh --profile prod up --build"
