@@ -349,7 +349,12 @@ def accept_review_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
         if not job:
             return _response(404, {"detail": "Job not found"})
         store = _get_store()
-        review_path = store.job_dir(job.job_id) / "review.json"
+        review_manifest_available = False
+        try:
+            store.load_artifact(job.job_id, "review.json")
+            review_manifest_available = True
+        except FileNotFoundError:
+            review_manifest_available = False
         has_import_events = any(
             getattr(event, "phase", None) == "import"
             if hasattr(event, "phase")
@@ -361,7 +366,7 @@ def accept_review_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
             if not (
                 job.status == "failed"
                 and job.review_summary is not None
-                and review_path.exists()
+                and review_manifest_available
                 and not has_import_events
             ):
                 return _response(409, {"detail": "Review not ready"})

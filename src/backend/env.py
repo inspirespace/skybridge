@@ -1,11 +1,11 @@
-"""Environment helpers for project and region resolution."""
+"""Environment helpers for project, region, and storage resolution."""
 from __future__ import annotations
 
 import json
 import os
-from typing import Any
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 DEFAULT_FIREBASE_REGION = "europe-west1"
 
@@ -107,9 +107,67 @@ def resolve_project_id() -> str | None:
     return None
 
 
+def _pick_storage_bucket_candidate(project_id: str, bucket_names: list[str]) -> str | None:
+    """Choose the most likely Firebase/GCS bucket for this project."""
+    if not bucket_names:
+        return None
+
+    normalized = [name.strip() for name in bucket_names if isinstance(name, str) and name.strip()]
+    normalized = [
+        name
+        for name in normalized
+        if not (
+            name.startswith("gcf-v2-sources-")
+            or name.startswith("gcf-v2-uploads-")
+            or name.startswith("gcf-sources-")
+        )
+    ]
+    if not normalized:
+        return None
+
+    preferred = (
+        f"{project_id}.firebasestorage.app",
+        f"{project_id}.appspot.com",
+    )
+    for candidate in preferred:
+        if candidate in normalized:
+            return candidate
+
+    project_prefixed = [name for name in normalized if name.startswith(f"{project_id}.")]
+    if len(project_prefixed) == 1:
+        return project_prefixed[0]
+
+    firebase_like = [
+        name
+        for name in normalized
+        if name.endswith(".firebasestorage.app") or name.endswith(".appspot.com")
+    ]
+    if len(firebase_like) == 1:
+        return firebase_like[0]
+
+    if len(normalized) == 1:
+        return normalized[0]
+    return None
+
+
+@lru_cache(maxsize=4)
+def _discover_project_storage_bucket(project_id: str) -> str | None:
+    """Discover an existing project bucket before falling back to guessed names."""
+    if not project_id:
+        return None
+    try:
+        from google.cloud import storage
+
+        client = storage.Client(project=project_id or None)
+        bucket_names = [bucket.name for bucket in client.list_buckets(project=project_id)]
+    except Exception:
+        return None
+    return _pick_storage_bucket_candidate(project_id, bucket_names)
+
+
 @lru_cache(maxsize=1)
 def resolve_storage_bucket() -> str | None:
-    """Resolve Firebase Storage bucket from env/runtime config/default project bucket."""
+    """Resolve Firebase Storage bucket from env, runtime config, discovery, or project default."""
     explicit_bucket = _clean_env("GCS_BUCKET") or _clean_env("FIREBASE_STORAGE_BUCKET")
     if explicit_bucket:
         return explicit_bucket
@@ -119,9 +177,14 @@ def resolve_storage_bucket() -> str | None:
         return firebase_bucket
 
     project_id = resolve_project_id()
-    if project_id:
-        return f"{project_id}.firebasestorage.app"
-    return None
+    if not project_id:
+        return None
+
+    discovered_bucket = _discover_project_storage_bucket(project_id)
+    if discovered_bucket:
+        return discovered_bucket
+
+    return f"{project_id}.firebasestorage.app"
 
 
 @lru_cache(maxsize=1)

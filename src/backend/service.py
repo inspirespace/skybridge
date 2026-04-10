@@ -79,6 +79,7 @@ class JobService:
             review_path = job_dir / "review.json"
             state_path = job_dir / "migration.db"
 
+            self._store.materialize_artifact_file(job_id, "migration.db", state_path)
             cloudahoy = _build_cloudahoy_client(payload, exports_dir)
             state = MigrationState(state_path)
 
@@ -146,6 +147,7 @@ class JobService:
             self._store.save_job(job)
             self._store.write_artifact(job_id, "review-summary.json", review_summary.model_dump())
             self._store.upload_artifact(job_id, "review.json", review_path)
+            self._store.upload_artifact(job_id, "migration.db", state_path)
             self._store.upload_artifact_dir(
                 job_id,
                 prefix="cloudahoy_exports",
@@ -187,10 +189,13 @@ class JobService:
             report_path = job_dir / "import-report.json"
             state_path = job_dir / "migration.db"
 
-            if not review_path.exists():
+            try:
+                review_payload = self._store.load_artifact(job_id, "review.json")
+            except FileNotFoundError:
                 raise FileNotFoundError("Review manifest missing; rerun review")
-
-            review_payload = json.loads(review_path.read_text())
+            review_path.parent.mkdir(parents=True, exist_ok=True)
+            review_path.write_text(json.dumps(review_payload, indent=2))
+            self._store.materialize_artifact_file(job_id, "migration.db", state_path)
             review_id = review_payload.get("review_id")
             summaries = _summaries_from_review(review_payload)
 
@@ -306,6 +311,7 @@ class JobService:
             job.error_message = None
             self._store.save_job(job)
             self._store.upload_artifact(job_id, "import-report.json", report_path)
+            self._store.upload_artifact(job_id, "migration.db", state_path)
             return job
         except Exception as exc:
             job.status = "failed"
@@ -318,6 +324,8 @@ class JobService:
             )
             job.error_message = f"Import failed: {exc}"
             self._store.save_job(job)
+            if "state_path" in locals():
+                self._store.upload_artifact(job_id, "migration.db", state_path)
             return job
 
 

@@ -17,6 +17,8 @@ const encryptionKey = requiredEnv("BACKEND_ENCRYPTION_KEY");
 const region = envValue("FIREBASE_REGION") || "europe-west1";
 const webAppId = envValue("FIREBASE_WEB_APP_ID") || discoverOrCreateWebAppId(projectId);
 const sdkConfig = loadWebSdkConfig(projectId, webAppId);
+const storageBucket =
+  envValue("GCS_BUCKET") || envValue("FIREBASE_STORAGE_BUCKET") || sdkConfig.storageBucket || "";
 const authProviders = defaults.authProviders || {};
 const appCheckSiteKey = (envValue("FIREBASE_APP_CHECK_SITE_KEY") || "").trim();
 const appCheckRequested = resolveBoolean(
@@ -54,6 +56,10 @@ const functionsEnv = {
   CORS_ALLOW_ORIGINS: Array.from(hostingOrigins).join(","),
 };
 
+if (storageBucket) {
+  functionsEnv.GCS_BUCKET = storageBucket;
+}
+
 const frontendEnv = {
   VITE_API_BASE_URL: "/api",
   VITE_FIREBASE_API_KEY: requiredConfig(sdkConfig.apiKey, "Firebase web apiKey"),
@@ -83,6 +89,7 @@ console.log(`Prepared Firebase deploy configuration:
   Project: ${projectId}
   Region: ${region}
   Web app: ${webAppId}
+  Storage bucket: ${storageBucket || "(runtime discovery/default fallback)"}
   Functions env: ${path.join("functions", `.env.${projectId}`)}
   Frontend env: ${path.join("src", "frontend", ".env.production")}
   App Check: ${appCheckStatus}`);

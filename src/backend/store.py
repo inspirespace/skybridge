@@ -311,17 +311,33 @@ class JobStore:
                     "Failed to upload artifact file %s for job %s: %s", name, job_id, exc
                 )
 
+    def materialize_artifact_file(self, job_id: UUID, name: str, target_path: Path) -> bool:
+        """Restore a file artifact from object storage onto local disk when needed."""
+        if target_path.exists():
+            return True
+        if not self._object_store:
+            return False
+        key = self._object_store.key_for(self.load_job(job_id).user_id, str(job_id), name)
+        payload = self._object_store.get_bytes(key)
+        if payload is None:
+            return False
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_bytes(payload)
+        return True
+
     def list_artifacts(self, job_id: UUID) -> list[str]:
         """Handle list artifacts."""
         job_dir = self._job_dir(job_id)
-        if not job_dir.exists() and self._object_store:
+        artifacts: set[str] = set()
+        if job_dir.exists():
+            artifacts.update(
+                item.name for item in job_dir.iterdir() if item.is_file() and item.name != "job.json"
+            )
+        if self._object_store:
             prefix = self._object_prefix_for_job(job_id)
-            return self._object_store.list_prefix(prefix)
-        if not job_dir.exists():
-            return []
-        return sorted(
-            [item.name for item in job_dir.iterdir() if item.is_file() and item.name != "job.json"]
-        )
+            if prefix:
+                artifacts.update(self._object_store.list_prefix(prefix))
+        return sorted(artifacts)
 
     def load_artifact(self, job_id: UUID, name: str) -> dict[str, Any]:
         """Handle load artifact."""

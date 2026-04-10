@@ -17,6 +17,7 @@ class FakeObjectStore:
         self.deleted: list[str] = []
         self.json_calls: list[str] = []
         self.files: dict[str, dict] = {}
+        self.bytes_payloads: dict[str, bytes] = {}
         self.raise_on_put = False
 
     def key_for(self, *parts: str) -> str:
@@ -39,6 +40,9 @@ class FakeObjectStore:
 
     def get_json(self, key: str):
         return self.files.get(key)
+
+    def get_bytes(self, key: str):
+        return self.bytes_payloads.get(key)
 
 
 def _job(store: JobStore, user_id: str = "user-1") -> JobRecord:
@@ -102,6 +106,20 @@ def test_list_jobs_filters_user(tmp_path: Path):
     jobs = store.list_jobs("user-1")
     assert len(jobs) == 1
     assert jobs[0].job_id == job1.job_id
+
+
+def test_materialize_artifact_file_from_object_store(tmp_path: Path):
+    object_store = FakeObjectStore()
+    store = JobStore(tmp_path, object_store=object_store)
+    job = _job(store)
+    target = store.job_dir(job.job_id) / "migration.db"
+    key = object_store.key_for(job.user_id, str(job.job_id), "migration.db")
+    object_store.bytes_payloads[key] = b"sqlite-bytes"
+
+    restored = store.materialize_artifact_file(job.job_id, "migration.db", target)
+
+    assert restored is True
+    assert target.read_bytes() == b"sqlite-bytes"
 
 
 def test_load_job_expired(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):

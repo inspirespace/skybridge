@@ -47,6 +47,16 @@ resolve_firestore_database_location() {
   printf '%s' "$FUNCTIONS_REGION"
 }
 
+resolve_storage_bucket_location() {
+  local location
+  location="$(resolve_config_value FIREBASE_STORAGE_BUCKET_LOCATION "$MANAGED_FUNCTIONS_ENV_FILE" functions/.env .env || true)"
+  if [ -n "$location" ]; then
+    printf '%s' "$location"
+    return 0
+  fi
+  printf '%s' "$FUNCTIONS_REGION"
+}
+
 PROJECT_ID="${FIREBASE_PROJECT_ID:-$(sh "$FIREBASE_CONFIG_SCRIPT" project 2>/dev/null || true)}"
 
 while [ "$#" -gt 0 ]; do
@@ -161,6 +171,37 @@ normalize_env_value() {
     raw="${raw:1:${#raw}-2}"
   fi
   printf '%s' "$raw"
+}
+
+normalize_bucket_candidate() {
+  local value
+  value="$(normalize_env_value "${1:-}")"
+  value="${value#gs://}"
+  value="${value%%/*}"
+  printf '%s' "$value"
+}
+
+env_file_set_value() {
+  local file_path="$1"
+  local key="$2"
+  local value="$3"
+  local tmp_file
+  tmp_file="$(mktemp)"
+  if [ -f "$file_path" ]; then
+    awk -v key="$key" '
+      {
+        current=$0
+        sub(/^[[:space:]]*/, "", current)
+        sub(/^export[[:space:]]+/, "", current)
+        if (index(current, key "=") == 1) {
+          next
+        }
+        print $0
+      }
+    ' "$file_path" >"$tmp_file"
+  fi
+  printf '%s=%s\n' "$key" "$value" >>"$tmp_file"
+  mv "$tmp_file" "$file_path"
 }
 
 backup_managed_env_file() {
@@ -484,6 +525,221 @@ NODE
   return 1
 }
 
+discover_project_storage_bucket() {
+  local token="$1"
+  local project_id="$2"
+  node - "$token" "$project_id" <<'NODE'
+const token = process.argv[2];
+const projectId = process.argv[3];
+
+if (!token || !projectId) {
+  process.exit(1);
+}
+
+const headers = {
+  Authorization: `Bearer ${token}`,
+  "X-Goog-User-Project": projectId,
+};
+
+const pickBucket = (projectId, bucketNames) => {
+  const normalized = bucketNames
+    .filter((value) => typeof value === "string")
+    .map((value) => value.trim())
+    .filter(
+      (name) =>
+        !name.startsWith("gcf-v2-sources-") &&
+        !name.startsWith("gcf-v2-uploads-") &&
+        !name.startsWith("gcf-sources-")
+    )
+    .filter(Boolean);
+
+  const preferred = [
+    `${projectId}.firebasestorage.app`,
+    `${projectId}.appspot.com`,
+  ];
+  for (const candidate of preferred) {
+    if (normalized.includes(candidate)) {
+      return candidate;
+    }
+  }
+
+  const projectPrefixed = normalized.filter((name) => name.startsWith(`${projectId}.`));
+  if (projectPrefixed.length === 1) {
+    return projectPrefixed[0];
+  }
+
+  const firebaseLike = normalized.filter(
+    (name) => name.endsWith(".firebasestorage.app") || name.endsWith(".appspot.com")
+  );
+  if (firebaseLike.length === 1) {
+    return firebaseLike[0];
+  }
+
+  if (normalized.length === 1) {
+    return normalized[0];
+  }
+  return "";
+};
+
+(async () => {
+  const buckets = new Set();
+  let pageToken = "";
+  while (true) {
+    const url = new URL("https://storage.googleapis.com/storage/v1/b");
+    url.searchParams.set("project", projectId);
+    url.searchParams.set("fields", "items(name),nextPageToken");
+    url.searchParams.set("maxResults", "1000");
+    if (pageToken) {
+      url.searchParams.set("pageToken", pageToken);
+    }
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Bucket list failed (${response.status}): ${body}`);
+    }
+    const payload = await response.json();
+    const items = Array.isArray(payload?.items) ? payload.items : [];
+    for (const item of items) {
+      if (typeof item?.name === "string" && item.name.trim()) {
+        buckets.add(item.name.trim());
+      }
+    }
+    if (!payload?.nextPageToken) {
+      break;
+    }
+    pageToken = payload.nextPageToken;
+  }
+
+  const bucketNames = Array.from(buckets);
+  const selected = pickBucket(projectId, bucketNames);
+  process.stdout.write(`COUNT=${bucketNames.length}\n`);
+  if (selected) {
+    process.stdout.write(`SELECTED=${selected}\n`);
+  }
+  for (const bucket of bucketNames) {
+    process.stdout.write(`BUCKET=${bucket}\n`);
+  }
+})().catch((err) => {
+  console.error(err instanceof Error ? err.message : String(err));
+  process.exit(1);
+});
+NODE
+}
+
+create_storage_bucket() {
+  local token="$1"
+  local project_id="$2"
+  local bucket="$3"
+  local location="$4"
+  node - "$token" "$project_id" "$bucket" "$location" <<'NODE'
+const token = process.argv[2];
+const projectId = process.argv[3];
+const bucket = process.argv[4];
+const location = process.argv[5];
+
+if (!token || !projectId || !bucket || !location) {
+  process.exit(1);
+}
+
+(async () => {
+  const url = new URL("https://storage.googleapis.com/storage/v1/b");
+  url.searchParams.set("project", projectId);
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "X-Goog-User-Project": projectId,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: bucket,
+      location,
+      storageClass: "STANDARD",
+      iamConfiguration: {
+        uniformBucketLevelAccess: {
+          enabled: true,
+        },
+      },
+    }),
+  });
+  if (response.ok || response.status === 409) {
+    process.exit(0);
+  }
+  const body = await response.text();
+  throw new Error(`Bucket create failed (${response.status}): ${body}`);
+})().catch((err) => {
+  console.error(err instanceof Error ? err.message : String(err));
+  process.exit(1);
+});
+NODE
+}
+
+resolve_project_number() {
+  local token="$1"
+  local project_id="$2"
+  local explicit
+  explicit="$(resolve_config_value FIREBASE_PROJECT_NUMBER "$MANAGED_FUNCTIONS_ENV_FILE" functions/.env .env || true)"
+  if [ -n "$explicit" ]; then
+    printf '%s' "$explicit"
+    return 0
+  fi
+  node - "$token" "$project_id" <<'NODE'
+const token = process.argv[2];
+const projectId = process.argv[3];
+
+if (!token || !projectId) {
+  process.exit(1);
+}
+
+(async () => {
+  const response = await fetch(
+    `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(projectId)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Project lookup failed (${response.status}): ${body}`);
+  }
+  const payload = await response.json();
+  const value = payload?.projectNumber;
+  if (value == null) {
+    process.exit(1);
+  }
+  process.stdout.write(String(value).trim());
+})().catch((err) => {
+  console.error(err instanceof Error ? err.message : String(err));
+  process.exit(1);
+});
+NODE
+}
+
+build_fallback_artifact_bucket_name() {
+  local project_id="$1"
+  local project_number="$2"
+  node - "$project_id" "$project_number" <<'NODE'
+const projectId = (process.argv[2] || "").trim().toLowerCase();
+const projectNumber = (process.argv[3] || "").trim();
+
+const normalize = (value) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+const base = normalize(projectId);
+if (!base) {
+  process.exit(1);
+}
+const suffix = projectNumber ? `-${normalize(projectNumber)}` : "";
+process.stdout.write(`${base}-artifacts${suffix}`);
+NODE
+}
+
 get_identity_platform_config() {
   local token="$1"
   local output_file="$2"
@@ -793,6 +1049,143 @@ EOF
   fi
   rm -f "$db_file" "$db_err_file"
   exit 1
+}
+
+preflight_storage_bucket() {
+  local configured_bucket token discovered_output discovered_count discovered_selected
+  local discovered_buckets application_buckets bucket_location created_configured_bucket
+  local create_output project_number fallback_bucket
+
+  configured_bucket="$(resolve_config_value GCS_BUCKET "$MANAGED_FUNCTIONS_ENV_FILE" functions/.env .env || true)"
+  if [ -z "$configured_bucket" ]; then
+    configured_bucket="$(resolve_config_value FIREBASE_STORAGE_BUCKET "$MANAGED_FUNCTIONS_ENV_FILE" functions/.env .env || true)"
+  fi
+  configured_bucket="$(normalize_bucket_candidate "$configured_bucket")"
+
+  token="$(google_access_token || true)"
+  if [ -z "$token" ]; then
+    if [ -n "$configured_bucket" ]; then
+      export GCS_BUCKET="$configured_bucket"
+      return 0
+    fi
+    cat >&2 <<'EOF'
+Firebase Storage preflight: could not acquire Google access token to verify the project bucket.
+Checked:
+  - Application Default Credentials (GOOGLE_APPLICATION_CREDENTIALS / ADC)
+  - Firebase CLI local login token cache (~/.config/configstore/firebase-tools.json)
+
+Set GCS_BUCKET explicitly or authenticate with ADC / Firebase CLI before deploy.
+EOF
+    exit 1
+  fi
+
+  discovered_output="$(discover_project_storage_bucket "$token" "$PROJECT_ID")" || {
+    echo "Firebase Storage preflight failed while listing project buckets." >&2
+    exit 1
+  }
+  discovered_count="$(printf '%s\n' "$discovered_output" | sed -n 's/^COUNT=//p' | head -n 1)"
+  discovered_selected="$(printf '%s\n' "$discovered_output" | sed -n 's/^SELECTED=//p' | head -n 1)"
+  discovered_buckets="$(printf '%s\n' "$discovered_output" | sed -n 's/^BUCKET=//p')"
+  application_buckets="$(printf '%s\n' "$discovered_buckets" | grep -Ev '^(gcf-v2-sources-|gcf-v2-uploads-|gcf-sources-)' || true)"
+
+  if [ -n "$configured_bucket" ]; then
+    if [ -n "$application_buckets" ] && ! printf '%s\n' "$application_buckets" | grep -Fxq "$configured_bucket"; then
+      case "$configured_bucket" in
+        "${PROJECT_ID}.firebasestorage.app"|"${PROJECT_ID}.appspot.com")
+          if [ -n "$discovered_selected" ]; then
+            echo "Firebase Storage preflight: configured bucket ${configured_bucket} is unavailable; using existing project bucket ${discovered_selected}."
+            configured_bucket="$discovered_selected"
+          else
+            cat >&2 <<EOF
+Firebase Storage preflight failed for project ${PROJECT_ID}.
+Configured bucket ${configured_bucket} does not exist in the project.
+Discovered buckets:
+$(printf '%s\n' "$discovered_buckets" | sed 's/^/  - /')
+EOF
+            exit 1
+          fi
+          ;;
+        *)
+          cat >&2 <<EOF
+Firebase Storage preflight failed for project ${PROJECT_ID}.
+Configured bucket ${configured_bucket} does not exist in the project.
+Discovered buckets:
+$(printf '%s\n' "$discovered_buckets" | sed 's/^/  - /')
+EOF
+          exit 1
+          ;;
+      esac
+    fi
+    created_configured_bucket=0
+    if ! printf '%s\n' "$application_buckets" | grep -Fxq "$configured_bucket"; then
+      case "$configured_bucket" in
+        "${PROJECT_ID}.firebasestorage.app"|"${PROJECT_ID}.appspot.com")
+          bucket_location="$(resolve_storage_bucket_location)"
+          echo "Firebase Storage preflight: creating missing bucket ${configured_bucket} in ${bucket_location}..."
+          if create_output="$(create_storage_bucket "$token" "$PROJECT_ID" "$configured_bucket" "$bucket_location" 2>&1)"; then
+            created_configured_bucket=1
+          else
+            if printf '%s' "$create_output" | grep -qi "owns the domain"; then
+              project_number="$(resolve_project_number "$token" "$PROJECT_ID" 2>/dev/null || true)"
+              fallback_bucket="$(build_fallback_artifact_bucket_name "$PROJECT_ID" "$project_number")"
+              echo "Firebase Storage preflight: default bucket name is unavailable; falling back to ${fallback_bucket}..."
+              if create_output="$(create_storage_bucket "$token" "$PROJECT_ID" "$fallback_bucket" "$bucket_location" 2>&1)"; then
+                configured_bucket="$fallback_bucket"
+                created_configured_bucket=1
+              else
+                printf '%s\n' "$create_output" >&2
+                echo "Firebase Storage preflight failed while creating fallback bucket ${fallback_bucket}." >&2
+                exit 1
+              fi
+            else
+              printf '%s\n' "$create_output" >&2
+              echo "Firebase Storage preflight failed while creating ${configured_bucket}." >&2
+              exit 1
+            fi
+          fi
+          ;;
+      esac
+    fi
+    if [ "$created_configured_bucket" -ne 1 ] && ! printf '%s\n' "$application_buckets" | grep -Fxq "$configured_bucket"; then
+      cat >&2 <<EOF
+Firebase Storage preflight failed for project ${PROJECT_ID}.
+Configured bucket ${configured_bucket} does not exist in the project.
+Set GCS_BUCKET to an existing bucket, or use the Firebase default bucket name and let deploy create it.
+EOF
+      exit 1
+    fi
+    export GCS_BUCKET="$configured_bucket"
+    env_file_set_value "$MANAGED_FUNCTIONS_ENV_FILE" "GCS_BUCKET" "$configured_bucket"
+    return 0
+  fi
+
+  if [ "${discovered_count:-0}" = "0" ]; then
+    cat >&2 <<EOF
+Firebase Storage preflight failed for project ${PROJECT_ID}.
+No Cloud Storage bucket exists for this Firebase project, so artifact downloads cannot work.
+
+Create or enable Firebase Storage for the project first, then rerun deploy.
+Firebase Console: https://console.firebase.google.com/project/${PROJECT_ID}/storage
+EOF
+    exit 1
+  fi
+
+  if [ -z "$discovered_selected" ]; then
+    cat >&2 <<EOF
+Firebase Storage preflight failed for project ${PROJECT_ID}.
+Multiple Storage buckets were found, but none could be selected automatically.
+Set GCS_BUCKET explicitly before deploy.
+
+Discovered buckets:
+$(printf '%s\n' "$discovered_buckets" | sed 's/^/  - /')
+EOF
+    exit 1
+  fi
+
+  echo "Firebase Storage preflight: using project bucket ${discovered_selected}."
+  export GCS_BUCKET="$discovered_selected"
+  env_file_set_value "$MANAGED_FUNCTIONS_ENV_FILE" "GCS_BUCKET" "$discovered_selected"
+  source_env_file "$MANAGED_FUNCTIONS_ENV_FILE"
 }
 
 print_firebase_auth_setup_overview() {
@@ -1530,6 +1923,7 @@ EOF
 fi
 
 prepare_managed_deploy_env
+preflight_storage_bucket
 preflight_app_check_config
 preflight_frontend_firebase_config
 preflight_firestore_database

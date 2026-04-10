@@ -9,7 +9,7 @@ import pytest
 
 from src.backend.firebase_errors import FirestoreDatabaseNotConfiguredError
 import src.backend.lambda_handlers as handlers
-from src.backend.models import JobRecord
+from src.backend.models import JobRecord, ReviewSummary
 from src.backend.store import JobStore
 
 
@@ -37,6 +37,29 @@ def _job(status: str, job_id=None):
         updated_at=now,
         progress_log=[],
     )
+
+
+class FakeObjectStore:
+    def __init__(self) -> None:
+        self.json_payloads: dict[str, dict] = {}
+
+    def key_for(self, *parts: str) -> str:
+        return "/".join(parts)
+
+    def list_prefix(self, prefix: str) -> list[str]:
+        return [key[len(prefix) + 1 :] for key in self.json_payloads if key.startswith(f"{prefix}/")]
+
+    def get_json(self, key: str):
+        return self.json_payloads.get(key)
+
+    def put_json(self, key: str, payload: dict) -> None:
+        self.json_payloads[key] = payload
+
+    def put_file(self, _key: str, _path) -> None:
+        return None
+
+    def delete_prefix(self, _prefix: str) -> None:
+        return None
 
 
 @pytest.fixture()
@@ -228,6 +251,62 @@ def test_accept_review_handler_conflict(store):
         _event("pilot", {"credentials": {}}, job_id=str(job.job_id)), None
     )
     assert response["statusCode"] == 409
+
+
+def test_accept_review_handler_allows_failed_retry_with_remote_review_manifest(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    object_store = FakeObjectStore()
+    store = JobStore(tmp_path, object_store=object_store)
+    monkeypatch.setattr(handlers, "_store", store)
+    monkeypatch.setattr(handlers, "_service", None)
+    monkeypatch.setattr(handlers, "_credential_store", None)
+    monkeypatch.setattr(handlers, "_pubsub_client", None)
+    monkeypatch.setattr(
+        handlers,
+        "user_id_from_event",
+        lambda event: "pilot"
+        if (event.get("headers") or {}).get("Authorization")
+        else (_ for _ in ()).throw(Exception("missing auth")),
+    )
+
+    job = _job("failed")
+    job.review_summary = ReviewSummary(flight_count=0, total_hours=0.0, flights=[])
+    store.save_job(job)
+    object_store.put_json(
+        object_store.key_for(job.user_id, str(job.job_id), "review.json"),
+        {"review_id": "review-1", "items": []},
+    )
+
+    class _DummyCredentialStore:
+        def issue(self, **_kwargs):
+            return "import-token"
+
+    seen = {}
+    monkeypatch.setattr(handlers, "_credential_store", _DummyCredentialStore())
+    monkeypatch.setattr(handlers, "_enqueue_job", lambda *args, **kwargs: seen.setdefault("enqueued", True))
+    monkeypatch.setattr(
+        handlers,
+        "resolve_job_queue_topic_path",
+        lambda: "projects/demo-project/topics/skybridge-job-queue",
+    )
+
+    payload = {
+        "credentials": {
+            "cloudahoy_username": "pilot",
+            "cloudahoy_password": "secret",
+            "flysto_username": "pilot",
+            "flysto_password": "secret",
+        }
+    }
+    response = handlers.accept_review_handler(
+        _event("pilot", payload, job_id=str(job.job_id)),
+        None,
+    )
+
+    assert response["statusCode"] == 200
+    assert seen["enqueued"] is True
 
 def test_artifact_handlers(store):
     job = _job("review_ready")
