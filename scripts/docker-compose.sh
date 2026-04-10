@@ -71,4 +71,11 @@ if [ -z "${WORKSPACE_BIND_ROOT:-}" ] || [ "${WORKSPACE_BIND_ROOT}" = "." ]; then
   fi
 fi
 
+# The attached Docker Compose shortcut menu advertises Docker Desktop actions
+# that are not reachable from inside the devcontainer. Keep it off there
+# unless the caller explicitly opted in/out via COMPOSE_MENU.
+if [ -f "/.dockerenv" ] && [ -z "${COMPOSE_MENU+x}" ]; then
+  export COMPOSE_MENU=false
+fi
+
 exec docker compose "$@"
