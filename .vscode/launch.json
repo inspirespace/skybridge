@@ -5,19 +5,13 @@
       "name": "Stack: Start (Docker Compose - dev)",
       "type": "node-terminal",
       "request": "launch",
-      "command": "./scripts/docker-compose.sh --profile dev up -d --build"
+      "command": "./scripts/docker-compose.sh --profile dev up --build"
     },
     {
       "name": "Stack: Start (Docker Compose - prod)",
       "type": "node-terminal",
       "request": "launch",
-      "command": "./scripts/docker-compose.sh --profile prod up -d --build"
-    },
-    {
-      "name": "Stack: Stop (Docker Compose)",
-      "type": "node-terminal",
-      "request": "launch",
-      "command": "./scripts/docker-compose.sh --profile dev --profile prod down --remove-orphans"
+      "command": "./scripts/docker-compose.sh --profile prod up --build"
     }
   ]
 }
