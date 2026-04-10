@@ -245,6 +245,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Fix Cloud Functions startup path resolution in `functions/main.py` for deployed runtime (`/workspace` source root), so staged modules under `functions/_deploy_src/src` are importable and containers start on `PORT=8080`.
 - [x] Fix production API base fallback to same-origin `/api` (instead of fixed local-domain API URLs) to prevent CSP `connect-src` failures on deployed domains.
 - [x] Simplify backend runtime paths by removing unused local/Cloud Run HTTP adapters (`src/backend/lambda_api_local.py`, `src/backend/http_api.py`, `src/backend/http_worker.py`), keeping Firebase Functions as the only backend runtime while retaining compose-based dev mock services.
+- [x] Disable automatic Firebase deploys on merges to `main` by making `.github/workflows/firebase-deploy.yml` manual-only (`workflow_dispatch`), while keeping the shared local/manual deploy path intact.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.
