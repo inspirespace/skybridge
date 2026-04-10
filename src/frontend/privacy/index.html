@@ -14,6 +14,23 @@
       content="Skybridge privacy policy, covering data processing, retention, and contact information."
     />
     <meta name="robots" content="index, follow" />
+    <script>
+      (() => {
+        const storageKey = "skybridge-theme";
+        let stored = null;
+        try {
+          stored = window.localStorage.getItem(storageKey);
+        } catch (_error) {
+          stored = null;
+        }
+        const prefersDark =
+          stored === "dark" ||
+          (stored !== "light" &&
+            typeof window.matchMedia === "function" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", prefersDark);
+      })();
+    </script>
     <link rel="stylesheet" href="/src/index.css" />
   </head>
   <body>

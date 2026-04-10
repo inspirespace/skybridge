@@ -40,6 +40,36 @@ class FakeFlySto:
         return True
 
 
+class FakeObjectStore:
+    def __init__(self) -> None:
+        self.json_payloads: dict[str, dict] = {}
+        self.files: list[tuple[str, Path]] = []
+        self.bytes_payloads: dict[str, bytes] = {}
+
+    def key_for(self, user_id: str, job_id: str, name: str | None = None) -> str:
+        if name:
+            return f"{user_id}/{job_id}/{name}"
+        return f"{user_id}/{job_id}"
+
+    def put_json(self, key: str, payload: dict) -> None:
+        self.json_payloads[key] = payload
+
+    def get_json(self, key: str):
+        return self.json_payloads.get(key)
+
+    def put_file(self, key: str, path: Path) -> None:
+        self.files.append((key, path))
+
+    def get_bytes(self, _key: str):
+        return self.bytes_payloads.get(_key)
+
+    def list_prefix(self, _prefix: str):
+        return []
+
+    def delete_prefix(self, _prefix: str):
+        return None
+
+
 @pytest.fixture()
 def job_service(tmp_path: Path) -> JobService:
     store = JobStore(tmp_path)
@@ -118,6 +148,74 @@ def test_generate_review_failure_marks_job_failed(job_service: JobService, monke
     assert "Review failed" in result.error_message
 
 
+def test_generate_review_reports_incremental_progress(
+    job_service: JobService,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Generate review should emit per-flight review progress while building artifacts."""
+    job = job_service.create_job("pilot")
+
+    summaries = [
+        CoreFlightSummary(
+            id="flight-1",
+            started_at=datetime(2026, 1, 5, 9, 0, tzinfo=timezone.utc),
+            duration_seconds=3600,
+            aircraft_type="C172",
+            tail_number="N123",
+        ),
+        CoreFlightSummary(
+            id="flight-2",
+            started_at=datetime(2026, 1, 6, 9, 0, tzinfo=timezone.utc),
+            duration_seconds=1800,
+            aircraft_type="C172",
+            tail_number="N124",
+        ),
+    ]
+
+    def fake_build_cloudahoy(payload, exports_dir: Path):
+        exports_dir.mkdir(parents=True, exist_ok=True)
+        return FakeCloudAhoy(summaries)
+
+    def fake_prepare_review(**kwargs):
+        progress = kwargs["progress"]
+        for index, summary in enumerate(summaries, start=1):
+            progress(index, len(summaries), summary)
+        output_path = kwargs["output_path"]
+        output_path.write_text(json.dumps({"review_id": "review-123", "items": []}))
+        items = [
+            FakeReviewItem(
+                flight_id="flight-1",
+                started_at=datetime(2026, 1, 5, 9, 0, tzinfo=timezone.utc),
+                duration_seconds=3600,
+                tail_number="N123",
+                metadata={},
+                status="ok",
+                message=None,
+            ),
+            FakeReviewItem(
+                flight_id="flight-2",
+                started_at=datetime(2026, 1, 6, 9, 0, tzinfo=timezone.utc),
+                duration_seconds=1800,
+                tail_number="N124",
+                metadata={},
+                status="ok",
+                message=None,
+            ),
+        ]
+        return items, "review-123"
+
+    monkeypatch.setattr(service_mod, "_build_cloudahoy_client", fake_build_cloudahoy)
+    monkeypatch.setattr(service_mod, "prepare_review", fake_prepare_review)
+
+    payload = JobCreateRequest(credentials=_credentials())
+    result = job_service.generate_review(job.job_id, payload)
+
+    assert result.status == "review_ready"
+    stored = job_service._store.load_job(job.job_id)
+    assert any(event.stage == "Preparing review (1/2)" for event in stored.progress_log)
+    assert stored.review_summary is not None
+
+
 def test_accept_review_missing_review_manifest(job_service: JobService) -> None:
     """Accept review should fail when review manifest is missing."""
     job = job_service.create_job("pilot")
@@ -133,7 +231,7 @@ def test_accept_review_missing_review_manifest(job_service: JobService) -> None:
 
 
 def test_accept_review_success(job_service: JobService, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Accept review should produce import report when reconciliation disabled."""
+    """Accept review should produce import report after finalization."""
     job = job_service.create_job("pilot")
     job.status = "review_ready"
     job_service._store.save_job(job)
@@ -152,9 +250,13 @@ def test_accept_review_success(job_service: JobService, monkeypatch: pytest.Monk
     }
     (job_dir / "review.json").write_text(json.dumps(review_payload))
 
-    monkeypatch.setenv("BACKEND_RECONCILE", "0")
     monkeypatch.setattr(service_mod, "_build_cloudahoy_client", lambda *args, **kwargs: FakeCloudAhoy([]))
     monkeypatch.setattr(service_mod, "_build_flysto_client", lambda *args, **kwargs: FakeFlySto())
+    monkeypatch.setattr(service_mod, "_maybe_wait_for_processing", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(service_mod, "verify_import_report", lambda *_args, **_kwargs: {"missing": 0})
+    monkeypatch.setattr(service_mod, "reconcile_aircraft_from_report", lambda *_args, **_kwargs: 0)
+    monkeypatch.setattr(service_mod, "reconcile_crew_from_report", lambda *_args, **_kwargs: 0)
+    monkeypatch.setattr(service_mod, "reconcile_metadata_from_report", lambda *_args, **_kwargs: 0)
 
     def fake_migrate_flights(**kwargs):
         report_path = kwargs["report_path"]
@@ -176,3 +278,101 @@ def test_accept_review_success(job_service: JobService, monkeypatch: pytest.Monk
     assert result.import_report.imported_count == 1
     assert result.import_report.skipped_count == 1
     assert result.import_report.failed_count == 1
+
+
+def test_accept_review_loads_review_manifest_from_object_store(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Accept review should read review.json from object storage when local disk is empty."""
+    object_store = FakeObjectStore()
+    store = JobStore(tmp_path, object_store=object_store)
+    job_service = JobService(store)
+    job = job_service.create_job("pilot")
+    job.status = "review_ready"
+    job_service._store.save_job(job)
+
+    review_payload = {
+        "review_id": "review-123",
+        "items": [
+            {
+                "flight_id": "flight-1",
+                "started_at": "2026-01-05T09:00:00Z",
+                "duration_seconds": 3600,
+                "tail_number": "N123",
+            }
+        ],
+    }
+    object_store.put_json(f"{job.user_id}/{job.job_id}/review.json", review_payload)
+
+    monkeypatch.setattr(service_mod, "_build_cloudahoy_client", lambda *args, **kwargs: FakeCloudAhoy([]))
+    monkeypatch.setattr(service_mod, "_build_flysto_client", lambda *args, **kwargs: FakeFlySto())
+    monkeypatch.setattr(service_mod, "_maybe_wait_for_processing", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(service_mod, "verify_import_report", lambda *_args, **_kwargs: {"missing": 0})
+    monkeypatch.setattr(service_mod, "reconcile_aircraft_from_report", lambda *_args, **_kwargs: 0)
+    monkeypatch.setattr(service_mod, "reconcile_crew_from_report", lambda *_args, **_kwargs: 0)
+    monkeypatch.setattr(service_mod, "reconcile_metadata_from_report", lambda *_args, **_kwargs: 0)
+
+    def fake_migrate_flights(**kwargs):
+        report_path = kwargs["report_path"]
+        report_path.write_text(json.dumps({"results": []}))
+        return [MigrationResult(flight_id="flight-1", status="ok")], {}
+
+    monkeypatch.setattr(service_mod, "migrate_flights", fake_migrate_flights)
+
+    payload = JobAcceptRequest(credentials=_credentials())
+    result = job_service.accept_review(job.job_id, payload)
+
+    assert result.status == "completed"
+    assert result.import_report is not None
+    assert result.import_report.imported_count == 1
+
+
+def test_accept_review_uploads_migration_state_artifact(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Accept review should persist migration.db for cross-instance retries."""
+    object_store = FakeObjectStore()
+    store = JobStore(tmp_path, object_store=object_store)
+    job_service = JobService(store)
+    job = job_service.create_job("pilot")
+    job.status = "review_ready"
+    job_service._store.save_job(job)
+    object_store.put_json(
+        f"{job.user_id}/{job.job_id}/review.json",
+        {
+            "review_id": "review-123",
+            "items": [
+                {
+                    "flight_id": "flight-1",
+                    "started_at": "2026-01-05T09:00:00Z",
+                    "duration_seconds": 3600,
+                    "tail_number": "N123",
+                }
+            ],
+        },
+    )
+
+    monkeypatch.setattr(service_mod, "_build_cloudahoy_client", lambda *args, **kwargs: FakeCloudAhoy([]))
+    monkeypatch.setattr(service_mod, "_build_flysto_client", lambda *args, **kwargs: FakeFlySto())
+    monkeypatch.setattr(service_mod, "_maybe_wait_for_processing", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(service_mod, "verify_import_report", lambda *_args, **_kwargs: {"missing": 0})
+    monkeypatch.setattr(service_mod, "reconcile_aircraft_from_report", lambda *_args, **_kwargs: 0)
+    monkeypatch.setattr(service_mod, "reconcile_crew_from_report", lambda *_args, **_kwargs: 0)
+    monkeypatch.setattr(service_mod, "reconcile_metadata_from_report", lambda *_args, **_kwargs: 0)
+
+    def fake_migrate_flights(**kwargs):
+        report_path = kwargs["report_path"]
+        state = kwargs["state"]
+        state.upsert("flight-1", "ok", file_hash="abc")
+        report_path.write_text(json.dumps({"results": []}))
+        return [MigrationResult(flight_id="flight-1", status="ok")], {}
+
+    monkeypatch.setattr(service_mod, "migrate_flights", fake_migrate_flights)
+
+    payload = JobAcceptRequest(credentials=_credentials())
+    result = job_service.accept_review(job.job_id, payload)
+
+    assert result.status == "completed"
+    assert any(key.endswith("migration.db") for key, _path in object_store.files)

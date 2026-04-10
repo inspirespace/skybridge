@@ -37,6 +37,12 @@ describe("auth-helpers", () => {
     statusError.status = 401;
     expect(isAuthExpiredError(statusError)).toBe(true);
     expect(isAuthExpiredError(new Error("token expired"))).toBe(true);
+    expect(isAuthExpiredError(new Error("Missing App Check token"))).toBe(false);
+    const missingAuthError = new Error("Missing authentication") as Error & {
+      status?: number;
+    };
+    missingAuthError.status = 401;
+    expect(isAuthExpiredError(missingAuthError)).toBe(false);
     expect(isAuthExpiredError(new Error("other"))).toBe(false);
   });
 

@@ -26,11 +26,28 @@ export function FirebaseEmailLinkForm({
   buttonClassName?: string;
   noticeClassName?: string;
 }) {
+  const inputId = "firebase-email-link-address";
+  const handleSubmit = () => {
+    if (disabled) return;
+    onSend();
+  };
+
   return (
     <div className="space-y-2">
-      <label className="text-xs font-medium text-slate-500">{label}</label>
+      <label className="text-xs font-medium text-slate-500" htmlFor={inputId}>
+        {label}
+      </label>
       <div className="flex w-full max-w-xl gap-2">
         <input
+          id={inputId}
+          name="email"
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck={false}
+          enterKeyHint="send"
           className={cn(
             "h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none",
             inputClassName
@@ -38,11 +55,16 @@ export function FirebaseEmailLinkForm({
           placeholder="you@example.com"
           value={email}
           onChange={(event) => onEmailChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            handleSubmit();
+          }}
         />
         <Button
           variant="outline"
           className={cn("h-11 px-4", buttonClassName)}
-          onClick={onSend}
+          onClick={handleSubmit}
           disabled={disabled}
         >
           {buttonLabel}

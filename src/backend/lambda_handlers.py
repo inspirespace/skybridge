@@ -13,12 +13,16 @@ from pydantic import ValidationError
 
 from .auth import user_id_from_event
 from .credential_store import build_credential_store
-from .models import CredentialValidationRequest, JobAcceptRequest, JobCreateRequest
+from .env import resolve_project_id
+from .firebase_errors import FirestoreDatabaseNotConfiguredError
+from .models import CredentialValidationRequest, JobAcceptRequest, JobCreateRequest, ProgressEvent
 from .object_store import build_object_store_from_env
+from .queue import resolve_job_queue_topic_path
 from .service import JobService, validate_credentials
 from .store import JobStore
 
 _logger = logging.getLogger(__name__)
+QUEUE_STALE_TIMEOUT_SECONDS = 120
 
 
 def _json_default(value: Any) -> str:
@@ -54,7 +58,7 @@ def _load_job(job_id: str, user_id: str):
     except ValueError:
         return None
     try:
-        job = store.load_job(job_uuid)
+        job = _get_store().load_job(job_uuid)
     except (FileNotFoundError, ValueError, ValidationError):
         return None
     if job.user_id != user_id:
@@ -64,9 +68,7 @@ def _load_job(job_id: str, user_id: str):
 
 def _firestore_jobs_collection() -> str | None:
     """Internal helper for Firestore jobs collection."""
-    if (os.getenv("BACKEND_FIRESTORE_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
-        return os.getenv("FIRESTORE_JOBS_COLLECTION") or "skybridge-jobs"
-    return None
+    return os.getenv("FIRESTORE_JOBS_COLLECTION") or "skybridge-jobs"
 
 
 def _credential_ttl() -> int:
@@ -74,22 +76,9 @@ def _credential_ttl() -> int:
     return int(os.getenv("BACKEND_CREDENTIAL_TTL") or "900")
 
 
-def _use_queue() -> bool:
-    """Internal helper for use queue."""
-    return (os.getenv("BACKEND_PUBSUB_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}
-
-
 def _pubsub_topic() -> str:
     """Internal helper for pubsub topic."""
-    topic = os.getenv("PUBSUB_TOPIC") or ""
-    if not topic:
-        return ""
-    if topic.startswith("projects/"):
-        return topic
-    project_id = os.getenv("GCP_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT") or ""
-    if not project_id:
-        return ""
-    return f"projects/{project_id}/topics/{topic}"
+    return resolve_job_queue_topic_path() or ""
 
 
 def _get_pubsub_client():
@@ -113,13 +102,64 @@ class LambdaHttpError(Exception):
 
 def _enqueue_job(job_id: UUID, purpose: str, token: str) -> None:
     """Internal helper for enqueue job."""
-    if not _use_queue():
-        return
     payload = json.dumps({"job_id": str(job_id), "purpose": purpose, "token": token}).encode("utf-8")
     topic = _pubsub_topic()
     if not topic:
-        raise LambdaHttpError(500, "PUBSUB_TOPIC not configured")
+        raise LambdaHttpError(500, "Firebase project id is not configured for the worker queue.")
     _get_pubsub_client().publish(topic, payload).result(timeout=10)
+
+
+def _ensure_worker_queue_ready() -> None:
+    """Fail fast when the Firebase worker queue cannot be resolved."""
+    if _pubsub_topic():
+        return
+    raise LambdaHttpError(500, "Firebase project id is not configured for the worker queue.")
+
+
+def _mark_enqueue_failed(job, *, phase: str, detail: str) -> None:
+    """Persist immediate queue handoff failures on the job record."""
+    job.status = "failed"
+    job.updated_at = datetime.now(timezone.utc)
+    job.progress_stage = f"{phase.title()} queue handoff failed"
+    job.progress_log.append(
+        ProgressEvent(
+            phase=phase,
+            stage=job.progress_stage,
+            percent=job.progress_percent,
+            status="failed",
+            created_at=job.updated_at,
+        )
+    )
+    job.error_message = detail
+    _get_store().save_job(job)
+
+
+def _fail_stale_queued_job(job):
+    """Mark jobs failed when Firebase worker delivery never starts."""
+    purpose = "review" if job.status == "review_queued" else "import" if job.status == "import_queued" else None
+    if not purpose:
+        return job
+    timeout_seconds = QUEUE_STALE_TIMEOUT_SECONDS
+    age_seconds = (datetime.now(timezone.utc) - job.updated_at).total_seconds()
+    if age_seconds < timeout_seconds:
+        return job
+    job.updated_at = datetime.now(timezone.utc)
+    job.status = "failed"
+    job.progress_stage = f"{purpose.title()} worker did not start"
+    job.progress_log.append(
+        ProgressEvent(
+            phase=purpose,
+            stage=job.progress_stage,
+            percent=job.progress_percent,
+            status="failed",
+            created_at=job.updated_at,
+        )
+    )
+    job.error_message = (
+        f"{purpose.title()} worker did not start. Check Firebase Pub/Sub/Eventarc configuration."
+    )
+    _get_store().save_job(job)
+    return job
 
 
 def _set_queued(job, *, phase: str) -> None:
@@ -129,13 +169,13 @@ def _set_queued(job, *, phase: str) -> None:
     job.progress_stage = "Queued"
     job.updated_at = datetime.now(timezone.utc)
     job.progress_log.append(
-        {
-            "phase": phase,
-            "stage": "Queued",
-            "percent": 5,
-            "status": job.status,
-            "created_at": job.updated_at,
-        }
+        ProgressEvent(
+            phase=phase,
+            stage="Queued",
+            percent=5,
+            status=job.status,
+            created_at=job.updated_at,
+        )
     )
 
 
@@ -147,6 +187,11 @@ def _handle_error(exc: Exception) -> dict[str, Any]:
     """
     if isinstance(exc, LambdaHttpError):
         return _response(exc.status_code, {"detail": exc.detail})
+    if isinstance(exc, FirestoreDatabaseNotConfiguredError):
+        return _response(
+            503,
+            {"detail": "Service configuration error: Cloud Firestore is not set up for this Firebase project."},
+        )
     if isinstance(exc, ValidationError):
         return _response(400, {"detail": exc.errors()})
     # Log the actual exception for debugging, but return generic message to client
@@ -155,14 +200,9 @@ def _handle_error(exc: Exception) -> dict[str, Any]:
 
 
 DATA_DIR = Path(os.environ.get("BACKEND_DATA_DIR", "/tmp/backend/jobs"))
-store = JobStore(
-    DATA_DIR,
-    build_object_store_from_env(),
-    firestore_collection=_firestore_jobs_collection(),
-    firestore_project=os.getenv("GCP_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT"),
-)
-service = JobService(store)
-credential_store = build_credential_store()
+_store: JobStore | None = None
+_service: JobService | None = None
+_credential_store = None
 _pubsub_client = None
 _ACTIVE_JOB_STATUSES = {
     "review_queued",
@@ -170,6 +210,35 @@ _ACTIVE_JOB_STATUSES = {
     "import_queued",
     "import_running",
 }
+
+
+def _get_store() -> JobStore:
+    """Initialize store lazily to keep function discovery lightweight."""
+    global _store
+    if _store is None:
+        _store = JobStore(
+            DATA_DIR,
+            build_object_store_from_env(),
+            firestore_collection=_firestore_jobs_collection(),
+            firestore_project=resolve_project_id(),
+        )
+    return _store
+
+
+def _get_service() -> JobService:
+    """Initialize service lazily."""
+    global _service
+    if _service is None:
+        _service = JobService(_get_store())
+    return _service
+
+
+def _get_credential_store():
+    """Initialize credential store lazily."""
+    global _credential_store
+    if _credential_store is None:
+        _credential_store = build_credential_store()
+    return _credential_store
 
 
 def create_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
@@ -180,15 +249,18 @@ def create_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
             return _response(401, {"detail": "Missing authentication"})
         body = json.loads(event.get("body") or "{}")
         payload = JobCreateRequest.model_validate(body)
+        store = _get_store()
+        service = _get_service()
         existing_jobs = store.list_jobs(user_id)
         if any(job.status in _ACTIVE_JOB_STATUSES for job in existing_jobs):
             return _response(429, {"detail": "Job already in progress"})
+        _ensure_worker_queue_ready()
         store.delete_jobs_for_user(user_id)
         job = service.create_job(user_id)
         job.start_date = payload.start_date
         job.end_date = payload.end_date
         job.max_flights = payload.max_flights
-        token = credential_store.issue(
+        token = _get_credential_store().issue(
             job_id=str(job.job_id),
             purpose="review",
             credentials=payload.credentials.model_dump(),
@@ -197,7 +269,22 @@ def create_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         _set_queued(job, phase="review")
         store.save_job(job)
         store.write_token(job.job_id, "review", token)
-        _enqueue_job(job.job_id, "review", token)
+        try:
+            _enqueue_job(job.job_id, "review", token)
+        except LambdaHttpError as exc:
+            _mark_enqueue_failed(job, phase="review", detail=exc.detail)
+            raise
+        except Exception as exc:
+            _logger.exception("Failed to enqueue review job %s", job.job_id)
+            _mark_enqueue_failed(
+                job,
+                phase="review",
+                detail="Review queue handoff failed. Check Firebase Pub/Sub permissions/configuration.",
+            )
+            raise LambdaHttpError(
+                500,
+                "Review queue handoff failed. Check Firebase Pub/Sub permissions/configuration.",
+            ) from exc
         return _response(201, job.model_dump())
     except Exception as exc:
         return _handle_error(exc)
@@ -209,7 +296,7 @@ def list_jobs_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         user_id = _user_id(event)
         if not user_id:
             return _response(401, {"detail": "Missing authentication"})
-        jobs = store.list_jobs(user_id)
+        jobs = [_fail_stale_queued_job(job) for job in _get_store().list_jobs(user_id)]
         return _response(200, {"jobs": [job.model_dump() for job in jobs]})
     except Exception as exc:
         return _handle_error(exc)
@@ -243,6 +330,7 @@ def get_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         job = _load_job(job_id, user_id)
         if not job:
             return _response(404, {"detail": "Job not found"})
+        job = _fail_stale_queued_job(job)
         return _response(200, job.model_dump())
     except Exception as exc:
         return _handle_error(exc)
@@ -260,7 +348,13 @@ def accept_review_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
         job = _load_job(job_id, user_id)
         if not job:
             return _response(404, {"detail": "Job not found"})
-        review_path = store.job_dir(job.job_id) / "review.json"
+        store = _get_store()
+        review_manifest_available = False
+        try:
+            store.load_artifact(job.job_id, "review.json")
+            review_manifest_available = True
+        except FileNotFoundError:
+            review_manifest_available = False
         has_import_events = any(
             getattr(event, "phase", None) == "import"
             if hasattr(event, "phase")
@@ -272,13 +366,14 @@ def accept_review_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
             if not (
                 job.status == "failed"
                 and job.review_summary is not None
-                and review_path.exists()
+                and review_manifest_available
                 and not has_import_events
             ):
                 return _response(409, {"detail": "Review not ready"})
+        _ensure_worker_queue_ready()
         body = json.loads(event.get("body") or "{}")
         payload = JobAcceptRequest.model_validate(body)
-        token = credential_store.issue(
+        token = _get_credential_store().issue(
             job_id=str(job.job_id),
             purpose="import",
             credentials=payload.credentials.model_dump(),
@@ -287,7 +382,22 @@ def accept_review_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
         _set_queued(job, phase="import")
         store.save_job(job)
         store.write_token(job.job_id, "import", token)
-        _enqueue_job(job.job_id, "import", token)
+        try:
+            _enqueue_job(job.job_id, "import", token)
+        except LambdaHttpError as exc:
+            _mark_enqueue_failed(job, phase="import", detail=exc.detail)
+            raise
+        except Exception as exc:
+            _logger.exception("Failed to enqueue import job %s", job.job_id)
+            _mark_enqueue_failed(
+                job,
+                phase="import",
+                detail="Import queue handoff failed. Check Firebase Pub/Sub permissions/configuration.",
+            )
+            raise LambdaHttpError(
+                500,
+                "Import queue handoff failed. Check Firebase Pub/Sub permissions/configuration.",
+            ) from exc
         return _response(200, job.model_dump())
     except Exception as exc:
         return _handle_error(exc)
@@ -305,7 +415,7 @@ def list_artifacts_handler(event: dict[str, Any], _context: Any) -> dict[str, An
         job = _load_job(job_id, user_id)
         if not job:
             return _response(404, {"detail": "Job not found"})
-        artifacts = store.list_artifacts(job.job_id)
+        artifacts = _get_store().list_artifacts(job.job_id)
         return _response(200, {"artifacts": artifacts})
     except Exception as exc:
         return _handle_error(exc)
@@ -325,7 +435,7 @@ def read_artifact_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
         job = _load_job(job_id, user_id)
         if not job:
             return _response(404, {"detail": "Job not found"})
-        data = store.load_artifact(job.job_id, artifact_name)
+        data = _get_store().load_artifact(job.job_id, artifact_name)
         return _response(200, data)
     except (FileNotFoundError, ValueError):
         return _response(404, {"detail": "Artifact not found"})
@@ -345,53 +455,8 @@ def delete_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         job = _load_job(job_id, user_id)
         if not job:
             return _response(404, {"detail": "Job not found"})
-        store.delete_job(job.job_id, user_id=user_id)
+        _get_store().delete_job(job.job_id, user_id=user_id)
         return _response(200, {"deleted": True})
-    except Exception as exc:
-        return _handle_error(exc)
-
-
-def auth_token_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
-    """Exchange or refresh OIDC tokens via the provider."""
-    try:
-        token_url = os.getenv("AUTH_TOKEN_URL") or ""
-        if not token_url:
-            return _response(500, {"detail": "AUTH_TOKEN_URL not configured"})
-        body = json.loads(event.get("body") or "{}")
-        refresh_token = body.get("refresh_token")
-        code = body.get("code")
-        verifier = body.get("code_verifier")
-        redirect_uri = body.get("redirect_uri")
-        client_id = os.getenv("AUTH_CLIENT_ID") or ""
-        if refresh_token:
-            data = {
-                "grant_type": "refresh_token",
-                "client_id": client_id,
-                "refresh_token": refresh_token,
-            }
-        else:
-            if not code or not verifier or not redirect_uri:
-                return _response(400, {"detail": "Missing code verifier or redirect"})
-            data = {
-                "grant_type": "authorization_code",
-                "client_id": client_id,
-                "code": code,
-                "redirect_uri": redirect_uri,
-                "code_verifier": verifier,
-            }
-        import requests
-
-        response = requests.post(token_url, data=data, timeout=15)
-        if not response.ok:
-            # Log the actual OAuth error for debugging, return generic message to client
-            _logger.warning("OAuth token exchange failed: status=%d body=%s", response.status_code, response.text)
-            # Map common OAuth errors to user-friendly messages
-            if response.status_code == 400:
-                return _response(400, {"detail": "Invalid or expired authorization code."})
-            if response.status_code == 401:
-                return _response(401, {"detail": "Authentication failed."})
-            return _response(502, {"detail": "Authentication service error. Please try again."})
-        return _response(200, response.json())
     except Exception as exc:
         return _handle_error(exc)
 
@@ -418,6 +483,7 @@ def download_artifacts_zip_handler(event: dict[str, Any], _context: Any) -> dict
         import tempfile
         import zipfile
 
+        store = _get_store()
         job_dir = store.job_dir(job_uuid)
         if not job_dir.exists() and not store.object_store:
             return _response(404, {"detail": "Job not found"})
@@ -489,12 +555,13 @@ def _process_queue_payload(payload: dict[str, Any]) -> None:
     except ValueError:
         return
     try:
+        store = _get_store()
         job = store.load_job(job_uuid)
     except FileNotFoundError:
         return
     creds = None
     if token:
-        creds = credential_store.claim(token, str(job_uuid), purpose)
+        creds = _get_credential_store().claim(token, str(job_uuid), purpose)
     if not creds:
         if job.status in {"review_running", "review_ready", "import_running", "completed"}:
             return
@@ -511,10 +578,10 @@ def _process_queue_payload(payload: dict[str, Any]) -> None:
                 end_date=job.end_date,
                 max_flights=job.max_flights,
             )
-            service.generate_review(job_uuid, request)
+            _get_service().generate_review(job_uuid, request)
         else:
             request = JobAcceptRequest(credentials=creds)
-            service.accept_review(job_uuid, request)
+            _get_service().accept_review(job_uuid, request)
     except Exception as exc:
         job.status = "failed"
         job.error_message = f"Worker failed: {exc}"

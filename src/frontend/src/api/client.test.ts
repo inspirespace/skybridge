@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@/lib/firebase-app-check", () => ({
+  getAppCheckTokenHeader: vi.fn(async () => ({})),
+}));
+
 const okResponse = (payload: unknown) =>
   Promise.resolve({
     ok: true,
@@ -23,22 +27,12 @@ afterEach(() => {
 });
 
 describe("buildAuthHeaders", () => {
-  it("requires a user id in header mode", async () => {
-    vi.stubEnv("VITE_AUTH_MODE", "header");
+  it("requires an access token", async () => {
     const { buildAuthHeaders } = await import("@/api/client");
-    expect(() => buildAuthHeaders({})).toThrow(/missing user session/i);
+    expect(() => buildAuthHeaders({})).toThrow(/missing access token/i);
   });
 
-  it("uses bearer token in firebase mode", async () => {
-    vi.stubEnv("VITE_AUTH_MODE", "firebase");
-    const { buildAuthHeaders } = await import("@/api/client");
-    expect(buildAuthHeaders({ token: "token" })).toEqual({
-      Authorization: "Bearer token",
-    });
-  });
-
-  it("uses bearer token in oidc mode", async () => {
-    vi.stubEnv("VITE_AUTH_MODE", "oidc");
+  it("uses bearer token", async () => {
     const { buildAuthHeaders } = await import("@/api/client");
     expect(buildAuthHeaders({ token: "token" })).toEqual({
       Authorization: "Bearer token",
@@ -46,9 +40,15 @@ describe("buildAuthHeaders", () => {
   });
 });
 
+describe("api base URL", () => {
+  it("defaults to same-origin /api when unset", async () => {
+    const { apiBaseUrl } = await import("@/api/client");
+    expect(apiBaseUrl).toBe("/api");
+  });
+});
+
 describe("request helpers", () => {
   it("propagates json error details and status", async () => {
-    vi.stubEnv("VITE_AUTH_MODE", "header");
     const { listJobs } = await import("@/api/client");
 
     const fetchMock = vi.fn(() =>
@@ -56,16 +56,15 @@ describe("request helpers", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(listJobs({ userId: "pilot" })).rejects.toThrow(/not authorized/i);
+    await expect(listJobs({ token: "token" })).rejects.toThrow(/not authorized/i);
     try {
-      await listJobs({ userId: "pilot" });
+      await listJobs({ token: "token" });
     } catch (err) {
       expect((err as Error & { status?: number }).status).toBe(401);
     }
   });
 
   it("sends JSON body and auth headers for createJob", async () => {
-    vi.stubEnv("VITE_AUTH_MODE", "header");
     const { createJob } = await import("@/api/client");
 
     const payload = {
@@ -88,30 +87,46 @@ describe("request helpers", () => {
     const fetchMock = vi.fn(() => okResponse(responsePayload));
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await createJob(payload, { userId: "pilot" });
+    const result = await createJob(payload, { token: "token" });
     expect(result.job_id).toBe(responsePayload.job_id);
 
     const [url, options] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toContain("/jobs");
     expect(options?.method).toBe("POST");
     expect(options?.body).toBe(JSON.stringify(payload));
-    expect((options?.headers as Record<string, string>)?.["X-User-Id"]).toBe("pilot");
+    expect((options?.headers as Record<string, string>)?.Authorization).toBe("Bearer token");
   });
 
   it("returns JSON payload for listJobs", async () => {
-    vi.stubEnv("VITE_AUTH_MODE", "header");
     const { listJobs } = await import("@/api/client");
 
     const payload = { jobs: [] };
     const fetchMock = vi.fn(() => okResponse(payload));
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await listJobs({ userId: "pilot" });
+    const result = await listJobs({ token: "token" });
     expect(result.jobs).toEqual([]);
   });
 
+  it("adds App Check header when token is available", async () => {
+    const appCheck = await import("@/lib/firebase-app-check");
+    vi.mocked(appCheck.getAppCheckTokenHeader).mockResolvedValue({
+      "X-Firebase-AppCheck": "app-check-token",
+    });
+    const { listJobs } = await import("@/api/client");
+
+    const payload = { jobs: [] };
+    const fetchMock = vi.fn(() => okResponse(payload));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await listJobs({ token: "token" });
+    const [, options] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect((options?.headers as Record<string, string>)?.["X-Firebase-AppCheck"]).toBe(
+      "app-check-token"
+    );
+  });
+
   it("retries transient errors for GET requests", async () => {
-    vi.stubEnv("VITE_AUTH_MODE", "header");
     vi.stubEnv("VITE_API_RETRY_ATTEMPTS", "2");
     vi.stubEnv("VITE_API_RETRY_DELAY_MS", "1");
     const { listJobs } = await import("@/api/client");
@@ -124,7 +139,7 @@ describe("request helpers", () => {
     vi.stubGlobal("fetch", fetchMock);
     vi.useFakeTimers();
 
-    const promise = listJobs({ userId: "pilot" });
+    const promise = listJobs({ token: "token" });
     await vi.advanceTimersByTimeAsync(5);
     const result = await promise;
 

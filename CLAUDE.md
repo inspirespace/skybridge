@@ -63,7 +63,8 @@ firebase deploy --only functions,hosting --project <project_id>
 
 ### Tech Stack
 - **Frontend**: React 19, Vite, TypeScript, Tailwind CSS, Shadcn/ui
-- **Backend**: FastAPI, Firebase Functions (Python 3.10+), Firestore, Cloud Storage, Pub/Sub
+- **Backend**: Firebase Functions (Python 3.11 runtime target), Firestore, Cloud Storage, Pub/Sub
+- **Backend dev/test helpers**: FastAPI (auth exception type + local mock services)
 - **Testing**: pytest (backend), Vitest + Playwright (frontend)
 - **Package Management**: uv (Python), npm (frontend)
 

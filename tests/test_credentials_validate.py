@@ -8,7 +8,7 @@ from src.backend import lambda_handlers
 
 def _make_event(payload: dict) -> dict:
     return {
-        "headers": {"X-User-Id": "pilot@skybridge.dev"},
+        "headers": {"Authorization": "Bearer token"},
         "body": json.dumps(payload),
         "rawPath": "/credentials/validate",
         "requestContext": {"http": {"method": "POST", "path": "/credentials/validate"}},
@@ -17,7 +17,8 @@ def _make_event(payload: dict) -> dict:
 
 def test_validate_credentials_success(monkeypatch):
     """Valid credentials return ok true."""
-    monkeypatch.setenv("AUTH_MODE", "header")
+    monkeypatch.setattr(lambda_handlers, "user_id_from_event", lambda _event: "pilot@skybridge.dev")
+
     def _noop(_credentials):
         return None
 
@@ -41,7 +42,8 @@ def test_validate_credentials_success(monkeypatch):
 
 def test_validate_credentials_failure(monkeypatch):
     """Invalid credentials return 400 with detail."""
-    monkeypatch.setenv("AUTH_MODE", "header")
+    monkeypatch.setattr(lambda_handlers, "user_id_from_event", lambda _event: "pilot@skybridge.dev")
+
     def _fail(_credentials):
         raise RuntimeError("bad credentials")
 

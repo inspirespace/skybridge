@@ -12,27 +12,23 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      BACKEND_ENCRYPTION_KEY: ${{ secrets.BACKEND_ENCRYPTION_KEY }}
+      FIREBASE_WEB_APP_ID: ${{ secrets.FIREBASE_WEB_APP_ID }}
+      FIREBASE_APP_CHECK_SITE_KEY: ${{ secrets.FIREBASE_APP_CHECK_SITE_KEY }}
     steps:
       - name: Preflight deploy requirements
-        id: preflight
-        env:
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
-          if [ -z "$FIREBASE_PROJECT_ID" ] || [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "reason=Missing FIREBASE_PROJECT_ID and/or FIREBASE_SERVICE_ACCOUNT secrets." >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-            echo "reason=All required Firebase deployment secrets are present." >> "$GITHUB_OUTPUT"
+          if [ -z "${FIREBASE_SERVICE_ACCOUNT:-}" ] || [ -z "${BACKEND_ENCRYPTION_KEY:-}" ]; then
+            echo "Missing FIREBASE_SERVICE_ACCOUNT and/or BACKEND_ENCRYPTION_KEY secrets." >&2
+            exit 1
           fi
 
       - name: Check out repository
-        if: steps.preflight.outputs.ready == 'true'
         uses: actions/checkout@v4
 
       - name: Set up Node
-        if: steps.preflight.outputs.ready == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -40,39 +36,13 @@ jobs:
           cache-dependency-path: src/frontend/package-lock.json
 
       - name: Set up Python
-        if: steps.preflight.outputs.ready == 'true'
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-
-      - name: Install frontend dependencies
-        if: steps.preflight.outputs.ready == 'true'
-        run: npm --prefix src/frontend ci
-
-      - name: Build frontend
-        if: steps.preflight.outputs.ready == 'true'
-        run: npm --prefix src/frontend run build
+          python-version: "3.11"
 
       - name: Install Firebase CLI
-        if: steps.preflight.outputs.ready == 'true'
         run: npm install -g firebase-tools@15.3.1
 
-      - name: Authenticate to Firebase
-        if: steps.preflight.outputs.ready == 'true'
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Deploy functions and hosting (shared script)
         run: |
-          echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-service-account.json"
-          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-service-account.json" >> "$GITHUB_ENV"
-
-      - name: Deploy functions and hosting
-        if: steps.preflight.outputs.ready == 'true'
-        env:
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-        run: |
-          firebase deploy --only functions,hosting --project "$FIREBASE_PROJECT_ID"
-
-      - name: Skip deploy (requirements not met)
-        if: steps.preflight.outputs.ready != 'true'
-        run: |
-          echo "::notice title=Firebase deploy skipped::${{ steps.preflight.outputs.reason }}"
+          ./scripts/firebase-deploy.sh

@@ -1,5 +1,12 @@
 import * as React from "react";
 
+import {
+  getEffectiveFirebaseWebConfig,
+  resolveFirebaseRuntimeConfig,
+  type FirebaseWebConfig,
+} from "@/lib/firebase-config";
+import { resolveAuthEmulatorBaseUrl } from "@/lib/runtime-endpoints";
+
 const EMULATOR_RETRY_ATTEMPTS = 3;
 const EMULATOR_RETRY_DELAY_MS = 600;
 
@@ -39,6 +46,7 @@ export function useFirebaseAuth({
   appId,
   emulatorHost,
   useEmulator,
+  allowAnonymous,
   onError,
   onLoadingChange,
 }: {
@@ -49,6 +57,7 @@ export function useFirebaseAuth({
   appId?: string;
   emulatorHost?: string;
   useEmulator?: boolean;
+  allowAnonymous?: boolean;
   onError?: (message: string) => void;
   onLoadingChange?: (loading: boolean) => void;
 }) {
@@ -64,36 +73,87 @@ export function useFirebaseAuth({
   const [userId, setUserId] = React.useState<string | null>(null);
   const [emailLinkPending, setEmailLinkPending] = React.useState(false);
   const [authReady, setAuthReady] = React.useState(false);
+  const [runtimeConfig, setRuntimeConfig] = React.useState<FirebaseWebConfig | null>(null);
+  const [runtimeConfigAttempted, setRuntimeConfigAttempted] = React.useState(false);
+  const [runtimeConfigError, setRuntimeConfigError] = React.useState<string | null>(null);
   const authRef = React.useRef<ReturnType<typeof import("firebase/auth").getAuth> | null>(null);
+  const effectiveConfig = React.useMemo(
+    () =>
+      getEffectiveFirebaseWebConfig({
+        apiKey,
+        authDomain,
+        projectId,
+        appId,
+        runtimeConfig,
+        useEmulator,
+      }),
+    [apiKey, authDomain, projectId, appId, runtimeConfig, useEmulator]
+  );
+  const effectiveApiKey = effectiveConfig.apiKey;
+  const effectiveProjectId = effectiveConfig.projectId;
+  const effectiveAuthDomain = effectiveConfig.authDomain;
+  const effectiveAppId = effectiveConfig.appId;
+  const hasConfiguredFirebaseConfig = React.useMemo(() => {
+    const configuredApiKey = apiKey?.trim() ?? "";
+    const configuredProjectId = projectId?.trim() ?? "";
+    const configuredAuthDomain = authDomain?.trim() ?? "";
+    return Boolean(
+      configuredApiKey &&
+        configuredProjectId &&
+        (configuredAuthDomain || configuredProjectId)
+    );
+  }, [apiKey, authDomain, projectId]);
+
+  React.useEffect(() => {
+    if (!enabled) return;
+    if (hasConfiguredFirebaseConfig) {
+      setRuntimeConfigAttempted(true);
+      setRuntimeConfigError(null);
+      return;
+    }
+    if (typeof window === "undefined") return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const resolved = await resolveFirebaseRuntimeConfig();
+        if (cancelled) return;
+        if (!resolved) {
+          setRuntimeConfigError("Firebase init config unavailable");
+          return;
+        }
+        setRuntimeConfig(resolved);
+        setRuntimeConfigError(null);
+      } catch (err) {
+        if (!cancelled) {
+          const message =
+            err instanceof Error ? err.message : "init.json fetch failed";
+          setRuntimeConfigError(message);
+        }
+      } finally {
+        if (!cancelled) {
+          setRuntimeConfigAttempted(true);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, hasConfiguredFirebaseConfig]);
+
   const emulatorUrl = React.useMemo(() => {
-    if (!useEmulator) return undefined;
-    let fallback = "http://localhost:9099";
-    if (typeof window !== "undefined") {
-      const isHttps = window.location.protocol === "https:";
-      const hostname = window.location.hostname;
-      if (isHttps && hostname.endsWith("skybridge.localhost")) {
-        fallback = window.location.origin;
-      }
-      if (window.location.protocol === "http:") {
-        fallback = "http://localhost:9099";
-      }
-    }
-    if (!emulatorHost) return fallback;
-    if (
-      typeof window !== "undefined" &&
-      window.location.protocol === "http:" &&
-      emulatorHost.startsWith("https://")
-    ) {
-      return "http://localhost:9099";
-    }
-    return emulatorHost;
+    return resolveAuthEmulatorBaseUrl({
+      useEmulator,
+      explicitHost: emulatorHost,
+    });
   }, [useEmulator, emulatorHost]);
 
   const checkEmulatorReady = React.useCallback(async () => {
     if (!useEmulator || !emulatorUrl) return true;
     const base = emulatorUrl.startsWith("http") ? emulatorUrl : `http://${emulatorUrl}`;
     const endpoint = `${base}/identitytoolkit.googleapis.com/v1/projects?key=${encodeURIComponent(
-      apiKey
+      effectiveApiKey
     )}`;
     const response = await fetch(endpoint, { method: "GET", mode: "cors" });
     // Reaching the emulator endpoint is enough; 4xx can still mean emulator is up.
@@ -101,7 +161,7 @@ export function useFirebaseAuth({
       throw new Error(`Auth emulator readiness check failed (${response.status})`);
     }
     return true;
-  }, [useEmulator, emulatorUrl, apiKey]);
+  }, [useEmulator, emulatorUrl, effectiveApiKey]);
 
   React.useEffect(() => {
     if (!useEmulator) {
@@ -111,14 +171,17 @@ export function useFirebaseAuth({
     let cancelled = false;
     setEmulatorReady(false);
     (async () => {
-      for (let attempt = 0; attempt < EMULATOR_RETRY_ATTEMPTS * 3; attempt += 1) {
+      let attempt = 0;
+      while (!cancelled) {
         try {
           await checkEmulatorReady();
           if (!cancelled) setEmulatorReady(true);
           return;
-        } catch (err) {
+        } catch {
           if (cancelled) return;
-          await delay(EMULATOR_RETRY_DELAY_MS * (attempt + 1));
+          attempt += 1;
+          const waitMs = Math.min(1_000 + attempt * 500, 5_000);
+          await delay(waitMs);
         }
       }
     })();
@@ -132,8 +195,8 @@ export function useFirebaseAuth({
       if (!emulatorUrl) return null;
       const base =
         emulatorUrl.startsWith("http") ? emulatorUrl : `http://${emulatorUrl}`;
-      const endpoint = `${base}/identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${encodeURIComponent(
-        apiKey
+        const endpoint = `${base}/identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=${encodeURIComponent(
+        effectiveApiKey
       )}`;
       const response = await fetch(endpoint, {
         method: "POST",
@@ -163,7 +226,7 @@ export function useFirebaseAuth({
         })();
       if (!oobCode) {
         const oobEndpoint = `${base}/emulator/v1/projects/${encodeURIComponent(
-          projectId || "demo"
+          effectiveProjectId || "demo"
         )}/oobCodes`;
         const oobResponse = await fetch(oobEndpoint);
         if (oobResponse.ok) {
@@ -195,18 +258,18 @@ export function useFirebaseAuth({
         const url = new URL(redirectUrl);
         url.searchParams.set("mode", "signIn");
         url.searchParams.set("oobCode", oobCode);
-        url.searchParams.set("apiKey", apiKey || "demo-local");
+        url.searchParams.set("apiKey", effectiveApiKey || "demo-local");
         url.searchParams.set("email", email);
         return url.toString();
       } catch {
         return `${redirectUrl}?mode=signIn&oobCode=${encodeURIComponent(
           oobCode
-        )}&apiKey=${encodeURIComponent(apiKey || "demo-local")}&email=${encodeURIComponent(
+        )}&apiKey=${encodeURIComponent(effectiveApiKey || "demo-local")}&email=${encodeURIComponent(
           email
         )}`;
       }
     },
-    [apiKey, emulatorUrl, projectId]
+    [effectiveApiKey, emulatorUrl, effectiveProjectId]
   );
 
   const clearAuth = React.useCallback(() => {
@@ -249,8 +312,13 @@ export function useFirebaseAuth({
 
   React.useEffect(() => {
     if (!enabled) return;
-    if (!apiKey || !authDomain || !projectId) {
-      onError?.("Firebase auth is not configured.");
+    if (!runtimeConfigAttempted) return;
+    if (!effectiveApiKey || !effectiveAuthDomain || !effectiveProjectId) {
+      if (runtimeConfigError) {
+        onError?.(`Firebase auth is not configured (${runtimeConfigError}).`);
+      } else {
+        onError?.("Firebase auth is not configured.");
+      }
       return;
     }
     let unsubscribe: (() => void) | undefined;
@@ -266,10 +334,10 @@ export function useFirebaseAuth({
           getApps().length > 0
             ? getApps()[0]
             : initializeApp({
-                apiKey,
-                authDomain,
-                projectId,
-                appId,
+                apiKey: effectiveApiKey,
+                authDomain: effectiveAuthDomain,
+                projectId: effectiveProjectId,
+                appId: effectiveAppId || undefined,
               });
         const auth = getAuth(app);
         if (useEmulator && emulatorUrl) {
@@ -292,6 +360,18 @@ export function useFirebaseAuth({
         unsubscribe = onIdTokenChanged(auth, async (user) => {
           if (disposed) return;
           if (!user) {
+            clearAuth();
+            setIsAnonymous(false);
+            setEmulatorProvider(null);
+            return;
+          }
+          if (user.isAnonymous && !allowAnonymous) {
+            try {
+              const { signOut } = await import("firebase/auth");
+              await signOut(auth);
+            } catch {
+              // Best-effort cleanup for stale anonymous sessions.
+            }
             clearAuth();
             setIsAnonymous(false);
             setEmulatorProvider(null);
@@ -326,15 +406,18 @@ export function useFirebaseAuth({
     };
   }, [
     enabled,
-    apiKey,
-    authDomain,
-    projectId,
-    appId,
+    effectiveApiKey,
+    effectiveAuthDomain,
+    effectiveProjectId,
+    effectiveAppId,
     emulatorUrl,
     useEmulator,
+    allowAnonymous,
     clearAuth,
     onError,
     completeEmailLink,
+    runtimeConfigAttempted,
+    runtimeConfigError,
   ]);
 
   const startLogin = React.useCallback(
@@ -343,10 +426,6 @@ export function useFirebaseAuth({
       const auth = authRef.current;
       if (!auth) {
         onError?.("Auth is not ready yet.");
-        return;
-      }
-      if (useEmulator && !emulatorReady) {
-        onError?.("Auth emulator is still starting. Please try again in a moment.");
         return;
       }
       onLoadingChange?.(true);
@@ -360,6 +439,10 @@ export function useFirebaseAuth({
           OAuthProvider,
         } = await import("firebase/auth");
         if (provider === "anonymous") {
+          if (!allowAnonymous) {
+            onError?.("Guest sign-in is disabled.");
+            return;
+          }
           if (!auth.currentUser) {
             if (useEmulator) {
               await retryEmulatorAuth(async () => {
@@ -432,44 +515,52 @@ export function useFirebaseAuth({
         onLoadingChange?.(false);
       }
     },
-    [enabled, useEmulator, onError, onLoadingChange]
+    [allowAnonymous, enabled, useEmulator, onError, onLoadingChange]
   );
 
   const startEmailLink = React.useCallback(
-    async (email: string): Promise<string | null> => {
-      if (!enabled) return null;
+    async (
+      email: string
+    ): Promise<{ sent: boolean; linkUrl: string | null }> => {
+      if (!enabled) return { sent: false, linkUrl: null };
       const auth = authRef.current;
       if (!auth) {
         onError?.("Auth is not ready yet.");
-        return null;
+        return { sent: false, linkUrl: null };
       }
       if (!email) {
         onError?.("Enter a valid email address.");
-        return null;
+        return { sent: false, linkUrl: null };
       }
       onLoadingChange?.(true);
       try {
         const { sendSignInLinkToEmail } = await import("firebase/auth");
         const redirectUrl =
           typeof window !== "undefined"
-            ? `${window.location.origin}/app/?emailLink=1`
+            ? (() => {
+                const url = new URL("/app/", window.location.origin);
+                url.searchParams.set("emailLink", "1");
+                // Keep an explicit email hint for link-completion when browser storage is unavailable.
+                url.searchParams.set("email", email);
+                return url.toString();
+              })()
             : "";
         if (!redirectUrl) {
           onError?.("Email link sign-in is unavailable in this environment.");
-          return null;
+          return { sent: false, linkUrl: null };
         }
         if (useEmulator) {
           const link = await buildEmulatorEmailLink(email, redirectUrl);
-          return link;
+          return { sent: true, linkUrl: link };
         }
         await sendSignInLinkToEmail(auth, email, {
           url: redirectUrl,
           handleCodeInApp: true,
         });
-        return null;
+        return { sent: true, linkUrl: null };
       } catch (err) {
         onError?.(err instanceof Error ? err.message : "Failed to send sign-in link");
-        return null;
+        return { sent: false, linkUrl: null };
       } finally {
         onLoadingChange?.(false);
       }

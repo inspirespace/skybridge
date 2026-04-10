@@ -2,21 +2,51 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Compose: Up (detached)",
+      "label": "Compose: Up (dev)",
       "type": "shell",
-      "command": "docker compose up -d",
+      "command": "./scripts/docker-compose.sh --profile dev up -d --build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Compose: Up (prod)",
+      "type": "shell",
+      "command": "./scripts/docker-compose.sh --profile prod up -d --build",
       "problemMatcher": []
     },
     {
       "label": "Compose: Down",
       "type": "shell",
-      "command": "docker compose down",
+      "command": "./scripts/docker-compose.sh --profile dev --profile prod down --remove-orphans",
       "problemMatcher": []
     },
     {
-      "label": "Compose: Build",
+      "label": "Firebase: Deploy",
       "type": "shell",
-      "command": "docker compose build",
+      "command": "./scripts/firebase-deploy.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "Firebase: Clear Project",
+      "type": "shell",
+      "command": "./scripts/firebase-clear-project.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "Workspace: Clean",
+      "type": "shell",
+      "command": "./scripts/clean-workspace.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "Devcontainer: Repair Docker Socket Access",
+      "type": "shell",
+      "command": "./scripts/repair-docker-socket-access.sh",
+      "problemMatcher": []
+    },
+    {
+      "label": "Devcontainer: Repair Docker Socket Access (Restart VS Code Server)",
+      "type": "shell",
+      "command": "./scripts/repair-docker-socket-access.sh --restart-vscode-server",
       "problemMatcher": []
     },
     {

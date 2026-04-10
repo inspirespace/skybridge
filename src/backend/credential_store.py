@@ -1,18 +1,16 @@
-"""Short-lived credential store for worker jobs.
-
-Credentials are issued with a TTL and can be claimed once by the worker.
-Backed by in-memory dict (dev) or Firestore (GCP).
-"""
+"""Short-lived credential store for worker jobs."""
 from __future__ import annotations
 
+import os
 import secrets
 import time
-import os
 from datetime import datetime, timezone
 from dataclasses import dataclass
 from typing import Optional
 
 from .crypto import decrypt_json, encrypt_json, require_encryption_key
+from .env import resolve_project_id
+from .firebase_errors import raise_if_missing_firestore_database
 
 @dataclass
 class _Entry:
@@ -60,8 +58,18 @@ class FirestoreCredentialStore:
         from google.cloud import firestore
 
         require_encryption_key()
+        self._project_id = project_id
+        self._database_id = "(default)"
         self._client = firestore.Client(project=project_id or None)
         self._collection = self._client.collection(collection)
+
+    def _raise_firestore_configuration_error(self, exc: Exception) -> None:
+        """Translate Firestore database lookup failures to config errors."""
+        raise_if_missing_firestore_database(
+            exc,
+            project_id=self._project_id,
+            database_id=self._database_id,
+        )
 
     def issue(self, job_id: str, purpose: str, credentials: dict, ttl_seconds: int) -> str:
         """Handle issue."""
@@ -69,17 +77,21 @@ class FirestoreCredentialStore:
         encrypted = encrypt_json(credentials)
         ttl_epoch = int(time.time() + ttl_seconds)
         ttl_at = datetime.fromtimestamp(ttl_epoch, tz=timezone.utc)
-        self._collection.document(token).set(
-            {
-                "job_id": job_id,
-                "purpose": purpose,
-                "credentials_enc": encrypted,
-                "enc_v": 1,
-                "ttl_epoch": ttl_epoch,
-                "ttl_at": ttl_at,
-                "used": False,
-            }
-        )
+        try:
+            self._collection.document(token).set(
+                {
+                    "job_id": job_id,
+                    "purpose": purpose,
+                    "credentials_enc": encrypted,
+                    "enc_v": 1,
+                    "ttl_epoch": ttl_epoch,
+                    "ttl_at": ttl_at,
+                    "used": False,
+                }
+            )
+        except Exception as exc:
+            self._raise_firestore_configuration_error(exc)
+            raise
         return token
 
     def claim(self, token: str, job_id: str, purpose: str) -> Optional[dict]:
@@ -106,13 +118,15 @@ class FirestoreCredentialStore:
             return decrypt_json(encrypted)
 
         transaction = self._client.transaction()
-        return _claim(transaction)
+        try:
+            return _claim(transaction)
+        except Exception as exc:
+            self._raise_firestore_configuration_error(exc)
+            raise
 
 
-def build_credential_store() -> CredentialStore | FirestoreCredentialStore:
+def build_credential_store() -> FirestoreCredentialStore:
     """Build credential store."""
-    if (os.getenv("BACKEND_FIRESTORE_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}:
-        collection = os.getenv("FIRESTORE_CREDENTIALS_COLLECTION") or "skybridge-credentials"
-        project_id = os.getenv("GCP_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT")
-        return FirestoreCredentialStore(collection, project_id)
-    return CredentialStore()
+    collection = os.getenv("FIRESTORE_CREDENTIALS_COLLECTION") or "skybridge-credentials"
+    project_id = resolve_project_id()
+    return FirestoreCredentialStore(collection, project_id)

@@ -30,6 +30,21 @@ def test_credential_store_expires(monkeypatch):
 
 
 def test_build_credential_store(monkeypatch):
-    monkeypatch.setenv("BACKEND_FIRESTORE_ENABLED", "false")
+    seen = {}
+
+    class DummyFirestoreCredentialStore:
+        def __init__(self, collection: str, project_id: str | None = None) -> None:
+            seen["collection"] = collection
+            seen["project_id"] = project_id
+
+    monkeypatch.setenv("FIRESTORE_CREDENTIALS_COLLECTION", "custom-credentials")
+    monkeypatch.setattr(store_mod, "FirestoreCredentialStore", DummyFirestoreCredentialStore)
+    monkeypatch.setattr(store_mod, "resolve_project_id", lambda: "demo-project")
+
     store = store_mod.build_credential_store()
-    assert isinstance(store, store_mod.CredentialStore)
+
+    assert isinstance(store, DummyFirestoreCredentialStore)
+    assert seen == {
+        "collection": "custom-credentials",
+        "project_id": "demo-project",
+    }

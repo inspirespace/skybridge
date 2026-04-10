@@ -79,6 +79,7 @@ class JobService:
             review_path = job_dir / "review.json"
             state_path = job_dir / "migration.db"
 
+            self._store.materialize_artifact_file(job_id, "migration.db", state_path)
             cloudahoy = _build_cloudahoy_client(payload, exports_dir)
             state = MigrationState(state_path)
 
@@ -88,6 +89,9 @@ class JobService:
                 payload.end_date,
                 payload.max_flights,
             )
+            if summaries is None:
+                summaries = cloudahoy.list_flights(limit=payload.max_flights)
+            total_summaries = len(summaries)
             _append_progress(
                 job,
                 phase="review",
@@ -97,6 +101,19 @@ class JobService:
             )
             self._store.save_job(job)
 
+            def _progress_review_item(index: int, total: int, _summary: CoreFlightSummary) -> None:
+                if total <= 0:
+                    return
+                percent = 45 + int((index / total) * 35)
+                _append_progress(
+                    job,
+                    phase="review",
+                    stage=f"Preparing review ({index}/{total})",
+                    percent=min(max(percent, 45), 80),
+                    status="review_running",
+                )
+                self._store.save_job(job)
+
             items, review_id = prepare_review(
                 cloudahoy=cloudahoy,
                 summaries=summaries,
@@ -104,6 +121,7 @@ class JobService:
                 state=state,
                 force=False,
                 output_path=review_path,
+                progress=_progress_review_item if total_summaries else None,
             )
             _append_progress(
                 job,
@@ -129,6 +147,7 @@ class JobService:
             self._store.save_job(job)
             self._store.write_artifact(job_id, "review-summary.json", review_summary.model_dump())
             self._store.upload_artifact(job_id, "review.json", review_path)
+            self._store.upload_artifact(job_id, "migration.db", state_path)
             self._store.upload_artifact_dir(
                 job_id,
                 prefix="cloudahoy_exports",
@@ -170,10 +189,13 @@ class JobService:
             report_path = job_dir / "import-report.json"
             state_path = job_dir / "migration.db"
 
-            if not review_path.exists():
+            try:
+                review_payload = self._store.load_artifact(job_id, "review.json")
+            except FileNotFoundError:
                 raise FileNotFoundError("Review manifest missing; rerun review")
-
-            review_payload = json.loads(review_path.read_text())
+            review_path.parent.mkdir(parents=True, exist_ok=True)
+            review_path.write_text(json.dumps(review_payload, indent=2))
+            self._store.materialize_artifact_file(job_id, "migration.db", state_path)
             review_id = review_payload.get("review_id")
             summaries = _summaries_from_review(review_payload)
 
@@ -260,7 +282,7 @@ class JobService:
                 failed_count=failed_count,
             )
 
-            if _bool_env("BACKEND_RECONCILE", True) and not _bool_env("DRY_RUN", False):
+            if not _bool_env("DRY_RUN", False):
                 _append_progress(
                     job,
                     phase="import",
@@ -289,6 +311,7 @@ class JobService:
             job.error_message = None
             self._store.save_job(job)
             self._store.upload_artifact(job_id, "import-report.json", report_path)
+            self._store.upload_artifact(job_id, "migration.db", state_path)
             return job
         except Exception as exc:
             job.status = "failed"
@@ -301,6 +324,8 @@ class JobService:
             )
             job.error_message = f"Import failed: {exc}"
             self._store.save_job(job)
+            if "state_path" in locals():
+                self._store.upload_artifact(job_id, "migration.db", state_path)
             return job
 
 
@@ -365,7 +390,6 @@ def _build_flysto_client(payload: JobAcceptRequest) -> FlyStoClient:
         upload_url=_env("FLYSTO_LOG_UPLOAD_URL"),
         session_cookie=_env("FLYSTO_SESSION_COOKIE"),
         include_metadata=include_metadata,
-        api_version=_env("FLYSTO_API_VERSION"),
         email=payload.credentials.flysto_username,
         password=payload.credentials.flysto_password,
         min_request_interval=min_request_interval,

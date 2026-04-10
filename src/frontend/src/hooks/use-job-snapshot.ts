@@ -2,14 +2,18 @@ import * as React from "react";
 
 import { getJob, type AuthContext, type JobRecord, type JobStatus } from "@/api/client";
 import { patchFirebaseEmulatorRequests } from "@/lib/firebase-emulator";
+import { resolveFirestoreEmulatorHostPort } from "@/lib/runtime-endpoints";
 
-const AUTH_MODE = import.meta.env.VITE_AUTH_MODE ?? "header";
 const FIRESTORE_LISTEN =
   (import.meta.env.VITE_FIRESTORE_LISTEN ?? "") === "1";
 const FIREBASE_API_KEY = import.meta.env.VITE_FIREBASE_API_KEY ?? "";
-const FIREBASE_AUTH_DOMAIN = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? "";
 const FIREBASE_PROJECT_ID = import.meta.env.VITE_FIREBASE_PROJECT_ID ?? "";
+const FIREBASE_AUTH_DOMAIN =
+  import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ??
+  (FIREBASE_PROJECT_ID ? `${FIREBASE_PROJECT_ID}.firebaseapp.com` : "");
 const FIREBASE_APP_ID = import.meta.env.VITE_FIREBASE_APP_ID ?? "";
+const FIREBASE_EMULATOR_HOST =
+  import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_HOST ?? "";
 const FIREBASE_USE_EMULATOR =
   (import.meta.env.VITE_FIREBASE_USE_EMULATOR ?? "") === "1";
 const FIRESTORE_JOBS_COLLECTION =
@@ -22,8 +26,6 @@ const POLLABLE_STATUSES: JobStatus[] = [
   "import_running",
 ];
 
-const FIRESTORE_PROXY_HOST = "skybridge.localhost";
-
 // Poll job updates in serverless mode.
 /** Hook for jobsnapshot. */
 export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
@@ -35,7 +37,6 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
   const [lastSnapshotAt, setLastSnapshotAt] = React.useState<number | null>(null);
   const lastListenerState = React.useRef<string | null>(null);
   const firestoreListenEnabled =
-    AUTH_MODE === "firebase" &&
     FIRESTORE_LISTEN &&
     Boolean(FIREBASE_PROJECT_ID) &&
     Boolean(FIREBASE_AUTH_DOMAIN);
@@ -105,16 +106,13 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
             });
       const db = getFirestore(app);
       if (FIREBASE_USE_EMULATOR) {
-        const host =
-          typeof window !== "undefined"
-            ? FIRESTORE_PROXY_HOST
-            : "localhost";
-        const port =
-          typeof window !== "undefined" && window.location.protocol === "https:"
-            ? 443
-            : 80;
+        const connection = resolveFirestoreEmulatorHostPort({
+          useEmulator: FIREBASE_USE_EMULATOR,
+          explicitHost: FIREBASE_EMULATOR_HOST,
+        });
+        if (!connection) return;
         patchFirebaseEmulatorRequests();
-        connectFirestoreEmulator(db, host, port);
+        connectFirestoreEmulator(db, connection.host, connection.port);
       }
       const ref = doc(db, FIRESTORE_JOBS_COLLECTION, jobId);
       unsubscribe = onSnapshot(

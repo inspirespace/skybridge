@@ -18,23 +18,54 @@
       property="og:description"
       content="Move your CloudAhoy history into FlySto with a guided, review-first import."
     />
-    <link rel="canonical" href="https://skybridge.localhost/" />
+    <meta property="og:image" content="/social-preview.png" />
+    <meta property="og:image:width" content="1280" />
+    <meta property="og:image:height" content="640" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:alt" content="Skybridge rocket logo on gradient background." />
+    <link id="canonical-link" rel="canonical" href="" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="en_US" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="/social-preview.png" />
+    <meta name="twitter:image:alt" content="Skybridge rocket logo on gradient background." />
     <meta
       name="keywords"
       content="CloudAhoy import, FlySto import, pilot logbook migration, flight data transfer, Skybridge"
     />
     <meta name="theme-color" content="#f7f9fc" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0b1120" media="(prefers-color-scheme: dark)" />
+    <script>
+      (() => {
+        const canonical = document.getElementById("canonical-link");
+        if (!(canonical instanceof HTMLLinkElement)) return;
+        canonical.href = `${window.location.origin}/`;
+      })();
+    </script>
+    <script>
+      (() => {
+        const storageKey = "skybridge-theme";
+        let stored = null;
+        try {
+          stored = window.localStorage.getItem(storageKey);
+        } catch (_error) {
+          stored = null;
+        }
+        const prefersDark =
+          stored === "dark" ||
+          (stored !== "light" &&
+            typeof window.matchMedia === "function" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", prefersDark);
+      })();
+    </script>
     <link rel="stylesheet" href="/src/index.css" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "WebSite",
         "name": "Skybridge",
-        "url": "https://skybridge.localhost/",
+        "url": "/",
         "inLanguage": "en-US",
         "description": "Move your CloudAhoy history into FlySto with a guided, review-first import."
       }
@@ -44,7 +75,7 @@
         "@context": "https://schema.org",
         "@type": "Organization",
         "name": "Inspirespace e.U.",
-        "url": "https://skybridge.localhost/"
+        "url": "/"
       }
     </script>
     <script type="application/ld+json">

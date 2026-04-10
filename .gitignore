@@ -4,6 +4,8 @@
 .zsh/
 .env
 .pytest_cache/
+.coverage
+.coverage.*
 .DS_Store
 .cache/
 .uv/
@@ -24,6 +26,7 @@ dist/
 *.egg-info/
 
 # Virtual environments
+.venv
 .venv/
 
 # Logs and local data
@@ -38,10 +41,15 @@ data/
 docker/https/certs/
 /data/
 .firebase-emulator/
+.firebase/
 firebase-export-*/
 firebase-export-*.json
 functions/venv/
+functions/venv
+functions/_deploy_src/
 functions/.env
+functions/.env.*
+src/frontend/.env.production
 
 # Lambda packages
 infra/terraform/lambda/*.zip

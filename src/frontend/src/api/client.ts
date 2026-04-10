@@ -1,3 +1,6 @@
+import { getAppCheckTokenHeader } from "@/lib/firebase-app-check";
+import { resolveApiBaseUrl } from "@/lib/runtime-endpoints";
+
 /** Type JobStatus. */
 export type JobStatus =
   | "review_queued"
@@ -102,10 +105,9 @@ export type CredentialValidationResponse = {
   ok: boolean;
 };
 
-export const apiBaseUrl =
-  import.meta.env.VITE_API_BASE_URL ?? "https://skybridge.localhost/api";
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? "";
+export const apiBaseUrl = resolveApiBaseUrl(configuredApiBaseUrl);
 
-const authMode = import.meta.env.VITE_AUTH_MODE ?? "header";
 const RETRY_ATTEMPTS = Number.parseInt(
   import.meta.env.VITE_API_RETRY_ATTEMPTS ?? "4",
   10
@@ -118,7 +120,6 @@ const RETRY_STATUSES = new Set([502, 503, 504]);
 
 /** Type AuthContext. */
 export type AuthContext = {
-  userId?: string | null;
   token?: string | null;
 };
 
@@ -126,24 +127,27 @@ export type AuthContext = {
 export function buildAuthHeaders(auth?: AuthContext, skipAuth = false) {
   const headers: Record<string, string> = {};
   if (skipAuth) return headers;
-  const userId = auth?.userId ?? undefined;
   const token = auth?.token ?? undefined;
-
-  if (authMode === "header") {
-    if (!userId) {
-      throw new Error("Missing user session. Please sign in again.");
-    }
-    headers["X-User-Id"] = userId;
+  if (!token) {
+    throw new Error("Missing access token. Please sign in again.");
   }
-
-  if (authMode === "oidc" || authMode === "firebase") {
-    if (!token) {
-      throw new Error("Missing access token. Please sign in again.");
-    }
-    headers.Authorization = `Bearer ${token}`;
-  }
-
+  headers.Authorization = `Bearer ${token}`;
   return headers;
+}
+
+async function buildRequestHeaders(
+  auth?: AuthContext,
+  skipAuth = false,
+  includeJsonContentType = true
+) {
+  const headers: Record<string, string> = {
+    ...buildAuthHeaders(auth, skipAuth),
+  };
+  if (includeJsonContentType) {
+    headers["Content-Type"] = "application/json";
+  }
+  const appCheckHeader = await getAppCheckTokenHeader();
+  return { ...headers, ...appCheckHeader };
 }
 
 async function requestJson<T>(
@@ -164,10 +168,7 @@ async function requestJson<T>(
     retryAttempts?: number;
   } = {}
 ): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...buildAuthHeaders(auth, skipAuth),
-  };
+  const headers = await buildRequestHeaders(auth, skipAuth, true);
 
   const maxAttempts =
     typeof retryAttempts === "number"
@@ -278,10 +279,9 @@ export async function fetchArtifact(jobId: string, name: string, auth: AuthConte
 }
 
 export async function downloadArtifactsZip(jobId: string, auth: AuthContext) {
+  const headers = await buildRequestHeaders(auth, false, false);
   const response = await fetch(`${apiBaseUrl}/jobs/${jobId}/artifacts.zip`, {
-    headers: {
-      ...buildAuthHeaders(auth),
-    },
+    headers,
   });
   if (!response.ok) {
     const message = await response.text();
@@ -296,36 +296,5 @@ export async function deleteJob(jobId: string, auth: AuthContext) {
   return requestJson<{ deleted: boolean }>(`/jobs/${jobId}`, {
     method: "DELETE",
     auth,
-  });
-}
-
-/** Type TokenExchangeResponse. */
-export type TokenExchangeResponse = {
-  access_token: string;
-  id_token?: string;
-  refresh_token?: string;
-  expires_in?: number;
-  token_type?: string;
-  scope?: string;
-};
-
-export async function exchangeToken(payload: {
-  code: string;
-  code_verifier: string;
-  redirect_uri: string;
-}) {
-  return requestJson<TokenExchangeResponse>("/auth/token", {
-    method: "POST",
-    body: payload,
-    skipAuth: true,
-  });
-}
-
-export async function refreshToken(payload: { refresh_token: string }, signal?: AbortSignal) {
-  return requestJson<TokenExchangeResponse>("/auth/token", {
-    method: "POST",
-    body: payload,
-    signal,
-    skipAuth: true,
   });
 }

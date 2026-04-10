@@ -53,23 +53,54 @@
 <script>
   (function () {
     var storageKey = "skybridge-theme";
+    var mediaQuery =
+      typeof window.matchMedia === "function"
+        ? window.matchMedia("(prefers-color-scheme: dark)")
+        : null;
     var root = document.documentElement;
     var toggle = document.getElementById("theme-switch");
     var thumb = document.querySelector("[data-thumb]");
-    var stored = localStorage.getItem(storageKey);
-    if (stored === "dark") {
-      root.classList.add("dark");
-      if (toggle) toggle.setAttribute("aria-checked", "true");
-      if (toggle) toggle.setAttribute("data-state", "checked");
-      if (thumb) thumb.setAttribute("data-state", "checked");
+    function readStoredThemePreference() {
+      try {
+        var stored = localStorage.getItem(storageKey);
+        return stored === "dark" || stored === "light" ? stored : null;
+      } catch (_error) {
+        return null;
+      }
+    }
+    function applyTheme(isDark) {
+      root.classList.toggle("dark", Boolean(isDark));
+      if (toggle) toggle.setAttribute("aria-checked", isDark ? "true" : "false");
+      if (toggle) toggle.setAttribute("data-state", isDark ? "checked" : "unchecked");
+      if (thumb) thumb.setAttribute("data-state", isDark ? "checked" : "unchecked");
+    }
+    function resolveThemeSelection() {
+      var stored = readStoredThemePreference();
+      if (stored === "dark") return true;
+      if (stored === "light") return false;
+      return mediaQuery ? mediaQuery.matches : false;
+    }
+    applyTheme(resolveThemeSelection());
+    if (mediaQuery) {
+      var syncToSystem = function (event) {
+        if (readStoredThemePreference() !== null) return;
+        applyTheme(event.matches);
+      };
+      if (typeof mediaQuery.addEventListener === "function") {
+        mediaQuery.addEventListener("change", syncToSystem);
+      } else if (typeof mediaQuery.addListener === "function") {
+        mediaQuery.addListener(syncToSystem);
+      }
     }
     if (toggle) {
       toggle.addEventListener("click", function () {
-        var isDark = root.classList.toggle("dark");
-        localStorage.setItem(storageKey, isDark ? "dark" : "light");
-        toggle.setAttribute("aria-checked", isDark ? "true" : "false");
-        toggle.setAttribute("data-state", isDark ? "checked" : "unchecked");
-        if (thumb) thumb.setAttribute("data-state", isDark ? "checked" : "unchecked");
+        var isDark = !root.classList.contains("dark");
+        applyTheme(isDark);
+        try {
+          localStorage.setItem(storageKey, isDark ? "dark" : "light");
+        } catch (_error) {
+          // Ignore storage access failures and keep runtime toggle behavior.
+        }
       });
     }
     var appButtons = document.querySelectorAll("[data-go-app]");
@@ -80,9 +111,7 @@
         window.location.assign(target);
       });
     });
-    var isSignedIn = Boolean(
-      localStorage.getItem("skybridge_access_token") || localStorage.getItem("skybridge_user_id")
-    );
+    var isSignedIn = false;
     var backLinks = document.querySelectorAll("[data-back-link]");
     if (backLinks.length) {
       backLinks.forEach(function (link) {

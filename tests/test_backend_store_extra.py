@@ -132,11 +132,23 @@ def test_serialize_converts_types(job_record):
 def test_list_artifacts_with_object_store(tmp_path, job_record):
     store = JobStore(tmp_path, object_store=FakeObjectStore())
     store.save_job(job_record)
-    rmtree(tmp_path / str(job_record.job_id))
     key = store.object_store.key_for(job_record.user_id, str(job_record.job_id), "review.json")
     store.object_store.put_json(key, {"items": []})
 
     artifacts = store.list_artifacts(job_record.job_id)
+    assert "review.json" in artifacts
+
+
+def test_list_artifacts_merges_local_and_object_store(tmp_path, job_record):
+    object_store = FakeObjectStore()
+    store = JobStore(tmp_path, object_store=object_store)
+    store.save_job(job_record)
+    (tmp_path / str(job_record.job_id) / "local.json").write_text(json.dumps({"ok": True}))
+    key = object_store.key_for(job_record.user_id, str(job_record.job_id), "review.json")
+    object_store.put_json(key, {"items": []})
+
+    artifacts = store.list_artifacts(job_record.job_id)
+    assert "local.json" in artifacts
     assert "review.json" in artifacts
 
 

@@ -34,7 +34,6 @@ def _fake_config() -> Config:
         flysto_session_cookie=None,
         flysto_log_upload_url=None,
         flysto_include_metadata=False,
-        flysto_api_version=None,
         flysto_min_request_interval=0.1,
         flysto_max_request_retries=2,
         cloudahoy_export_format="gpx",

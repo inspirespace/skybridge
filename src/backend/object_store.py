@@ -6,6 +6,8 @@ import os
 from pathlib import Path
 from typing import Any, Protocol
 
+from .env import resolve_project_id, resolve_storage_bucket
+
 
 class ObjectStoreProtocol(Protocol):
     """Shared interface for object stores."""
@@ -37,20 +39,12 @@ class GcsObjectStore:
         bucket: str,
         prefix: str,
         project_id: str | None,
-        location: str | None,
-        create_bucket: bool,
     ) -> None:
-        from google.api_core.exceptions import NotFound
         from google.cloud import storage
 
         self._prefix = prefix.strip("/")
         self._client = storage.Client(project=project_id or None)
         self._bucket = self._client.bucket(bucket)
-        if create_bucket and not os.getenv("STORAGE_EMULATOR_HOST"):
-            try:
-                self._client.get_bucket(bucket)
-            except NotFound:
-                self._client.create_bucket(self._bucket, location=location or "us-central1")
 
     @property
     def bucket(self) -> str:
@@ -98,27 +92,17 @@ class GcsObjectStore:
             self._bucket.delete_blobs(blobs)
 
 
-def build_object_store_from_env() -> ObjectStoreProtocol | None:
+def build_object_store_from_env() -> ObjectStoreProtocol:
     """Build object store from env."""
-    if not _bool_env("BACKEND_GCS_ENABLED", False):
-        return None
-    bucket = os.getenv("GCS_BUCKET") or "skybridge-artifacts"
+    bucket = resolve_storage_bucket()
+    if not bucket:
+        raise RuntimeError(
+            "Firebase Storage bucket could not be resolved. Set GCS_BUCKET, provide FIREBASE_CONFIG storageBucket, or configure FIREBASE_PROJECT_ID."
+        )
     prefix = os.getenv("GCS_PREFIX") or "jobs"
-    project_id = os.getenv("GCP_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT")
-    location = os.getenv("GCS_LOCATION")
-    create_bucket = _bool_env("GCS_CREATE_BUCKET", False)
+    project_id = resolve_project_id()
     return GcsObjectStore(
         bucket=bucket,
         prefix=prefix,
         project_id=project_id,
-        location=location,
-        create_bucket=create_bucket,
     )
-
-
-def _bool_env(name: str, default: bool) -> bool:
-    """Internal helper for bool env."""
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}

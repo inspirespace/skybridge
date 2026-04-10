@@ -68,7 +68,6 @@ def test_accept_review_progress_and_reconcile(tmp_path: Path, monkeypatch: pytes
     }
     (job_dir / "review.json").write_text(json.dumps(review_payload))
 
-    monkeypatch.setenv("BACKEND_RECONCILE", "1")
     monkeypatch.setattr(service_mod, "_build_cloudahoy_client", lambda *_args, **_kwargs: DummyCloudAhoy())
     monkeypatch.setattr(service_mod, "_build_flysto_client", lambda *_args, **_kwargs: DummyFlySto())
     monkeypatch.setattr(service_mod, "verify_import_report", lambda *_args, **_kwargs: {"missing": 0})

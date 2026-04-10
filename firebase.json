@@ -5,6 +5,7 @@
     "ignore": [
       ".git",
       "node_modules",
+      "venv",
       ".venv",
       ".pytest_cache",
       "__pycache__"
@@ -39,7 +40,43 @@
           },
           {
             "key": "Content-Security-Policy",
-            "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://*.googleapis.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+            "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://apis.google.com https://www.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://*.googleapis.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.google.com https://www.gstatic.com; frame-src 'self' https://*.firebaseapp.com https://*.web.app https://apis.google.com https://www.google.com https://www.gstatic.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+          }
+        ]
+      },
+      {
+        "source": "/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-store, no-cache, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/app/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-store, no-cache, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/privacy/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-store, no-cache, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "/imprint/index.html",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-store, no-cache, must-revalidate"
           }
         ]
       },
@@ -54,7 +91,13 @@
       }
     ],
     "rewrites": [
-      { "source": "/api/**", "function": "api" },
+      {
+        "source": "/api/**",
+        "function": {
+          "functionId": "api",
+          "region": "europe-west1"
+        }
+      },
       { "source": "/app/**", "destination": "/app/index.html" },
       { "source": "/privacy/**", "destination": "/privacy/index.html" },
       { "source": "/imprint/**", "destination": "/imprint/index.html" },

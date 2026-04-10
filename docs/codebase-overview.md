@@ -20,7 +20,7 @@ Requirements:
 
 1) `docker compose up --build` (starts Firebase emulators, API, worker, frontend, HTTPS proxy, mocks)
 2) Open https://skybridge.localhost
-3) Sign in using the Firebase Auth emulator popup (Google/Apple/Facebook buttons).
+3) Sign in using the passwordless email-link flow.
 4) (Optional) open the Firebase emulator UI at https://emulator.skybridge.localhost.
 5) If the domain does not resolve, add a hosts entry for `skybridge.localhost` and `*.skybridge.localhost` → `127.0.0.1` (macOS already resolves `*.localhost`).
 6) Generate local HTTPS certs with `mkcert` (see README).
@@ -29,3 +29,5 @@ Requirements:
 - CLI entrypoint: `./cloudahoy2flysto` (interactive, guided migration flow).
 - API handlers: `src/backend/lambda_handlers.py`
 - Firebase Functions: `functions/main.py`
+- Backend runtime adapter: Firebase Functions only (no alternate HTTP server runtime in `src/backend`).
+- Local mocks: `src/backend/mocks/` served by compose-only dev services (`mock-cloudahoy`, `mock-flysto`).

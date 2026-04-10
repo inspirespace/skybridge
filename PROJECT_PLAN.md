@@ -70,7 +70,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 ### 9.2 Backend Port
 - [x] 9.2.1 Add Firebase Functions 2nd gen entrypoints (HTTP API + Pub/Sub worker).
 - [x] 9.2.2 Wire Firebase emulators for local dev (Auth/Firestore/Pub/Sub/Storage/Functions).
-- [x] 9.2.3 Update backend config flags for Firebase-only runtime.
+- [x] 9.2.3 Remove backend mode flags; use a shared fixed Firebase queue/worker configuration.
 
 ### 9.3 Frontend + Auth
 - [x] 9.3.1 Update auth mode to Firebase and ensure social sign-in buttons route to Firebase Auth providers.
@@ -101,7 +101,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [ ] Q3 Confirm whether CloudAhoy/FlySto require fixed egress IP allowlisting (may require NAT).
 
 ## Blockers
-- [x] Local Firebase emulator stack re-verified after moving emulator access behind `*.skybridge.localhost` subdomains to avoid host port conflicts.
+- [x] Local Firebase emulator stack re-verified after moving emulator access behind configurable domain subdomains to avoid host port conflicts.
 
 ## Maintenance Notes
 - [x] Show download preparation progress and lock download actions while artifacts are fetched.
@@ -140,6 +140,11 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Ensure Playwright global setup starts VNC server when launched from VS Code Testing UI.
 - [x] Fix noVNC web UI serving (use novnc_proxy/websockify --web).
 - [x] Auto-open noVNC auto-connect URL when running Playwright from VS Code.
+- [x] Fix devcontainer startup failure caused by `HISTFILE` expansion in `.devcontainer/setup-history.sh` under `set -u`.
+- [x] Fix devcontainer post-start cache permissions by using user-owned npm/uv caches (`$HOME/.cache/*`) and suppress non-fatal ownership warnings from mounted volumes.
+- [x] Harden devcontainer Python 3.11 detection in post-start (`python3.11`/absolute path/python3-version fallback) and include Python feature bin paths in remote `PATH`.
+- [x] Silence devcontainer npm update-notifier notices during startup (`NPM_CONFIG_UPDATE_NOTIFIER=false`) for cleaner rebuild logs.
+- [x] Make devcontainer VNC setup/start best-effort in post-start so optional noVNC failures do not abort container startup.
 - [x] Exclude discovery modules from coverage targets and remove discovery-specific tests.
 - [x] Refactor App shell auth UI into dedicated components/config helpers to keep `App.tsx` maintainable.
 - [x] Refresh visual polish for landing/app (route-oriented hero + denser review table styling) while keeping existing flow behavior.
@@ -157,12 +162,88 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Standardize visual PR screenshot workflow (before=`main`, deterministic app-state captures, light+dark sets, PR-context hosting, no screenshot binaries in git history).
 - [x] De-duplicate screenshot workflow docs: keep detailed procedure in `CONTRIBUTING.md` and reference it from `AGENTS.md`.
 - [x] Add a VS Code task (`Git: Cleanup Merged Branches`) for `scripts/cleanup-merged-branches.sh` to make branch cleanup accessible from the editor.
+- [x] Add `scripts/clean-workspace.sh` plus a VS Code task (`Workspace: Clean`) that removes local dependency/build artifacts (`venv`, `node_modules`, caches, coverage/test outputs, pyc files) and ignored `*.log` files without reinstall/rebuild steps.
+- [x] Add `scripts/firebase-clear-project.sh` plus a VS Code task (`Firebase: Clear Project`) to clear Functions/Firestore/RTDB/Hosting with zero-config defaults from `.firebaserc` while keeping the Firebase project itself.
 - [x] Gate Firebase deploy workflow with a preflight secrets check so CI exits successfully with a skip notice when deploy prerequisites are not configured.
+- [x] Add `scripts/firebase-deploy.sh` as the shared Firebase deploy implementation, used by both VS Code task (`Firebase: Deploy`) and `.github/workflows/firebase-deploy.yml`.
+- [x] Pin devcontainer Python toolchain to `3.11` and enforce `uv sync --python 3.11` in post-start setup so local devcontainer runtime matches Firebase Functions `python311`.
+- [x] Remove the obsolete root install/uninstall build file and clean repository references so command workflows live in scripts/VS Code tasks/GitHub Actions only.
+- [x] Align Firebase project-id references to `skybridge-inspirespace` (`.firebaserc` default, emulator compose env/command, proxy rewrite path, frontend auth-client fallback, and functions env example).
 - [x] Remove Terraform devcontainer feature and align VS Code Vitest settings with current `vitest.explorer` configuration keys.
 - [x] Fix merged-remote cleanup to include nested remote branch names (e.g., `feature/foo`) instead of only single-segment names.
 - [x] Remove devcontainer Copilot-uninstall hook/scripts to prevent noisy VS Code extension uninstall errors on container start.
 - [x] Fix Step 2 "Edit import filters" transient review error flash by resetting to Connect state optimistically before async job deletion completes.
 - [x] Extend privacy policy wording with explicit Firebase hosting/processing details and Google Analytics disclosure (consent, cookies, transfer safeguards).
+- [x] Extend `logo:generate` to also create a repeatable 1280x640 social preview image (`src/frontend/public/social-preview.png`) and wire landing-page social meta tags to that asset.
+- [x] Add devcontainer image tooling for asset generation (ImageMagick binaries) so logo/social generation commands work in-container.
+- [x] Pre-create `/opt/venv` in the devcontainer image (`uv venv`) so VS Code can resolve `/opt/venv/bin/python` during startup (before post-start sync).
+- [x] Fix devcontainer `uv sync` `/opt/venv` permission error by refreshing venv contents in-place for Python 3.11 and hardening `/opt/venv` ownership setup.
+- [x] Add Firebase deploy auth preflight to fail fast before frontend/functions build, with local support for `firebase login`, `GOOGLE_APPLICATION_CREDENTIALS`, or `FIREBASE_SERVICE_ACCOUNT`.
+- [x] Auto-trigger Firebase interactive login from the shared deploy script when launched from VS Code task terminals, with `--no-localhost` fallback.
+- [x] Make Firebase deploy fully zero-config in VS Code tasks (no project prompt; default `.firebaserc` project + auto auth) and add one automatic retry for first-run API propagation failures.
+- [x] Consolidate Functions/Object storage region to EU (`europe-west1`) across production deploy and local emulator/proxy routing.
+- [x] Centralize essential Firebase defaults in `.firebaserc` (`projects.default`, `config.region`) consumed by deploy script and compose wiring.
+- [x] Remove remaining hardcoded compose/frontend Firebase project settings and source project id from `.firebaserc` (`projects.default`) so local stack + deploy + CI share one zero-config default.
+- [x] Normalize project-id resolution to a single canonical value (`FIREBASE_PROJECT_ID`) with runtime metadata auto-detection fallback for deployed Functions.
+- [x] Remove split config by deleting `.firebase.defaults`; keep both project id and region in `.firebaserc`, deriving aliases at runtime in scripts/code.
+- [x] Prune unused keys from `.env.example` files (`GCS_LOCATION`, `GCP_PROJECT_ID`, `BACKEND_QUEUE_PROVIDER`) after code-level usage audit.
+- [x] Remove project-derived env duplication: stop exporting `GOOGLE_CLOUD_PROJECT`/`GCLOUD_PROJECT`, derive Firebase auth issuer/audience defaults from project id, and make frontend auth-domain/project-id defaults come from `.firebaserc`.
+- [x] Fix Cloud Run startup failure for Firebase Functions by staging shared `src/backend` + `src/core` modules into `functions/src` during deploy packaging.
+- [x] Remove redundant frontend `VITE_*` env duplication by deriving defaults from global backend vars in `vite.config.ts` and trimming duplicate entries from `.env.example`/compose wiring.
+- [x] Centralize Firebase region derivation in shared resolvers (`src/backend/env.py`, `scripts/firebase-config.sh`) and remove duplicated inline region fallback patterns from backend/deploy callsites.
+- [x] Fix VS Code Pytest discovery fallback to `/bin/python` by pinning workspace interpreter/test runner paths to `/opt/venv`.
+- [x] Harden VS Code Pytest discovery by avoiding destructive `/opt/venv` wipes in post-start, validating pytest within `/opt/venv` (not global PATH), and wiring `/bin/python` + `.venv` fallbacks to `/opt/venv`.
+- [x] Fix local emulator API routing by aligning Hosting `/api/**` rewrite to `europe-west1` and ensuring Functions emulator can discover Python deps via `functions/venv` symlink to container-local venv.
+- [x] Fix Functions emulator startup mismatch on Alpine by adding `python3.11` alias inside container-local `functions-venv`, so Firebase Functions SDK discovery succeeds and `/api/**` rewrites resolve.
+- [x] Fix Firebase emulator container healthcheck instability by moving emulator runtime state to a dedicated `/firebase-emulator` volume path (instead of nested `/workspace/.firebase-emulator`), disabling Gunicorn control sockets in local compose, adding Python 3.11 compatibility links (`bin/python3.11`, `lib/python3.11`) for Firebase Functions SDK discovery on Alpine Python 3.12, and auto-rebuilding stale persisted venvs whose activation scripts still reference the old mount path.
+- [x] Fix devcontainer post-start `/opt/venv` refresh failure on rebuild by retrying Python 3.11 venv refresh with `sudo` and restoring `/opt/venv` ownership to `vscode`.
+- [x] Fix CI pytest regression (270 passed / 3 failed) by restoring `user_id_from_request()` token-verify call signature to pass `mode`, while keeping `_verify_token(mode=None)` backward compatible for existing callers.
+- [x] Add optional Firebase App Check protection for API requests (frontend `X-Firebase-AppCheck` header injection + backend token verification with `APP_CHECK_ENFORCE`).
+- [x] Add Firebase deploy preflight for App Check so CI fails early when `APP_CHECK_ENFORCE=1` is set without required frontend App Check env (`VITE_FIREBASE_APP_CHECK_ENABLED=1`, `VITE_FIREBASE_APP_CHECK_SITE_KEY`).
+- [x] Initialize theme from host system preference when no saved theme exists, including first paint and toggle state across SPA + static pages.
+- [x] Simplify runtime to Firebase-only auth/storage/queue behavior by removing legacy auth/storage/version toggles, keeping the fixed Firebase worker queue path (`skybridge-job-queue`), reusing Firebase Hosting runtime config for App Check initialization, and keeping the theme synced with live system appearance changes when no explicit override is stored.
+- [x] Fix production Firebase job API initialization by deriving the Storage bucket from Firebase runtime config (`FIREBASE_CONFIG.storageBucket`) instead of requiring explicit `GCS_BUCKET` in deployed Functions.
+- [x] Remove local `GCS_BUCKET` wiring and unify Firebase Storage bucket resolution across emulator and production: explicit override, then `FIREBASE_CONFIG.storageBucket`, then the default bucket derived from the active Firebase project id.
+- [x] Fix local Firebase Functions emulator source loading by ignoring stale `functions/_deploy_src` staging during emulator/dev runs and only preferring that path in deployed Cloud Functions runtime.
+- [x] Tighten local Firebase emulator healthcheck so dev/proxy startup waits for both Auth and `/api/jobs` rewrite availability instead of exposing the app before Functions is ready.
+- [x] Increase the Firebase worker timeout budget and emit incremental review progress during CloudAhoy export generation so long real-data reviews do not die silently at `Preparing review`.
+- [x] Streamline Firebase email-link sign-in UX: use inline auth card on `/app` (no duplicate modal) and prefill email-link completion from redirect email hint.
+- [x] Improve sign-in email field UX by submitting on Enter and enabling native browser email autofill/suggestions without wrapping the field in a login form that triggers Safari password-manager takeover.
+- [x] Reduce password-manager save prompts on CloudAhoy/FlySto credential fields by adding `autocomplete` suppression plus manager-specific ignore attributes (`data-lpignore`, `data-1p-ignore`, `data-bwignore`).
+- [x] Further harden credential fields against password-manager prompts by adding decoy hidden login inputs for CloudAhoy/FlySto forms.
+- [x] Restore Playwright e2e compatibility for Connect credentials by removing the readOnly arming gate from password inputs while keeping decoy fields plus password-manager ignore attributes.
+- [x] Replace the hidden CloudAhoy/FlySto login decoys with less login-like field semantics (`new-password`, no form names) and clear temporary import credentials on delete/sign-out/token-expiry so Safari stops prompting to save them on close.
+- [x] Fix deployed Firebase email-link auth on the custom Hosting domain by allowing Firebase Auth helper iframe/script origins in Hosting CSP (`*.firebaseapp.com`, `*.web.app`, `apis.google.com`, `www.google.com`, `www.gstatic.com`) and lock that into regression coverage.
+- [x] Restore frontend deploy builds after adding the CSP regression test by exposing Node typings to frontend test files during `tsc -b` typechecking.
+- [x] Extend the Firebase clear-project task to empty the resolved Firebase Storage bucket objects as well, while clarifying the remaining limits (Auth users not deleted; Storage metrics can lag under retention/soft-delete).
+- [x] Harden Firebase Storage cleanup auth in the clear-project task: use `gcloud auth application-default print-access-token` as an extra token source, isolate gcloud in a temp config dir, and prompt for ADC login in interactive local runs when needed.
+- [x] Replace guessed Firebase bucket names in the clear-project task with Storage API project-bucket discovery so Storage cleanup clears the project’s real buckets instead of reporting false “no matching bucket” results.
+- [x] Add Firebase deploy preflight for the default Firestore database and clarify that local `docker compose --profile prod` stays emulator-backed, so missing production Firebase resources are caught by deploy checks rather than local compose alone.
+- [x] Extend Firebase deploy/clear scripts to manage the default Firestore database lifecycle directly: auto-create `(default)` on deploy when missing and delete it during project clear, with configurable first-create location via `FIRESTORE_DATABASE_LOCATION`.
+- [x] Harden Firestore database auto-create after clear by waiting through Firebase's database-id cooldown window and retrying recreation automatically during deploy.
+- [x] Fix Firebase clear-project storage cleanup exit handling so empty buckets no longer abort the task under `set -e`; empty buckets now report as already empty and the script continues through the remaining buckets.
+- [x] Upgrade Firebase clear-project storage cleanup from object-only cleanup to full bucket removal: delete each project bucket after clearing remaining object versions, with explicit warnings when bucket protection settings block deletion.
+- [x] Fix production artifact downloads for Firebase Functions by propagating the Firebase Web SDK `storageBucket` into managed Functions env and teaching backend bucket resolution to prefer discovered real project buckets before guessing a default name.
+- [x] Harden Firebase deploy storage setup so deploy verifies/discovers the actual project bucket via the Storage API, writes managed `GCS_BUCKET`, and fails early when Firebase Storage is not provisioned instead of shipping a worker that 404s artifact uploads at runtime.
+- [x] Extend deploy storage preflight to auto-create the missing Firebase default artifact bucket (`<project>.firebasestorage.app` or `<project>.appspot.com`) in the configured region instead of requiring a manual Firebase Console Storage setup step.
+- [x] Harden deploy storage auto-provisioning for globally unavailable Firebase-style bucket names by falling back to a normal project-owned artifact bucket name and pinning managed `GCS_BUCKET` to it.
+- [x] Fix production import handoff across Cloud Functions instances by loading `review.json` from object storage during the import phase instead of assuming the review manifest still exists on the worker’s local filesystem.
+- [x] Remove two more instance-local artifact assumptions: failed-import retry gating now checks remote `review.json`, and artifact listing now merges local + object-store results instead of letting a local `job_dir` hide remote artifacts.
+- [x] Persist `migration.db` through object storage so review/import retries on different Cloud Functions instances keep migration state instead of starting from an empty local SQLite file.
+- [x] Fix deploy storage preflight for later redeploys by reusing an already-created fallback artifact bucket when Firebase Web SDK config still points at an unavailable default `*.firebasestorage.app` name.
+- [x] Remove unused `FirebaseAuthDialog` component file to prevent accidental reintroduction of auth modal behavior on `/app`.
+- [x] Remove deploy-time Firebase Auth branding auto-patching and switch deploy preflight to manual setup guidance (email-link mode, template naming, authorized domains) plus verification-only checks.
+- [x] Document Firebase Console prerequisite that Auth template "Public-facing name" is editable only when Google sign-in provider is enabled (deploy overview + docs).
+- [x] Document manual Firebase Console setup for Auth email custom sender domains, including DNS verification and the distinction from Hosting domains / Auth authorized domains.
+- [x] Fix deploy authorized-domain setup overview to merge/dedupe `FIREBASE_AUTHORIZED_DOMAINS` across env sources so all configured domains (for example `.app` and `.co`) are shown and validated.
+- [x] Reduce deploy-time Git noise by staging shared backend modules under ignored `functions/_deploy_src/src` (instead of tracked `functions/src`) and updating Functions import path fallback accordingly.
+- [x] Harden deploy authorized-domain config parsing to merge all `FIREBASE_AUTHORIZED_DOMAINS` entries (including repeated keys) across env sources, and label setup output as merged-source values.
+- [x] Fix deploy authorized-domain parser dropping the final value without trailing newline (for comma-separated env values), so `.app,.co` entries both render in setup output and verification.
+- [x] Add deploy preflight toolchain check to fail fast with explicit missing-command list when required CLI utilities are not present in the devcontainer/runtime.
+- [x] Add repository EOL normalization for shell/python files (`.gitattributes`) to prevent CRLF-related shell execution artifacts in deploy scripts.
+- [x] Fix Cloud Functions startup path resolution in `functions/main.py` for deployed runtime (`/workspace` source root), so staged modules under `functions/_deploy_src/src` are importable and containers start on `PORT=8080`.
+- [x] Fix production API base fallback to same-origin `/api` (instead of fixed local-domain API URLs) to prevent CSP `connect-src` failures on deployed domains.
+- [x] Simplify backend runtime paths by removing unused local/Cloud Run HTTP adapters (`src/backend/lambda_api_local.py`, `src/backend/http_api.py`, `src/backend/http_worker.py`), keeping Firebase Functions as the only backend runtime while retaining compose-based dev mock services.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.

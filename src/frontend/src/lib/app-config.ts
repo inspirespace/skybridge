@@ -1,20 +1,15 @@
-export const AUTH_MODE = import.meta.env.VITE_AUTH_MODE ?? "header";
-export const AUTH_ISSUER =
-  import.meta.env.VITE_AUTH_ISSUER_URL ??
-  import.meta.env.VITE_AUTH_BROWSER_ISSUER_URL ??
-  "";
-export const AUTH_CLIENT_ID = import.meta.env.VITE_AUTH_CLIENT_ID ?? "skybridge-dev";
-export const AUTH_SCOPE =
-  import.meta.env.VITE_AUTH_SCOPE ?? "openid profile email offline_access";
-export const AUTH_REDIRECT_PATH =
-  import.meta.env.VITE_AUTH_REDIRECT_PATH ?? "/app/auth/callback";
-export const AUTH_PROVIDER_PARAM = import.meta.env.VITE_AUTH_PROVIDER_PARAM ?? "kc_idp_hint";
-export const AUTH_LOGOUT_URL = import.meta.env.VITE_AUTH_LOGOUT_URL ?? "";
-
 export const FIREBASE_API_KEY = import.meta.env.VITE_FIREBASE_API_KEY ?? "";
-export const FIREBASE_AUTH_DOMAIN = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ?? "";
 export const FIREBASE_PROJECT_ID = import.meta.env.VITE_FIREBASE_PROJECT_ID ?? "";
+export const FIREBASE_AUTH_DOMAIN =
+  import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ??
+  (FIREBASE_PROJECT_ID ? `${FIREBASE_PROJECT_ID}.firebaseapp.com` : "");
 export const FIREBASE_APP_ID = import.meta.env.VITE_FIREBASE_APP_ID ?? "";
+export const FIREBASE_APP_CHECK_ENABLED =
+  (import.meta.env.VITE_FIREBASE_APP_CHECK_ENABLED ?? "") === "1";
+export const FIREBASE_APP_CHECK_SITE_KEY =
+  import.meta.env.VITE_FIREBASE_APP_CHECK_SITE_KEY ?? "";
+export const FIREBASE_APP_CHECK_DEBUG_TOKEN =
+  import.meta.env.VITE_FIREBASE_APP_CHECK_DEBUG_TOKEN ?? "";
 export const FIREBASE_EMULATOR_HOST =
   import.meta.env.VITE_FIREBASE_AUTH_EMULATOR_HOST ?? "";
 export const FIREBASE_USE_EMULATOR =

@@ -2,22 +2,16 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Stack: Start (Docker Compose)",
+      "name": "Compose: Up (dev)",
       "type": "node-terminal",
       "request": "launch",
-      "command": "docker compose up -d"
+      "command": "./scripts/docker-compose.sh --profile dev up --build"
     },
     {
-      "name": "Stack: Stop (Docker Compose)",
+      "name": "Compose: Up (prod)",
       "type": "node-terminal",
       "request": "launch",
-      "command": "docker compose down"
-    },
-    {
-      "name": "Stack: Build (Docker Compose)",
-      "type": "node-terminal",
-      "request": "launch",
-      "command": "docker compose build"
+      "command": "./scripts/docker-compose.sh --profile prod up --build"
     }
   ]
 }
