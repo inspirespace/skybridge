@@ -14,8 +14,9 @@ This is a checklist of what production needs, not a step-by-step deployment guid
   - `/api/**` rewrites to the `api` function (see `firebase.json`).
 
 ## Required backend environment (Firebase Functions)
+These values are managed by the shared deploy script. Do not configure them manually in the Firebase console.
 - `BACKEND_PRODUCTION=true` (enables production security guards)
-- `APP_CHECK_ENFORCE=1` (rejects API requests without valid Firebase App Check token)
+- `APP_CHECK_ENFORCE=1` when Firebase App Check is configured for the deployed web app
 - `BACKEND_ENCRYPTION_KEY=<32-byte urlsafe base64 key>`
 - `FIRESTORE_JOBS_COLLECTION=skybridge-jobs`
 - `FIRESTORE_CREDENTIALS_COLLECTION=skybridge-credentials`
@@ -28,8 +29,8 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - `VITE_API_BASE_URL` is optional; default is same-origin `/api` (recommended with Firebase Hosting rewrites).
 - `VITE_FIREBASE_API_KEY=<web api key>`
 - `VITE_FIREBASE_APP_ID=<web app id>`
-- `VITE_FIREBASE_APP_CHECK_ENABLED=1`
-- `VITE_FIREBASE_APP_CHECK_SITE_KEY=<reCAPTCHA v3 site key>`
+- `VITE_FIREBASE_APP_CHECK_ENABLED=1` when App Check is enabled
+- `VITE_FIREBASE_APP_CHECK_SITE_KEY=<reCAPTCHA v3 site key>` when App Check is enabled
 - `VITE_FIREBASE_PROJECT_ID` / `VITE_FIREBASE_AUTH_DOMAIN` are optional; by default they are derived from `.firebaserc`.
 - `VITE_FIRESTORE_JOBS_COLLECTION` and `VITE_RETENTION_DAYS` are optional; defaults come from backend globals (`FIRESTORE_JOBS_COLLECTION`, `BACKEND_RETENTION_DAYS`).
 - `GCS_BUCKET` is optional override only; otherwise the backend uses `FIREBASE_CONFIG.storageBucket` or the default Firebase bucket derived from the active project id.
@@ -42,6 +43,22 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - Firebase Console currently requires Google sign-in provider to be enabled before Auth template "Public-facing name" can be edited.
 - Optional: `FIREBASE_AUTH_EMAIL_APP_NAME` sets the friendly app name shown in that setup overview (default `Skybridge`).
 - Auth preflight verification uses Google ADC (`GOOGLE_APPLICATION_CREDENTIALS`) and falls back to Firebase CLI login token cache.
+- Provider flags are managed from `.github/firebase-deploy.defaults.json`.
+
+## Managed deploy inputs
+- Required GitHub secrets:
+  - `FIREBASE_SERVICE_ACCOUNT`
+  - `BACKEND_ENCRYPTION_KEY`
+- Optional GitHub secrets:
+  - `FIREBASE_WEB_APP_ID` when the Firebase project has more than one web app
+  - `FIREBASE_APP_CHECK_SITE_KEY` when App Check is enabled
+- Checked-in defaults:
+  - `.github/firebase-deploy.defaults.json`
+- Generated during deploy:
+  - `functions/.env.<project_id>`
+  - `src/frontend/.env.production`
+- Source of truth for project/region defaults:
+  - `.firebaserc`
 ## Deploy
 - `npm --prefix src/frontend run build`
 - `./scripts/firebase-deploy.sh`

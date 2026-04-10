@@ -23,3 +23,4 @@ The frontend is a Vite SPA (`src/frontend/`) plus a static landing page and lega
 - `VITE_FIRESTORE_JOBS_COLLECTION` — optional override (defaults from `FIRESTORE_JOBS_COLLECTION`)
 - `VITE_RETENTION_DAYS` — optional override (defaults from `BACKEND_RETENTION_DAYS`)
 - `VITE_CLOUD_AHOY_EMAIL` / `VITE_CLOUD_AHOY_PASSWORD` / `VITE_FLYSTO_EMAIL` / `VITE_FLYSTO_PASSWORD` — optional prefill overrides (default from non-`VITE_` credentials)
+- Production deploys generate `src/frontend/.env.production` from the shared deploy script using Firebase sdk config plus `.github/firebase-deploy.defaults.json`.

@@ -64,6 +64,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Local emulator startup also adds `functions-venv/bin/python3.11 -> python` plus `functions-venv/lib/python3.11 -> lib/python3.12` compatibility links so Firebase Tools can resolve Python Functions SDK checks that expect Python 3.11 paths.
 - Local emulator startup auto-rebuilds the container venv if `functions-venv/bin/activate` still points at an old path (for example `/workspace/.firebase-emulator/...`) to avoid Firebase Functions SDK discovery failures after mount-path migrations.
 - Firebase Hosting custom-domain setup guidance is documented in `docs/production.md` under `Custom domain setup (Firebase Hosting)`.
+- Firebase deploy workflow lives in `.github/workflows/firebase-deploy.yml` and requires `FIREBASE_SERVICE_ACCOUNT` and `BACKEND_ENCRYPTION_KEY` secrets. `FIREBASE_WEB_APP_ID` and `FIREBASE_APP_CHECK_SITE_KEY` are optional. Shared deploy flow generates temporary production env files from `.github/firebase-deploy.defaults.json`; do not rely on manual Firebase console env configuration.
 - Local dev runs behind `http://skybridge.localhost` with emulator subdomains (`auth.skybridge.localhost`, `firestore.skybridge.localhost`, `ui.skybridge.localhost`) instead of localhost ports.
 - `python -m src.core.cli --review` — run the CLI locally (requires Python deps).
 - CLI supports `--start-date` / `--end-date` for targeted imports (YYYY-MM-DD or ISO8601).

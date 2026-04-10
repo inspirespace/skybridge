@@ -14,7 +14,17 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      BACKEND_ENCRYPTION_KEY: ${{ secrets.BACKEND_ENCRYPTION_KEY }}
+      FIREBASE_WEB_APP_ID: ${{ secrets.FIREBASE_WEB_APP_ID }}
+      FIREBASE_APP_CHECK_SITE_KEY: ${{ secrets.FIREBASE_APP_CHECK_SITE_KEY }}
     steps:
+      - name: Preflight deploy requirements
+        run: |
+          if [ -z "${FIREBASE_SERVICE_ACCOUNT:-}" ] || [ -z "${BACKEND_ENCRYPTION_KEY:-}" ]; then
+            echo "Missing FIREBASE_SERVICE_ACCOUNT and/or BACKEND_ENCRYPTION_KEY secrets." >&2
+            exit 1
+          fi
+
       - name: Check out repository
         uses: actions/checkout@v4
 

@@ -216,7 +216,6 @@ def test_create_job_handler_marks_job_failed_when_enqueue_fails(store, monkeypat
     assert saved_job.status == "failed"
     assert saved_job.error_message == "publish failed"
 
-
 def test_get_job_handler_returns_404(store):
     response = handlers.get_job_handler(_event("pilot", job_id=str(uuid4())), None)
     assert response["statusCode"] == 404
@@ -229,7 +228,6 @@ def test_accept_review_handler_conflict(store):
         _event("pilot", {"credentials": {}}, job_id=str(job.job_id)), None
     )
     assert response["statusCode"] == 409
-
 
 def test_artifact_handlers(store):
     job = _job("review_ready")

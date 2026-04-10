@@ -107,6 +107,10 @@ FIREBASE_JSON_PATH="firebase.json"
 FIREBASE_JSON_BACKUP_FILE=""
 FIREBASE_JSON_STAGED=0
 DEPLOY_OUTPUT_FILE=""
+MANAGED_FUNCTIONS_ENV_FILE=""
+MANAGED_FUNCTIONS_ENV_BACKUP=""
+MANAGED_FRONTEND_ENV_FILE=""
+MANAGED_FRONTEND_ENV_BACKUP=""
 
 cleanup_credentials() {
   if [ -n "$TEMP_CREDENTIALS_FILE" ] && [ -f "$TEMP_CREDENTIALS_FILE" ]; then
@@ -138,6 +142,7 @@ cleanup_staged_firebase_json() {
 
 cleanup_all() {
   cleanup_credentials
+  cleanup_managed_env_files
   cleanup_staged_functions_src
   cleanup_staged_firebase_json
   if [ -n "$DEPLOY_OUTPUT_FILE" ] && [ -f "$DEPLOY_OUTPUT_FILE" ]; then
@@ -156,6 +161,56 @@ normalize_env_value() {
     raw="${raw:1:${#raw}-2}"
   fi
   printf '%s' "$raw"
+}
+
+backup_managed_env_file() {
+  local target_path="$1"
+  local backup_var_name="$2"
+  if [ -f "$target_path" ]; then
+    local backup_path
+    backup_path="$(mktemp)"
+    cp "$target_path" "$backup_path"
+    printf -v "$backup_var_name" '%s' "$backup_path"
+  else
+    printf -v "$backup_var_name" '%s' ""
+  fi
+}
+
+restore_managed_env_file() {
+  local target_path="$1"
+  local backup_path="$2"
+  if [ -z "$target_path" ]; then
+    return 0
+  fi
+  if [ -n "$backup_path" ] && [ -f "$backup_path" ]; then
+    mv "$backup_path" "$target_path"
+    return 0
+  fi
+  rm -f "$target_path"
+}
+
+cleanup_managed_env_files() {
+  restore_managed_env_file "$MANAGED_FUNCTIONS_ENV_FILE" "$MANAGED_FUNCTIONS_ENV_BACKUP"
+  restore_managed_env_file "$MANAGED_FRONTEND_ENV_FILE" "$MANAGED_FRONTEND_ENV_BACKUP"
+}
+
+source_env_file() {
+  local file_path="$1"
+  [ -f "$file_path" ] || return 1
+  set -a
+  # shellcheck disable=SC1090
+  . "$file_path"
+  set +a
+}
+
+prepare_managed_deploy_env() {
+  MANAGED_FUNCTIONS_ENV_FILE="functions/.env.${PROJECT_ID}"
+  MANAGED_FRONTEND_ENV_FILE="src/frontend/.env.production"
+  backup_managed_env_file "$MANAGED_FUNCTIONS_ENV_FILE" MANAGED_FUNCTIONS_ENV_BACKUP
+  backup_managed_env_file "$MANAGED_FRONTEND_ENV_FILE" MANAGED_FRONTEND_ENV_BACKUP
+  node .github/scripts/prepare-firebase-deploy.mjs
+  source_env_file "$MANAGED_FUNCTIONS_ENV_FILE"
+  source_env_file "$MANAGED_FRONTEND_ENV_FILE"
 }
 
 read_env_file_value() {
@@ -1474,6 +1529,7 @@ EOF
   exit 1
 fi
 
+prepare_managed_deploy_env
 preflight_app_check_config
 preflight_frontend_firebase_config
 preflight_firestore_database

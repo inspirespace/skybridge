@@ -1,0 +1,13 @@
+{
+  "firestoreJobsCollection": "skybridge-jobs",
+  "firestoreCredentialsCollection": "skybridge-credentials",
+  "retentionDays": "7",
+  "appCheckEnabled": true,
+  "authProviders": {
+    "google": true,
+    "apple": true,
+    "facebook": true,
+    "microsoft": false,
+    "guest": false
+  }
+}

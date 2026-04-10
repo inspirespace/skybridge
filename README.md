@@ -98,6 +98,11 @@ npm --prefix src/frontend run logo:generate -- path/to/new-logo.webp
 CI deploys live from `main` via GitHub Actions (`.github/workflows/firebase-deploy.yml`).
 Required repository secrets:
 - `FIREBASE_SERVICE_ACCOUNT` (service account JSON)
+- `BACKEND_ENCRYPTION_KEY` (32-byte urlsafe base64 Fernet key)
+- `FIREBASE_WEB_APP_ID` (optional; only needed when the project has multiple Firebase web apps)
+- `FIREBASE_APP_CHECK_SITE_KEY` (optional; only needed when App Check is enabled)
+
+The shared deploy flow generates the production Functions env file (`functions/.env.<project_id>`) and frontend env file (`src/frontend/.env.production`) during local and CI deploys. Non-secret defaults live in `.github/firebase-deploy.defaults.json`; no manual Firebase Functions env setup is required.
 
 CI and local deploy share the same implementation path:
 - both invoke `./scripts/firebase-deploy.sh`

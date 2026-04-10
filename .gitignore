@@ -48,6 +48,8 @@ functions/venv/
 functions/venv
 functions/_deploy_src/
 functions/.env
+functions/.env.*
+src/frontend/.env.production
 
 # Lambda packages
 infra/terraform/lambda/*.zip
