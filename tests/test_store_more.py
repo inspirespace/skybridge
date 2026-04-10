@@ -122,6 +122,37 @@ def test_materialize_artifact_file_from_object_store(tmp_path: Path):
     assert target.read_bytes() == b"sqlite-bytes"
 
 
+def test_materialize_artifact_file_prefers_remote_over_stale_local(tmp_path: Path):
+    object_store = FakeObjectStore()
+    store = JobStore(tmp_path, object_store=object_store)
+    job = _job(store)
+    target = store.job_dir(job.job_id) / "migration.db"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(b"stale-local")
+    key = object_store.key_for(job.user_id, str(job.job_id), "migration.db")
+    object_store.bytes_payloads[key] = b"remote-fresh"
+
+    restored = store.materialize_artifact_file(job.job_id, "migration.db", target)
+
+    assert restored is True
+    assert target.read_bytes() == b"remote-fresh"
+
+
+def test_load_artifact_prefers_remote_over_stale_local(tmp_path: Path):
+    object_store = FakeObjectStore()
+    store = JobStore(tmp_path, object_store=object_store)
+    job = _job(store)
+    artifact = store.job_dir(job.job_id) / "artifact.json"
+    artifact.write_text(json.dumps({"source": "local"}))
+    key = object_store.key_for(job.user_id, str(job.job_id), "artifact.json")
+    object_store.put_json(key, {"source": "remote"})
+
+    payload = store.load_artifact(job.job_id, "artifact.json")
+
+    assert payload == {"source": "remote"}
+    assert json.loads(artifact.read_text()) == {"source": "remote"}
+
+
 def test_load_job_expired(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     store = JobStore(tmp_path)
     job = _job(store)

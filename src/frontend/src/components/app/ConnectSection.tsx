@@ -114,7 +114,9 @@ export function ConnectSection({
           </p>
           <Alert className="border-[hsl(var(--sky-accent))]/20 bg-[hsl(var(--sky-accent))]/5 text-foreground dark:border-[hsl(var(--sky-accent))]/25 dark:bg-[hsl(var(--sky-accent))]/8">
             <AlertTitle className="text-[hsl(var(--sky-accent))]">Credentials</AlertTitle>
-            <AlertDescription className="text-muted-foreground">Credentials are used only for this job and not stored.</AlertDescription>
+            <AlertDescription className="text-muted-foreground">
+              Credentials are kept only for this job, encrypted on the backend, and removed when the job is deleted or expires.
+            </AlertDescription>
           </Alert>
 
           <div className="grid gap-4 md:grid-cols-2">

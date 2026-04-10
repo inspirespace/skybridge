@@ -329,17 +329,14 @@ class JobStore:
 
     def materialize_artifact_file(self, job_id: UUID, name: str, target_path: Path) -> bool:
         """Restore a file artifact from object storage onto local disk when needed."""
-        if target_path.exists():
-            return True
-        if not self._object_store:
-            return False
-        key = self._object_store.key_for(self.load_job(job_id).user_id, str(job_id), name)
-        payload = self._object_store.get_bytes(key)
-        if payload is None:
-            return False
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        target_path.write_bytes(payload)
-        return True
+        if self._object_store:
+            key = self._object_store.key_for(self.load_job(job_id).user_id, str(job_id), name)
+            payload = self._object_store.get_bytes(key)
+            if payload is not None:
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                target_path.write_bytes(payload)
+                return True
+        return target_path.exists()
 
     def list_artifacts(self, job_id: UUID) -> list[str]:
         """Handle list artifacts."""
@@ -358,13 +355,15 @@ class JobStore:
     def load_artifact(self, job_id: UUID, name: str) -> dict[str, Any]:
         """Handle load artifact."""
         artifact_file = self._job_dir(job_id) / name
-        if artifact_file.exists():
-            return json.loads(artifact_file.read_text())
         if self._object_store:
             key = self._object_store.key_for(self.load_job(job_id).user_id, str(job_id), name)
             payload = self._object_store.get_json(key)
             if payload is not None:
+                artifact_file.parent.mkdir(parents=True, exist_ok=True)
+                artifact_file.write_text(json.dumps(payload, indent=2))
                 return payload
+        if artifact_file.exists():
+            return json.loads(artifact_file.read_text())
         raise FileNotFoundError("Artifact not found")
 
     def write_token(self, job_id: UUID, purpose: str, token: str) -> None:
@@ -415,32 +414,37 @@ class JobStore:
         """Load review payload for enrichment."""
         job_dir = self._job_dir(job.job_id)
         review_path = job_dir / "review.json"
+        if not self._object_store:
+            return json.loads(review_path.read_text()) if review_path.exists() else None
+        key = self._object_store.key_for(job.user_id, str(job.job_id), "review.json")
+        payload = self._object_store.get_json(key)
+        if payload is not None:
+            review_path.parent.mkdir(parents=True, exist_ok=True)
+            review_path.write_text(json.dumps(payload, indent=2))
+            return payload
         if review_path.exists():
             return json.loads(review_path.read_text())
-        if not self._object_store:
-            return None
-        key = self._object_store.key_for(job.user_id, str(job.job_id), "review.json")
-        return self._object_store.get_json(key)
+        return None
 
     def _load_raw_payload(self, job: JobRecord, raw_path: str) -> dict[str, Any] | None:
         """Load raw CloudAhoy payload for enrichment."""
         raw_file = Path(raw_path)
-        if raw_file.exists():
-            try:
-                return json.loads(raw_file.read_text())
-            except json.JSONDecodeError:
-                return None
         filename = raw_file.name
         job_dir = self._job_dir(job.job_id) / "cloudahoy_exports" / filename
-        if job_dir.exists():
-            try:
-                return json.loads(job_dir.read_text())
-            except json.JSONDecodeError:
-                return None
-        if not self._object_store:
-            return None
-        key = self._object_store.key_for(job.user_id, str(job.job_id), f"cloudahoy_exports/{filename}")
-        return self._object_store.get_json(key)
+        if self._object_store:
+            key = self._object_store.key_for(job.user_id, str(job.job_id), f"cloudahoy_exports/{filename}")
+            payload = self._object_store.get_json(key)
+            if payload is not None:
+                job_dir.parent.mkdir(parents=True, exist_ok=True)
+                job_dir.write_text(json.dumps(payload, indent=2))
+                return payload
+        for candidate in (raw_file, job_dir):
+            if candidate.exists():
+                try:
+                    return json.loads(candidate.read_text())
+                except json.JSONDecodeError:
+                    return None
+        return None
 
     def clear_token(self, job_id: UUID, purpose: str) -> None:
         """Handle clear token."""

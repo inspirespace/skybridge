@@ -30,6 +30,13 @@ def test_summaries_from_review_parses_dates():
     assert summaries[0].started_at is not None
 
 
+def test_summaries_from_review_normalizes_numeric_ids():
+    payload = {"items": [{"flight_id": 42, "started_at": "2026-01-01T10:00:00Z"}]}
+    summaries = service._summaries_from_review(payload)
+    assert len(summaries) == 1
+    assert summaries[0].id == "42"
+
+
 def test_summaries_for_range_filters():
     summaries = [
         FlightSummary("A1", datetime(2026, 1, 1, tzinfo=timezone.utc), None, None, None),

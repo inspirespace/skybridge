@@ -79,6 +79,10 @@ import { parseISODateInput } from "@/lib/date-input";
 const JOB_ID_KEY = "skybridge_job_id";
 const OPEN_STEP_KEY = "skybridge_open_step";
 const EMAIL_LINK_EMAIL_KEY = "skybridge_email_link_email";
+const RUNNING_STALL_WARNING_SECONDS = Number.parseInt(
+  import.meta.env.VITE_RUNNING_STALL_WARNING_SECONDS ?? "60",
+  10
+);
 
 const readStorageValue = (
   storage: Pick<Storage, "getItem"> | undefined,
@@ -399,6 +403,18 @@ export default function App() {
   );
   const reviewLastUpdate = formatPhaseLastUpdate(job?.progress_log, "review", now);
   const importLastUpdate = formatPhaseLastUpdate(job?.progress_log, "import", now);
+  const heartbeatAt = job?.heartbeat_at ? Date.parse(job.heartbeat_at) : NaN;
+  const stalledHeartbeat =
+    Number.isFinite(heartbeatAt) &&
+    Date.now() - heartbeatAt > RUNNING_STALL_WARNING_SECONDS * 1000;
+  const reviewRuntimeWarning =
+    reviewRunning && stalledHeartbeat
+      ? `No background heartbeat for ${formatLastUpdate(job?.heartbeat_at, now)}. The worker may have stalled or crashed.`
+      : null;
+  const importRuntimeWarning =
+    importRunning && stalledHeartbeat
+      ? `No background heartbeat for ${formatLastUpdate(job?.heartbeat_at, now)}. The worker may have stalled or crashed.`
+      : null;
 
   React.useEffect(() => {
     if (!isSignedIn || !jobId || !reviewComplete) {
@@ -444,11 +460,11 @@ export default function App() {
 
   const connectLocked =
     flow.connected &&
+    flow.importStatus !== "failed" &&
     (flow.reviewStatus === "running" ||
       flow.reviewStatus === "complete" ||
       flow.importStatus === "running" ||
-      flow.importStatus === "complete" ||
-      flow.importStatus === "failed");
+      flow.importStatus === "complete");
 
   const allowedSteps = React.useMemo(() => {
     if (!flow.signedIn) return new Set<string>();
@@ -643,14 +659,23 @@ export default function App() {
     setActionLoading(true);
     setActionError(null);
     try {
-      await acceptReview(jobId, {
-        credentials: {
-          cloudahoy_username: cloudahoyEmail,
-          cloudahoy_password: cloudahoyPassword,
-          flysto_username: flystoEmail,
-          flysto_password: flystoPassword,
-        },
-      }, auth);
+      const credentialsProvided =
+        cloudahoyEmail.trim() &&
+        cloudahoyPassword.trim() &&
+        flystoEmail.trim() &&
+        flystoPassword.trim()
+          ? {
+              cloudahoy_username: cloudahoyEmail,
+              cloudahoy_password: cloudahoyPassword,
+              flysto_username: flystoEmail,
+              flysto_password: flystoPassword,
+            }
+          : null;
+      await acceptReview(
+        jobId,
+        credentialsProvided ? { credentials: credentialsProvided } : {},
+        auth
+      );
       setManualOpen("import");
       refresh();
     } catch (err) {
@@ -663,6 +688,8 @@ export default function App() {
         message =
           "Review not ready yet. The review may still be running or was canceled before it finished. " +
           "Please wait for “Review ready”, or use “Edit import filters” to restart the review.";
+      } else if (message.includes("Import credentials are unavailable")) {
+        setManualOpen("connect");
       }
       setActionError({
         scope,
@@ -1337,6 +1364,7 @@ export default function App() {
                 showAllFlights={showAllFlights}
                 setShowAllFlights={setShowAllFlights}
                 reviewError={reviewError}
+                reviewRuntimeWarning={reviewRuntimeWarning}
                 onRefresh={refresh}
                 canApprove={canApprove}
                 importRunning={importRunning}
@@ -1372,6 +1400,7 @@ export default function App() {
                 onDeleteResults={handleDeleteResults}
                 actionLoading={actionLoading}
                 importError={importError}
+                importRuntimeWarning={importRuntimeWarning}
                 onRefresh={refresh}
                 canRetryImport={canRetryImport}
                 onRetryImport={handleRetryImport}

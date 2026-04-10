@@ -47,6 +47,7 @@ export function ImportSection({
   onDeleteResults,
   actionLoading,
   importError,
+  importRuntimeWarning,
   onRefresh,
   canRetryImport,
   onRetryImport,
@@ -78,6 +79,7 @@ export function ImportSection({
   onDeleteResults: () => void;
   actionLoading: boolean;
   importError?: string | null;
+  importRuntimeWarning?: string | null;
   onRefresh: () => void;
   canRetryImport: boolean;
   onRetryImport: () => void;
@@ -278,6 +280,17 @@ export function ImportSection({
                 )}
                 <Button size="sm" variant="outline" onClick={onRefresh}>
                   Retry
+                </Button>
+              </div>
+            </Alert>
+          )}
+          {importRuntimeWarning && !importError && (
+            <Alert>
+              <AlertTitle>Background import may be stalled</AlertTitle>
+              <AlertDescription>{importRuntimeWarning}</AlertDescription>
+              <div className="mt-3">
+                <Button size="sm" variant="outline" onClick={onRefresh}>
+                  Refresh
                 </Button>
               </div>
             </Alert>

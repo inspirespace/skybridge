@@ -187,6 +187,49 @@ def test_accept_review_handler_enqueues(store, monkeypatch: pytest.MonkeyPatch):
     assert seen["enqueued"] is True
 
 
+def test_accept_review_handler_uses_saved_job_credentials_when_request_is_empty(
+    store,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    job = _job("review_ready")
+    job.status = "review_ready"
+    store.save_job(job)
+    store.write_artifact(job.job_id, "review.json", {"review_id": "review-1", "items": []})
+
+    seen = {}
+
+    class _DummyCredentialStore:
+        def load_job_credentials(self, job_id: str):
+            assert job_id == str(job.job_id)
+            return {
+                "cloudahoy_username": "pilot",
+                "cloudahoy_password": "secret",
+                "flysto_username": "pilot",
+                "flysto_password": "secret",
+            }
+
+        def issue(self, **kwargs):
+            seen["issued_credentials"] = kwargs["credentials"]
+            return "import-token"
+
+    monkeypatch.setattr(handlers, "_credential_store", _DummyCredentialStore())
+    monkeypatch.setattr(handlers, "_enqueue_job", lambda *args, **kwargs: seen.setdefault("enqueued", True))
+    monkeypatch.setattr(
+        handlers,
+        "resolve_job_queue_topic_path",
+        lambda: "projects/demo-project/topics/skybridge-job-queue",
+    )
+
+    response = handlers.accept_review_handler(
+        _event("pilot", {}, job_id=str(job.job_id)),
+        None,
+    )
+
+    assert response["statusCode"] == 200
+    assert seen["enqueued"] is True
+    assert seen["issued_credentials"]["flysto_username"] == "pilot"
+
+
 def test_accept_review_handler_rejects_failed_review_without_import_phase(store):
     job = _job("failed")
     job.review_summary = ReviewSummary(flight_count=1, total_hours=1.0, flights=[])

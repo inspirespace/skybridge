@@ -31,6 +31,10 @@ class FakeCloudAhoy:
     def fetch_flight(self, flight_id: str, file_id: str | None = None):
         return self._details[flight_id]
 
+    def fetch_metadata(self, flight_id: str):
+        detail = self._details[flight_id]
+        return service_mod._extract_metadata(detail.raw_payload)
+
 
 class FakeFlySto:
     def __init__(self) -> None:
@@ -247,7 +251,7 @@ def test_generate_review_failure_marks_job_failed(
         def list_flights(self, limit=None):
             return [summary]
 
-        def fetch_flight(self, flight_id: str, file_id: str | None = None):
+        def fetch_metadata(self, flight_id: str):
             raise RuntimeError("boom")
 
     monkeypatch.setattr(service_mod, "_build_cloudahoy_client", lambda payload, path: BrokenCloudAhoy())
@@ -344,7 +348,7 @@ def test_accept_review_resets_cursor_when_transitioning_from_review_to_import(
     store = JobStore(tmp_path)
     job_service = JobService(store)
     job = job_service.create_job("pilot")
-    job.status = "review_ready"
+    job.status = "import_queued"
     job.review_summary = service_mod.ReviewSummary(flight_count=2, total_hours=1.5, flights=[])
     job.phase_cursor = 2
     job.phase_total = 2
@@ -355,7 +359,14 @@ def test_accept_review_resets_cursor_when_transitioning_from_review_to_import(
             percent=100,
             status="review_ready",
             created_at=datetime.now(timezone.utc),
-        )
+        ),
+        service_mod.ProgressEvent(
+            phase="import",
+            stage="Queued",
+            percent=5,
+            status="import_queued",
+            created_at=datetime.now(timezone.utc),
+        ),
     ]
     store.save_job(job)
 
@@ -403,7 +414,9 @@ def test_accept_review_resets_cursor_when_transitioning_from_review_to_import(
         "_build_cloudahoy_client",
         lambda payload, path: FakeCloudAhoy([], details),
     )
-    monkeypatch.setattr(service_mod, "_build_flysto_client", lambda payload: FakeFlySto())
+    monkeypatch.setenv("BACKEND_IMPORT_BATCH_SIZE", "2")
+    flysto = FakeFlySto()
+    monkeypatch.setattr(service_mod, "_build_flysto_client", lambda payload: flysto)
     monkeypatch.setattr(service_mod, "_maybe_wait_for_processing", lambda *_args, **_kwargs: None)
     monkeypatch.setattr(service_mod, "verify_import_report", lambda *_args, **_kwargs: {"missing": 0})
     monkeypatch.setattr(service_mod, "reconcile_aircraft_from_report", lambda *_args, **_kwargs: 0)
@@ -416,6 +429,7 @@ def test_accept_review_resets_cursor_when_transitioning_from_review_to_import(
     assert result.phase_cursor == 2
     assert result.import_report is not None
     assert result.import_report.imported_count == 2
+    assert flysto.upload_calls == ["flight-1", "flight-2"]
 
 
 def test_accept_review_loads_manifest_from_object_store_and_persists_context(

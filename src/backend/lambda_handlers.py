@@ -23,7 +23,7 @@ from .store import JobStore
 
 _logger = logging.getLogger(__name__)
 QUEUE_STALE_TIMEOUT_SECONDS = 120
-RUNNING_STALE_TIMEOUT_SECONDS = 300
+RUNNING_STALE_TIMEOUT_SECONDS = 120
 
 
 def _json_default(value: Any) -> str:
@@ -75,6 +75,11 @@ def _firestore_jobs_collection() -> str | None:
 def _credential_ttl() -> int:
     """Internal helper for credential ttl."""
     return int(os.getenv("BACKEND_CREDENTIAL_TTL") or "900")
+
+
+def _job_credential_ttl() -> int:
+    """Internal helper for reusable job credential ttl."""
+    return int(os.getenv("BACKEND_JOB_CREDENTIAL_TTL") or "21600")
 
 
 def _pubsub_topic() -> str:
@@ -274,6 +279,48 @@ def _get_credential_store():
     return _credential_store
 
 
+def _persist_job_credentials(job_id: str, credentials: dict[str, Any]) -> None:
+    """Persist reusable job-scoped credentials when supported by the store."""
+    store = _get_credential_store()
+    if hasattr(store, "store_job_credentials"):
+        store.store_job_credentials(job_id, credentials, _job_credential_ttl())
+
+
+def _load_job_credentials(job_id: str) -> dict[str, Any] | None:
+    """Load reusable job-scoped credentials when supported by the store."""
+    store = _get_credential_store()
+    if hasattr(store, "load_job_credentials"):
+        return store.load_job_credentials(job_id)
+    return None
+
+
+def _delete_job_credentials(job_id: str) -> None:
+    """Delete reusable job-scoped credentials when supported by the store."""
+    global _credential_store
+    store = _credential_store
+    if hasattr(store, "delete_job_credentials"):
+        store.delete_job_credentials(job_id)
+
+
+def _credentials_complete(credentials) -> bool:
+    """Return True when all required credential fields are present and non-empty."""
+    if credentials is None:
+        return False
+    if hasattr(credentials, "model_dump"):
+        payload = credentials.model_dump()
+    elif isinstance(credentials, dict):
+        payload = credentials
+    else:
+        return False
+    required = (
+        "cloudahoy_username",
+        "cloudahoy_password",
+        "flysto_username",
+        "flysto_password",
+    )
+    return all(isinstance(payload.get(key), str) and payload.get(key).strip() for key in required)
+
+
 def create_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     """Create job handler."""
     try:
@@ -288,15 +335,19 @@ def create_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         if any(job.status in _ACTIVE_JOB_STATUSES for job in existing_jobs):
             return _response(429, {"detail": "Job already in progress"})
         _ensure_worker_queue_ready()
+        for existing_job in existing_jobs:
+            _delete_job_credentials(str(existing_job.job_id))
         store.delete_jobs_for_user(user_id)
         job = service.create_job(user_id)
         job.start_date = payload.start_date
         job.end_date = payload.end_date
         job.max_flights = payload.max_flights
+        credentials_payload = payload.credentials.model_dump()
+        _persist_job_credentials(str(job.job_id), credentials_payload)
         token = _get_credential_store().issue(
             job_id=str(job.job_id),
             purpose="review",
-            credentials=payload.credentials.model_dump(),
+            credentials=credentials_payload,
             ttl_seconds=_credential_ttl(),
         )
         _set_queued(job, phase="review")
@@ -407,10 +458,24 @@ def accept_review_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
         _ensure_worker_queue_ready()
         body = json.loads(event.get("body") or "{}")
         payload = JobAcceptRequest.model_validate(body)
+        provided_credentials = payload.credentials.model_dump() if _credentials_complete(payload.credentials) else None
+        if provided_credentials:
+            _persist_job_credentials(str(job.job_id), provided_credentials)
+        credentials_payload = provided_credentials or _load_job_credentials(str(job.job_id))
+        if not _credentials_complete(credentials_payload):
+            return _response(
+                400,
+                {
+                    "detail": (
+                        "Import credentials are unavailable. Re-enter CloudAhoy and FlySto "
+                        "credentials in Connect Accounts and retry."
+                    )
+                },
+            )
         token = _get_credential_store().issue(
             job_id=str(job.job_id),
             purpose="import",
-            credentials=payload.credentials.model_dump(),
+            credentials=credentials_payload,
             ttl_seconds=_credential_ttl(),
         )
         _set_queued(job, phase="import")
@@ -489,6 +554,7 @@ def delete_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         job = _load_job(job_id, user_id)
         if not job:
             return _response(404, {"detail": "Job not found"})
+        _delete_job_credentials(str(job.job_id))
         _get_store().delete_job(job.job_id, user_id=user_id)
         return _response(200, {"deleted": True})
     except Exception as exc:

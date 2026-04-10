@@ -204,6 +204,34 @@ def test_list_flights_paginates_and_dedupes(monkeypatch):
     assert session.calls[1][1]["initialCall"] is False
 
 
+def test_list_flights_normalizes_numeric_ids(monkeypatch):
+    responses = [
+        {
+            "flights": [
+                {"fdID": 101, "gmtStart": 1000, "nSec": 10},
+                {"key": 202, "gmtStart": 2000, "nSec": 20},
+            ],
+            "more": False,
+        }
+    ]
+    session = FakeSession(responses)
+
+    def fake_login(base_url: str, email: str, password: str):
+        return session, {"EMAIL3": "e", "SID3": "s", "USER3": "u"}
+
+    monkeypatch.setattr("src.core.cloudahoy.client._login", fake_login)
+
+    client = CloudAhoyClient(
+        api_key=None,
+        base_url="https://www.cloudahoy.com/api",
+        email="user",
+        password="pass",
+        exports_dir=None,  # type: ignore[arg-type]
+    )
+    flights = client.list_flights()
+    assert [flight.id for flight in flights] == ["101", "202"]
+
+
 def test_fetch_flight_exports_files(tmp_path, monkeypatch):
     payload = {
         "flt": {

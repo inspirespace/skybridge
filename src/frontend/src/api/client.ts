@@ -102,7 +102,7 @@ export type JobCreatePayload = {
 
 /** Type JobAcceptPayload. */
 export type JobAcceptPayload = {
-  credentials: CredentialsPayload;
+  credentials?: CredentialsPayload | null;
 };
 
 /** Type JobListResponse. */

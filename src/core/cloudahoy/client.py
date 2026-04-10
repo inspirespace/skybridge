@@ -73,8 +73,8 @@ class CloudAhoyClient:
         summaries: list[FlightSummary] = []
         seen: set[str] = set()
         for flight in flights[: limit or len(flights)]:
-            flight_key = flight.get("key")
-            flight_fdid = flight.get("fdID")
+            flight_key = _normalize_identifier(flight.get("key"))
+            flight_fdid = _normalize_identifier(flight.get("fdID"))
             flight_id = flight_key or flight_fdid
             if not flight_id or flight_id in seen:
                 continue
@@ -247,7 +247,9 @@ class CloudAhoyClient:
         """Handle fetch metadata."""
         data = self._fetch_raw(flight_id)
         flt = data.get("flt", {})
-        return _extract_metadata(flt)
+        metadata = _extract_metadata(flt)
+        data.clear()
+        return metadata
 
     def _fetch_raw(self, flight_id: str) -> dict:
         """Internal helper for fetch raw."""
@@ -269,6 +271,17 @@ def _csv_suffix(export_format: str) -> str:
         return ""
     safe = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in export_format)
     return f".{safe}"
+
+
+def _normalize_identifier(value: object) -> str | None:
+    """Normalize external identifiers to stable non-empty strings."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        normalized = value.strip()
+    else:
+        normalized = str(value).strip()
+    return normalized or None
 
 
 def _login(base_url: str, email: str, password: str) -> tuple[requests.Session, dict]:

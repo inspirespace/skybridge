@@ -41,8 +41,29 @@ describe("deriveFlowState", () => {
       missing_tail_numbers: 0,
       flights: [],
     };
+    job.progress_log = [
+      {
+        phase: "import",
+        stage: "Queued",
+        status: "import_queued",
+        created_at: "2026-01-01T10:05:00Z",
+      },
+    ];
     const state = deriveFlowState(true, job);
     expect(state.reviewStatus).toBe("complete");
+    expect(state.importStatus).toBe("failed");
+  });
+
+  it("keeps review failed when the review itself failed", () => {
+    const job = baseJob("failed");
+    job.review_summary = {
+      flight_count: 1,
+      total_hours: 1,
+      missing_tail_numbers: 0,
+      flights: [],
+    };
+    const state = deriveFlowState(true, job);
+    expect(state.reviewStatus).toBe("failed");
     expect(state.importStatus).toBe("idle");
   });
 

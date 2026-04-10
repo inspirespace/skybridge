@@ -22,9 +22,26 @@ fi
 mkdir -p "${NPM_CACHE_DIR}"
 
 run_install() {
+  install_strategy="$1"
   NPM_CONFIG_CACHE="${NPM_CACHE_DIR}" \
   NPM_CONFIG_UPDATE_NOTIFIER="${NPM_UPDATE_NOTIFIER}" \
-    npm --prefix "${FRONTEND_DIR}" ci --install-strategy=nested --no-audit --fund=false
+    npm --prefix "${FRONTEND_DIR}" ci --install-strategy="${install_strategy}" --no-audit --fund=false
+}
+
+verify_install() {
+  missing=0
+  for required_path in \
+    "${FRONTEND_DIR}/node_modules/lucide-react/package.json" \
+    "${FRONTEND_DIR}/node_modules/lucide-react/dist/esm/lucide-react.js" \
+    "${FRONTEND_DIR}/node_modules/react-day-picker/package.json" \
+    "${FRONTEND_DIR}/node_modules/react/package.json" \
+    "${FRONTEND_DIR}/node_modules/typescript/package.json"; do
+    if [ ! -e "${required_path}" ]; then
+      echo "Frontend npm install is missing required file: ${required_path}" >&2
+      missing=1
+    fi
+  done
+  [ "${missing}" -eq 0 ]
 }
 
 print_latest_npm_logs() {
@@ -44,18 +61,18 @@ print_latest_npm_logs() {
 }
 
 echo "Installing frontend dependencies (attempt 1/2)..."
-if run_install; then
+if run_install nested && verify_install; then
   exit 0
 fi
 
-echo "Frontend npm install failed on first attempt; cleaning cache and retrying..." >&2
+echo "Frontend npm install failed validation on first attempt; cleaning cache and retrying with hoisted strategy..." >&2
 rm -rf "${FRONTEND_DIR}/node_modules"
 NPM_CONFIG_CACHE="${NPM_CACHE_DIR}" \
 NPM_CONFIG_UPDATE_NOTIFIER="${NPM_UPDATE_NOTIFIER}" \
   npm cache clean --force >/dev/null 2>&1 || true
 
 echo "Installing frontend dependencies (attempt 2/2)..."
-if run_install; then
+if run_install hoisted && verify_install; then
   exit 0
 fi
 

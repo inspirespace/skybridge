@@ -47,7 +47,7 @@ class JobCreateRequest(BaseModel):
 
 class JobAcceptRequest(BaseModel):
     """Represents JobAcceptRequest."""
-    credentials: CredentialPayload
+    credentials: Optional[CredentialPayload] = None
 
 
 class FlightSummary(BaseModel):

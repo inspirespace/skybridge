@@ -61,12 +61,10 @@ class JobService:
 
     def _materialize_json_artifact(self, job_id: UUID, artifact_name: str, target_path: Path) -> bool:
         """Restore a JSON artifact onto local disk when needed."""
-        if target_path.exists():
-            return True
         try:
             payload = self._store.load_artifact(job_id, artifact_name)
         except FileNotFoundError:
-            return False
+            return target_path.exists()
         target_path.parent.mkdir(parents=True, exist_ok=True)
         target_path.write_text(json.dumps(payload, indent=2))
         return True
@@ -92,11 +90,8 @@ class JobService:
             job_dir = self._store.job_dir(job_id)
             work_dir = job_dir / "work"
             exports_dir = work_dir / "cloudahoy_exports"
-            state_path = job_dir / "migration.db"
-            self._store.materialize_artifact_file(job_id, "migration.db", state_path)
             cloudahoy = _build_cloudahoy_client(payload, exports_dir)
-            state = MigrationState(state_path)
-            batch_size = max(1, _int_env("BACKEND_REVIEW_BATCH_SIZE", 5))
+            batch_size = max(1, _int_env("BACKEND_REVIEW_BATCH_SIZE", 1))
 
             job.status = "review_running"
             job.error_message = None
@@ -135,7 +130,6 @@ class JobService:
                 job.review_id = review_id
                 job.phase_cursor = 0
                 job.phase_total = len(manifest_items)
-                job.review_summary = _build_review_summary_from_rows([])
                 self._store.save_job(job)
 
             review_payload = self._store.load_artifact(job_id, REVIEW_MANIFEST_ARTIFACT)
@@ -164,8 +158,7 @@ class JobService:
                 )
                 self._store.save_job(job)
 
-                detail = cloudahoy.fetch_flight(summary.id, file_id=item.get("fd_id"))
-                metadata = _extract_metadata(detail.raw_payload)
+                metadata = cloudahoy.fetch_metadata(summary.id)
                 row = _build_review_row(summary, metadata)
                 flights_payload["review_id"] = job.review_id
                 flights_payload["count"] = total_summaries
@@ -175,7 +168,6 @@ class JobService:
                 manifest_items = review_payload["items"]
                 self._store.write_artifact(job_id, REVIEW_FLIGHTS_ARTIFACT, flights_payload)
                 self._store.write_artifact(job_id, REVIEW_MANIFEST_ARTIFACT, review_payload)
-                _upload_detail_artifacts(self._store, job_id, detail)
 
                 job.phase_cursor = index + 1
                 _touch_heartbeat(job)
@@ -250,17 +242,17 @@ class JobService:
             self._materialize_json_artifact(job_id, IMPORT_CONTEXT_ARTIFACT, context_path)
             review_id = review_payload.get("review_id")
             summaries = _sort_import_summaries(_summaries_from_review(review_payload))
-            last_phase = _last_progress_phase(job)
+            import_started = _has_started_import(job)
 
             cloudahoy = _build_cloudahoy_client(payload, exports_dir)
             flysto = _build_flysto_client(payload)
             state = MigrationState(state_path)
-            batch_size = max(1, _int_env("BACKEND_IMPORT_BATCH_SIZE", 3))
+            batch_size = max(1, _int_env("BACKEND_IMPORT_BATCH_SIZE", 1))
 
             job.status = "import_running"
             job.error_message = None
             _touch_heartbeat(job)
-            if last_phase != "import":
+            if not import_started:
                 job.phase_cursor = 0
                 job.phase_total = len(summaries)
             elif job.phase_total is None or job.phase_total != len(summaries):
@@ -299,6 +291,7 @@ class JobService:
                 self._store.save_job(job)
 
                 detail = cloudahoy.fetch_flight(summary.id)
+                _upload_detail_artifacts(self._store, job_id, detail)
                 file_hash = _hash_file(detail.file_path)
                 csv_hash = _hash_file(detail.csv_path)
                 metadata_hash = _hash_file(detail.metadata_path)
@@ -469,7 +462,7 @@ class JobService:
 def _summary_manifest_item(summary: CoreFlightSummary) -> dict[str, object]:
     """Create a slim manifest item that is safe to persist in Firestore-backed jobs."""
     return {
-        "flight_id": summary.id,
+        "flight_id": _normalize_flight_id(summary.id),
         "started_at": summary.started_at.isoformat() if isinstance(summary.started_at, datetime) else None,
         "duration_seconds": summary.duration_seconds,
         "aircraft_type": summary.aircraft_type,
@@ -482,7 +475,7 @@ def _compute_manifest_review_id(items: list[dict[str, object]]) -> str:
     """Compute a stable review id from the slim review manifest."""
     payload = [
         {
-            "flight_id": item.get("flight_id"),
+            "flight_id": _normalize_flight_id(item.get("flight_id")),
             "started_at": item.get("started_at"),
             "duration_seconds": item.get("duration_seconds"),
         }
@@ -501,7 +494,7 @@ def _summary_from_manifest_item(item: dict[str, object]) -> CoreFlightSummary:
         except ValueError:
             started_at = None
     return CoreFlightSummary(
-        id=str(item.get("flight_id") or ""),
+        id=_normalize_flight_id(item.get("flight_id")) or "",
         started_at=started_at or _now(),
         duration_seconds=item.get("duration_seconds") if isinstance(item.get("duration_seconds"), int) else None,
         aircraft_type=item.get("aircraft_type") if isinstance(item.get("aircraft_type"), str) else None,
@@ -573,13 +566,14 @@ def _load_json_payload(store: JobStore, job_id: UUID, artifact_name: str, defaul
 def _upsert_by_flight_id(items: object, payload: dict[str, object]) -> list[dict[str, object]]:
     """Replace or append a flight keyed payload while preserving order."""
     rows = [item for item in items if isinstance(item, dict)] if isinstance(items, list) else []
-    flight_id = payload.get("flight_id")
-    if not isinstance(flight_id, str) or not flight_id:
+    flight_id = _normalize_flight_id(payload.get("flight_id"))
+    if not flight_id:
         return rows
+    payload = {**payload, "flight_id": flight_id}
     updated: list[dict[str, object]] = []
     replaced = False
     for item in rows:
-        if item.get("flight_id") == flight_id:
+        if _normalize_flight_id(item.get("flight_id")) == flight_id:
             updated.append(payload)
             replaced = True
         else:
@@ -727,11 +721,36 @@ def _sort_import_summaries(summaries: list[CoreFlightSummary]) -> list[CoreFligh
     )
 
 
+def _normalize_flight_id(value: object) -> str | None:
+    """Normalize persisted flight ids to stable strings."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        normalized = value.strip()
+    else:
+        normalized = str(value).strip()
+    return normalized or None
+
+
 def _last_progress_phase(job: JobRecord) -> str | None:
     """Return the last recorded progress phase for the job."""
     if not job.progress_log:
         return None
     return job.progress_log[-1].phase
+
+
+def _has_started_import(job: JobRecord) -> bool:
+    """Return True once the import phase has done more than queue handoff."""
+    for event in job.progress_log or []:
+        phase = getattr(event, "phase", None)
+        if phase != "import":
+            continue
+        stage = getattr(event, "stage", None)
+        status = getattr(event, "status", None)
+        if status == "import_queued" and stage == "Queued":
+            continue
+        return True
+    return False
 
 
 def _format_import_tag_value() -> str:
@@ -857,8 +876,8 @@ def _summaries_from_review(payload: dict) -> list[CoreFlightSummary]:
     for item in items:
         if not isinstance(item, dict):
             continue
-        flight_id = item.get("flight_id")
-        if not isinstance(flight_id, str) or not flight_id:
+        flight_id = _normalize_flight_id(item.get("flight_id"))
+        if not flight_id:
             continue
         started_at = None
         started_raw = item.get("started_at")

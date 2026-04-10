@@ -305,6 +305,6 @@ describe("App UI flows", () => {
       fireEvent.click(retryImport);
     });
 
-    expect(acceptReview).toHaveBeenCalled();
+    expect(acceptReview).toHaveBeenCalledWith("job-123", {}, { token: "token" });
   });
 });
