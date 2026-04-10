@@ -519,16 +519,18 @@ export function useFirebaseAuth({
   );
 
   const startEmailLink = React.useCallback(
-    async (email: string): Promise<string | null> => {
-      if (!enabled) return null;
+    async (
+      email: string
+    ): Promise<{ sent: boolean; linkUrl: string | null }> => {
+      if (!enabled) return { sent: false, linkUrl: null };
       const auth = authRef.current;
       if (!auth) {
         onError?.("Auth is not ready yet.");
-        return null;
+        return { sent: false, linkUrl: null };
       }
       if (!email) {
         onError?.("Enter a valid email address.");
-        return null;
+        return { sent: false, linkUrl: null };
       }
       onLoadingChange?.(true);
       try {
@@ -545,20 +547,20 @@ export function useFirebaseAuth({
             : "";
         if (!redirectUrl) {
           onError?.("Email link sign-in is unavailable in this environment.");
-          return null;
+          return { sent: false, linkUrl: null };
         }
         if (useEmulator) {
           const link = await buildEmulatorEmailLink(email, redirectUrl);
-          return link;
+          return { sent: true, linkUrl: link };
         }
         await sendSignInLinkToEmail(auth, email, {
           url: redirectUrl,
           handleCodeInApp: true,
         });
-        return null;
+        return { sent: true, linkUrl: null };
       } catch (err) {
         onError?.(err instanceof Error ? err.message : "Failed to send sign-in link");
-        return null;
+        return { sent: false, linkUrl: null };
       } finally {
         onLoadingChange?.(false);
       }

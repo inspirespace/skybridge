@@ -77,33 +77,71 @@ const JOB_ID_KEY = "skybridge_job_id";
 const OPEN_STEP_KEY = "skybridge_open_step";
 const EMAIL_LINK_EMAIL_KEY = "skybridge_email_link_email";
 
+const readStorageValue = (
+  storage: Pick<Storage, "getItem"> | undefined,
+  key: string
+) => {
+  if (!storage) return null;
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const writeStorageValue = (
+  storage: Pick<Storage, "setItem"> | undefined,
+  key: string,
+  value: string
+) => {
+  if (!storage) return;
+  try {
+    storage.setItem(key, value);
+  } catch {
+    // Storage access can be blocked by browser privacy settings.
+  }
+};
+
+const removeStorageValue = (
+  storage: Pick<Storage, "removeItem"> | undefined,
+  key: string
+) => {
+  if (!storage) return;
+  try {
+    storage.removeItem(key);
+  } catch {
+    // Storage access can be blocked by browser privacy settings.
+  }
+};
+
 const readSessionValue = (key: string) =>
-  typeof window !== "undefined" ? sessionStorage.getItem(key) : null;
+  typeof window !== "undefined" ? readStorageValue(window.sessionStorage, key) : null;
 const setSessionValue = (key: string, value: string) => {
   if (typeof window === "undefined") return;
-  sessionStorage.setItem(key, value);
+  writeStorageValue(window.sessionStorage, key, value);
 };
 const removeSessionValue = (key: string) => {
   if (typeof window === "undefined") return;
-  sessionStorage.removeItem(key);
+  removeStorageValue(window.sessionStorage, key);
 };
 const readEmailLinkEmail = () => {
   if (typeof window === "undefined") return null;
   return (
-    sessionStorage.getItem(EMAIL_LINK_EMAIL_KEY) ||
-    window.localStorage?.getItem(EMAIL_LINK_EMAIL_KEY) ||
+    readStorageValue(window.sessionStorage, EMAIL_LINK_EMAIL_KEY) ||
+    readStorageValue(window.localStorage, EMAIL_LINK_EMAIL_KEY) ||
+    new URLSearchParams(window.location.search).get("email") ||
     null
   );
 };
 const setEmailLinkEmail = (email: string) => {
   if (typeof window === "undefined") return;
-  sessionStorage.setItem(EMAIL_LINK_EMAIL_KEY, email);
-  window.localStorage?.setItem(EMAIL_LINK_EMAIL_KEY, email);
+  writeStorageValue(window.sessionStorage, EMAIL_LINK_EMAIL_KEY, email);
+  writeStorageValue(window.localStorage, EMAIL_LINK_EMAIL_KEY, email);
 };
 const clearEmailLinkEmail = () => {
   if (typeof window === "undefined") return;
-  sessionStorage.removeItem(EMAIL_LINK_EMAIL_KEY);
-  window.localStorage?.removeItem(EMAIL_LINK_EMAIL_KEY);
+  removeStorageValue(window.sessionStorage, EMAIL_LINK_EMAIL_KEY);
+  removeStorageValue(window.localStorage, EMAIL_LINK_EMAIL_KEY);
 };
 
 /** Render App component. */
@@ -466,12 +504,15 @@ export default function App() {
       setActionError({ scope: "sign-in", message: "Enter a valid email address." });
       return;
     }
+    const result = await startFirebaseEmailLink(email);
+    if (!result?.sent) return;
     setEmailLinkEmail(email);
-    const link = await startFirebaseEmailLink(email);
-    setEmailLinkNotice(`We sent a sign-in link to ${email}.`);
-    if (link) {
-      setEmailLinkUrl(link);
-    }
+    setEmailLinkNotice(
+      result.linkUrl
+        ? `Emulator sign-in link is ready for ${email}.`
+        : `Check ${email} for your sign-in link. If it does not arrive within a minute, check spam/junk and try again.`
+    );
+    setEmailLinkUrl(result.linkUrl);
   }, [emailAddress, startFirebaseEmailLink]);
 
   const handleEmailLinkComplete = React.useCallback(async () => {

@@ -31,7 +31,7 @@ function firebaseAuthState(overrides: Record<string, unknown> = {}) {
     accessToken: null,
     idToken: null,
     startLogin: vi.fn(),
-    startEmailLink: vi.fn(),
+    startEmailLink: vi.fn(async () => ({ sent: true, linkUrl: null })),
     completeEmailLink: vi.fn(),
     isAnonymous: false,
     emulatorProvider: null,

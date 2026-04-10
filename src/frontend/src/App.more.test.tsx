@@ -31,7 +31,7 @@ function firebaseAuthState(overrides: Record<string, unknown> = {}) {
     accessToken: "token",
     idToken: null,
     startLogin: vi.fn(),
-    startEmailLink: vi.fn(),
+    startEmailLink: vi.fn(async () => ({ sent: true, linkUrl: null })),
     completeEmailLink: vi.fn(),
     isAnonymous: false,
     emulatorProvider: null,
@@ -85,6 +85,87 @@ afterEach(() => {
 });
 
 describe("App UI flows", () => {
+  it("shows inbox guidance only after the email-link request succeeds", async () => {
+    const startEmailLink = vi.fn(async () => ({ sent: true, linkUrl: null }));
+    vi.mocked(useFirebaseAuth).mockReturnValue(
+      firebaseAuthState({
+        accessToken: null,
+        startEmailLink,
+      })
+    );
+    vi.mocked(useJobSnapshot).mockReturnValue(jobSnapshotState());
+
+    render(<App />);
+
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/passwordless email link/i), {
+        target: { value: "pilot@example.com" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /send link/i }));
+    });
+
+    expect(startEmailLink).toHaveBeenCalledWith("pilot@example.com");
+    expect(
+      await screen.findByText(/check pilot@example.com for your sign-in link/i)
+    ).toBeInTheDocument();
+  });
+
+  it("still sends the email link when browser storage writes are blocked", async () => {
+    const startEmailLink = vi.fn(async () => ({ sent: true, linkUrl: null }));
+    const setItemSpy = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(() => {
+        throw new DOMException("Storage blocked", "SecurityError");
+      });
+    vi.mocked(useFirebaseAuth).mockReturnValue(
+      firebaseAuthState({
+        accessToken: null,
+        startEmailLink,
+      })
+    );
+    vi.mocked(useJobSnapshot).mockReturnValue(jobSnapshotState());
+
+    render(<App />);
+
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/passwordless email link/i), {
+        target: { value: "pilot@example.com" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /send link/i }));
+    });
+
+    expect(startEmailLink).toHaveBeenCalledWith("pilot@example.com");
+    expect(
+      await screen.findByText(/check pilot@example.com for your sign-in link/i)
+    ).toBeInTheDocument();
+    setItemSpy.mockRestore();
+  });
+
+  it("does not show a success notice when Firebase rejects the email-link request", async () => {
+    const startEmailLink = vi.fn(async () => ({ sent: false, linkUrl: null }));
+    vi.mocked(useFirebaseAuth).mockReturnValue(
+      firebaseAuthState({
+        accessToken: null,
+        startEmailLink,
+      })
+    );
+    vi.mocked(useJobSnapshot).mockReturnValue(jobSnapshotState());
+
+    render(<App />);
+
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/passwordless email link/i), {
+        target: { value: "pilot@example.com" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /send link/i }));
+    });
+
+    expect(startEmailLink).toHaveBeenCalledWith("pilot@example.com");
+    expect(
+      screen.queryByText(/check pilot@example.com for your sign-in link/i)
+    ).not.toBeInTheDocument();
+  });
+
   it("returns to connect step immediately while edit-filter delete is in flight", async () => {
     sessionStorage.setItem(JOB_ID_KEY, "job-123");
 
