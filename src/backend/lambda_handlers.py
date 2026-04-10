@@ -401,6 +401,7 @@ def accept_review_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
                 job.status == "failed"
                 and job.review_summary is not None
                 and review_manifest_available
+                and has_import_events
             ):
                 return _response(409, {"detail": "Review not ready"})
         _ensure_worker_queue_ready()

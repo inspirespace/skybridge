@@ -187,6 +187,28 @@ def test_accept_review_handler_enqueues(store, monkeypatch: pytest.MonkeyPatch):
     assert seen["enqueued"] is True
 
 
+def test_accept_review_handler_rejects_failed_review_without_import_phase(store):
+    job = _job("failed")
+    job.review_summary = ReviewSummary(flight_count=1, total_hours=1.0, flights=[])
+    store.save_job(job)
+    store.write_artifact(job.job_id, "review.json", {"review_id": "review-1", "items": []})
+
+    payload = {
+        "credentials": {
+            "cloudahoy_username": "pilot",
+            "cloudahoy_password": "secret",
+            "flysto_username": "pilot",
+            "flysto_password": "secret",
+        }
+    }
+    response = handlers.accept_review_handler(
+        _event("pilot", payload, job_id=str(job.job_id)),
+        None,
+    )
+
+    assert response["statusCode"] == 409
+
+
 def test_get_job_handler_marks_stale_queued_job_failed(store, monkeypatch: pytest.MonkeyPatch):
     job = _job("review_queued")
     job.updated_at = datetime.now(timezone.utc) - timedelta(minutes=10)
@@ -287,6 +309,15 @@ def test_accept_review_handler_allows_failed_retry_with_remote_review_manifest(
 
     job = _job("failed")
     job.review_summary = ReviewSummary(flight_count=0, total_hours=0.0, flights=[])
+    job.progress_log = [
+        handlers.ProgressEvent(
+            phase="import",
+            stage="Import failed",
+            percent=42,
+            status="failed",
+            created_at=datetime.now(timezone.utc),
+        )
+    ]
     store.save_job(job)
     object_store.put_json(
         object_store.key_for(job.user_id, str(job.job_id), "review.json"),

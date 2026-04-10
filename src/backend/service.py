@@ -250,6 +250,7 @@ class JobService:
             self._materialize_json_artifact(job_id, IMPORT_CONTEXT_ARTIFACT, context_path)
             review_id = review_payload.get("review_id")
             summaries = _sort_import_summaries(_summaries_from_review(review_payload))
+            last_phase = _last_progress_phase(job)
 
             cloudahoy = _build_cloudahoy_client(payload, exports_dir)
             flysto = _build_flysto_client(payload)
@@ -259,7 +260,10 @@ class JobService:
             job.status = "import_running"
             job.error_message = None
             _touch_heartbeat(job)
-            if job.phase_total is None or job.phase_total != len(summaries):
+            if last_phase != "import":
+                job.phase_cursor = 0
+                job.phase_total = len(summaries)
+            elif job.phase_total is None or job.phase_total != len(summaries):
                 job.phase_total = len(summaries)
                 if job.phase_cursor is None:
                     job.phase_cursor = 0
@@ -723,6 +727,13 @@ def _sort_import_summaries(summaries: list[CoreFlightSummary]) -> list[CoreFligh
     )
 
 
+def _last_progress_phase(job: JobRecord) -> str | None:
+    """Return the last recorded progress phase for the job."""
+    if not job.progress_log:
+        return None
+    return job.progress_log[-1].phase
+
+
 def _format_import_tag_value() -> str:
     """Build the import tag timestamp once per migration event."""
     return _now().strftime("%Y-%m-%dT%H:%MZ")
@@ -830,7 +841,9 @@ def _summaries_for_range(
     """Internal helper for summaries for range."""
     if not start_date and not end_date:
         return None
-    summaries = cloudahoy.list_flights(limit=max_flights)
+    # Apply max_flights only after date filtering; limiting the upstream list first
+    # can drop in-range flights that are older than the first fetched page/window.
+    summaries = cloudahoy.list_flights(limit=None)
     start_bound = _parse_date_bound(start_date, is_end=False) if start_date else None
     end_bound = _parse_date_bound(end_date, is_end=True) if end_date else None
     filtered = _filter_summaries_by_date(summaries, start_bound, end_bound)

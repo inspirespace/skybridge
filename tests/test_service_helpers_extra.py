@@ -46,6 +46,29 @@ def test_summaries_for_range_filters():
     assert [item.id for item in filtered] == ["A2"]
 
 
+def test_summaries_for_range_applies_max_after_date_filtering():
+    summaries = [
+        FlightSummary("A1", datetime(2026, 1, 5, tzinfo=timezone.utc), None, None, None),
+        FlightSummary("A2", datetime(2026, 1, 4, tzinfo=timezone.utc), None, None, None),
+        FlightSummary("A3", datetime(2026, 1, 3, tzinfo=timezone.utc), None, None, None),
+    ]
+    seen_limits: list[int | None] = []
+
+    class DummyCloudAhoy:
+        def list_flights(self, limit=None):
+            seen_limits.append(limit)
+            if limit is None:
+                return summaries
+            return summaries[:limit]
+
+    filtered = service._summaries_for_range(
+        DummyCloudAhoy(), "2026-01-03", "2026-01-04", max_flights=1
+    )
+
+    assert seen_limits == [None]
+    assert [item.id for item in filtered] == ["A2"]
+
+
 def test_build_review_summary_and_locations():
     items = [
         SimpleNamespace(
