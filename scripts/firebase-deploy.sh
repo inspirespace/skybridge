@@ -634,11 +634,14 @@ Firebase Auth manual setup overview for project ${project_for_domains}:
      - Enable "Email/Password"
      - Enable "Email link (passwordless sign-in)"
      - Console: https://console.firebase.google.com/project/${PROJECT_ID}/authentication/providers
-  2) Email template branding (required for friendly app naming):
+  2) Email template branding + sender domain:
      - Open the "Email address sign-in" template in Firebase Console
      - Prerequisite: enable Google sign-in provider to unlock "Public-facing name"
      - Set sender/app display name to "${app_name}" (or your preferred friendly name)
      - Update subject/body copy so emails say your brand instead of project ids
+     - Recommended for production: click "Customize domain" and verify a dedicated sender subdomain
+     - Add the exact DNS records Firebase shows at your DNS provider (typically TXT + DKIM CNAME records)
+     - Wait for Firebase verification to complete; Console notes this can take up to 48 hours
      - Console: https://console.firebase.google.com/project/${PROJECT_ID}/authentication/templates
   3) Authorized domains for email-link continueUrl (required):
      - Ensure these are present in Authentication -> Settings:

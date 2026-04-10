@@ -114,7 +114,7 @@ VS Code equivalent:
 First deploy behavior (out of the box):
 - If you are not logged in, the script prompts and runs `firebase login --reauth`.
 - If frontend Firebase web config is missing, deploy preflight auto-resolves it from Firebase web app config (and creates a WEB app when required).
-- In Firebase auth mode (non-emulator), deploy preflight prints a manual Firebase Auth setup overview (sign-in method, email template branding, authorized domains).
+- In Firebase auth mode (non-emulator), deploy preflight prints a manual Firebase Auth setup overview (sign-in method, email template branding, custom sender domain, authorized domains).
 
 Deploy preflight note:
 - Deploy script validates required local/devcontainer CLI tools first (`firebase`, `npm`, `node`, `curl`, `awk`, `sed`, `grep`, `find`) and fails fast with explicit missing-tool output.
@@ -124,6 +124,7 @@ Deploy preflight note:
 - If your project has multiple Firebase web apps, set `FIREBASE_WEB_APP_ID` to force which app is used for SDK config resolution during deploy preflight.
 - In `firebase` auth mode without emulator, deploy preflight verifies passwordless email-link provider config (`signIn.email.enabled=true`, `signIn.email.passwordRequired=false`) when `FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN=1` (default).
 - Deploy preflight does not auto-patch Firebase Auth templates or project display name. Configure friendly app/template names in Firebase Console.
+- Deploy preflight also does not configure the Firebase Auth custom sender domain for emails. Set that manually in **Authentication -> Templates -> Email address sign-in -> Customize domain**, add the Firebase-provided DNS records at your DNS provider, and wait for verification.
 - Firebase Console currently requires Google sign-in provider to be enabled before the Auth template "Public-facing name" can be edited.
 - Auth provider verification uses either Google ADC (`GOOGLE_APPLICATION_CREDENTIALS`) or Firebase CLI login token cache (`firebase login`). In CI this is enforced; local runs warn and continue only when neither source is available.
 - Deploy preflight also verifies Firebase Auth `authorizedDomains` for email-link `continueUrl` hosts. Custom Hosting domains are enforced as required; default project domains are treated as best-effort (warning-only) because Firebase may allow them implicitly without listing them in API output. Add explicit domains via `FIREBASE_AUTHORIZED_DOMAINS` (comma-separated) when needed.

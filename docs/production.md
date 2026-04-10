@@ -34,7 +34,7 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - Deploy preflight (`scripts/firebase-deploy.sh`) fails fast if required Firebase web config is missing in non-emulator Firebase mode and will attempt best-effort auto-resolution from `firebase apps:sdkconfig` (first WEB app in the project).
 - Optional: set `FIREBASE_WEB_APP_ID` to force which Firebase WEB app deploy preflight should use for sdkconfig lookup.
 - Deploy preflight also validates passwordless email-link sign-in mode (`signIn.email.enabled=true`, `signIn.email.passwordRequired=false`) when `FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN=1` (default).
-- Deploy preflight prints a manual Firebase Auth setup overview (sign-in method, email template branding name, authorized domains) and keeps template naming/configuration manual in Firebase Console.
+- Deploy preflight prints a manual Firebase Auth setup overview (sign-in method, email template branding name, custom sender domain, authorized domains) and keeps template naming/configuration manual in Firebase Console.
 - Firebase Console currently requires Google sign-in provider to be enabled before Auth template "Public-facing name" can be edited.
 - Optional: `FIREBASE_AUTH_EMAIL_APP_NAME` sets the friendly app name shown in that setup overview (default `Skybridge`).
 - Auth preflight verification uses Google ADC (`GOOGLE_APPLICATION_CREDENTIALS`) and falls back to Firebase CLI login token cache.
@@ -62,6 +62,23 @@ Notes:
 - Keep `VITE_API_BASE_URL` as `/api` (or, if overridden, point it at the same Firebase Hosting domain users access).
 - Firebase Hosting is global CDN-backed; there is no dedicated EU-only Hosting region setting.
 
+## Custom email sender domain (Firebase Auth templates)
+Firebase Auth email template sender domains are also configured manually in the Firebase console; `firebase deploy` does not create or verify them.
+
+1. Open Firebase Console: **Authentication -> Templates**.
+2. Open **Email address sign-in** (or another Auth email template you use) and click **Customize domain**.
+3. Enter a dedicated sender subdomain you control, for example `auth.example.com` or `mail.example.com`.
+4. Add the DNS records Firebase shows at your DNS provider.
+   - Firebase generates the exact records per project/domain.
+   - Expect a mix of TXT records (SPF + Firebase verification) and DKIM CNAME records.
+5. Wait for Firebase verification to complete. The Console warns this can take up to 48 hours.
+6. After verification, keep that sender domain selected for your Auth email templates.
+
+Notes:
+- This is separate from **Authentication -> Settings -> Authorized domains** used for email-link `continueUrl` hosts.
+- This is also separate from the Firebase Hosting custom domain for your app site.
+- Use a dedicated mail/auth subdomain instead of reusing the same host that serves your app.
+
 ## Storage lifecycle rule
 Job artifacts must expire automatically. Apply a lifecycle rule to your storage bucket:
 - Example JSON: `docs/firebase-storage-lifecycle.json`
@@ -81,6 +98,7 @@ Job artifacts must expire automatically. Apply a lifecycle rule to your storage 
 - Enable Email/Password and Email link (passwordless) in **Authentication -> Sign-in method**.
 - Enable Google sign-in provider if you need to edit **Public-facing name** in Auth email templates.
 - Set a friendly sender/app name and subject/body copy in **Authentication -> Templates -> Email address sign-in** (for example `Skybridge`).
+- For branded production emails, also configure **Authentication -> Templates -> Email address sign-in -> Customize domain** and complete the DNS verification in your DNS provider.
 - Add all continue-url hostnames in **Authentication -> Settings -> Authorized domains** (including custom Hosting domains).
 - Keep the Hosting CSP compatible with Firebase Auth helpers on custom domains: allow the auth iframe domains (`https://*.firebaseapp.com`, `https://*.web.app`) plus Google helper/recaptcha origins used by `/__/auth/*` (`https://apis.google.com`, `https://www.google.com`, `https://www.gstatic.com`).
 
