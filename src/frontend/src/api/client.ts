@@ -33,6 +33,13 @@ export type ReviewSummary = {
   flights: FlightSummary[];
 };
 
+/** Type ReviewFlightsArtifact. */
+export type ReviewFlightsArtifact = {
+  review_id?: string | null;
+  count?: number | null;
+  items: FlightSummary[];
+};
+
 /** Type ImportReport. */
 export type ImportReport = {
   imported_count: number;
@@ -57,9 +64,12 @@ export type JobRecord = {
   status: JobStatus;
   created_at: string;
   updated_at: string;
+  heartbeat_at?: string | null;
   progress_percent?: number | null;
   progress_stage?: string | null;
   progress_log?: ProgressEvent[];
+  phase_cursor?: number | null;
+  phase_total?: number | null;
   review_id?: string | null;
   start_date?: string | null;
   end_date?: string | null;
@@ -271,8 +281,8 @@ export async function listArtifacts(jobId: string, auth: AuthContext) {
   return requestJson<ArtifactListResponse>(`/jobs/${jobId}/artifacts`, { auth });
 }
 
-export async function fetchArtifact(jobId: string, name: string, auth: AuthContext) {
-  return requestJson<Record<string, unknown>>(
+export async function fetchArtifact<T = Record<string, unknown>>(jobId: string, name: string, auth: AuthContext) {
+  return requestJson<T>(
     `/jobs/${jobId}/artifacts/${name}`,
     { auth }
   );

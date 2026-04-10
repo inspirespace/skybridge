@@ -23,6 +23,7 @@ from .store import JobStore
 
 _logger = logging.getLogger(__name__)
 QUEUE_STALE_TIMEOUT_SECONDS = 120
+RUNNING_STALE_TIMEOUT_SECONDS = 300
 
 
 def _json_default(value: Any) -> str:
@@ -134,18 +135,52 @@ def _mark_enqueue_failed(job, *, phase: str, detail: str) -> None:
     _get_store().save_job(job)
 
 
-def _fail_stale_queued_job(job):
-    """Mark jobs failed when Firebase worker delivery never starts."""
-    purpose = "review" if job.status == "review_queued" else "import" if job.status == "import_queued" else None
+def _running_stale_timeout_seconds() -> int:
+    value = os.getenv("BACKEND_RUNNING_STALE_TIMEOUT_SECONDS")
+    if not value:
+        return RUNNING_STALE_TIMEOUT_SECONDS
+    try:
+        return int(value)
+    except ValueError:
+        return RUNNING_STALE_TIMEOUT_SECONDS
+
+
+def _job_phase(job) -> str | None:
+    if job.status.startswith("review"):
+        return "review"
+    if job.status.startswith("import"):
+        return "import"
+    return None
+
+
+def _fail_stale_job(job):
+    """Mark queued or running jobs failed when the worker stops making progress."""
+    purpose = _job_phase(job)
     if not purpose:
         return job
-    timeout_seconds = QUEUE_STALE_TIMEOUT_SECONDS
-    age_seconds = (datetime.now(timezone.utc) - job.updated_at).total_seconds()
+    if job.status == f"{purpose}_queued":
+        timeout_seconds = QUEUE_STALE_TIMEOUT_SECONDS
+        failure_stage = f"{purpose.title()} worker did not start"
+        failure_message = (
+            f"{purpose.title()} worker did not start. Check Firebase Pub/Sub/Eventarc configuration."
+        )
+    elif job.status == f"{purpose}_running":
+        timeout_seconds = _running_stale_timeout_seconds()
+        failure_stage = f"{purpose.title()} worker stalled"
+        failure_message = (
+            f"{purpose.title()} stopped making progress in the background. "
+            f"Please retry or start over."
+        )
+    else:
+        return job
+    reference_time = job.heartbeat_at or job.updated_at
+    age_seconds = (datetime.now(timezone.utc) - reference_time).total_seconds()
     if age_seconds < timeout_seconds:
         return job
     job.updated_at = datetime.now(timezone.utc)
+    job.heartbeat_at = job.updated_at
     job.status = "failed"
-    job.progress_stage = f"{purpose.title()} worker did not start"
+    job.progress_stage = failure_stage
     job.progress_log.append(
         ProgressEvent(
             phase=purpose,
@@ -155,9 +190,7 @@ def _fail_stale_queued_job(job):
             created_at=job.updated_at,
         )
     )
-    job.error_message = (
-        f"{purpose.title()} worker did not start. Check Firebase Pub/Sub/Eventarc configuration."
-    )
+    job.error_message = failure_message
     _get_store().save_job(job)
     return job
 
@@ -251,7 +284,7 @@ def create_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         payload = JobCreateRequest.model_validate(body)
         store = _get_store()
         service = _get_service()
-        existing_jobs = store.list_jobs(user_id)
+        existing_jobs = [_fail_stale_job(job) for job in store.list_jobs(user_id)]
         if any(job.status in _ACTIVE_JOB_STATUSES for job in existing_jobs):
             return _response(429, {"detail": "Job already in progress"})
         _ensure_worker_queue_ready()
@@ -296,7 +329,7 @@ def list_jobs_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         user_id = _user_id(event)
         if not user_id:
             return _response(401, {"detail": "Missing authentication"})
-        jobs = [_fail_stale_queued_job(job) for job in _get_store().list_jobs(user_id)]
+        jobs = [_fail_stale_job(job) for job in _get_store().list_jobs(user_id)]
         return _response(200, {"jobs": [job.model_dump() for job in jobs]})
     except Exception as exc:
         return _handle_error(exc)
@@ -330,7 +363,7 @@ def get_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         job = _load_job(job_id, user_id)
         if not job:
             return _response(404, {"detail": "Job not found"})
-        job = _fail_stale_queued_job(job)
+        job = _fail_stale_job(job)
         return _response(200, job.model_dump())
     except Exception as exc:
         return _handle_error(exc)
@@ -348,6 +381,7 @@ def accept_review_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
         job = _load_job(job_id, user_id)
         if not job:
             return _response(404, {"detail": "Job not found"})
+        job = _fail_stale_job(job)
         store = _get_store()
         review_manifest_available = False
         try:
@@ -367,7 +401,6 @@ def accept_review_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
                 job.status == "failed"
                 and job.review_summary is not None
                 and review_manifest_available
-                and not has_import_events
             ):
                 return _response(409, {"detail": "Review not ready"})
         _ensure_worker_queue_ready()
@@ -578,14 +611,28 @@ def _process_queue_payload(payload: dict[str, Any]) -> None:
                 end_date=job.end_date,
                 max_flights=job.max_flights,
             )
-            _get_service().generate_review(job_uuid, request)
+            updated_job = _get_service().generate_review(job_uuid, request)
         else:
             request = JobAcceptRequest(credentials=creds)
-            _get_service().accept_review(job_uuid, request)
+            updated_job = _get_service().accept_review(job_uuid, request)
+        if (
+            updated_job.status == f"{purpose}_running"
+            and updated_job.phase_total is not None
+            and (updated_job.phase_cursor or 0) < updated_job.phase_total
+        ):
+            next_token = _get_credential_store().issue(
+                job_id=str(updated_job.job_id),
+                purpose=purpose,
+                credentials=creds,
+                ttl_seconds=_credential_ttl(),
+            )
+            store.write_token(updated_job.job_id, purpose, next_token)
+            _enqueue_job(updated_job.job_id, purpose, next_token)
     except Exception as exc:
         job.status = "failed"
         job.error_message = f"Worker failed: {exc}"
         job.updated_at = datetime.now(timezone.utc)
+        job.heartbeat_at = job.updated_at
         store.save_job(job)
 
 

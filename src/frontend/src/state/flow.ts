@@ -78,7 +78,11 @@ export function deriveFlowState(signedIn: boolean, job: JobRecord | null): FlowS
 /** Get openstep. */
 export function getOpenStep(state: FlowState) {
   if (!state.connected) return "connect";
-  if (state.importStatus === "running" || state.importStatus === "complete") {
+  if (
+    state.importStatus === "running" ||
+    state.importStatus === "complete" ||
+    state.importStatus === "failed"
+  ) {
     return "import";
   }
   if (state.reviewStatus !== "complete") return "review";

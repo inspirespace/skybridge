@@ -13,13 +13,14 @@ vi.mock("@/api/client", () => ({
   listJobs: vi.fn(),
   createJob: vi.fn(),
   acceptReview: vi.fn(),
+  fetchArtifact: vi.fn(),
   validateCredentials: vi.fn(),
   deleteJob: vi.fn(),
   downloadArtifactsZip: vi.fn(async () => new Blob(["zip"])),
 }));
 
 import App from "@/App";
-import { deleteJob, downloadArtifactsZip } from "@/api/client";
+import { acceptReview, deleteJob, downloadArtifactsZip, fetchArtifact } from "@/api/client";
 import { useJobSnapshot } from "@/hooks/use-job-snapshot";
 import { useFirebaseAuth } from "@/hooks/use-firebase-auth";
 import type { JobRecord } from "@/api/client";
@@ -234,5 +235,76 @@ describe("App UI flows", () => {
     render(<App />);
 
     expect(await screen.findByText(/review failed/i)).toBeInTheDocument();
+  });
+
+  it("loads review rows from the artifact when the job summary is slim", async () => {
+    sessionStorage.setItem(JOB_ID_KEY, "job-123");
+    vi.mocked(fetchArtifact).mockResolvedValue({
+      review_id: "review-1",
+      items: [
+        {
+          flight_id: "flight-1",
+          date: "2026-01-05T09:00:00Z",
+          tail_number: "N123",
+          origin: "KSEA",
+          destination: "KLAX",
+        },
+      ],
+    });
+    vi.mocked(useFirebaseAuth).mockReturnValue(firebaseAuthState());
+    vi.mocked(useJobSnapshot).mockReturnValue(
+      jobSnapshotState({
+        data: baseJob({
+          status: "review_ready",
+          review_summary: {
+            flight_count: 1,
+            total_hours: 1.0,
+            missing_tail_numbers: 0,
+            flights: [],
+          },
+        }),
+      })
+    );
+
+    render(<App />);
+
+    expect(await screen.findByText("KSEA")).toBeInTheDocument();
+    expect(fetchArtifact).toHaveBeenCalledWith("job-123", "review-flights.json", { token: "token" });
+  });
+
+  it("shows retry import action after a failed import", async () => {
+    sessionStorage.setItem(JOB_ID_KEY, "job-123");
+    vi.mocked(useFirebaseAuth).mockReturnValue(firebaseAuthState());
+    vi.mocked(useJobSnapshot).mockReturnValue(
+      jobSnapshotState({
+        data: baseJob({
+          status: "failed",
+          error_message: "Import failed",
+          review_summary: {
+            flight_count: 1,
+            total_hours: 1.0,
+            missing_tail_numbers: 0,
+            flights: [],
+          },
+          progress_log: [
+            {
+              phase: "import",
+              stage: "Uploading",
+              status: "import_running",
+              created_at: "2026-01-01T10:05:00Z",
+            },
+          ],
+        }),
+      })
+    );
+
+    render(<App />);
+
+    const retryImport = await screen.findByRole("button", { name: /retry import/i });
+    await act(async () => {
+      fireEvent.click(retryImport);
+    });
+
+    expect(acceptReview).toHaveBeenCalled();
   });
 });

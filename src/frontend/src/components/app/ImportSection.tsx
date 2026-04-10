@@ -48,6 +48,8 @@ export function ImportSection({
   actionLoading,
   importError,
   onRefresh,
+  canRetryImport,
+  onRetryImport,
 }: {
   allowed: boolean;
   importComplete: boolean;
@@ -77,6 +79,8 @@ export function ImportSection({
   actionLoading: boolean;
   importError?: string | null;
   onRefresh: () => void;
+  canRetryImport: boolean;
+  onRetryImport: () => void;
 }) {
   return (
     <AccordionItem
@@ -266,7 +270,12 @@ export function ImportSection({
             <Alert variant="destructive">
               <AlertTitle>Something went wrong</AlertTitle>
               <AlertDescription>{importError}</AlertDescription>
-              <div className="mt-3">
+              <div className="mt-3 flex flex-wrap gap-2">
+                {canRetryImport && (
+                  <Button size="sm" onClick={onRetryImport}>
+                    Retry import
+                  </Button>
+                )}
                 <Button size="sm" variant="outline" onClick={onRefresh}>
                   Retry
                 </Button>

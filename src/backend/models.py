@@ -96,9 +96,12 @@ class JobRecord(BaseModel):
     status: JobStatus
     created_at: datetime
     updated_at: datetime
+    heartbeat_at: Optional[datetime] = None
     progress_percent: Optional[int] = None
     progress_stage: Optional[str] = None
     progress_log: list[ProgressEvent] = Field(default_factory=list)
+    phase_cursor: Optional[int] = None
+    phase_total: Optional[int] = None
     review_id: Optional[str] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None

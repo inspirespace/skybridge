@@ -33,11 +33,14 @@ import { cn } from "@/lib/utils";
 import {
   acceptReview,
   createJob,
-  validateCredentials,
+  fetchArtifact,
   listJobs,
   deleteJob,
   downloadArtifactsZip,
   type AuthContext,
+  type FlightSummary,
+  type ReviewFlightsArtifact,
+  validateCredentials,
 } from "@/api/client";
 import { canStartOver, deriveFlowState, getOpenStep } from "@/state/flow";
 import { useJobSnapshot } from "@/hooks/use-job-snapshot";
@@ -150,6 +153,8 @@ export default function App() {
     readSessionValue(JOB_ID_KEY)
   );
   const [showAllFlights, setShowAllFlights] = React.useState(false);
+  const [reviewFlights, setReviewFlights] = React.useState<FlightSummary[] | null>(null);
+  const [reviewFlightsError, setReviewFlightsError] = React.useState<string | null>(null);
   const [actionError, setActionError] = React.useState<{
     scope: "sign-in" | "connect" | "review" | "import" | "global";
     message: string;
@@ -241,7 +246,13 @@ export default function App() {
   const backendResetCheckRef = React.useRef(false);
   const emailLinkAutoRef = React.useRef(false);
   const openStep = React.useMemo(() => {
-    if (flow.importStatus === "running" || flow.importStatus === "complete") return "import";
+    if (
+      flow.importStatus === "running" ||
+      flow.importStatus === "complete" ||
+      flow.importStatus === "failed"
+    ) {
+      return "import";
+    }
     if (flow.reviewStatus === "running") return "review";
     if (!flow.connected) return manualOpen ?? "connect";
     return manualOpen ?? getOpenStep(flow);
@@ -290,7 +301,7 @@ export default function App() {
   }, [firebaseAuthReady]);
 
   const reviewSummary = job?.review_summary ?? null;
-  const flights = reviewSummary?.flights ?? [];
+  const flights = reviewFlights ?? reviewSummary?.flights ?? [];
   const importEvents = React.useMemo(
     () =>
       (job?.progress_log ?? [])
@@ -333,7 +344,7 @@ export default function App() {
   const reviewError = flow.connected
     ? actionError?.scope === "review" || actionError?.scope === "global"
       ? actionError.message
-      : reviewFailureMessage ?? jobErrorMessage
+      : reviewFailureMessage ?? reviewFlightsError ?? jobErrorMessage
     : null;
   const importError = flow.connected
     ? actionError?.scope === "import" || actionError?.scope === "global"
@@ -390,6 +401,40 @@ export default function App() {
   const importLastUpdate = formatPhaseLastUpdate(job?.progress_log, "import", now);
 
   React.useEffect(() => {
+    if (!isSignedIn || !jobId || !reviewComplete) {
+      setReviewFlights(null);
+      setReviewFlightsError(null);
+      return;
+    }
+    let cancelled = false;
+    setReviewFlightsError(null);
+    (async () => {
+      try {
+        const payload = await fetchArtifact<ReviewFlightsArtifact>(
+          jobId,
+          "review-flights.json",
+          auth
+        );
+        if (cancelled) return;
+        setReviewFlights(Array.isArray(payload.items) ? payload.items : []);
+      } catch (err) {
+        if (cancelled) return;
+        const status = (err as Error & { status?: number }).status;
+        const fallbackFlights = reviewSummary?.flights ?? [];
+        setReviewFlights(fallbackFlights);
+        if (status !== 404) {
+          setReviewFlightsError(
+            err instanceof Error ? err.message : "Failed to load review flights"
+          );
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isSignedIn, jobId, reviewComplete, auth, reviewSummary?.flights]);
+
+  React.useEffect(() => {
     if (!DEV_PREFILL) return;
     if (DEV_CLOUD_AHOY_EMAIL) setCloudahoyEmail(DEV_CLOUD_AHOY_EMAIL);
     if (DEV_CLOUD_AHOY_PASSWORD) setCloudahoyPassword(DEV_CLOUD_AHOY_PASSWORD);
@@ -397,7 +442,13 @@ export default function App() {
     if (DEV_FLYSTO_PASSWORD) setFlystoPassword(DEV_FLYSTO_PASSWORD);
   }, []);
 
-  const connectLocked = flow.connected && flow.reviewStatus !== "idle";
+  const connectLocked =
+    flow.connected &&
+    (flow.reviewStatus === "running" ||
+      flow.reviewStatus === "complete" ||
+      flow.importStatus === "running" ||
+      flow.importStatus === "complete" ||
+      flow.importStatus === "failed");
 
   const allowedSteps = React.useMemo(() => {
     if (!flow.signedIn) return new Set<string>();
@@ -587,8 +638,7 @@ export default function App() {
     }
   };
 
-  /** Handle handleApproveImport. */
-  const handleApproveImport = async () => {
+  const startImport = async (scope: "review" | "import") => {
     if (!isSignedIn || !jobId) return;
     setActionLoading(true);
     setActionError(null);
@@ -615,12 +665,22 @@ export default function App() {
           "Please wait for “Review ready”, or use “Edit import filters” to restart the review.";
       }
       setActionError({
-        scope: "review",
+        scope,
         message,
       });
     } finally {
       setActionLoading(false);
     }
+  };
+
+  /** Handle handleApproveImport. */
+  const handleApproveImport = async () => {
+    await startImport("review");
+  };
+
+  /** Handle handleRetryImport. */
+  const handleRetryImport = async () => {
+    await startImport("import");
   };
 
   /** Handle handleEditFilters. */
@@ -900,6 +960,8 @@ export default function App() {
   const visibleFlights = showAllFlights ? flights : flights.slice(0, 3);
   const canApprove =
     reviewComplete && flow.importStatus === "idle" && !actionLoading;
+  const canRetryImport =
+    flow.importStatus === "failed" && !importRunning && !importComplete && !actionLoading;
   const canEditFiltersNow =
     reviewComplete && !importRunning && !importComplete && !actionLoading;
 
@@ -1311,6 +1373,8 @@ export default function App() {
                 actionLoading={actionLoading}
                 importError={importError}
                 onRefresh={refresh}
+                canRetryImport={canRetryImport}
+                onRetryImport={handleRetryImport}
               />
             </Accordion>
             </div>

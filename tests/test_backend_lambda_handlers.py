@@ -199,6 +199,20 @@ def test_get_job_handler_marks_stale_queued_job_failed(store, monkeypatch: pytes
     assert "worker did not start" in response["body"]
 
 
+def test_get_job_handler_marks_stale_running_job_failed(store, monkeypatch: pytest.MonkeyPatch):
+    job = _job("review_running")
+    stale_at = datetime.now(timezone.utc) - timedelta(minutes=10)
+    job.updated_at = stale_at
+    job.heartbeat_at = stale_at
+    store.save_job(job)
+    monkeypatch.setenv("BACKEND_RUNNING_STALE_TIMEOUT_SECONDS", "60")
+
+    response = handlers.get_job_handler(_event("pilot", job_id=str(job.job_id)), None)
+
+    assert response["statusCode"] == 200
+    assert "worker stalled" in response["body"]
+
+
 def test_create_job_handler_marks_job_failed_when_enqueue_fails(store, monkeypatch: pytest.MonkeyPatch):
     job = _job("review_ready")
 

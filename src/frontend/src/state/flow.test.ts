@@ -80,6 +80,12 @@ describe("getOpenStep", () => {
       getOpenStep({ signedIn: true, connected: true, reviewStatus: "complete", importStatus: "running" })
     ).toBe("import");
   });
+
+  it("opens import when import failed", () => {
+    expect(
+      getOpenStep({ signedIn: true, connected: true, reviewStatus: "complete", importStatus: "failed" })
+    ).toBe("import");
+  });
 });
 
 describe("canStartOver", () => {

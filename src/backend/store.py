@@ -285,6 +285,22 @@ class JobStore:
                 "Failed to upload artifact file %s for job %s: %s", name, job_id, exc
             )
 
+    def upload_artifact_as(self, job_id: UUID, artifact_name: str, path: Path) -> None:
+        """Upload a local file under an explicit artifact name."""
+        if not self._object_store or not path.exists():
+            return
+        key = self._object_store.key_for(
+            self.load_job(job_id).user_id,
+            str(job_id),
+            artifact_name,
+        )
+        try:
+            self._object_store.put_file(key, path)
+        except Exception as exc:
+            logging.getLogger(__name__).warning(
+                "Failed to upload artifact file %s for job %s: %s", artifact_name, job_id, exc
+            )
+
     def upload_artifact_dir(
         self,
         job_id: UUID,
