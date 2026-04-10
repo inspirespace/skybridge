@@ -12,7 +12,7 @@ Usage: ./scripts/firebase-clear-project.sh [--project <firebase_project_id>] [--
 
 Clears Firebase resources while keeping the project itself:
   - deletes all Cloud Functions
-  - clears Firestore default database data
+  - deletes the Firestore default database (after clearing its data)
   - clears Realtime Database root
   - disables Firebase Hosting sites
   - deletes Cloud Storage buckets in the project after clearing their objects
@@ -743,6 +743,23 @@ clear_firestore_data() {
   return 0
 }
 
+delete_firestore_database() {
+  local output
+  if output="$(firebase firestore:databases:delete "(default)" --project "$PROJECT_ID" --force 2>&1)"; then
+    [ -n "$output" ] && printf '%s\n' "$output"
+    return 0
+  fi
+
+  if printf '%s' "$output" | grep -Eiq 'database .* does not exist|NOT_FOUND|No databases found'; then
+    echo "  - no Firestore default database found; skipping delete."
+    return 0
+  fi
+
+  printf '%s\n' "$output" >&2
+  echo "Warning: deleting Firestore default database failed; continuing." >&2
+  return 0
+}
+
 clear_realtime_database_root() {
   local output
   if output="$(firebase database:remove / --project "$PROJECT_ID" --force --disable-triggers 2>&1)"; then
@@ -836,6 +853,9 @@ fi
 
 echo "Clearing Firestore default database data..."
 clear_firestore_data
+
+echo "Deleting Firestore default database..."
+delete_firestore_database
 
 echo "Clearing Realtime Database root..."
 clear_realtime_database_root

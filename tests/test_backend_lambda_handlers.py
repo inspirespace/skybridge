@@ -7,6 +7,7 @@ from uuid import uuid4
 import json
 import pytest
 
+from src.backend.firebase_errors import FirestoreDatabaseNotConfiguredError
 import src.backend.lambda_handlers as handlers
 from src.backend.models import JobRecord
 from src.backend.store import JobStore
@@ -58,6 +59,19 @@ def store(tmp_path, monkeypatch: pytest.MonkeyPatch):
 def test_list_jobs_handler_requires_auth(store):
     response = handlers.list_jobs_handler(_event(None), None)
     assert response["statusCode"] == 401
+
+
+def test_list_jobs_handler_surfaces_missing_firestore_database(store, monkeypatch: pytest.MonkeyPatch):
+    class _BrokenStore:
+        def list_jobs(self, _user_id: str):
+            raise FirestoreDatabaseNotConfiguredError("skybridge-inspirespace")
+
+    monkeypatch.setattr(handlers, "_store", _BrokenStore())
+
+    response = handlers.list_jobs_handler(_event("pilot"), None)
+
+    assert response["statusCode"] == 503
+    assert "Cloud Firestore is not set up" in response["body"]
 
 
 def test_create_job_handler(store, monkeypatch: pytest.MonkeyPatch):

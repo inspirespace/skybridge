@@ -19,6 +19,8 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - `BACKEND_ENCRYPTION_KEY=<32-byte urlsafe base64 key>`
 - `FIRESTORE_JOBS_COLLECTION=skybridge-jobs`
 - `FIRESTORE_CREDENTIALS_COLLECTION=skybridge-credentials`
+- `FIRESTORE_DATABASE_LOCATION=<location>` optional override for first-time deploy auto-creation of the default Firestore database; defaults to `FIREBASE_REGION`
+- `FIRESTORE_DATABASE_CREATE_MAX_WAIT_SECONDS=<seconds>` optional override for how long deploy should wait when Firebase temporarily blocks reusing a just-deleted default database id; defaults to `900`
 - `GCS_PREFIX=jobs`
 - `CORS_ALLOW_ORIGINS=<comma separated origins>` (never use `*` in production)
 
@@ -33,6 +35,8 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - `GCS_BUCKET` is optional override only; otherwise the backend uses `FIREBASE_CONFIG.storageBucket` or the default Firebase bucket derived from the active project id.
 - Deploy preflight (`scripts/firebase-deploy.sh`) fails fast if required Firebase web config is missing in non-emulator Firebase mode and will attempt best-effort auto-resolution from `firebase apps:sdkconfig` (first WEB app in the project).
 - Optional: set `FIREBASE_WEB_APP_ID` to force which Firebase WEB app deploy preflight should use for sdkconfig lookup.
+- Deploy auto-creates the default Cloud Firestore database `(default)` when it is missing from the target project, because production job state and credential claims are stored there.
+- If Firebase reports that `(default)` is temporarily unavailable for recreation after deletion, deploy waits and retries automatically up to `FIRESTORE_DATABASE_CREATE_MAX_WAIT_SECONDS`.
 - Deploy preflight also validates passwordless email-link sign-in mode (`signIn.email.enabled=true`, `signIn.email.passwordRequired=false`) when `FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN=1` (default).
 - Deploy preflight prints a manual Firebase Auth setup overview (sign-in method, email template branding name, custom sender domain, authorized domains) and keeps template naming/configuration manual in Firebase Console.
 - Firebase Console currently requires Google sign-in provider to be enabled before Auth template "Public-facing name" can be edited.
@@ -42,9 +46,12 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - `npm --prefix src/frontend run build`
 - `./scripts/firebase-deploy.sh`
 Functions source lives in `functions/` and uses `functions/requirements.txt` for dependencies.
+The shared deploy script publishes Functions, Hosting, and Firestore configuration from `firebase.json`.
 - Project id and region defaults come from `.firebaserc` (`projects.default`, `config.region`).
 - Default Functions region is `europe-west1`.
 - You can override per deploy with `FIREBASE_REGION`.
+- On the first deploy to a project with no Firestore database, the script creates `(default)` automatically. Override the creation location with `FIRESTORE_DATABASE_LOCATION` when needed; otherwise it uses `FIREBASE_REGION`.
+- If `(default)` was deleted just before deploy, Firebase can keep the id in a short cooldown window. The deploy script handles that by waiting and retrying instead of failing immediately.
 
 ## Custom domain setup (Firebase Hosting)
 Custom domains are configured in the Firebase console (not via `firebase deploy`).

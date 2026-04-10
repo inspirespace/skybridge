@@ -37,6 +37,16 @@ require_deploy_toolchain() {
   exit 1
 }
 
+resolve_firestore_database_location() {
+  local location
+  location="$(resolve_config_value FIRESTORE_DATABASE_LOCATION functions/.env .env || true)"
+  if [ -n "$location" ]; then
+    printf '%s' "$location"
+    return 0
+  fi
+  printf '%s' "$FUNCTIONS_REGION"
+}
+
 PROJECT_ID="${FIREBASE_PROJECT_ID:-$(sh "$FIREBASE_CONFIG_SCRIPT" project 2>/dev/null || true)}"
 
 while [ "$#" -gt 0 ]; do
@@ -428,6 +438,73 @@ get_identity_platform_config() {
     >"$output_file"
 }
 
+get_firestore_database() {
+  local token="$1"
+  local output_file="$2"
+  curl -sS \
+    -H "Authorization: Bearer ${token}" \
+    -o "$output_file" \
+    -w "%{http_code}" \
+    "https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)"
+}
+
+create_firestore_database() {
+  local location="$1"
+  firebase firestore:databases:create "(default)" \
+    --location "$location" \
+    --project "$PROJECT_ID"
+}
+
+extract_firestore_retry_seconds() {
+  local output="$1"
+  printf '%s' "$output" | sed -nE "s/.*Please retry in ([0-9]+) seconds.*/\1/p" | head -n 1
+}
+
+create_firestore_database_with_retry() {
+  local location="$1"
+  local max_wait_seconds
+  local waited_seconds
+  local output
+  local retry_seconds
+
+  max_wait_seconds="$(resolve_config_value FIRESTORE_DATABASE_CREATE_MAX_WAIT_SECONDS functions/.env .env || true)"
+  if [ -z "$max_wait_seconds" ]; then
+    max_wait_seconds="900"
+  fi
+  waited_seconds=0
+
+  while true; do
+    if output="$(create_firestore_database "$location" 2>&1)"; then
+      [ -n "$output" ] && printf '%s\n' "$output"
+      return 0
+    fi
+
+    if printf '%s' "$output" | grep -Eiq 'already exists|ALREADY_EXISTS'; then
+      echo "Default Cloud Firestore database '(default)' already exists."
+      return 0
+    fi
+
+    retry_seconds="$(extract_firestore_retry_seconds "$output" || true)"
+    if [ -z "$retry_seconds" ]; then
+      printf '%s\n' "$output" >&2
+      return 1
+    fi
+
+    if [ $((waited_seconds + retry_seconds)) -gt "$max_wait_seconds" ]; then
+      cat >&2 <<EOF
+Firestore database recreation is still cooling down for project ${PROJECT_ID}.
+Firebase asked to retry in ${retry_seconds} seconds, but that would exceed FIRESTORE_DATABASE_CREATE_MAX_WAIT_SECONDS=${max_wait_seconds}.
+EOF
+      printf '%s\n' "$output" >&2
+      return 1
+    fi
+
+    echo "Firestore database '(default)' is temporarily unavailable for recreation. Waiting ${retry_seconds}s before retry..."
+    sleep "$retry_seconds"
+    waited_seconds=$((waited_seconds + retry_seconds))
+  done
+}
+
 extract_authorized_domains() {
   local file_path="$1"
   node - "$file_path" <<'NODE'
@@ -605,6 +682,62 @@ preflight_app_check_config() {
     echo "App Check preflight: FIREBASE_PROJECT_NUMBER is not set; backend will attempt runtime lookup." >&2
     echo "Set FIREBASE_PROJECT_NUMBER for deterministic App Check verification configuration." >&2
   fi
+}
+
+preflight_firestore_database() {
+  local token
+  token="$(google_access_token || true)"
+  if [ -z "$token" ]; then
+    cat >&2 <<'EOF'
+Firestore preflight: could not acquire Google access token to verify the default Cloud Firestore database.
+Checked:
+  - Application Default Credentials (GOOGLE_APPLICATION_CREDENTIALS / ADC)
+  - Firebase CLI local login token cache (~/.config/configstore/firebase-tools.json)
+EOF
+    if [ -n "${CI:-}" ]; then
+      echo "Failing in CI because the deploy must verify that the production Firestore database exists." >&2
+      exit 1
+    fi
+    echo "Warning: continuing local deploy without automated Firestore database verification." >&2
+    return 0
+  fi
+
+  local db_file
+  local db_err_file
+  local status
+  db_file="$(mktemp)"
+  db_err_file="$(mktemp)"
+  status="$(get_firestore_database "$token" "$db_file" 2>"$db_err_file" || true)"
+
+  if [ "$status" = "200" ]; then
+    rm -f "$db_file" "$db_err_file"
+    return 0
+  fi
+
+  if [ "$status" = "404" ]; then
+    local location
+    location="$(resolve_firestore_database_location)"
+    rm -f "$db_file" "$db_err_file"
+    echo "Default Cloud Firestore database '(default)' is missing for project ${PROJECT_ID}. Creating it in ${location}..."
+    create_firestore_database_with_retry "$location"
+    return 0
+  fi
+
+  cat >&2 <<EOF
+Firestore preflight failed for project ${PROJECT_ID}.
+Could not verify the default Cloud Firestore database via the Firestore Admin API.
+HTTP status: ${status:-<unknown>}
+EOF
+  if [ -s "$db_err_file" ]; then
+    echo "Diagnostics:" >&2
+    sed 's/^/  /' "$db_err_file" >&2
+  fi
+  if [ -s "$db_file" ]; then
+    echo "API response:" >&2
+    sed 's/^/  /' "$db_file" >&2
+  fi
+  rm -f "$db_file" "$db_err_file"
+  exit 1
 }
 
 print_firebase_auth_setup_overview() {
@@ -1246,7 +1379,7 @@ has_firebase_auth() {
 run_firebase_deploy() {
   local output_file="$1"
   set +e
-  firebase deploy --only functions,hosting --project "$PROJECT_ID" 2>&1 | tee "$output_file"
+  firebase deploy --only functions,hosting,firestore --project "$PROJECT_ID" 2>&1 | tee "$output_file"
   local status="${PIPESTATUS[0]}"
   set -e
   return "$status"
@@ -1343,6 +1476,7 @@ fi
 
 preflight_app_check_config
 preflight_frontend_firebase_config
+preflight_firestore_database
 print_firebase_auth_setup_overview
 preflight_firebase_auth_signin_config
 preflight_firebase_auth_authorized_domains
@@ -1382,7 +1516,7 @@ sanitize_functions_source_for_deploy
 
 DEPLOY_OUTPUT_FILE="$(mktemp)"
 
-echo "Deploying Firebase functions + hosting to project: ${PROJECT_ID} (region: ${FUNCTIONS_REGION})"
+echo "Deploying Firebase functions + hosting + firestore to project: ${PROJECT_ID} (region: ${FUNCTIONS_REGION})"
 if ! run_firebase_deploy "$DEPLOY_OUTPUT_FILE"; then
   if delete_trigger_mismatch_functions "$DEPLOY_OUTPUT_FILE"; then
     echo "Deleted conflicting function definitions. Retrying deploy..."

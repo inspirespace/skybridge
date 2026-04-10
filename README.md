@@ -59,6 +59,7 @@ Devcontainer equivalent:
 ```sh
 ./scripts/docker-compose.sh --profile prod up -d --build
 ```
+This remains emulator-backed for Firebase services. It exercises the production-like Hosting/Functions path locally, but it will not surface missing remote Firebase resources such as an uncreated production Firestore database.
 On macOS, `.localhost` already resolves to `127.0.0.1`, so no hosts file change is needed. If your OS does not resolve `*.localhost`, add these entries to `/etc/hosts`:
 
 ```
@@ -101,6 +102,7 @@ Required repository secrets:
 CI and local deploy share the same implementation path:
 - both invoke `./scripts/firebase-deploy.sh`
 - the workflow only provides runtime/tooling and trigger wiring
+- the script deploys Functions, Hosting, and Firestore config from `firebase.json`
 
 Manual deploy (zero-config: uses `.firebaserc` default project and prompts login if needed):
 
@@ -114,6 +116,8 @@ VS Code equivalent:
 First deploy behavior (out of the box):
 - If you are not logged in, the script prompts and runs `firebase login --reauth`.
 - If frontend Firebase web config is missing, deploy preflight auto-resolves it from Firebase web app config (and creates a WEB app when required).
+- If the project is missing the default Cloud Firestore database required by the backend, deploy auto-creates `(default)` before continuing.
+- If `(default)` was just deleted, Firebase can hold the database id briefly before allowing recreation; deploy now waits and retries automatically during that cooldown.
 - In Firebase auth mode (non-emulator), deploy preflight prints a manual Firebase Auth setup overview (sign-in method, email template branding, custom sender domain, authorized domains).
 
 Deploy preflight note:
@@ -122,6 +126,8 @@ Deploy preflight note:
 - Local deploys print a warning and continue.
 - In `firebase` auth mode without emulator, deploy fails fast if frontend Firebase web config is incomplete (`VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_PROJECT_ID`). The deploy script attempts best-effort auto-resolution from Firebase Web App SDK config.
 - If your project has multiple Firebase web apps, set `FIREBASE_WEB_APP_ID` to force which app is used for SDK config resolution during deploy preflight.
+- Deploy auto-creates the default Cloud Firestore database `(default)` when it is missing from the target Firebase project. Override the first-create location with `FIRESTORE_DATABASE_LOCATION`; otherwise it defaults to `FIREBASE_REGION`.
+- If Firebase reports that `(default)` is temporarily unavailable for recreation after deletion, deploy waits and retries up to `FIRESTORE_DATABASE_CREATE_MAX_WAIT_SECONDS` (default `900`).
 - In `firebase` auth mode without emulator, deploy preflight verifies passwordless email-link provider config (`signIn.email.enabled=true`, `signIn.email.passwordRequired=false`) when `FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN=1` (default).
 - Deploy preflight does not auto-patch Firebase Auth templates or project display name. Configure friendly app/template names in Firebase Console.
 - Deploy preflight also does not configure the Firebase Auth custom sender domain for emails. Set that manually in **Authentication -> Templates -> Email address sign-in -> Customize domain**, add the Firebase-provided DNS records at your DNS provider, and wait for verification.
@@ -135,6 +141,8 @@ Clear Firebase resources while keeping the project (zero-config from `.firebaser
 ```sh
 ./scripts/firebase-clear-project.sh
 ```
+This now deletes the default Cloud Firestore database `(default)` after clearing its data. A later deploy recreates it automatically if needed.
+Immediate redeploy after a clear can pause for a few minutes while Firebase releases the deleted database id; the deploy script now waits and retries automatically.
 
 This clears functions, Firestore, Realtime Database, Hosting, and deletes Cloud Storage buckets in the project after clearing any remaining object versions. In local interactive runs, if Cloud Storage cleanup needs Google ADC and none is available yet, the script will prompt for `gcloud auth application-default login`. It does not delete Firebase Auth users, and Storage usage charts can lag when provider-side protection settings still apply.
 

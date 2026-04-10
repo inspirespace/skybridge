@@ -17,6 +17,7 @@ from shutil import rmtree
 from typing import Any, Callable
 from uuid import UUID
 
+from .firebase_errors import raise_if_missing_firestore_database
 from .models import FlightSummary, ImportReport, JobRecord, ReviewSummary
 from .object_store import ObjectStoreProtocol
 
@@ -40,6 +41,8 @@ class JobStore:
         self._object_store = object_store
         self._firestore = None
         self._firestore_collection = None
+        self._firestore_project = firestore_project
+        self._firestore_database = "(default)"
         self._token_cache: dict[tuple[str, str], str] = {}
         if firestore_collection:
             from google.cloud import firestore
@@ -47,6 +50,14 @@ class JobStore:
             self._firestore = firestore.Client(project=firestore_project or None)
             self._firestore_collection = self._firestore.collection(firestore_collection)
         self._base_path.mkdir(parents=True, exist_ok=True)
+
+    def _raise_firestore_configuration_error(self, exc: Exception) -> None:
+        """Translate Firestore database lookup failures to config errors."""
+        raise_if_missing_firestore_database(
+            exc,
+            project_id=self._firestore_project,
+            database_id=self._firestore_database,
+        )
 
     def _job_dir(self, job_id: UUID) -> Path:
         """Internal helper for job dir."""
@@ -78,19 +89,23 @@ class JobStore:
         self.cleanup_expired()
         if self._firestore_collection:
             jobs: list[JobRecord] = []
-            for doc in self._firestore_collection.stream():
-                payload = doc.to_dict() or {}
-                job_payload = payload.get("payload")
-                if isinstance(job_payload, str):
-                    job_payload = json.loads(job_payload)
-                if not isinstance(job_payload, dict):
-                    continue
-                job = JobRecord.model_validate(job_payload)
-                job = self._maybe_enrich_review_summary(job)
-                if self._is_expired(job):
-                    self.delete_job(job.job_id)
-                    continue
-                jobs.append(job)
+            try:
+                for doc in self._firestore_collection.stream():
+                    payload = doc.to_dict() or {}
+                    job_payload = payload.get("payload")
+                    if isinstance(job_payload, str):
+                        job_payload = json.loads(job_payload)
+                    if not isinstance(job_payload, dict):
+                        continue
+                    job = JobRecord.model_validate(job_payload)
+                    job = self._maybe_enrich_review_summary(job)
+                    if self._is_expired(job):
+                        self.delete_job(job.job_id)
+                        continue
+                    jobs.append(job)
+            except Exception as exc:
+                self._raise_firestore_configuration_error(exc)
+                raise
             return sorted(jobs, key=lambda job: job.created_at, reverse=True)
 
         jobs = []
@@ -117,19 +132,23 @@ class JobStore:
         if self._firestore_collection:
             jobs: list[JobRecord] = []
             query = self._firestore_collection.where("user_id", "==", user_id)
-            for doc in query.stream():
-                payload = doc.to_dict() or {}
-                job_payload = payload.get("payload")
-                if isinstance(job_payload, str):
-                    job_payload = json.loads(job_payload)
-                if not isinstance(job_payload, dict):
-                    continue
-                job = JobRecord.model_validate(job_payload)
-                job = self._maybe_enrich_review_summary(job)
-                if self._is_expired(job):
-                    self.delete_job(job.job_id)
-                    continue
-                jobs.append(job)
+            try:
+                for doc in query.stream():
+                    payload = doc.to_dict() or {}
+                    job_payload = payload.get("payload")
+                    if isinstance(job_payload, str):
+                        job_payload = json.loads(job_payload)
+                    if not isinstance(job_payload, dict):
+                        continue
+                    job = JobRecord.model_validate(job_payload)
+                    job = self._maybe_enrich_review_summary(job)
+                    if self._is_expired(job):
+                        self.delete_job(job.job_id)
+                        continue
+                    jobs.append(job)
+            except Exception as exc:
+                self._raise_firestore_configuration_error(exc)
+                raise
             return sorted(jobs, key=lambda job: job.created_at, reverse=True)
 
         jobs = []
@@ -160,7 +179,11 @@ class JobStore:
     def load_job(self, job_id: UUID) -> JobRecord:
         """Handle load job."""
         if self._firestore_collection:
-            doc = self._firestore_collection.document(str(job_id)).get()
+            try:
+                doc = self._firestore_collection.document(str(job_id)).get()
+            except Exception as exc:
+                self._raise_firestore_configuration_error(exc)
+                raise
             if not doc.exists:
                 raise FileNotFoundError("Job not found")
             payload = doc.to_dict() or {}
@@ -190,7 +213,11 @@ class JobStore:
         if self._firestore_collection:
             try:
                 job = self.load_job(job_id)
-                self._firestore_collection.document(str(job_id)).delete()
+                try:
+                    self._firestore_collection.document(str(job_id)).delete()
+                except Exception as exc:
+                    self._raise_firestore_configuration_error(exc)
+                    raise
                 user_id = user_id or job.user_id
             except FileNotFoundError:
                 pass
@@ -225,7 +252,11 @@ class JobStore:
                 "ttl_epoch": ttl_epoch,
                 "ttl_at": ttl_at,
             }
-            self._firestore_collection.document(str(job.job_id)).set(item)
+            try:
+                self._firestore_collection.document(str(job.job_id)).set(item)
+            except Exception as exc:
+                self._raise_firestore_configuration_error(exc)
+                raise
 
     def write_artifact(self, job_id: UUID, name: str, payload: dict[str, Any]) -> None:
         """Handle write artifact."""
@@ -389,9 +420,13 @@ class JobStore:
         now = int(datetime.now(timezone.utc).timestamp())
         if self._firestore_collection:
             query = self._firestore_collection.where("ttl_epoch", "<", now)
-            for doc in query.stream():
-                doc.reference.delete()
-                deleted += 1
+            try:
+                for doc in query.stream():
+                    doc.reference.delete()
+                    deleted += 1
+            except Exception as exc:
+                self._raise_firestore_configuration_error(exc)
+                raise
             return deleted
         for job_dir in self._base_path.iterdir():
             if not job_dir.is_dir():

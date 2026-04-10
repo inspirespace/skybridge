@@ -14,6 +14,7 @@ from pydantic import ValidationError
 from .auth import user_id_from_event
 from .credential_store import build_credential_store
 from .env import resolve_project_id
+from .firebase_errors import FirestoreDatabaseNotConfiguredError
 from .models import CredentialValidationRequest, JobAcceptRequest, JobCreateRequest, ProgressEvent
 from .object_store import build_object_store_from_env
 from .queue import resolve_job_queue_topic_path
@@ -186,6 +187,11 @@ def _handle_error(exc: Exception) -> dict[str, Any]:
     """
     if isinstance(exc, LambdaHttpError):
         return _response(exc.status_code, {"detail": exc.detail})
+    if isinstance(exc, FirestoreDatabaseNotConfiguredError):
+        return _response(
+            503,
+            {"detail": "Service configuration error: Cloud Firestore is not set up for this Firebase project."},
+        )
     if isinstance(exc, ValidationError):
         return _response(400, {"detail": exc.errors()})
     # Log the actual exception for debugging, but return generic message to client
