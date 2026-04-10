@@ -218,6 +218,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Extend the Firebase clear-project task to empty the resolved Firebase Storage bucket objects as well, while clarifying the remaining limits (Auth users not deleted; Storage metrics can lag under retention/soft-delete).
 - [x] Harden Firebase Storage cleanup auth in the clear-project task: use `gcloud auth application-default print-access-token` as an extra token source, isolate gcloud in a temp config dir, and prompt for ADC login in interactive local runs when needed.
 - [x] Replace guessed Firebase bucket names in the clear-project task with Storage API project-bucket discovery so Storage cleanup clears the project’s real buckets instead of reporting false “no matching bucket” results.
+- [x] Disable Docker Compose's attached shortcut menu by default inside the devcontainer wrapper so VS Code launch terminals stop advertising unusable host-only Docker Desktop actions.
 - [x] Add Firebase deploy preflight for the default Firestore database and clarify that local `docker compose --profile prod` stays emulator-backed, so missing production Firebase resources are caught by deploy checks rather than local compose alone.
 - [x] Extend Firebase deploy/clear scripts to manage the default Firestore database lifecycle directly: auto-create `(default)` on deploy when missing and delete it during project clear, with configurable first-create location via `FIRESTORE_DATABASE_LOCATION`.
 - [x] Harden Firestore database auto-create after clear by waiting through Firebase's database-id cooldown window and retrying recreation automatically during deploy.
@@ -244,6 +245,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Fix Cloud Functions startup path resolution in `functions/main.py` for deployed runtime (`/workspace` source root), so staged modules under `functions/_deploy_src/src` are importable and containers start on `PORT=8080`.
 - [x] Fix production API base fallback to same-origin `/api` (instead of fixed local-domain API URLs) to prevent CSP `connect-src` failures on deployed domains.
 - [x] Simplify backend runtime paths by removing unused local/Cloud Run HTTP adapters (`src/backend/lambda_api_local.py`, `src/backend/http_api.py`, `src/backend/http_worker.py`), keeping Firebase Functions as the only backend runtime while retaining compose-based dev mock services.
+- [x] Disable automatic Firebase deploys on merges to `main` by making `.github/workflows/firebase-deploy.yml` manual-only (`workflow_dispatch`), while keeping the shared local/manual deploy path intact.
 
 ## 10. Security Hardening (In Progress)
 - [x] Require encrypted storage for credential payloads when Firestore is enabled.

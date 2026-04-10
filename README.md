@@ -95,7 +95,7 @@ npm --prefix src/frontend run logo:generate -- path/to/new-logo.webp
 
 ## Deploy (Firebase)
 
-CI deploys live from `main` via GitHub Actions (`.github/workflows/firebase-deploy.yml`).
+Automatic GitHub Actions deploys from `main` are disabled. The repository keeps the deploy workflow file (`.github/workflows/firebase-deploy.yml`) for manual `workflow_dispatch` runs only, while local deploys continue to use `./scripts/firebase-deploy.sh`.
 Required repository secrets:
 - `FIREBASE_SERVICE_ACCOUNT` (service account JSON)
 - `BACKEND_ENCRYPTION_KEY` (32-byte urlsafe base64 Fernet key)
@@ -105,7 +105,7 @@ Required repository secrets:
 The shared deploy flow generates the production Functions env file (`functions/.env.<project_id>`) and frontend env file (`src/frontend/.env.production`) during local and CI deploys. The generated Functions env file contains app-owned runtime settings only; Firebase project/region continue to come from deploy/runtime context (`FIREBASE_PROJECT_ID`, `FIREBASE_REGION`, `.firebaserc`). Non-secret defaults live in `.github/firebase-deploy.defaults.json`; no manual Firebase Functions env setup is required.
 By default, deploys enable passwordless email-link sign-in only; third-party Firebase providers stay disabled unless you opt in via `.github/firebase-deploy.defaults.json`.
 
-CI and local deploy share the same implementation path:
+Manual workflow runs and local deploys share the same implementation path:
 - both invoke `./scripts/firebase-deploy.sh`
 - the workflow only provides runtime/tooling and trigger wiring
 - the script deploys Functions, Hosting, and Firestore config from `firebase.json`
