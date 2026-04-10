@@ -102,7 +102,8 @@ Required repository secrets:
 - `FIREBASE_WEB_APP_ID` (optional; only needed when the project has multiple Firebase web apps)
 - `FIREBASE_APP_CHECK_SITE_KEY` (optional; only needed when App Check is enabled)
 
-The shared deploy flow generates the production Functions env file (`functions/.env.<project_id>`) and frontend env file (`src/frontend/.env.production`) during local and CI deploys. Non-secret defaults live in `.github/firebase-deploy.defaults.json`; no manual Firebase Functions env setup is required.
+The shared deploy flow generates the production Functions env file (`functions/.env.<project_id>`) and frontend env file (`src/frontend/.env.production`) during local and CI deploys. The generated Functions env file contains app-owned runtime settings only; Firebase project/region continue to come from deploy/runtime context (`FIREBASE_PROJECT_ID`, `FIREBASE_REGION`, `.firebaserc`). Non-secret defaults live in `.github/firebase-deploy.defaults.json`; no manual Firebase Functions env setup is required.
+By default, deploys enable passwordless email-link sign-in only; third-party Firebase providers stay disabled unless you opt in via `.github/firebase-deploy.defaults.json`.
 
 CI and local deploy share the same implementation path:
 - both invoke `./scripts/firebase-deploy.sh`

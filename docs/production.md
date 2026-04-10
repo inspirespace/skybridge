@@ -3,7 +3,7 @@
 This is a checklist of what production needs, not a step-by-step deployment guide.
 
 ## Required Firebase resources
-- **Firebase Auth** with Google/Apple/Facebook providers.
+- **Firebase Auth** with Email/Password plus Email link (passwordless) enabled.
 - **Firestore** collections:
   - Jobs collection: documents keyed by `job_id`, with `user_id` field indexed.
   - Credentials collection: documents keyed by `token` with TTL configured.
@@ -55,10 +55,10 @@ These values are managed by the shared deploy script. Do not configure them manu
 - Checked-in defaults:
   - `.github/firebase-deploy.defaults.json`
 - Generated during deploy:
-  - `functions/.env.<project_id>`
+  - `functions/.env.<project_id>` for app-owned backend settings only (`BACKEND_*`, `APP_CHECK_ENFORCE`, Firestore collection names, CORS)
   - `src/frontend/.env.production`
 - Source of truth for project/region defaults:
-  - `.firebaserc`
+  - `.firebaserc` plus deploy/runtime `FIREBASE_PROJECT_ID` / `FIREBASE_REGION` exports
 ## Deploy
 - `npm --prefix src/frontend run build`
 - `./scripts/firebase-deploy.sh`
@@ -110,14 +110,14 @@ Job artifacts must expire automatically. Apply a lifecycle rule to your storage 
   - `gcloud storage buckets update gs://<bucket> --lifecycle-file=docs/firebase-storage-lifecycle.json`
 
 ## Production smoke test checklist
-- Sign in with each enabled provider (Google/Apple/Facebook/Microsoft) and email link.
+- Sign in with email link and each provider you explicitly enabled for this deployment.
 - Start a review, confirm progress updates without reload.
 - Approve import, confirm progress updates without reload.
 - Download artifacts zip from the results screen.
 - Delete results; verify job disappears on reload.
 
 ## Firebase Auth setup notes
-- Enable Google/Apple/Facebook providers in the Firebase console.
+- Default deploy config keeps Google/Apple/Facebook/Microsoft disabled; enable only the providers you want to expose.
 - Apple sign-in requires an Apple Developer Program membership and a Services ID.
 - Enable Email/Password and Email link (passwordless) in **Authentication -> Sign-in method**.
 - Enable Google sign-in provider if you need to edit **Public-facing name** in Auth email templates.

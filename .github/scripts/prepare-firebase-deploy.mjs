@@ -6,22 +6,34 @@ const workspaceRoot = process.cwd();
 const defaultsPath = path.join(workspaceRoot, ".github", "firebase-deploy.defaults.json");
 const functionsEnvDir = path.join(workspaceRoot, "functions");
 const frontendEnvPath = path.join(workspaceRoot, "src", "frontend", ".env.production");
+const deployInputEnv = loadEnvFiles([
+  path.join(workspaceRoot, ".env"),
+  path.join(functionsEnvDir, ".env"),
+]);
 
 const defaults = JSON.parse(fs.readFileSync(defaultsPath, "utf8"));
 const projectId = requiredEnv("FIREBASE_PROJECT_ID");
 const encryptionKey = requiredEnv("BACKEND_ENCRYPTION_KEY");
-const region = process.env.FIREBASE_REGION || "europe-west1";
-const webAppId = process.env.FIREBASE_WEB_APP_ID || discoverOrCreateWebAppId(projectId);
+const region = envValue("FIREBASE_REGION") || "europe-west1";
+const webAppId = envValue("FIREBASE_WEB_APP_ID") || discoverOrCreateWebAppId(projectId);
 const sdkConfig = loadWebSdkConfig(projectId, webAppId);
 const authProviders = defaults.authProviders || {};
-const appCheckSiteKey = (process.env.FIREBASE_APP_CHECK_SITE_KEY || "").trim();
-const appCheckRequested = resolveBoolean(process.env.APP_CHECK_ENFORCE, defaults.appCheckEnabled !== false);
+const appCheckSiteKey = (envValue("FIREBASE_APP_CHECK_SITE_KEY") || "").trim();
+const appCheckRequested = resolveBoolean(
+  envValue("APP_CHECK_ENFORCE"),
+  defaults.appCheckEnabled !== false
+);
 const appCheckEnabled = appCheckRequested && Boolean(appCheckSiteKey);
+const appCheckStatus = appCheckEnabled
+  ? "enabled"
+  : appCheckRequested
+    ? "requested by default, inactive (missing FIREBASE_APP_CHECK_SITE_KEY)"
+    : "disabled";
 const hostingOrigins = new Set([
   `https://${projectId}.web.app`,
   `https://${projectId}.firebaseapp.com`,
 ]);
-const extraOrigins = (process.env.CORS_EXTRA_ORIGINS || "")
+const extraOrigins = (envValue("CORS_EXTRA_ORIGINS") || "")
   .split(",")
   .map((value) => value.trim())
   .filter(Boolean);
@@ -34,13 +46,11 @@ const functionsEnv = {
   BACKEND_PRODUCTION: "true",
   BACKEND_ENCRYPTION_KEY: encryptionKey,
   APP_CHECK_ENFORCE: appCheckEnabled ? "1" : "0",
-  FIREBASE_PROJECT_ID: projectId,
-  FIREBASE_REGION: region,
   FIRESTORE_JOBS_COLLECTION:
-    process.env.FIRESTORE_JOBS_COLLECTION || defaults.firestoreJobsCollection,
+    envValue("FIRESTORE_JOBS_COLLECTION") || defaults.firestoreJobsCollection,
   FIRESTORE_CREDENTIALS_COLLECTION:
-    process.env.FIRESTORE_CREDENTIALS_COLLECTION || defaults.firestoreCredentialsCollection,
-  BACKEND_RETENTION_DAYS: process.env.BACKEND_RETENTION_DAYS || defaults.retentionDays,
+    envValue("FIRESTORE_CREDENTIALS_COLLECTION") || defaults.firestoreCredentialsCollection,
+  BACKEND_RETENTION_DAYS: envValue("BACKEND_RETENTION_DAYS") || defaults.retentionDays,
   CORS_ALLOW_ORIGINS: Array.from(hostingOrigins).join(","),
 };
 
@@ -69,27 +79,26 @@ if (appCheckEnabled) {
 writeEnvFile(path.join(functionsEnvDir, `.env.${projectId}`), functionsEnv);
 writeEnvFile(frontendEnvPath, frontendEnv);
 
-console.log(
-  JSON.stringify(
-    {
-      projectId,
-      region,
-      webAppId,
-      functionsEnvFile: path.join("functions", `.env.${projectId}`),
-      frontendEnvFile: path.join("src", "frontend", ".env.production"),
-      appCheckEnabled,
-    },
-    null,
-    2
-  )
-);
+console.log(`Prepared Firebase deploy configuration:
+  Project: ${projectId}
+  Region: ${region}
+  Web app: ${webAppId}
+  Functions env: ${path.join("functions", `.env.${projectId}`)}
+  Frontend env: ${path.join("src", "frontend", ".env.production")}
+  App Check: ${appCheckStatus}`);
 
 function requiredEnv(name) {
-  const value = process.env[name];
+  const value = envValue(name);
   if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
+    throw new Error(
+      `Missing required environment variable: ${name} (checked process env, .env, functions/.env)`
+    );
   }
   return value;
+}
+
+function envValue(name) {
+  return process.env[name] ?? deployInputEnv[name] ?? "";
 }
 
 function requiredConfig(value, label) {
@@ -104,6 +113,45 @@ function resolveBoolean(rawValue, defaultValue) {
     return Boolean(defaultValue);
   }
   return ["1", "true", "yes", "on"].includes(String(rawValue).trim().toLowerCase());
+}
+
+function loadEnvFiles(filePaths) {
+  const values = {};
+  for (const filePath of filePaths) {
+    if (!fs.existsSync(filePath)) {
+      continue;
+    }
+    Object.assign(values, parseEnvFile(fs.readFileSync(filePath, "utf8")));
+  }
+  return values;
+}
+
+function parseEnvFile(source) {
+  const values = {};
+  for (const rawLine of String(source).split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) {
+      continue;
+    }
+
+    const normalized = line.startsWith("export ") ? line.slice(7).trim() : line;
+    const separatorIndex = normalized.indexOf("=");
+    if (separatorIndex <= 0) {
+      continue;
+    }
+
+    const key = normalized.slice(0, separatorIndex).trim();
+    let value = normalized.slice(separatorIndex + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    values[key] = value;
+  }
+  return values;
 }
 
 function discoverOrCreateWebAppId(project) {

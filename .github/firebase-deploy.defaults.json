@@ -4,9 +4,9 @@
   "retentionDays": "7",
   "appCheckEnabled": true,
   "authProviders": {
-    "google": true,
-    "apple": true,
-    "facebook": true,
+    "google": false,
+    "apple": false,
+    "facebook": false,
     "microsoft": false,
     "guest": false
   }
