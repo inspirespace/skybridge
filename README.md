@@ -136,6 +136,8 @@ Clear Firebase resources while keeping the project (zero-config from `.firebaser
 ./scripts/firebase-clear-project.sh
 ```
 
+This clears functions, Firestore, Realtime Database, Hosting, and deletes Cloud Storage buckets in the project after clearing any remaining object versions. In local interactive runs, if Cloud Storage cleanup needs Google ADC and none is available yet, the script will prompt for `gcloud auth application-default login`. It does not delete Firebase Auth users, and Storage usage charts can lag when provider-side protection settings still apply.
+
 Frontend dependency install during deploy/devcontainer startup is handled by `scripts/npm-ci-frontend.sh`, which uses npm nested install strategy and one automatic retry to mitigate intermittent npm unpack `ENOENT`/tarball failures.
 Deploys are also gated by `npm --prefix src/frontend run test:runtime-smoke`, which fails fast on frontend runtime errors before any remote Firebase changes.
 
