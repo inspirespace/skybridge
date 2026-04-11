@@ -23,7 +23,7 @@ from .store import JobStore
 
 _logger = logging.getLogger(__name__)
 QUEUE_STALE_TIMEOUT_SECONDS = 120
-RUNNING_STALE_TIMEOUT_SECONDS = 120
+RUNNING_STALE_TIMEOUT_SECONDS = 600
 STALE_AUTO_RETRY_LIMIT = 2
 
 
@@ -663,6 +663,7 @@ def download_artifacts_zip_handler(event: dict[str, Any], _context: Any) -> dict
 
         import tempfile
         import zipfile
+        from shutil import copyfileobj
 
         store = _get_store()
         job_dir = store.job_dir(job_uuid)
@@ -704,8 +705,15 @@ def download_artifacts_zip_handler(event: dict[str, Any], _context: Any) -> dict
                             "cloudahoy_exports",
                             arcname,
                         )
-                        with zipf.open(arcname, "w") as destination:
-                            store.object_store.download_to_file(full_key, destination)
+                        with tempfile.TemporaryFile() as remote_file:
+                            downloaded = store.object_store.download_to_file(full_key, remote_file)
+                            if not downloaded:
+                                if arcname in local_entries:
+                                    zipf.write(local_entries[arcname], arcname=arcname)
+                                continue
+                            remote_file.seek(0)
+                            with zipf.open(arcname, "w") as destination:
+                                copyfileobj(remote_file, destination)
             filename = f"skybridge-run-{job_uuid}.zip"
             return {
                 "statusCode": 200,

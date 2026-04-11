@@ -311,7 +311,7 @@ export function ReviewSection({
           )}
           {reviewRuntimeWarning && !reviewError && (
             <Alert>
-              <AlertTitle>Background review may be stalled</AlertTitle>
+              <AlertTitle>Background review updates are delayed</AlertTitle>
               <AlertDescription>{reviewRuntimeWarning}</AlertDescription>
               <div className="mt-3">
                 <Button size="sm" variant="outline" onClick={onRefresh}>

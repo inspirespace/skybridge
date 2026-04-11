@@ -207,6 +207,8 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Fix local Firebase Functions emulator source loading by ignoring stale `functions/_deploy_src` staging during emulator/dev runs and only preferring that path in deployed Cloud Functions runtime.
 - [x] Tighten local Firebase emulator healthcheck so dev/proxy startup waits for both Auth and `/api/jobs` rewrite availability instead of exposing the app before Functions is ready.
 - [x] Increase the Firebase worker timeout budget and emit incremental review progress during CloudAhoy export generation so long real-data reviews do not die silently at `Preparing review`.
+- [x] Fix streamed artifact ZIP fallback so a missing remote object no longer replaces a valid local export with an empty entry.
+- [x] Reduce false stale-worker alarms by lengthening the running-job stale timeout and softening delayed-heartbeat UI messaging during long imports.
 - [x] Streamline Firebase email-link sign-in UX: use inline auth card on `/app` (no duplicate modal) and prefill email-link completion from redirect email hint.
 - [x] Improve sign-in email field UX by submitting on Enter and enabling native browser email autofill/suggestions without wrapping the field in a login form that triggers Safari password-manager takeover.
 - [x] Reduce password-manager save prompts on CloudAhoy/FlySto credential fields by adding `autocomplete` suppression plus manager-specific ignore attributes (`data-lpignore`, `data-1p-ignore`, `data-bwignore`).
