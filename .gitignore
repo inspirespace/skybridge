@@ -57,5 +57,6 @@ infra/terraform/lambda/*.zip
 src/frontend/.npm-cache/
 src/frontend/.npm-cache-shadcn/
 src/frontend/.vite/
+src/frontend/coverage/
 .claude/settings.local.json
 .playwright-mcp/

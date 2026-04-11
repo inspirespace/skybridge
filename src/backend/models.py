@@ -100,6 +100,7 @@ class JobRecord(BaseModel):
     progress_percent: Optional[int] = None
     progress_stage: Optional[str] = None
     progress_log: list[ProgressEvent] = Field(default_factory=list)
+    worker_retry_count: int = 0
     phase_cursor: Optional[int] = None
     phase_total: Optional[int] = None
     review_id: Optional[str] = None

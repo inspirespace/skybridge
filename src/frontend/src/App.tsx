@@ -409,11 +409,11 @@ export default function App() {
     Date.now() - heartbeatAt > RUNNING_STALL_WARNING_SECONDS * 1000;
   const reviewRuntimeWarning =
     reviewRunning && stalledHeartbeat
-      ? `No background heartbeat for ${formatLastUpdate(job?.heartbeat_at, now)}. The worker may have stalled or crashed.`
+      ? `No background heartbeat for ${formatLastUpdate(job?.heartbeat_at, now)}. Skybridge will retry the review automatically if the worker does not recover.`
       : null;
   const importRuntimeWarning =
     importRunning && stalledHeartbeat
-      ? `No background heartbeat for ${formatLastUpdate(job?.heartbeat_at, now)}. The worker may have stalled or crashed.`
+      ? `No background heartbeat for ${formatLastUpdate(job?.heartbeat_at, now)}. Skybridge will retry the import automatically if the worker does not recover.`
       : null;
 
   React.useEffect(() => {

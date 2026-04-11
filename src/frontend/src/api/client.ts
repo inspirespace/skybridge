@@ -68,6 +68,7 @@ export type JobRecord = {
   progress_percent?: number | null;
   progress_stage?: string | null;
   progress_log?: ProgressEvent[];
+  worker_retry_count?: number | null;
   phase_cursor?: number | null;
   phase_total?: number | null;
   review_id?: string | null;

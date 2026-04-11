@@ -402,21 +402,49 @@ class JobService:
             self._store.save_job(job)
 
             if not dry_run:
-                _append_progress(
+                _set_import_finalization_stage(
+                    self._store,
                     job,
-                    phase="import",
                     stage="Finalizing import",
                     percent=85,
-                    status="import_running",
                 )
-                self._store.save_job(job)
                 _maybe_wait_for_processing(flysto, heartbeat=lambda: _touch_heartbeat(job, store=self._store))
+                _set_import_finalization_stage(
+                    self._store,
+                    job,
+                    stage="Verifying imported flights",
+                    percent=88,
+                )
                 verify_import_report(report_path, flysto)
+                _set_import_finalization_stage(
+                    self._store,
+                    job,
+                    stage="Reconciling aircraft",
+                    percent=90,
+                )
                 reconcile_aircraft_from_report(report_path, flysto)
+                _set_import_finalization_stage(
+                    self._store,
+                    job,
+                    stage="Reconciling crew",
+                    percent=92,
+                )
                 reconcile_crew_from_report(report_path, flysto, review_path, cloudahoy)
+                _set_import_finalization_stage(
+                    self._store,
+                    job,
+                    stage="Reconciling metadata",
+                    percent=94,
+                )
                 reconcile_metadata_from_report(report_path, flysto)
                 # Crew can be cleared by FlySto post-processing; reapply after the queue drains.
                 _maybe_wait_for_processing(flysto, heartbeat=lambda: _touch_heartbeat(job, store=self._store))
+                _set_import_finalization_stage(
+                    self._store,
+                    job,
+                    stage="Reapplying crew assignments",
+                    percent=96,
+                )
                 reconcile_crew_from_report(report_path, flysto, review_path, cloudahoy)
             final_report_payload = _load_or_create_import_report(report_path, review_id, len(summaries))
             job.import_report = ImportReport(
@@ -693,6 +721,24 @@ def _record_import_progress(
     store.save_job(job)
 
 
+def _set_import_finalization_stage(
+    store: JobStore,
+    job: JobRecord,
+    *,
+    stage: str,
+    percent: int,
+) -> None:
+    """Persist a finalization-stage progress update and refresh the heartbeat."""
+    _append_progress(
+        job,
+        phase="import",
+        stage=stage,
+        percent=percent,
+        status="import_running",
+    )
+    store.save_job(job)
+
+
 def _recompute_import_report_stats(payload: dict) -> None:
     """Recompute aggregate import counts from the report item list."""
     items = [item for item in payload.get("items", []) if isinstance(item, dict)]
@@ -745,9 +791,8 @@ def _has_started_import(job: JobRecord) -> bool:
         phase = getattr(event, "phase", None)
         if phase != "import":
             continue
-        stage = getattr(event, "stage", None)
         status = getattr(event, "status", None)
-        if status == "import_queued" and stage == "Queued":
+        if status == "import_queued":
             continue
         return True
     return False

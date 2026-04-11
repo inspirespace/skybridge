@@ -24,6 +24,7 @@ from .store import JobStore
 _logger = logging.getLogger(__name__)
 QUEUE_STALE_TIMEOUT_SECONDS = 120
 RUNNING_STALE_TIMEOUT_SECONDS = 120
+STALE_AUTO_RETRY_LIMIT = 2
 
 
 def _json_default(value: Any) -> str:
@@ -150,6 +151,16 @@ def _running_stale_timeout_seconds() -> int:
         return RUNNING_STALE_TIMEOUT_SECONDS
 
 
+def _stale_auto_retry_limit() -> int:
+    value = os.getenv("BACKEND_STALE_AUTO_RETRY_LIMIT")
+    if not value:
+        return STALE_AUTO_RETRY_LIMIT
+    try:
+        return max(0, int(value))
+    except ValueError:
+        return STALE_AUTO_RETRY_LIMIT
+
+
 def _job_phase(job) -> str | None:
     if job.status.startswith("review"):
         return "review"
@@ -182,10 +193,19 @@ def _fail_stale_job(job):
     age_seconds = (datetime.now(timezone.utc) - reference_time).total_seconds()
     if age_seconds < timeout_seconds:
         return job
+    if _can_auto_retry_stale_job(job, purpose):
+        recovered = _auto_retry_stale_job(job, purpose)
+        if recovered is not None:
+            return recovered
     job.updated_at = datetime.now(timezone.utc)
     job.heartbeat_at = job.updated_at
     job.status = "failed"
     job.progress_stage = failure_stage
+    if purpose == "import" and (job.worker_retry_count or 0) > 0:
+        failure_message = (
+            "Import stopped making progress in the background and automatic recovery was exhausted. "
+            "Please retry or start over."
+        )
     job.progress_log.append(
         ProgressEvent(
             phase=purpose,
@@ -198,6 +218,65 @@ def _fail_stale_job(job):
     job.error_message = failure_message
     _get_store().save_job(job)
     return job
+
+
+def _can_auto_retry_stale_job(job, purpose: str) -> bool:
+    if purpose not in {"review", "import"}:
+        return False
+    if (job.worker_retry_count or 0) >= _stale_auto_retry_limit():
+        return False
+    credentials = _load_job_credentials(str(job.job_id))
+    return _credentials_complete(credentials)
+
+
+def _auto_retry_stale_job(job, purpose: str):
+    credentials = _load_job_credentials(str(job.job_id))
+    if not _credentials_complete(credentials):
+        return None
+    store = _get_store()
+    retry_number = (job.worker_retry_count or 0) + 1
+    now = datetime.now(timezone.utc)
+    stage = f"Retrying {purpose} after worker interruption"
+    job.worker_retry_count = retry_number
+    job.status = f"{purpose}_queued"
+    job.progress_stage = stage
+    job.updated_at = now
+    job.heartbeat_at = now
+    job.error_message = None
+    job.progress_log.append(
+        ProgressEvent(
+            phase=purpose,
+            stage=stage,
+            percent=job.progress_percent,
+            status=job.status,
+            created_at=now,
+        )
+    )
+    try:
+        token = _get_credential_store().issue(
+            job_id=str(job.job_id),
+            purpose=purpose,
+            credentials=credentials,
+            ttl_seconds=_credential_ttl(),
+        )
+        store.save_job(job)
+        store.write_token(job.job_id, purpose, token)
+        _enqueue_job(job.job_id, purpose, token)
+        return job
+    except LambdaHttpError as exc:
+        _mark_enqueue_failed(job, phase=purpose, detail=exc.detail)
+        return store.load_job(job.job_id)
+    except Exception as exc:
+        _logger.exception("Failed to auto-retry stale %s job %s", purpose, job.job_id)
+        _mark_enqueue_failed(
+            job,
+            phase=purpose,
+            detail=(
+                f"{purpose.title()} automatic recovery failed. "
+                "Please retry or start over."
+            ),
+        )
+        return store.load_job(job.job_id)
 
 
 def _set_queued(job, *, phase: str) -> None:
@@ -350,6 +429,7 @@ def create_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
             credentials=credentials_payload,
             ttl_seconds=_credential_ttl(),
         )
+        job.worker_retry_count = 0
         _set_queued(job, phase="review")
         store.save_job(job)
         store.write_token(job.job_id, "review", token)
@@ -478,6 +558,7 @@ def accept_review_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
             credentials=credentials_payload,
             ttl_seconds=_credential_ttl(),
         )
+        job.worker_retry_count = 0
         _set_queued(job, phase="import")
         store.save_job(job)
         store.write_token(job.job_id, "import", token)

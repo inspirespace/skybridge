@@ -65,9 +65,17 @@ class FakeObjectStore:
 @pytest.fixture()
 def store(tmp_path, monkeypatch: pytest.MonkeyPatch):
     store = JobStore(tmp_path)
+
+    class _DefaultCredentialStore:
+        def load_job_credentials(self, _job_id: str):
+            return None
+
+        def issue(self, **_kwargs):
+            return "token"
+
     monkeypatch.setattr(handlers, "_store", store)
     monkeypatch.setattr(handlers, "_service", None)
-    monkeypatch.setattr(handlers, "_credential_store", None)
+    monkeypatch.setattr(handlers, "_credential_store", _DefaultCredentialStore())
     monkeypatch.setattr(handlers, "_pubsub_client", None)
     monkeypatch.setattr(
         handlers,
@@ -276,6 +284,85 @@ def test_get_job_handler_marks_stale_running_job_failed(store, monkeypatch: pyte
 
     assert response["statusCode"] == 200
     assert "worker stalled" in response["body"]
+
+
+def test_get_job_handler_auto_retries_stale_import_with_saved_credentials(
+    store,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    job = _job("import_running")
+    stale_at = datetime.now(timezone.utc) - timedelta(minutes=10)
+    job.updated_at = stale_at
+    job.heartbeat_at = stale_at
+    job.progress_percent = 85
+    job.progress_stage = "Finalizing import"
+    job.progress_log = [
+        handlers.ProgressEvent(
+            phase="import",
+            stage="Finalizing import",
+            percent=85,
+            status="import_running",
+            created_at=stale_at,
+        )
+    ]
+    store.save_job(job)
+
+    seen = {}
+
+    class _RetryCredentialStore:
+        def load_job_credentials(self, job_id: str):
+            assert job_id == str(job.job_id)
+            return {
+                "cloudahoy_username": "pilot",
+                "cloudahoy_password": "secret",
+                "flysto_username": "pilot",
+                "flysto_password": "secret",
+            }
+
+        def issue(self, **kwargs):
+            seen["issued"] = kwargs
+            return "retry-token"
+
+    monkeypatch.setattr(handlers, "_credential_store", _RetryCredentialStore())
+    monkeypatch.setattr(handlers, "_enqueue_job", lambda *args, **kwargs: seen.setdefault("enqueued", True))
+    monkeypatch.setenv("BACKEND_RUNNING_STALE_TIMEOUT_SECONDS", "60")
+
+    response = handlers.get_job_handler(_event("pilot", job_id=str(job.job_id)), None)
+
+    assert response["statusCode"] == 200
+    assert "\"status\": \"import_queued\"" in response["body"]
+    assert "\"worker_retry_count\": 1" in response["body"]
+    assert seen["enqueued"] is True
+    saved_job = store.load_job(job.job_id)
+    assert saved_job.status == "import_queued"
+    assert saved_job.worker_retry_count == 1
+    assert saved_job.progress_stage == "Retrying import after worker interruption"
+
+
+def test_get_job_handler_fails_stale_import_after_auto_retry_budget(store, monkeypatch: pytest.MonkeyPatch):
+    job = _job("import_running")
+    stale_at = datetime.now(timezone.utc) - timedelta(minutes=10)
+    job.updated_at = stale_at
+    job.heartbeat_at = stale_at
+    job.worker_retry_count = 2
+    job.progress_log = [
+        handlers.ProgressEvent(
+            phase="import",
+            stage="Finalizing import",
+            percent=85,
+            status="import_running",
+            created_at=stale_at,
+        )
+    ]
+    store.save_job(job)
+
+    monkeypatch.setenv("BACKEND_RUNNING_STALE_TIMEOUT_SECONDS", "60")
+    monkeypatch.setenv("BACKEND_STALE_AUTO_RETRY_LIMIT", "2")
+
+    response = handlers.get_job_handler(_event("pilot", job_id=str(job.job_id)), None)
+
+    assert response["statusCode"] == 200
+    assert "automatic recovery was exhausted" in response["body"]
 
 
 def test_create_job_handler_marks_job_failed_when_enqueue_fails(store, monkeypatch: pytest.MonkeyPatch):

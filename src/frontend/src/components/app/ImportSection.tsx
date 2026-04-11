@@ -279,7 +279,7 @@ export function ImportSection({
                   </Button>
                 )}
                 <Button size="sm" variant="outline" onClick={onRefresh}>
-                  Retry
+                  Refresh status
                 </Button>
               </div>
             </Alert>
@@ -290,7 +290,7 @@ export function ImportSection({
               <AlertDescription>{importRuntimeWarning}</AlertDescription>
               <div className="mt-3">
                 <Button size="sm" variant="outline" onClick={onRefresh}>
-                  Refresh
+                  Refresh status
                 </Button>
               </div>
             </Alert>

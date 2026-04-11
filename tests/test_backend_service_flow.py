@@ -432,6 +432,97 @@ def test_accept_review_resets_cursor_when_transitioning_from_review_to_import(
     assert flysto.upload_calls == ["flight-1", "flight-2"]
 
 
+def test_accept_review_resets_cursor_after_stale_auto_retry_queue_event(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = JobStore(tmp_path)
+    job_service = JobService(store)
+    job = job_service.create_job("pilot")
+    job.status = "import_queued"
+    job.review_summary = service_mod.ReviewSummary(flight_count=2, total_hours=1.5, flights=[])
+    job.phase_cursor = 2
+    job.phase_total = 2
+    job.progress_log = [
+        service_mod.ProgressEvent(
+            phase="review",
+            stage="Review ready",
+            percent=100,
+            status="review_ready",
+            created_at=datetime.now(timezone.utc),
+        ),
+        service_mod.ProgressEvent(
+            phase="import",
+            stage="Retrying import after worker interruption",
+            percent=85,
+            status="import_queued",
+            created_at=datetime.now(timezone.utc),
+        ),
+    ]
+    store.save_job(job)
+
+    review_payload = {
+        "review_id": "review-123",
+        "items": [
+            {
+                "flight_id": "flight-1",
+                "started_at": "2026-01-05T09:00:00Z",
+                "duration_seconds": 3600,
+                "tail_number": "N123",
+            },
+            {
+                "flight_id": "flight-2",
+                "started_at": "2026-01-06T10:00:00Z",
+                "duration_seconds": 1800,
+                "tail_number": "N123",
+            },
+        ],
+    }
+    store.write_artifact(job.job_id, REVIEW_MANIFEST_ARTIFACT, review_payload)
+
+    exports_dir = tmp_path / "exports"
+    details = {
+        "flight-1": _detail(
+            exports_dir,
+            "flight-1",
+            datetime(2026, 1, 5, 9, 0, tzinfo=timezone.utc),
+            "N123",
+            "KSEA",
+            "KLAX",
+        ),
+        "flight-2": _detail(
+            exports_dir,
+            "flight-2",
+            datetime(2026, 1, 6, 10, 0, tzinfo=timezone.utc),
+            "N123",
+            "KSFO",
+            "KPDX",
+        ),
+    }
+
+    monkeypatch.setattr(
+        service_mod,
+        "_build_cloudahoy_client",
+        lambda payload, path: FakeCloudAhoy([], details),
+    )
+    monkeypatch.setenv("BACKEND_IMPORT_BATCH_SIZE", "2")
+    flysto = FakeFlySto()
+    monkeypatch.setattr(service_mod, "_build_flysto_client", lambda payload: flysto)
+    monkeypatch.setattr(service_mod, "_maybe_wait_for_processing", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(service_mod, "verify_import_report", lambda *_args, **_kwargs: {"missing": 0})
+    monkeypatch.setattr(service_mod, "reconcile_aircraft_from_report", lambda *_args, **_kwargs: 0)
+    monkeypatch.setattr(service_mod, "reconcile_crew_from_report", lambda *_args, **_kwargs: 0)
+    monkeypatch.setattr(service_mod, "reconcile_metadata_from_report", lambda *_args, **_kwargs: 0)
+
+    result = job_service.accept_review(job.job_id, JobAcceptRequest(credentials=_credentials()))
+
+    assert result.status == "completed"
+    assert result.phase_cursor == 2
+    assert result.import_report is not None
+    assert result.import_report.imported_count == 2
+    assert flysto.upload_calls == ["flight-1", "flight-2"]
+
+
 def test_accept_review_loads_manifest_from_object_store_and_persists_context(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
