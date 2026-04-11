@@ -555,6 +555,50 @@ def test_download_artifacts_zip_merges_remote_exports_with_local_cache(tmp_path,
     Path(response["bodyFilePath"]).unlink(missing_ok=True)
 
 
+def test_download_artifacts_zip_falls_back_to_local_when_remote_object_is_missing(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import zipfile
+
+    object_store = FakeObjectStore()
+    store = JobStore(tmp_path, object_store=object_store)
+    job = _job("completed")
+    store.save_job(job)
+    monkeypatch.setattr(handlers, "_store", store)
+    monkeypatch.setattr(
+        handlers,
+        "user_id_from_event",
+        lambda event: "pilot"
+        if (event.get("headers") or {}).get("Authorization")
+        else (_ for _ in ()).throw(Exception("missing auth")),
+    )
+
+    exports_dir = store.job_dir(job.job_id) / "work" / "cloudahoy_exports"
+    exports_dir.mkdir(parents=True, exist_ok=True)
+    (exports_dir / "flight-1.gpx").write_text("local-fallback")
+
+    original_list_prefix = object_store.list_prefix
+    remote_prefix = object_store.key_for(job.user_id, str(job.job_id), "cloudahoy_exports")
+    monkeypatch.setattr(
+        object_store,
+        "list_prefix",
+        lambda prefix: ["flight-1.gpx"] if prefix == remote_prefix else original_list_prefix(prefix),
+    )
+
+    response = handlers.download_artifacts_zip_handler(
+        _event("pilot", job_id=str(job.job_id)),
+        None,
+    )
+
+    assert response["statusCode"] == 200
+    assert response["bodyFilePath"]
+    with zipfile.ZipFile(response["bodyFilePath"], "r") as archive:
+        assert archive.namelist() == ["flight-1.gpx"]
+        assert archive.read("flight-1.gpx") == b"local-fallback"
+    Path(response["bodyFilePath"]).unlink(missing_ok=True)
+
+
 def test_delete_job_handler(store):
     job = _job("review_ready")
     store.save_job(job)
