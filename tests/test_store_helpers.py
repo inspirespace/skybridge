@@ -37,6 +37,9 @@ class FakeObjectStore:
     def put_file(self, _key: str, _path: Path) -> None:
         return None
 
+    def download_to_file(self, _key: str, _file_obj) -> bool:
+        return False
+
     def delete_prefix(self, _prefix: str) -> None:
         return None
 

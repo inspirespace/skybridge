@@ -156,6 +156,28 @@ def _invoke(
     is_b64 = payload.get("isBase64Encoded", False)
     data = payload.get("body", "")
     headers = {**headers, **_cors_headers(request.headers.get("Origin"))}
+    body_file_path = payload.get("bodyFilePath")
+    if body_file_path:
+        cleanup_file_path = payload.get("cleanupFilePath")
+
+        def _generate() -> Any:
+            with open(body_file_path, "rb") as handle:
+                while True:
+                    chunk = handle.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    yield chunk
+
+        response = Response(response=_generate(), status=status, headers=headers)
+        if cleanup_file_path:
+            @response.call_on_close
+            def _cleanup_file() -> None:
+                try:
+                    os.unlink(cleanup_file_path)
+                except OSError:
+                    pass
+
+        return response
     if isinstance(data, dict):
         data = json.dumps(data)
     if is_b64:

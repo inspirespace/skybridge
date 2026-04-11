@@ -661,7 +661,6 @@ def download_artifacts_zip_handler(event: dict[str, Any], _context: Any) -> dict
         except ValueError:
             return _response(404, {"detail": "Job not found"})
 
-        import base64
         import tempfile
         import zipfile
 
@@ -677,7 +676,7 @@ def download_artifacts_zip_handler(event: dict[str, Any], _context: Any) -> dict
         try:
             exports_dir = job_dir / "work" / "cloudahoy_exports"
             local_entries: dict[str, Any] = {}
-            remote_entries: dict[str, bytes] = {}
+            remote_entries: set[str] = set()
             with zipfile.ZipFile(temp_path, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
                 if exports_dir.exists():
                     for path in exports_dir.rglob("*"):
@@ -689,30 +688,24 @@ def download_artifacts_zip_handler(event: dict[str, Any], _context: Any) -> dict
                         local_entries[arcname] = path
                 if store.object_store:
                     prefix = store.object_store.key_for(user_id, str(job_uuid), "cloudahoy_exports")
-                    keys = store.object_store.list_prefix(prefix)
-                    for key in keys:
+                    for key in store.object_store.list_prefix(prefix):
                         if key.endswith(".token"):
                             continue
-                        full_key = store.object_store.key_for(
-                            user_id,
-                            str(job_uuid),
-                            "cloudahoy_exports",
-                            key,
-                        )
-                        payload = store.object_store.get_bytes(full_key)
-                        if payload is None:
-                            continue
-                        remote_entries[key] = payload
+                        remote_entries.add(key)
                 for arcname in sorted(local_entries):
                     if arcname in remote_entries:
                         continue
                     zipf.write(local_entries[arcname], arcname=arcname)
-                for arcname in sorted(remote_entries):
-                    zipf.writestr(arcname, remote_entries[arcname])
-
-            with open(temp_path, "rb") as handle:
-                payload = handle.read()
-            encoded = base64.b64encode(payload).decode("utf-8")
+                if store.object_store:
+                    for arcname in sorted(remote_entries):
+                        full_key = store.object_store.key_for(
+                            user_id,
+                            str(job_uuid),
+                            "cloudahoy_exports",
+                            arcname,
+                        )
+                        with zipf.open(arcname, "w") as destination:
+                            store.object_store.download_to_file(full_key, destination)
             filename = f"skybridge-run-{job_uuid}.zip"
             return {
                 "statusCode": 200,
@@ -720,15 +713,15 @@ def download_artifacts_zip_handler(event: dict[str, Any], _context: Any) -> dict
                     "Content-Type": "application/zip",
                     "Content-Disposition": f'attachment; filename="{filename}"',
                 },
-                "isBase64Encoded": True,
-                "body": encoded,
+                "bodyFilePath": temp_path,
+                "cleanupFilePath": temp_path,
             }
-        finally:
-            # Always clean up the temp file to prevent disk space exhaustion
+        except Exception:
             try:
                 os.unlink(temp_path)
             except OSError:
                 pass
+            raise
     except Exception as exc:
         return _handle_error(exc)
 

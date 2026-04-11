@@ -41,6 +41,9 @@ class FakeObjectStore:
     def put_file(self, key: str, path: Path) -> None:
         self.files.append((key, path))
 
+    def download_to_file(self, _key: str, _file_obj) -> bool:
+        return False
+
     def list_prefix(self, prefix: str):
         return [key.split("/")[-1] for key in self.json_payloads if key.startswith(prefix)]
 
