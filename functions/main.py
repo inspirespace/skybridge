@@ -64,6 +64,19 @@ from src.backend.env import resolve_project_id, resolve_region  # noqa: E402
 from src.backend.queue import JOB_QUEUE_TOPIC  # noqa: E402
 
 WORKER_TIMEOUT_SEC = 540
+_SUPPORTED_MEMORY_MB = {128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768}
+
+
+def _worker_memory_mb() -> int:
+    raw = os.getenv("BACKEND_WORKER_MEMORY_MB", "256").strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        return 256
+    return value if value in _SUPPORTED_MEMORY_MB else 256
+
+
+WORKER_MEMORY_MB = _worker_memory_mb()
 
 options.set_global_options(
     region=resolve_region()
@@ -176,7 +189,11 @@ def api(request: Request) -> Response:
     )
 
 
-@pubsub_fn.on_message_published(topic=JOB_QUEUE_TOPIC, timeout_sec=WORKER_TIMEOUT_SEC)
+@pubsub_fn.on_message_published(
+    topic=JOB_QUEUE_TOPIC,
+    timeout_sec=WORKER_TIMEOUT_SEC,
+    memory=WORKER_MEMORY_MB,
+)
 def worker(event: pubsub_fn.CloudEvent[pubsub_fn.MessagePublishedData]) -> None:
     message = event.data.message
     payload = message.data

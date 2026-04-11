@@ -50,6 +50,7 @@ export function ReviewSection({
   showAllFlights,
   setShowAllFlights,
   reviewError,
+  reviewRuntimeWarning,
   onRefresh,
   canApprove,
   importRunning,
@@ -77,6 +78,7 @@ export function ReviewSection({
   showAllFlights: boolean;
   setShowAllFlights: (value: boolean) => void;
   reviewError?: string | null;
+  reviewRuntimeWarning?: string | null;
   onRefresh: () => void;
   canApprove: boolean;
   importRunning: boolean;
@@ -303,6 +305,17 @@ export function ReviewSection({
               <div className="mt-3">
                 <Button size="sm" variant="outline" onClick={onRefresh}>
                   Retry
+                </Button>
+              </div>
+            </Alert>
+          )}
+          {reviewRuntimeWarning && !reviewError && (
+            <Alert>
+              <AlertTitle>Background review may be stalled</AlertTitle>
+              <AlertDescription>{reviewRuntimeWarning}</AlertDescription>
+              <div className="mt-3">
+                <Button size="sm" variant="outline" onClick={onRefresh}>
+                  Refresh
                 </Button>
               </div>
             </Alert>

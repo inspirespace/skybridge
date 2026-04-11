@@ -29,6 +29,20 @@ def test_credential_store_expires(monkeypatch):
     assert store.claim(token, "job1", "import") is None
 
 
+def test_credential_store_delete_all_for_job(monkeypatch):
+    store = store_mod.CredentialStore()
+    monkeypatch.setattr(time, "time", lambda: 1000.0)
+    token_job1 = store.issue("job1", "import", {"user": "pilot"}, ttl_seconds=10)
+    token_job2 = store.issue("job2", "import", {"user": "other"}, ttl_seconds=10)
+    store.store_job_credentials("job1", {"user": "pilot"}, ttl_seconds=10)
+
+    store.delete_all_for_job("job1")
+
+    assert store.claim(token_job1, "job1", "import") is None
+    assert store.load_job_credentials("job1") is None
+    assert store.claim(token_job2, "job2", "import") == {"user": "other"}
+
+
 def test_build_credential_store(monkeypatch):
     seen = {}
 

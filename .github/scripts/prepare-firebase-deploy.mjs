@@ -47,6 +47,8 @@ for (const origin of extraOrigins) {
 const functionsEnv = {
   BACKEND_PRODUCTION: "true",
   BACKEND_ENCRYPTION_KEY: encryptionKey,
+  BACKEND_WORKER_MEMORY_MB:
+    envValue("BACKEND_WORKER_MEMORY_MB") || defaults.workerMemoryMb || "256",
   APP_CHECK_ENFORCE: appCheckEnabled ? "1" : "0",
   FIRESTORE_JOBS_COLLECTION:
     envValue("FIRESTORE_JOBS_COLLECTION") || defaults.firestoreJobsCollection,
@@ -90,6 +92,7 @@ console.log(`Prepared Firebase deploy configuration:
   Region: ${region}
   Web app: ${webAppId}
   Storage bucket: ${storageBucket || "(runtime discovery/default fallback)"}
+  Worker memory: ${functionsEnv.BACKEND_WORKER_MEMORY_MB} MiB
   Functions env: ${path.join("functions", `.env.${projectId}`)}
   Frontend env: ${path.join("src", "frontend", ".env.production")}
   App Check: ${appCheckStatus}`);

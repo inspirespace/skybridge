@@ -210,15 +210,21 @@ class JobStore:
 
     def delete_job(self, job_id: UUID, *, user_id: str | None = None) -> None:
         """Delete job."""
+        _delete_related_credentials(job_id)
         if self._firestore_collection:
             try:
-                job = self.load_job(job_id)
+                doc_ref = self._firestore_collection.document(str(job_id))
+                doc = doc_ref.get()
+                if doc.exists:
+                    payload = doc.to_dict() or {}
+                    raw_user_id = payload.get("user_id")
+                    if user_id is None and isinstance(raw_user_id, str):
+                        user_id = raw_user_id
                 try:
-                    self._firestore_collection.document(str(job_id)).delete()
+                    doc_ref.delete()
                 except Exception as exc:
                     self._raise_firestore_configuration_error(exc)
                     raise
-                user_id = user_id or job.user_id
             except FileNotFoundError:
                 pass
         job_dir = self._job_dir(job_id)
@@ -285,6 +291,22 @@ class JobStore:
                 "Failed to upload artifact file %s for job %s: %s", name, job_id, exc
             )
 
+    def upload_artifact_as(self, job_id: UUID, artifact_name: str, path: Path) -> None:
+        """Upload a local file under an explicit artifact name."""
+        if not self._object_store or not path.exists():
+            return
+        key = self._object_store.key_for(
+            self.load_job(job_id).user_id,
+            str(job_id),
+            artifact_name,
+        )
+        try:
+            self._object_store.put_file(key, path)
+        except Exception as exc:
+            logging.getLogger(__name__).warning(
+                "Failed to upload artifact file %s for job %s: %s", artifact_name, job_id, exc
+            )
+
     def upload_artifact_dir(
         self,
         job_id: UUID,
@@ -313,17 +335,14 @@ class JobStore:
 
     def materialize_artifact_file(self, job_id: UUID, name: str, target_path: Path) -> bool:
         """Restore a file artifact from object storage onto local disk when needed."""
-        if target_path.exists():
-            return True
-        if not self._object_store:
-            return False
-        key = self._object_store.key_for(self.load_job(job_id).user_id, str(job_id), name)
-        payload = self._object_store.get_bytes(key)
-        if payload is None:
-            return False
-        target_path.parent.mkdir(parents=True, exist_ok=True)
-        target_path.write_bytes(payload)
-        return True
+        if self._object_store:
+            key = self._object_store.key_for(self.load_job(job_id).user_id, str(job_id), name)
+            payload = self._object_store.get_bytes(key)
+            if payload is not None:
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                target_path.write_bytes(payload)
+                return True
+        return target_path.exists()
 
     def list_artifacts(self, job_id: UUID) -> list[str]:
         """Handle list artifacts."""
@@ -342,13 +361,24 @@ class JobStore:
     def load_artifact(self, job_id: UUID, name: str) -> dict[str, Any]:
         """Handle load artifact."""
         artifact_file = self._job_dir(job_id) / name
-        if artifact_file.exists():
-            return json.loads(artifact_file.read_text())
         if self._object_store:
             key = self._object_store.key_for(self.load_job(job_id).user_id, str(job_id), name)
-            payload = self._object_store.get_json(key)
-            if payload is not None:
-                return payload
+            try:
+                payload = self._object_store.get_json(key)
+            except Exception as exc:
+                logging.getLogger(__name__).warning(
+                    "Failed to read remote artifact %s for job %s: %s",
+                    name,
+                    job_id,
+                    exc,
+                )
+            else:
+                if payload is not None:
+                    artifact_file.parent.mkdir(parents=True, exist_ok=True)
+                    artifact_file.write_text(json.dumps(payload, indent=2))
+                    return payload
+        if artifact_file.exists():
+            return json.loads(artifact_file.read_text())
         raise FileNotFoundError("Artifact not found")
 
     def write_token(self, job_id: UUID, purpose: str, token: str) -> None:
@@ -399,32 +429,37 @@ class JobStore:
         """Load review payload for enrichment."""
         job_dir = self._job_dir(job.job_id)
         review_path = job_dir / "review.json"
+        if not self._object_store:
+            return json.loads(review_path.read_text()) if review_path.exists() else None
+        key = self._object_store.key_for(job.user_id, str(job.job_id), "review.json")
+        payload = self._object_store.get_json(key)
+        if payload is not None:
+            review_path.parent.mkdir(parents=True, exist_ok=True)
+            review_path.write_text(json.dumps(payload, indent=2))
+            return payload
         if review_path.exists():
             return json.loads(review_path.read_text())
-        if not self._object_store:
-            return None
-        key = self._object_store.key_for(job.user_id, str(job.job_id), "review.json")
-        return self._object_store.get_json(key)
+        return None
 
     def _load_raw_payload(self, job: JobRecord, raw_path: str) -> dict[str, Any] | None:
         """Load raw CloudAhoy payload for enrichment."""
         raw_file = Path(raw_path)
-        if raw_file.exists():
-            try:
-                return json.loads(raw_file.read_text())
-            except json.JSONDecodeError:
-                return None
         filename = raw_file.name
         job_dir = self._job_dir(job.job_id) / "cloudahoy_exports" / filename
-        if job_dir.exists():
-            try:
-                return json.loads(job_dir.read_text())
-            except json.JSONDecodeError:
-                return None
-        if not self._object_store:
-            return None
-        key = self._object_store.key_for(job.user_id, str(job.job_id), f"cloudahoy_exports/{filename}")
-        return self._object_store.get_json(key)
+        if self._object_store:
+            key = self._object_store.key_for(job.user_id, str(job.job_id), f"cloudahoy_exports/{filename}")
+            payload = self._object_store.get_json(key)
+            if payload is not None:
+                job_dir.parent.mkdir(parents=True, exist_ok=True)
+                job_dir.write_text(json.dumps(payload, indent=2))
+                return payload
+        for candidate in (raw_file, job_dir):
+            if candidate.exists():
+                try:
+                    return json.loads(candidate.read_text())
+                except json.JSONDecodeError:
+                    return None
+        return None
 
     def clear_token(self, job_id: UUID, purpose: str) -> None:
         """Handle clear token."""
@@ -438,7 +473,15 @@ class JobStore:
             query = self._firestore_collection.where("ttl_epoch", "<", now)
             try:
                 for doc in query.stream():
-                    doc.reference.delete()
+                    payload = doc.to_dict() or {}
+                    user_id = payload.get("user_id")
+                    try:
+                        job_id = UUID(doc.id)
+                    except ValueError:
+                        doc.reference.delete()
+                        deleted += 1
+                        continue
+                    self.delete_job(job_id, user_id=user_id if isinstance(user_id, str) else None)
                     deleted += 1
             except Exception as exc:
                 self._raise_firestore_configuration_error(exc)
@@ -600,3 +643,23 @@ def _bool_env(name: str, default: bool) -> bool:
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _delete_related_credentials(job_id: UUID) -> None:
+    """Best-effort credential cleanup for explicit and retention-based job deletion."""
+    if not os.getenv("BACKEND_ENCRYPTION_KEY"):
+        return
+    try:
+        from .credential_store import build_credential_store
+
+        store = build_credential_store()
+        if hasattr(store, "delete_all_for_job"):
+            store.delete_all_for_job(str(job_id))
+        elif hasattr(store, "delete_job_credentials"):
+            store.delete_job_credentials(str(job_id))
+    except Exception as exc:
+        logging.getLogger(__name__).warning(
+            "Failed to delete credentials for job %s: %s",
+            job_id,
+            exc,
+        )

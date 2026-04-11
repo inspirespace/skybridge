@@ -23,6 +23,8 @@ from .store import JobStore
 
 _logger = logging.getLogger(__name__)
 QUEUE_STALE_TIMEOUT_SECONDS = 120
+RUNNING_STALE_TIMEOUT_SECONDS = 120
+STALE_AUTO_RETRY_LIMIT = 2
 
 
 def _json_default(value: Any) -> str:
@@ -74,6 +76,11 @@ def _firestore_jobs_collection() -> str | None:
 def _credential_ttl() -> int:
     """Internal helper for credential ttl."""
     return int(os.getenv("BACKEND_CREDENTIAL_TTL") or "900")
+
+
+def _job_credential_ttl() -> int:
+    """Internal helper for reusable job credential ttl."""
+    return int(os.getenv("BACKEND_JOB_CREDENTIAL_TTL") or "21600")
 
 
 def _pubsub_topic() -> str:
@@ -134,18 +141,71 @@ def _mark_enqueue_failed(job, *, phase: str, detail: str) -> None:
     _get_store().save_job(job)
 
 
-def _fail_stale_queued_job(job):
-    """Mark jobs failed when Firebase worker delivery never starts."""
-    purpose = "review" if job.status == "review_queued" else "import" if job.status == "import_queued" else None
+def _running_stale_timeout_seconds() -> int:
+    value = os.getenv("BACKEND_RUNNING_STALE_TIMEOUT_SECONDS")
+    if not value:
+        return RUNNING_STALE_TIMEOUT_SECONDS
+    try:
+        return int(value)
+    except ValueError:
+        return RUNNING_STALE_TIMEOUT_SECONDS
+
+
+def _stale_auto_retry_limit() -> int:
+    value = os.getenv("BACKEND_STALE_AUTO_RETRY_LIMIT")
+    if not value:
+        return STALE_AUTO_RETRY_LIMIT
+    try:
+        return max(0, int(value))
+    except ValueError:
+        return STALE_AUTO_RETRY_LIMIT
+
+
+def _job_phase(job) -> str | None:
+    if job.status.startswith("review"):
+        return "review"
+    if job.status.startswith("import"):
+        return "import"
+    return None
+
+
+def _fail_stale_job(job):
+    """Mark queued or running jobs failed when the worker stops making progress."""
+    purpose = _job_phase(job)
     if not purpose:
         return job
-    timeout_seconds = QUEUE_STALE_TIMEOUT_SECONDS
-    age_seconds = (datetime.now(timezone.utc) - job.updated_at).total_seconds()
+    if job.status == f"{purpose}_queued":
+        timeout_seconds = QUEUE_STALE_TIMEOUT_SECONDS
+        failure_stage = f"{purpose.title()} worker did not start"
+        failure_message = (
+            f"{purpose.title()} worker did not start. Check Firebase Pub/Sub/Eventarc configuration."
+        )
+    elif job.status == f"{purpose}_running":
+        timeout_seconds = _running_stale_timeout_seconds()
+        failure_stage = f"{purpose.title()} worker stalled"
+        failure_message = (
+            f"{purpose.title()} stopped making progress in the background. "
+            f"Please retry or start over."
+        )
+    else:
+        return job
+    reference_time = job.heartbeat_at or job.updated_at
+    age_seconds = (datetime.now(timezone.utc) - reference_time).total_seconds()
     if age_seconds < timeout_seconds:
         return job
+    if _can_auto_retry_stale_job(job, purpose):
+        recovered = _auto_retry_stale_job(job, purpose)
+        if recovered is not None:
+            return recovered
     job.updated_at = datetime.now(timezone.utc)
+    job.heartbeat_at = job.updated_at
     job.status = "failed"
-    job.progress_stage = f"{purpose.title()} worker did not start"
+    job.progress_stage = failure_stage
+    if purpose == "import" and (job.worker_retry_count or 0) > 0:
+        failure_message = (
+            "Import stopped making progress in the background and automatic recovery was exhausted. "
+            "Please retry or start over."
+        )
     job.progress_log.append(
         ProgressEvent(
             phase=purpose,
@@ -155,11 +215,68 @@ def _fail_stale_queued_job(job):
             created_at=job.updated_at,
         )
     )
-    job.error_message = (
-        f"{purpose.title()} worker did not start. Check Firebase Pub/Sub/Eventarc configuration."
-    )
+    job.error_message = failure_message
     _get_store().save_job(job)
     return job
+
+
+def _can_auto_retry_stale_job(job, purpose: str) -> bool:
+    if purpose not in {"review", "import"}:
+        return False
+    if (job.worker_retry_count or 0) >= _stale_auto_retry_limit():
+        return False
+    credentials = _load_job_credentials(str(job.job_id))
+    return _credentials_complete(credentials)
+
+
+def _auto_retry_stale_job(job, purpose: str):
+    credentials = _load_job_credentials(str(job.job_id))
+    if not _credentials_complete(credentials):
+        return None
+    store = _get_store()
+    retry_number = (job.worker_retry_count or 0) + 1
+    now = datetime.now(timezone.utc)
+    stage = f"Retrying {purpose} after worker interruption"
+    job.worker_retry_count = retry_number
+    job.status = f"{purpose}_queued"
+    job.progress_stage = stage
+    job.updated_at = now
+    job.heartbeat_at = now
+    job.error_message = None
+    job.progress_log.append(
+        ProgressEvent(
+            phase=purpose,
+            stage=stage,
+            percent=job.progress_percent,
+            status=job.status,
+            created_at=now,
+        )
+    )
+    try:
+        token = _get_credential_store().issue(
+            job_id=str(job.job_id),
+            purpose=purpose,
+            credentials=credentials,
+            ttl_seconds=_credential_ttl(),
+        )
+        store.save_job(job)
+        store.write_token(job.job_id, purpose, token)
+        _enqueue_job(job.job_id, purpose, token)
+        return job
+    except LambdaHttpError as exc:
+        _mark_enqueue_failed(job, phase=purpose, detail=exc.detail)
+        return store.load_job(job.job_id)
+    except Exception as exc:
+        _logger.exception("Failed to auto-retry stale %s job %s", purpose, job.job_id)
+        _mark_enqueue_failed(
+            job,
+            phase=purpose,
+            detail=(
+                f"{purpose.title()} automatic recovery failed. "
+                "Please retry or start over."
+            ),
+        )
+        return store.load_job(job.job_id)
 
 
 def _set_queued(job, *, phase: str) -> None:
@@ -241,6 +358,49 @@ def _get_credential_store():
     return _credential_store
 
 
+def _persist_job_credentials(job_id: str, credentials: dict[str, Any]) -> None:
+    """Persist reusable job-scoped credentials when supported by the store."""
+    store = _get_credential_store()
+    if hasattr(store, "store_job_credentials"):
+        store.store_job_credentials(job_id, credentials, _job_credential_ttl())
+
+
+def _load_job_credentials(job_id: str) -> dict[str, Any] | None:
+    """Load reusable job-scoped credentials when supported by the store."""
+    store = _get_credential_store()
+    if hasattr(store, "load_job_credentials"):
+        return store.load_job_credentials(job_id)
+    return None
+
+
+def _delete_job_credentials(job_id: str) -> None:
+    """Delete reusable job-scoped credentials when supported by the store."""
+    store = _get_credential_store()
+    if hasattr(store, "delete_all_for_job"):
+        store.delete_all_for_job(job_id)
+    elif hasattr(store, "delete_job_credentials"):
+        store.delete_job_credentials(job_id)
+
+
+def _credentials_complete(credentials) -> bool:
+    """Return True when all required credential fields are present and non-empty."""
+    if credentials is None:
+        return False
+    if hasattr(credentials, "model_dump"):
+        payload = credentials.model_dump()
+    elif isinstance(credentials, dict):
+        payload = credentials
+    else:
+        return False
+    required = (
+        "cloudahoy_username",
+        "cloudahoy_password",
+        "flysto_username",
+        "flysto_password",
+    )
+    return all(isinstance(payload.get(key), str) and payload.get(key).strip() for key in required)
+
+
 def create_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
     """Create job handler."""
     try:
@@ -251,21 +411,26 @@ def create_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         payload = JobCreateRequest.model_validate(body)
         store = _get_store()
         service = _get_service()
-        existing_jobs = store.list_jobs(user_id)
+        existing_jobs = [_fail_stale_job(job) for job in store.list_jobs(user_id)]
         if any(job.status in _ACTIVE_JOB_STATUSES for job in existing_jobs):
             return _response(429, {"detail": "Job already in progress"})
         _ensure_worker_queue_ready()
+        for existing_job in existing_jobs:
+            _delete_job_credentials(str(existing_job.job_id))
         store.delete_jobs_for_user(user_id)
         job = service.create_job(user_id)
         job.start_date = payload.start_date
         job.end_date = payload.end_date
         job.max_flights = payload.max_flights
+        credentials_payload = payload.credentials.model_dump()
+        _persist_job_credentials(str(job.job_id), credentials_payload)
         token = _get_credential_store().issue(
             job_id=str(job.job_id),
             purpose="review",
-            credentials=payload.credentials.model_dump(),
+            credentials=credentials_payload,
             ttl_seconds=_credential_ttl(),
         )
+        job.worker_retry_count = 0
         _set_queued(job, phase="review")
         store.save_job(job)
         store.write_token(job.job_id, "review", token)
@@ -296,7 +461,7 @@ def list_jobs_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         user_id = _user_id(event)
         if not user_id:
             return _response(401, {"detail": "Missing authentication"})
-        jobs = [_fail_stale_queued_job(job) for job in _get_store().list_jobs(user_id)]
+        jobs = [_fail_stale_job(job) for job in _get_store().list_jobs(user_id)]
         return _response(200, {"jobs": [job.model_dump() for job in jobs]})
     except Exception as exc:
         return _handle_error(exc)
@@ -330,7 +495,7 @@ def get_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         job = _load_job(job_id, user_id)
         if not job:
             return _response(404, {"detail": "Job not found"})
-        job = _fail_stale_queued_job(job)
+        job = _fail_stale_job(job)
         return _response(200, job.model_dump())
     except Exception as exc:
         return _handle_error(exc)
@@ -348,6 +513,7 @@ def accept_review_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
         job = _load_job(job_id, user_id)
         if not job:
             return _response(404, {"detail": "Job not found"})
+        job = _fail_stale_job(job)
         store = _get_store()
         review_manifest_available = False
         try:
@@ -367,18 +533,33 @@ def accept_review_handler(event: dict[str, Any], _context: Any) -> dict[str, Any
                 job.status == "failed"
                 and job.review_summary is not None
                 and review_manifest_available
-                and not has_import_events
+                and has_import_events
             ):
                 return _response(409, {"detail": "Review not ready"})
         _ensure_worker_queue_ready()
         body = json.loads(event.get("body") or "{}")
         payload = JobAcceptRequest.model_validate(body)
+        provided_credentials = payload.credentials.model_dump() if _credentials_complete(payload.credentials) else None
+        if provided_credentials:
+            _persist_job_credentials(str(job.job_id), provided_credentials)
+        credentials_payload = provided_credentials or _load_job_credentials(str(job.job_id))
+        if not _credentials_complete(credentials_payload):
+            return _response(
+                400,
+                {
+                    "detail": (
+                        "Import credentials are unavailable. Re-enter CloudAhoy and FlySto "
+                        "credentials in Connect Accounts and retry."
+                    )
+                },
+            )
         token = _get_credential_store().issue(
             job_id=str(job.job_id),
             purpose="import",
-            credentials=payload.credentials.model_dump(),
+            credentials=credentials_payload,
             ttl_seconds=_credential_ttl(),
         )
+        job.worker_retry_count = 0
         _set_queued(job, phase="import")
         store.save_job(job)
         store.write_token(job.job_id, "import", token)
@@ -455,6 +636,7 @@ def delete_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
         job = _load_job(job_id, user_id)
         if not job:
             return _response(404, {"detail": "Job not found"})
+        _delete_job_credentials(str(job.job_id))
         _get_store().delete_job(job.job_id, user_id=user_id)
         return _response(200, {"deleted": True})
     except Exception as exc:
@@ -494,6 +676,8 @@ def download_artifacts_zip_handler(event: dict[str, Any], _context: Any) -> dict
 
         try:
             exports_dir = job_dir / "work" / "cloudahoy_exports"
+            local_entries: dict[str, Any] = {}
+            remote_entries: dict[str, bytes] = {}
             with zipfile.ZipFile(temp_path, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
                 if exports_dir.exists():
                     for path in exports_dir.rglob("*"):
@@ -502,8 +686,8 @@ def download_artifacts_zip_handler(event: dict[str, Any], _context: Any) -> dict
                         if path.name.endswith(".token"):
                             continue
                         arcname = str(path.relative_to(exports_dir))
-                        zipf.write(path, arcname=arcname)
-                elif store.object_store:
+                        local_entries[arcname] = path
+                if store.object_store:
                     prefix = store.object_store.key_for(user_id, str(job_uuid), "cloudahoy_exports")
                     keys = store.object_store.list_prefix(prefix)
                     for key in keys:
@@ -518,7 +702,13 @@ def download_artifacts_zip_handler(event: dict[str, Any], _context: Any) -> dict
                         payload = store.object_store.get_bytes(full_key)
                         if payload is None:
                             continue
-                        zipf.writestr(key, payload)
+                        remote_entries[key] = payload
+                for arcname in sorted(local_entries):
+                    if arcname in remote_entries:
+                        continue
+                    zipf.write(local_entries[arcname], arcname=arcname)
+                for arcname in sorted(remote_entries):
+                    zipf.writestr(arcname, remote_entries[arcname])
 
             with open(temp_path, "rb") as handle:
                 payload = handle.read()
@@ -578,14 +768,28 @@ def _process_queue_payload(payload: dict[str, Any]) -> None:
                 end_date=job.end_date,
                 max_flights=job.max_flights,
             )
-            _get_service().generate_review(job_uuid, request)
+            updated_job = _get_service().generate_review(job_uuid, request)
         else:
             request = JobAcceptRequest(credentials=creds)
-            _get_service().accept_review(job_uuid, request)
+            updated_job = _get_service().accept_review(job_uuid, request)
+        if (
+            updated_job.status == f"{purpose}_running"
+            and updated_job.phase_total is not None
+            and (updated_job.phase_cursor or 0) < updated_job.phase_total
+        ):
+            next_token = _get_credential_store().issue(
+                job_id=str(updated_job.job_id),
+                purpose=purpose,
+                credentials=creds,
+                ttl_seconds=_credential_ttl(),
+            )
+            store.write_token(updated_job.job_id, purpose, next_token)
+            _enqueue_job(updated_job.job_id, purpose, next_token)
     except Exception as exc:
         job.status = "failed"
         job.error_message = f"Worker failed: {exc}"
         job.updated_at = datetime.now(timezone.utc)
+        job.heartbeat_at = job.updated_at
         store.save_job(job)
 
 

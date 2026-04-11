@@ -42,15 +42,26 @@ def _job(status: str, job_id=None):
 class FakeObjectStore:
     def __init__(self) -> None:
         self.json_payloads: dict[str, dict] = {}
+        self.bytes_payloads: dict[str, bytes] = {}
 
     def key_for(self, *parts: str) -> str:
         return "/".join(parts)
 
     def list_prefix(self, prefix: str) -> list[str]:
-        return [key[len(prefix) + 1 :] for key in self.json_payloads if key.startswith(f"{prefix}/")]
+        keys = set()
+        for payload_key in self.json_payloads:
+            if payload_key.startswith(f"{prefix}/"):
+                keys.add(payload_key[len(prefix) + 1 :])
+        for payload_key in self.bytes_payloads:
+            if payload_key.startswith(f"{prefix}/"):
+                keys.add(payload_key[len(prefix) + 1 :])
+        return sorted(keys)
 
     def get_json(self, key: str):
         return self.json_payloads.get(key)
+
+    def get_bytes(self, key: str):
+        return self.bytes_payloads.get(key)
 
     def put_json(self, key: str, payload: dict) -> None:
         self.json_payloads[key] = payload
@@ -65,9 +76,17 @@ class FakeObjectStore:
 @pytest.fixture()
 def store(tmp_path, monkeypatch: pytest.MonkeyPatch):
     store = JobStore(tmp_path)
+
+    class _DefaultCredentialStore:
+        def load_job_credentials(self, _job_id: str):
+            return None
+
+        def issue(self, **_kwargs):
+            return "token"
+
     monkeypatch.setattr(handlers, "_store", store)
     monkeypatch.setattr(handlers, "_service", None)
-    monkeypatch.setattr(handlers, "_credential_store", None)
+    monkeypatch.setattr(handlers, "_credential_store", _DefaultCredentialStore())
     monkeypatch.setattr(handlers, "_pubsub_client", None)
     monkeypatch.setattr(
         handlers,
@@ -187,6 +206,71 @@ def test_accept_review_handler_enqueues(store, monkeypatch: pytest.MonkeyPatch):
     assert seen["enqueued"] is True
 
 
+def test_accept_review_handler_uses_saved_job_credentials_when_request_is_empty(
+    store,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    job = _job("review_ready")
+    job.status = "review_ready"
+    store.save_job(job)
+    store.write_artifact(job.job_id, "review.json", {"review_id": "review-1", "items": []})
+
+    seen = {}
+
+    class _DummyCredentialStore:
+        def load_job_credentials(self, job_id: str):
+            assert job_id == str(job.job_id)
+            return {
+                "cloudahoy_username": "pilot",
+                "cloudahoy_password": "secret",
+                "flysto_username": "pilot",
+                "flysto_password": "secret",
+            }
+
+        def issue(self, **kwargs):
+            seen["issued_credentials"] = kwargs["credentials"]
+            return "import-token"
+
+    monkeypatch.setattr(handlers, "_credential_store", _DummyCredentialStore())
+    monkeypatch.setattr(handlers, "_enqueue_job", lambda *args, **kwargs: seen.setdefault("enqueued", True))
+    monkeypatch.setattr(
+        handlers,
+        "resolve_job_queue_topic_path",
+        lambda: "projects/demo-project/topics/skybridge-job-queue",
+    )
+
+    response = handlers.accept_review_handler(
+        _event("pilot", {}, job_id=str(job.job_id)),
+        None,
+    )
+
+    assert response["statusCode"] == 200
+    assert seen["enqueued"] is True
+    assert seen["issued_credentials"]["flysto_username"] == "pilot"
+
+
+def test_accept_review_handler_rejects_failed_review_without_import_phase(store):
+    job = _job("failed")
+    job.review_summary = ReviewSummary(flight_count=1, total_hours=1.0, flights=[])
+    store.save_job(job)
+    store.write_artifact(job.job_id, "review.json", {"review_id": "review-1", "items": []})
+
+    payload = {
+        "credentials": {
+            "cloudahoy_username": "pilot",
+            "cloudahoy_password": "secret",
+            "flysto_username": "pilot",
+            "flysto_password": "secret",
+        }
+    }
+    response = handlers.accept_review_handler(
+        _event("pilot", payload, job_id=str(job.job_id)),
+        None,
+    )
+
+    assert response["statusCode"] == 409
+
+
 def test_get_job_handler_marks_stale_queued_job_failed(store, monkeypatch: pytest.MonkeyPatch):
     job = _job("review_queued")
     job.updated_at = datetime.now(timezone.utc) - timedelta(minutes=10)
@@ -197,6 +281,99 @@ def test_get_job_handler_marks_stale_queued_job_failed(store, monkeypatch: pytes
 
     assert response["statusCode"] == 200
     assert "worker did not start" in response["body"]
+
+
+def test_get_job_handler_marks_stale_running_job_failed(store, monkeypatch: pytest.MonkeyPatch):
+    job = _job("review_running")
+    stale_at = datetime.now(timezone.utc) - timedelta(minutes=10)
+    job.updated_at = stale_at
+    job.heartbeat_at = stale_at
+    store.save_job(job)
+    monkeypatch.setenv("BACKEND_RUNNING_STALE_TIMEOUT_SECONDS", "60")
+
+    response = handlers.get_job_handler(_event("pilot", job_id=str(job.job_id)), None)
+
+    assert response["statusCode"] == 200
+    assert "worker stalled" in response["body"]
+
+
+def test_get_job_handler_auto_retries_stale_import_with_saved_credentials(
+    store,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    job = _job("import_running")
+    stale_at = datetime.now(timezone.utc) - timedelta(minutes=10)
+    job.updated_at = stale_at
+    job.heartbeat_at = stale_at
+    job.progress_percent = 85
+    job.progress_stage = "Finalizing import"
+    job.progress_log = [
+        handlers.ProgressEvent(
+            phase="import",
+            stage="Finalizing import",
+            percent=85,
+            status="import_running",
+            created_at=stale_at,
+        )
+    ]
+    store.save_job(job)
+
+    seen = {}
+
+    class _RetryCredentialStore:
+        def load_job_credentials(self, job_id: str):
+            assert job_id == str(job.job_id)
+            return {
+                "cloudahoy_username": "pilot",
+                "cloudahoy_password": "secret",
+                "flysto_username": "pilot",
+                "flysto_password": "secret",
+            }
+
+        def issue(self, **kwargs):
+            seen["issued"] = kwargs
+            return "retry-token"
+
+    monkeypatch.setattr(handlers, "_credential_store", _RetryCredentialStore())
+    monkeypatch.setattr(handlers, "_enqueue_job", lambda *args, **kwargs: seen.setdefault("enqueued", True))
+    monkeypatch.setenv("BACKEND_RUNNING_STALE_TIMEOUT_SECONDS", "60")
+
+    response = handlers.get_job_handler(_event("pilot", job_id=str(job.job_id)), None)
+
+    assert response["statusCode"] == 200
+    assert "\"status\": \"import_queued\"" in response["body"]
+    assert "\"worker_retry_count\": 1" in response["body"]
+    assert seen["enqueued"] is True
+    saved_job = store.load_job(job.job_id)
+    assert saved_job.status == "import_queued"
+    assert saved_job.worker_retry_count == 1
+    assert saved_job.progress_stage == "Retrying import after worker interruption"
+
+
+def test_get_job_handler_fails_stale_import_after_auto_retry_budget(store, monkeypatch: pytest.MonkeyPatch):
+    job = _job("import_running")
+    stale_at = datetime.now(timezone.utc) - timedelta(minutes=10)
+    job.updated_at = stale_at
+    job.heartbeat_at = stale_at
+    job.worker_retry_count = 2
+    job.progress_log = [
+        handlers.ProgressEvent(
+            phase="import",
+            stage="Finalizing import",
+            percent=85,
+            status="import_running",
+            created_at=stale_at,
+        )
+    ]
+    store.save_job(job)
+
+    monkeypatch.setenv("BACKEND_RUNNING_STALE_TIMEOUT_SECONDS", "60")
+    monkeypatch.setenv("BACKEND_STALE_AUTO_RETRY_LIMIT", "2")
+
+    response = handlers.get_job_handler(_event("pilot", job_id=str(job.job_id)), None)
+
+    assert response["statusCode"] == 200
+    assert "automatic recovery was exhausted" in response["body"]
 
 
 def test_create_job_handler_marks_job_failed_when_enqueue_fails(store, monkeypatch: pytest.MonkeyPatch):
@@ -273,6 +450,15 @@ def test_accept_review_handler_allows_failed_retry_with_remote_review_manifest(
 
     job = _job("failed")
     job.review_summary = ReviewSummary(flight_count=0, total_hours=0.0, flights=[])
+    job.progress_log = [
+        handlers.ProgressEvent(
+            phase="import",
+            stage="Import failed",
+            percent=42,
+            status="failed",
+            created_at=datetime.now(timezone.utc),
+        )
+    ]
     store.save_job(job)
     object_store.put_json(
         object_store.key_for(job.user_id, str(job.job_id), "review.json"),
@@ -323,8 +509,57 @@ def test_artifact_handlers(store):
     assert read_response["statusCode"] == 200
 
 
+def test_download_artifacts_zip_merges_remote_exports_with_local_cache(tmp_path, monkeypatch: pytest.MonkeyPatch):
+    import base64
+    import io
+    import zipfile
+
+    object_store = FakeObjectStore()
+    store = JobStore(tmp_path, object_store=object_store)
+    job = _job("completed")
+    store.save_job(job)
+    monkeypatch.setattr(handlers, "_store", store)
+    monkeypatch.setattr(
+        handlers,
+        "user_id_from_event",
+        lambda event: "pilot"
+        if (event.get("headers") or {}).get("Authorization")
+        else (_ for _ in ()).throw(Exception("missing auth")),
+    )
+
+    exports_dir = store.job_dir(job.job_id) / "work" / "cloudahoy_exports"
+    exports_dir.mkdir(parents=True, exist_ok=True)
+    (exports_dir / "flight-1.gpx").write_text("local-stale")
+
+    remote_prefix = object_store.key_for(job.user_id, str(job.job_id), "cloudahoy_exports")
+    object_store.bytes_payloads[f"{remote_prefix}/flight-1.gpx"] = b"remote-fresh"
+    object_store.bytes_payloads[f"{remote_prefix}/flight-2.gpx"] = b"remote-second"
+
+    response = handlers.download_artifacts_zip_handler(
+        _event("pilot", job_id=str(job.job_id)),
+        None,
+    )
+
+    assert response["statusCode"] == 200
+    payload = base64.b64decode(response["body"])
+    with zipfile.ZipFile(io.BytesIO(payload), "r") as archive:
+        assert sorted(archive.namelist()) == ["flight-1.gpx", "flight-2.gpx"]
+        assert archive.read("flight-1.gpx") == b"remote-fresh"
+        assert archive.read("flight-2.gpx") == b"remote-second"
+
+
 def test_delete_job_handler(store):
     job = _job("review_ready")
     store.save_job(job)
+    seen = {}
+
+    class _DummyCredentialStore:
+        def delete_all_for_job(self, job_id: str):
+            seen["job_id"] = job_id
+
+    handlers._credential_store = None
+    store_obj = _DummyCredentialStore()
+    handlers._credential_store = store_obj
     response = handlers.delete_job_handler(_event("pilot", job_id=str(job.job_id)), None)
     assert response["statusCode"] == 200
+    assert seen["job_id"] == str(job.job_id)

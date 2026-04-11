@@ -13,6 +13,7 @@ vi.mock("@/api/client", () => ({
   listJobs: vi.fn(),
   createJob: vi.fn(),
   acceptReview: vi.fn(),
+  fetchArtifact: vi.fn(),
   validateCredentials: vi.fn(),
   deleteJob: vi.fn(),
   downloadArtifactsZip: vi.fn(),

@@ -8,7 +8,9 @@ import json
 
 import pytest
 
+import src.backend.credential_store as credential_store_mod
 from src.backend.models import JobRecord
+import src.backend.store as store_mod
 from src.backend.store import JobStore
 
 
@@ -19,6 +21,7 @@ class FakeObjectStore:
         self.files: dict[str, dict] = {}
         self.bytes_payloads: dict[str, bytes] = {}
         self.raise_on_put = False
+        self.raise_on_get = False
 
     def key_for(self, *parts: str) -> str:
         return "/".join(parts)
@@ -39,10 +42,44 @@ class FakeObjectStore:
         return ["review.json"]
 
     def get_json(self, key: str):
+        if self.raise_on_get:
+            raise RuntimeError("boom")
         return self.files.get(key)
 
     def get_bytes(self, key: str):
         return self.bytes_payloads.get(key)
+
+
+class _FakeDocSnapshot:
+    def __init__(self, doc_id: str, payload: dict) -> None:
+        self.id = doc_id
+        self._payload = payload
+        self.exists = True
+        self.reference = self
+        self.deleted = False
+
+    def to_dict(self) -> dict:
+        return self._payload
+
+    def get(self):
+        return self
+
+    def delete(self) -> None:
+        self.deleted = True
+
+
+class _FakeCollection:
+    def __init__(self, snapshot: _FakeDocSnapshot) -> None:
+        self._snapshot = snapshot
+
+    def where(self, *_args, **_kwargs):
+        return self
+
+    def stream(self):
+        return [self._snapshot]
+
+    def document(self, _doc_id: str):
+        return self._snapshot
 
 
 def _job(store: JobStore, user_id: str = "user-1") -> JobRecord:
@@ -70,6 +107,26 @@ def test_delete_job_deletes_remote_prefix(tmp_path: Path, monkeypatch: pytest.Mo
 
     store.delete_job(job.job_id, user_id=job.user_id)
     assert store.object_store.deleted
+
+
+def test_delete_job_cleans_credentials_when_encryption_key_is_configured(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    store = JobStore(tmp_path)
+    job = _job(store)
+    seen = {}
+
+    class _DummyCredentialStore:
+        def delete_all_for_job(self, job_id: str) -> None:
+            seen["job_id"] = job_id
+
+    monkeypatch.setenv("BACKEND_ENCRYPTION_KEY", "x" * 32)
+    monkeypatch.setattr(credential_store_mod, "build_credential_store", lambda: _DummyCredentialStore())
+
+    store.delete_job(job.job_id, user_id=job.user_id)
+
+    assert seen["job_id"] == str(job.job_id)
 
 
 def test_write_artifact_uploads_and_ignores_object_store_errors(tmp_path: Path):
@@ -122,6 +179,50 @@ def test_materialize_artifact_file_from_object_store(tmp_path: Path):
     assert target.read_bytes() == b"sqlite-bytes"
 
 
+def test_materialize_artifact_file_prefers_remote_over_stale_local(tmp_path: Path):
+    object_store = FakeObjectStore()
+    store = JobStore(tmp_path, object_store=object_store)
+    job = _job(store)
+    target = store.job_dir(job.job_id) / "migration.db"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(b"stale-local")
+    key = object_store.key_for(job.user_id, str(job.job_id), "migration.db")
+    object_store.bytes_payloads[key] = b"remote-fresh"
+
+    restored = store.materialize_artifact_file(job.job_id, "migration.db", target)
+
+    assert restored is True
+    assert target.read_bytes() == b"remote-fresh"
+
+
+def test_load_artifact_prefers_remote_over_stale_local(tmp_path: Path):
+    object_store = FakeObjectStore()
+    store = JobStore(tmp_path, object_store=object_store)
+    job = _job(store)
+    artifact = store.job_dir(job.job_id) / "artifact.json"
+    artifact.write_text(json.dumps({"source": "local"}))
+    key = object_store.key_for(job.user_id, str(job.job_id), "artifact.json")
+    object_store.put_json(key, {"source": "remote"})
+
+    payload = store.load_artifact(job.job_id, "artifact.json")
+
+    assert payload == {"source": "remote"}
+    assert json.loads(artifact.read_text()) == {"source": "remote"}
+
+
+def test_load_artifact_falls_back_to_local_when_remote_read_fails(tmp_path: Path):
+    object_store = FakeObjectStore()
+    object_store.raise_on_get = True
+    store = JobStore(tmp_path, object_store=object_store)
+    job = _job(store)
+    artifact = store.job_dir(job.job_id) / "artifact.json"
+    artifact.write_text(json.dumps({"source": "local"}))
+
+    payload = store.load_artifact(job.job_id, "artifact.json")
+
+    assert payload == {"source": "local"}
+
+
 def test_load_job_expired(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     store = JobStore(tmp_path)
     job = _job(store)
@@ -131,3 +232,23 @@ def test_load_job_expired(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
     with pytest.raises(FileNotFoundError):
         store.load_job(job.job_id)
+
+
+def test_cleanup_expired_firestore_uses_delete_job_without_recursive_load(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    store = JobStore(tmp_path)
+    snapshot = _FakeDocSnapshot(
+        str(uuid4()),
+        {
+            "user_id": "user-1",
+            "ttl_epoch": 1,
+        },
+    )
+    store._firestore_collection = _FakeCollection(snapshot)
+
+    deleted = store.cleanup_expired()
+
+    assert deleted == 1
+    assert snapshot.deleted is True

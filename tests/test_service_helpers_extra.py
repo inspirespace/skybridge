@@ -30,6 +30,13 @@ def test_summaries_from_review_parses_dates():
     assert summaries[0].started_at is not None
 
 
+def test_summaries_from_review_normalizes_numeric_ids():
+    payload = {"items": [{"flight_id": 42, "started_at": "2026-01-01T10:00:00Z"}]}
+    summaries = service._summaries_from_review(payload)
+    assert len(summaries) == 1
+    assert summaries[0].id == "42"
+
+
 def test_summaries_for_range_filters():
     summaries = [
         FlightSummary("A1", datetime(2026, 1, 1, tzinfo=timezone.utc), None, None, None),
@@ -43,6 +50,29 @@ def test_summaries_for_range_filters():
     filtered = service._summaries_for_range(
         DummyCloudAhoy(), "2026-01-02", "2026-01-02", max_flights=None
     )
+    assert [item.id for item in filtered] == ["A2"]
+
+
+def test_summaries_for_range_applies_max_after_date_filtering():
+    summaries = [
+        FlightSummary("A1", datetime(2026, 1, 5, tzinfo=timezone.utc), None, None, None),
+        FlightSummary("A2", datetime(2026, 1, 4, tzinfo=timezone.utc), None, None, None),
+        FlightSummary("A3", datetime(2026, 1, 3, tzinfo=timezone.utc), None, None, None),
+    ]
+    seen_limits: list[int | None] = []
+
+    class DummyCloudAhoy:
+        def list_flights(self, limit=None):
+            seen_limits.append(limit)
+            if limit is None:
+                return summaries
+            return summaries[:limit]
+
+    filtered = service._summaries_for_range(
+        DummyCloudAhoy(), "2026-01-03", "2026-01-04", max_flights=1
+    )
+
+    assert seen_limits == [None]
     assert [item.id for item in filtered] == ["A2"]
 
 
