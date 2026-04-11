@@ -363,11 +363,20 @@ class JobStore:
         artifact_file = self._job_dir(job_id) / name
         if self._object_store:
             key = self._object_store.key_for(self.load_job(job_id).user_id, str(job_id), name)
-            payload = self._object_store.get_json(key)
-            if payload is not None:
-                artifact_file.parent.mkdir(parents=True, exist_ok=True)
-                artifact_file.write_text(json.dumps(payload, indent=2))
-                return payload
+            try:
+                payload = self._object_store.get_json(key)
+            except Exception as exc:
+                logging.getLogger(__name__).warning(
+                    "Failed to read remote artifact %s for job %s: %s",
+                    name,
+                    job_id,
+                    exc,
+                )
+            else:
+                if payload is not None:
+                    artifact_file.parent.mkdir(parents=True, exist_ok=True)
+                    artifact_file.write_text(json.dumps(payload, indent=2))
+                    return payload
         if artifact_file.exists():
             return json.loads(artifact_file.read_text())
         raise FileNotFoundError("Artifact not found")

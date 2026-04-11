@@ -21,6 +21,7 @@ class FakeObjectStore:
         self.files: dict[str, dict] = {}
         self.bytes_payloads: dict[str, bytes] = {}
         self.raise_on_put = False
+        self.raise_on_get = False
 
     def key_for(self, *parts: str) -> str:
         return "/".join(parts)
@@ -41,6 +42,8 @@ class FakeObjectStore:
         return ["review.json"]
 
     def get_json(self, key: str):
+        if self.raise_on_get:
+            raise RuntimeError("boom")
         return self.files.get(key)
 
     def get_bytes(self, key: str):
@@ -205,6 +208,19 @@ def test_load_artifact_prefers_remote_over_stale_local(tmp_path: Path):
 
     assert payload == {"source": "remote"}
     assert json.loads(artifact.read_text()) == {"source": "remote"}
+
+
+def test_load_artifact_falls_back_to_local_when_remote_read_fails(tmp_path: Path):
+    object_store = FakeObjectStore()
+    object_store.raise_on_get = True
+    store = JobStore(tmp_path, object_store=object_store)
+    job = _job(store)
+    artifact = store.job_dir(job.job_id) / "artifact.json"
+    artifact.write_text(json.dumps({"source": "local"}))
+
+    payload = store.load_artifact(job.job_id, "artifact.json")
+
+    assert payload == {"source": "local"}
 
 
 def test_load_job_expired(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
