@@ -375,9 +375,10 @@ def _load_job_credentials(job_id: str) -> dict[str, Any] | None:
 
 def _delete_job_credentials(job_id: str) -> None:
     """Delete reusable job-scoped credentials when supported by the store."""
-    global _credential_store
-    store = _credential_store
-    if hasattr(store, "delete_job_credentials"):
+    store = _get_credential_store()
+    if hasattr(store, "delete_all_for_job"):
+        store.delete_all_for_job(job_id)
+    elif hasattr(store, "delete_job_credentials"):
         store.delete_job_credentials(job_id)
 
 
@@ -675,6 +676,8 @@ def download_artifacts_zip_handler(event: dict[str, Any], _context: Any) -> dict
 
         try:
             exports_dir = job_dir / "work" / "cloudahoy_exports"
+            local_entries: dict[str, Any] = {}
+            remote_entries: dict[str, bytes] = {}
             with zipfile.ZipFile(temp_path, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
                 if exports_dir.exists():
                     for path in exports_dir.rglob("*"):
@@ -683,8 +686,8 @@ def download_artifacts_zip_handler(event: dict[str, Any], _context: Any) -> dict
                         if path.name.endswith(".token"):
                             continue
                         arcname = str(path.relative_to(exports_dir))
-                        zipf.write(path, arcname=arcname)
-                elif store.object_store:
+                        local_entries[arcname] = path
+                if store.object_store:
                     prefix = store.object_store.key_for(user_id, str(job_uuid), "cloudahoy_exports")
                     keys = store.object_store.list_prefix(prefix)
                     for key in keys:
@@ -699,7 +702,13 @@ def download_artifacts_zip_handler(event: dict[str, Any], _context: Any) -> dict
                         payload = store.object_store.get_bytes(full_key)
                         if payload is None:
                             continue
-                        zipf.writestr(key, payload)
+                        remote_entries[key] = payload
+                for arcname in sorted(local_entries):
+                    if arcname in remote_entries:
+                        continue
+                    zipf.write(local_entries[arcname], arcname=arcname)
+                for arcname in sorted(remote_entries):
+                    zipf.writestr(arcname, remote_entries[arcname])
 
             with open(temp_path, "rb") as handle:
                 payload = handle.read()

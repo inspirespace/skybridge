@@ -42,15 +42,26 @@ def _job(status: str, job_id=None):
 class FakeObjectStore:
     def __init__(self) -> None:
         self.json_payloads: dict[str, dict] = {}
+        self.bytes_payloads: dict[str, bytes] = {}
 
     def key_for(self, *parts: str) -> str:
         return "/".join(parts)
 
     def list_prefix(self, prefix: str) -> list[str]:
-        return [key[len(prefix) + 1 :] for key in self.json_payloads if key.startswith(f"{prefix}/")]
+        keys = set()
+        for payload_key in self.json_payloads:
+            if payload_key.startswith(f"{prefix}/"):
+                keys.add(payload_key[len(prefix) + 1 :])
+        for payload_key in self.bytes_payloads:
+            if payload_key.startswith(f"{prefix}/"):
+                keys.add(payload_key[len(prefix) + 1 :])
+        return sorted(keys)
 
     def get_json(self, key: str):
         return self.json_payloads.get(key)
+
+    def get_bytes(self, key: str):
+        return self.bytes_payloads.get(key)
 
     def put_json(self, key: str, payload: dict) -> None:
         self.json_payloads[key] = payload
@@ -498,8 +509,57 @@ def test_artifact_handlers(store):
     assert read_response["statusCode"] == 200
 
 
+def test_download_artifacts_zip_merges_remote_exports_with_local_cache(tmp_path, monkeypatch: pytest.MonkeyPatch):
+    import base64
+    import io
+    import zipfile
+
+    object_store = FakeObjectStore()
+    store = JobStore(tmp_path, object_store=object_store)
+    job = _job("completed")
+    store.save_job(job)
+    monkeypatch.setattr(handlers, "_store", store)
+    monkeypatch.setattr(
+        handlers,
+        "user_id_from_event",
+        lambda event: "pilot"
+        if (event.get("headers") or {}).get("Authorization")
+        else (_ for _ in ()).throw(Exception("missing auth")),
+    )
+
+    exports_dir = store.job_dir(job.job_id) / "work" / "cloudahoy_exports"
+    exports_dir.mkdir(parents=True, exist_ok=True)
+    (exports_dir / "flight-1.gpx").write_text("local-stale")
+
+    remote_prefix = object_store.key_for(job.user_id, str(job.job_id), "cloudahoy_exports")
+    object_store.bytes_payloads[f"{remote_prefix}/flight-1.gpx"] = b"remote-fresh"
+    object_store.bytes_payloads[f"{remote_prefix}/flight-2.gpx"] = b"remote-second"
+
+    response = handlers.download_artifacts_zip_handler(
+        _event("pilot", job_id=str(job.job_id)),
+        None,
+    )
+
+    assert response["statusCode"] == 200
+    payload = base64.b64decode(response["body"])
+    with zipfile.ZipFile(io.BytesIO(payload), "r") as archive:
+        assert sorted(archive.namelist()) == ["flight-1.gpx", "flight-2.gpx"]
+        assert archive.read("flight-1.gpx") == b"remote-fresh"
+        assert archive.read("flight-2.gpx") == b"remote-second"
+
+
 def test_delete_job_handler(store):
     job = _job("review_ready")
     store.save_job(job)
+    seen = {}
+
+    class _DummyCredentialStore:
+        def delete_all_for_job(self, job_id: str):
+            seen["job_id"] = job_id
+
+    handlers._credential_store = None
+    store_obj = _DummyCredentialStore()
+    handlers._credential_store = store_obj
     response = handlers.delete_job_handler(_event("pilot", job_id=str(job.job_id)), None)
     assert response["statusCode"] == 200
+    assert seen["job_id"] == str(job.job_id)

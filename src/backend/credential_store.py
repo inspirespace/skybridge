@@ -75,6 +75,17 @@ class CredentialStore:
         """Delete any reusable credentials associated with a job."""
         self._job_credentials.pop(job_id, None)
 
+    def delete_all_for_job(self, job_id: str) -> None:
+        """Delete reusable credentials and any outstanding one-time tokens for a job."""
+        self.delete_job_credentials(job_id)
+        stale_tokens = [
+            token
+            for token, entry in self._entries.items()
+            if entry.job_id == job_id
+        ]
+        for token in stale_tokens:
+            self._entries.pop(token, None)
+
 
 class FirestoreCredentialStore:
     def __init__(self, collection: str, project_id: str | None = None) -> None:
@@ -198,6 +209,15 @@ class FirestoreCredentialStore:
         doc_ref = self._collection.document(_job_doc_id(job_id))
         try:
             doc_ref.delete()
+        except Exception as exc:
+            self._raise_firestore_configuration_error(exc)
+            raise
+
+    def delete_all_for_job(self, job_id: str) -> None:
+        """Delete reusable job credentials and outstanding one-time token docs for a job."""
+        try:
+            for doc in self._collection.where("job_id", "==", job_id).stream():
+                doc.reference.delete()
         except Exception as exc:
             self._raise_firestore_configuration_error(exc)
             raise

@@ -210,15 +210,21 @@ class JobStore:
 
     def delete_job(self, job_id: UUID, *, user_id: str | None = None) -> None:
         """Delete job."""
+        _delete_related_credentials(job_id)
         if self._firestore_collection:
             try:
-                job = self.load_job(job_id)
+                doc_ref = self._firestore_collection.document(str(job_id))
+                doc = doc_ref.get()
+                if doc.exists:
+                    payload = doc.to_dict() or {}
+                    raw_user_id = payload.get("user_id")
+                    if user_id is None and isinstance(raw_user_id, str):
+                        user_id = raw_user_id
                 try:
-                    self._firestore_collection.document(str(job_id)).delete()
+                    doc_ref.delete()
                 except Exception as exc:
                     self._raise_firestore_configuration_error(exc)
                     raise
-                user_id = user_id or job.user_id
             except FileNotFoundError:
                 pass
         job_dir = self._job_dir(job_id)
@@ -458,7 +464,15 @@ class JobStore:
             query = self._firestore_collection.where("ttl_epoch", "<", now)
             try:
                 for doc in query.stream():
-                    doc.reference.delete()
+                    payload = doc.to_dict() or {}
+                    user_id = payload.get("user_id")
+                    try:
+                        job_id = UUID(doc.id)
+                    except ValueError:
+                        doc.reference.delete()
+                        deleted += 1
+                        continue
+                    self.delete_job(job_id, user_id=user_id if isinstance(user_id, str) else None)
                     deleted += 1
             except Exception as exc:
                 self._raise_firestore_configuration_error(exc)
@@ -620,3 +634,23 @@ def _bool_env(name: str, default: bool) -> bool:
     if value is None:
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _delete_related_credentials(job_id: UUID) -> None:
+    """Best-effort credential cleanup for explicit and retention-based job deletion."""
+    if not os.getenv("BACKEND_ENCRYPTION_KEY"):
+        return
+    try:
+        from .credential_store import build_credential_store
+
+        store = build_credential_store()
+        if hasattr(store, "delete_all_for_job"):
+            store.delete_all_for_job(str(job_id))
+        elif hasattr(store, "delete_job_credentials"):
+            store.delete_job_credentials(str(job_id))
+    except Exception as exc:
+        logging.getLogger(__name__).warning(
+            "Failed to delete credentials for job %s: %s",
+            job_id,
+            exc,
+        )

@@ -347,7 +347,10 @@ class JobService:
                     crew=crew,
                     flysto=flysto if not dry_run else None,
                 )
-                report_payload["items"] = _upsert_by_flight_id(report_payload.get("items"), report_item)
+                report_payload["items"] = _upsert_report_item(
+                    report_payload.get("items"),
+                    report_item,
+                )
                 _recompute_import_report_stats(report_payload)
 
                 if (
@@ -609,6 +612,41 @@ def _upsert_by_flight_id(items: object, payload: dict[str, object]) -> list[dict
     if not replaced:
         updated.append(payload)
     return updated
+
+
+def _upsert_report_item(items: object, payload: dict[str, object]) -> list[dict[str, object]]:
+    """Upsert an import report item while preserving prior successful results across retries."""
+    rows = [item for item in items if isinstance(item, dict)] if isinstance(items, list) else []
+    flight_id = _normalize_flight_id(payload.get("flight_id"))
+    if not flight_id:
+        return rows
+    normalized_payload = {**payload, "flight_id": flight_id}
+    updated: list[dict[str, object]] = []
+    replaced = False
+    for item in rows:
+        if _normalize_flight_id(item.get("flight_id")) != flight_id:
+            updated.append(item)
+            continue
+        replaced = True
+        updated.append(_merge_report_item(item, normalized_payload))
+    if not replaced:
+        updated.append(normalized_payload)
+    return updated
+
+
+def _merge_report_item(existing: dict[str, object], incoming: dict[str, object]) -> dict[str, object]:
+    """Keep an earlier successful import result when a resumed retry reprocesses the same flight."""
+    if existing.get("status") != "ok" or incoming.get("status") == "ok":
+        return incoming
+    merged = dict(existing)
+    for key, value in incoming.items():
+        if key == "status":
+            continue
+        if value in (None, "", [], {}):
+            continue
+        if merged.get(key) in (None, "", [], {}):
+            merged[key] = value
+    return merged
 
 
 def _upload_detail_artifacts(store: JobStore, job_id: UUID, detail) -> None:

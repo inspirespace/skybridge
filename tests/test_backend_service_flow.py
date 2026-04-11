@@ -579,3 +579,124 @@ def test_accept_review_loads_manifest_from_object_store_and_persists_context(
     assert report_payload["attempted"] == 1
     context_payload = store.load_artifact(job.job_id, IMPORT_CONTEXT_ARTIFACT)
     assert "assigned_unknown_tails" in context_payload
+
+
+def test_accept_review_preserves_prior_success_when_retry_hits_duplicate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = JobStore(tmp_path)
+    job_service = JobService(store)
+    job = job_service.create_job("pilot")
+    job.status = "import_running"
+    job.review_summary = service_mod.ReviewSummary(flight_count=2, total_hours=1.5, flights=[])
+    job.phase_cursor = 0
+    job.phase_total = 2
+    job.progress_log = [
+        service_mod.ProgressEvent(
+            phase="review",
+            stage="Review ready",
+            percent=100,
+            status="review_ready",
+            created_at=datetime.now(timezone.utc),
+        ),
+        service_mod.ProgressEvent(
+            phase="import",
+            stage="Uploading flights",
+            percent=10,
+            status="import_running",
+            created_at=datetime.now(timezone.utc),
+        ),
+    ]
+    store.save_job(job)
+
+    store.write_artifact(
+        job.job_id,
+        REVIEW_MANIFEST_ARTIFACT,
+        {
+            "review_id": "review-123",
+            "items": [
+                {
+                    "flight_id": "flight-1",
+                    "started_at": "2026-01-05T09:00:00Z",
+                    "duration_seconds": 3600,
+                    "tail_number": "N123",
+                },
+                {
+                    "flight_id": "flight-2",
+                    "started_at": "2026-01-06T10:00:00Z",
+                    "duration_seconds": 1800,
+                    "tail_number": "N123",
+                },
+            ],
+        },
+    )
+    store.write_artifact(
+        job.job_id,
+        IMPORT_REPORT_ARTIFACT,
+        {
+            "review_id": "review-123",
+            "attempted": 2,
+            "succeeded": 1,
+            "failed": 0,
+            "items": [
+                {
+                    "flight_id": "flight-1",
+                    "status": "ok",
+                    "file_path": "flight-1.gpx",
+                    "flysto_log_id": "log-flight-1.gpx",
+                }
+            ],
+        },
+    )
+
+    exports_dir = tmp_path / "exports"
+    details = {
+        "flight-1": _detail(
+            exports_dir,
+            "flight-1",
+            datetime(2026, 1, 5, 9, 0, tzinfo=timezone.utc),
+            "N123",
+            "KSEA",
+            "KLAX",
+        ),
+        "flight-2": _detail(
+            exports_dir,
+            "flight-2",
+            datetime(2026, 1, 6, 10, 0, tzinfo=timezone.utc),
+            "N123",
+            "KSFO",
+            "KPDX",
+        ),
+    }
+
+    monkeypatch.setattr(
+        service_mod,
+        "_build_cloudahoy_client",
+        lambda payload, path: FakeCloudAhoy([], details),
+    )
+    monkeypatch.setenv("BACKEND_IMPORT_BATCH_SIZE", "2")
+    flysto = FakeFlySto()
+
+    def _upload(detail: FlightDetail, dry_run: bool = False):
+        flysto.upload_calls.append(detail.id)
+        if detail.id == "flight-1":
+            raise RuntimeError("Flight already exists")
+        return None
+
+    flysto.upload_flight = _upload
+    monkeypatch.setattr(service_mod, "_build_flysto_client", lambda payload: flysto)
+    monkeypatch.setattr(service_mod, "_maybe_wait_for_processing", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(service_mod, "verify_import_report", lambda *_args, **_kwargs: {"missing": 0})
+    monkeypatch.setattr(service_mod, "reconcile_aircraft_from_report", lambda *_args, **_kwargs: 0)
+    monkeypatch.setattr(service_mod, "reconcile_crew_from_report", lambda *_args, **_kwargs: 0)
+    monkeypatch.setattr(service_mod, "reconcile_metadata_from_report", lambda *_args, **_kwargs: 0)
+
+    result = job_service.accept_review(job.job_id, JobAcceptRequest(credentials=_credentials()))
+
+    assert result.status == "completed"
+    assert result.import_report is not None
+    assert result.import_report.imported_count == 2
+    payload = store.load_artifact(job.job_id, IMPORT_REPORT_ARTIFACT)
+    statuses = {item["flight_id"]: item["status"] for item in payload["items"]}
+    assert statuses == {"flight-1": "ok", "flight-2": "ok"}
