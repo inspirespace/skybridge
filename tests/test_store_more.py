@@ -49,6 +49,13 @@ class FakeObjectStore:
     def get_bytes(self, key: str):
         return self.bytes_payloads.get(key)
 
+    def download_to_file(self, key: str, file_obj) -> bool:
+        payload = self.bytes_payloads.get(key)
+        if payload is None:
+            return False
+        file_obj.write(payload)
+        return True
+
 
 class _FakeDocSnapshot:
     def __init__(self, doc_id: str, payload: dict) -> None:

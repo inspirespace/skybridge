@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, BinaryIO, Protocol
 
 from .env import resolve_project_id, resolve_storage_bucket
 
@@ -24,6 +24,8 @@ class ObjectStoreProtocol(Protocol):
     def get_json(self, key: str) -> dict[str, Any] | None: ...
 
     def get_bytes(self, key: str) -> bytes | None: ...
+
+    def download_to_file(self, key: str, file_obj: BinaryIO) -> bool: ...
 
     def list_prefix(self, prefix: str) -> list[str]: ...
 
@@ -78,6 +80,16 @@ class GcsObjectStore:
         if not blob.exists():
             return None
         return blob.download_as_bytes()
+
+    def download_to_file(self, key: str, file_obj: BinaryIO) -> bool:
+        from google.api_core.exceptions import NotFound
+
+        blob = self._bucket.blob(key)
+        try:
+            blob.download_to_file(file_obj)
+        except NotFound:
+            return False
+        return True
 
     def list_prefix(self, prefix: str) -> list[str]:
         keys: list[str] = []

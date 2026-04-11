@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from uuid import uuid4
 
 import json
@@ -62,6 +63,13 @@ class FakeObjectStore:
 
     def get_bytes(self, key: str):
         return self.bytes_payloads.get(key)
+
+    def download_to_file(self, key: str, file_obj) -> bool:
+        payload = self.bytes_payloads.get(key)
+        if payload is None:
+            return False
+        file_obj.write(payload)
+        return True
 
     def put_json(self, key: str, payload: dict) -> None:
         self.json_payloads[key] = payload
@@ -510,8 +518,6 @@ def test_artifact_handlers(store):
 
 
 def test_download_artifacts_zip_merges_remote_exports_with_local_cache(tmp_path, monkeypatch: pytest.MonkeyPatch):
-    import base64
-    import io
     import zipfile
 
     object_store = FakeObjectStore()
@@ -541,11 +547,12 @@ def test_download_artifacts_zip_merges_remote_exports_with_local_cache(tmp_path,
     )
 
     assert response["statusCode"] == 200
-    payload = base64.b64decode(response["body"])
-    with zipfile.ZipFile(io.BytesIO(payload), "r") as archive:
+    assert response["bodyFilePath"]
+    with zipfile.ZipFile(response["bodyFilePath"], "r") as archive:
         assert sorted(archive.namelist()) == ["flight-1.gpx", "flight-2.gpx"]
         assert archive.read("flight-1.gpx") == b"remote-fresh"
         assert archive.read("flight-2.gpx") == b"remote-second"
+    Path(response["bodyFilePath"]).unlink(missing_ok=True)
 
 
 def test_delete_job_handler(store):
