@@ -237,6 +237,37 @@ describe("App UI flows", () => {
     expect(await screen.findByText(/review failed/i)).toBeInTheDocument();
   });
 
+  it("shows delayed update messaging instead of a stall warning for long-running imports", async () => {
+    sessionStorage.setItem(JOB_ID_KEY, "job-123");
+    vi.mocked(useFirebaseAuth).mockReturnValue(firebaseAuthState());
+    vi.mocked(useJobSnapshot).mockReturnValue(
+      jobSnapshotState({
+        data: baseJob({
+          status: "import_running",
+          heartbeat_at: new Date(Date.now() - 181_000).toISOString(),
+          progress_log: [
+            {
+              phase: "import",
+              stage: "Uploading flight",
+              percent: 65,
+              status: "import_running",
+              created_at: new Date(Date.now() - 181_000).toISOString(),
+            },
+          ],
+        }),
+      })
+    );
+
+    render(<App />);
+
+    expect(
+      await screen.findByText(/background import updates are delayed/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/the import may still be running; refresh if the status looks outdated/i)
+    ).toBeInTheDocument();
+  });
+
   it("loads review rows from the artifact when the job summary is slim", async () => {
     sessionStorage.setItem(JOB_ID_KEY, "job-123");
     vi.mocked(fetchArtifact).mockResolvedValue({

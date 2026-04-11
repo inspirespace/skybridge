@@ -305,6 +305,12 @@ def test_get_job_handler_marks_stale_running_job_failed(store, monkeypatch: pyte
     assert "worker stalled" in response["body"]
 
 
+def test_running_stale_timeout_defaults_to_ten_minutes(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("BACKEND_RUNNING_STALE_TIMEOUT_SECONDS", raising=False)
+
+    assert handlers._running_stale_timeout_seconds() == 600
+
+
 def test_get_job_handler_auto_retries_stale_import_with_saved_credentials(
     store,
     monkeypatch: pytest.MonkeyPatch,

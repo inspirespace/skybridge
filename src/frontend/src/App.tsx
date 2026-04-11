@@ -80,7 +80,7 @@ const JOB_ID_KEY = "skybridge_job_id";
 const OPEN_STEP_KEY = "skybridge_open_step";
 const EMAIL_LINK_EMAIL_KEY = "skybridge_email_link_email";
 const RUNNING_STALL_WARNING_SECONDS = Number.parseInt(
-  import.meta.env.VITE_RUNNING_STALL_WARNING_SECONDS ?? "60",
+  import.meta.env.VITE_RUNNING_STALL_WARNING_SECONDS ?? "180",
   10
 );
 
@@ -409,11 +409,11 @@ export default function App() {
     Date.now() - heartbeatAt > RUNNING_STALL_WARNING_SECONDS * 1000;
   const reviewRuntimeWarning =
     reviewRunning && stalledHeartbeat
-      ? `No background heartbeat for ${formatLastUpdate(job?.heartbeat_at, now)}. Skybridge will retry the review automatically if the worker does not recover.`
+      ? `No background heartbeat for ${formatLastUpdate(job?.heartbeat_at, now)}. The review may still be running; refresh if the status looks outdated.`
       : null;
   const importRuntimeWarning =
     importRunning && stalledHeartbeat
-      ? `No background heartbeat for ${formatLastUpdate(job?.heartbeat_at, now)}. Skybridge will retry the import automatically if the worker does not recover.`
+      ? `No background heartbeat for ${formatLastUpdate(job?.heartbeat_at, now)}. The import may still be running; refresh if the status looks outdated.`
       : null;
 
   React.useEffect(() => {

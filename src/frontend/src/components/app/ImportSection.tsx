@@ -286,7 +286,7 @@ export function ImportSection({
           )}
           {importRuntimeWarning && !importError && (
             <Alert>
-              <AlertTitle>Background import may be stalled</AlertTitle>
+              <AlertTitle>Background import updates are delayed</AlertTitle>
               <AlertDescription>{importRuntimeWarning}</AlertDescription>
               <div className="mt-3">
                 <Button size="sm" variant="outline" onClick={onRefresh}>
