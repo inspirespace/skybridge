@@ -2,6 +2,7 @@
   "firestoreJobsCollection": "skybridge-jobs",
   "firestoreCredentialsCollection": "skybridge-credentials",
   "retentionDays": "7",
+  "workerMemoryMb": "256",
   "appCheckEnabled": true,
   "authProviders": {
     "google": false,

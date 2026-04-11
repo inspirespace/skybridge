@@ -22,6 +22,7 @@ These values are managed by the shared deploy script. Do not configure them manu
 - `FIRESTORE_CREDENTIALS_COLLECTION=skybridge-credentials`
 - `FIRESTORE_DATABASE_LOCATION=<location>` optional override for first-time deploy auto-creation of the default Firestore database; defaults to `FIREBASE_REGION`
 - `FIRESTORE_DATABASE_CREATE_MAX_WAIT_SECONDS=<seconds>` optional override for how long deploy should wait when Firebase temporarily blocks reusing a just-deleted default database id; defaults to `900`
+- `BACKEND_WORKER_MEMORY_MB=<memory>` optional override for the Pub/Sub worker memory; managed deploy default is `256` MiB. Supported values: `128`, `256`, `512`, `1024`, `2048`, `4096`, `8192`, `16384`, `32768`
 - `GCS_PREFIX=jobs`
 - `CORS_ALLOW_ORIGINS=<comma separated origins>` (never use `*` in production)
 
@@ -67,6 +68,7 @@ The shared deploy script publishes Functions, Hosting, and Firestore configurati
 - Project id and region defaults come from `.firebaserc` (`projects.default`, `config.region`).
 - Default Functions region is `europe-west1`.
 - You can override per deploy with `FIREBASE_REGION`.
+- The worker deploys at `256 MiB` by default. If production needs more headroom, set `BACKEND_WORKER_MEMORY_MB` before deploy; the deploy preflight prints the effective worker memory in its summary.
 - On the first deploy to a project with no Firestore database, the script creates `(default)` automatically. Override the creation location with `FIRESTORE_DATABASE_LOCATION` when needed; otherwise it uses `FIREBASE_REGION`.
 - If `(default)` was deleted just before deploy, Firebase can keep the id in a short cooldown window. The deploy script handles that by waiting and retrying instead of failing immediately.
 
