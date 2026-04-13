@@ -8,7 +8,9 @@ This is a checklist of what production needs, not a step-by-step deployment guid
   - Jobs collection: documents keyed by `job_id`, with `user_id` field indexed.
   - Credentials collection: documents keyed by `token` with TTL configured.
 - **Cloud Scheduler** (auto-created by Functions schedule) for daily TTL cleanup.
-- **Firebase Storage** bucket for job artifacts (add a lifecycle rule; 7 days suggested).
+- **Firebase Storage** bucket for job artifacts.
+  - App cleanup deletes a job's artifact prefix immediately when the user clears a run or when TTL cleanup expires the job.
+  - Keep a bucket lifecycle rule as a safety net for unexpected orphaned objects; 7 days is still a sensible default.
 - **Pub/Sub** topic `skybridge-job-queue` for review/import jobs (Functions 2nd gen trigger; fixed by code, not a runtime toggle).
 - **Firebase Hosting** for SPA + API rewrites.
   - `/api/**` rewrites to the `api` function (see `firebase.json`).
@@ -24,6 +26,7 @@ These values are managed by the shared deploy script. Do not configure them manu
 - `FIRESTORE_DATABASE_CREATE_MAX_WAIT_SECONDS=<seconds>` optional override for how long deploy should wait when Firebase temporarily blocks reusing a just-deleted default database id; defaults to `900`
 - `BACKEND_WORKER_MEMORY_MB=<memory>` optional override for the Pub/Sub worker memory; managed deploy default is `256` MiB. Supported values: `128`, `256`, `512`, `1024`, `2048`, `4096`, `8192`, `16384`, `32768`
 - `GCS_PREFIX=jobs`
+- `BACKEND_OBJECT_STORE_DELETE_ON_CLEAR=1` is the intended production default; only override to `0` for temporary debugging.
 - `CORS_ALLOW_ORIGINS=<comma separated origins>` (never use `*` in production)
 
 ## Frontend build configuration (Firebase)
@@ -106,7 +109,7 @@ Notes:
 - Use a dedicated mail/auth subdomain instead of reusing the same host that serves your app.
 
 ## Storage lifecycle rule
-Job artifacts must expire automatically. Apply a lifecycle rule to your storage bucket:
+Job artifacts should still expire automatically even though the app deletes known job prefixes itself. Apply a lifecycle rule to your storage bucket as a safety net:
 - Example JSON: `docs/firebase-storage-lifecycle.json`
 - Apply with gcloud:
   - `gcloud storage buckets update gs://<bucket> --lifecycle-file=docs/firebase-storage-lifecycle.json`

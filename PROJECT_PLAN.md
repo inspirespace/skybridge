@@ -218,6 +218,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Fix deployed Firebase email-link auth on the custom Hosting domain by allowing Firebase Auth helper iframe/script origins in Hosting CSP (`*.firebaseapp.com`, `*.web.app`, `apis.google.com`, `www.google.com`, `www.gstatic.com`) and lock that into regression coverage.
 - [x] Restore frontend deploy builds after adding the CSP regression test by exposing Node typings to frontend test files during `tsc -b` typechecking.
 - [x] Extend the Firebase clear-project task to empty the resolved Firebase Storage bucket objects as well, while clarifying the remaining limits (Auth users not deleted; Storage metrics can lag under retention/soft-delete).
+- [x] Delete Firebase Storage job-artifact prefixes by default when runs are cleared or expire, and sweep orphaned prefixes during daily cleanup so repeated reruns do not accumulate storage.
 - [x] Add a repo-local Codex skill for assigned GitHub PR review handling, including review-thread discovery, inline replies, and thread resolution helpers.
 - [x] Harden Firebase Storage cleanup auth in the clear-project task: use `gcloud auth application-default print-access-token` as an extra token source, isolate gcloud in a temp config dir, and prompt for ADC login in interactive local runs when needed.
 - [x] Replace guessed Firebase bucket names in the clear-project task with Storage API project-bucket discovery so Storage cleanup clears the project’s real buckets instead of reporting false “no matching bucket” results.
