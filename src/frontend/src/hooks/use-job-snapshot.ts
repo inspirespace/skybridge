@@ -30,7 +30,7 @@ const POLLABLE_STATUSES: JobStatus[] = [
 /** Hook for jobsnapshot. */
 export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
   const [data, setData] = React.useState<JobRecord | null>(null);
-  const [loading, setLoading] = React.useState(false);
+  const [loading, setLoading] = React.useState(Boolean(jobId));
   const [error, setError] = React.useState<Error | null>(null);
   const [listenerFailed, setListenerFailed] = React.useState(false);
   const [listenerActive, setListenerActive] = React.useState(false);
@@ -58,9 +58,11 @@ export function useJobSnapshot(jobId: string | null, auth: AuthContext) {
   React.useEffect(() => {
     if (!jobId) {
       setData(null);
+      setLoading(false);
       setError(null);
       return;
     }
+    setLoading(true);
     setListenerFailed(false);
     setListenerActive(false);
     setLastSnapshotAt(null);

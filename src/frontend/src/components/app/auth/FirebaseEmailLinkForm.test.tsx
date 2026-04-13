@@ -43,4 +43,20 @@ describe("FirebaseEmailLinkForm", () => {
     expect(input).toHaveAttribute("autocomplete", "email");
     expect(input).toHaveAttribute("inputmode", "email");
   });
+
+  it("disables the email field while a sign-in action is in flight", () => {
+    render(
+      <FirebaseEmailLinkForm
+        label="Passwordless email link"
+        email=""
+        onEmailChange={vi.fn()}
+        onSend={vi.fn()}
+        buttonLabel="Send link"
+        disabled
+      />
+    );
+
+    expect(screen.getByLabelText(/passwordless email link/i)).toBeDisabled();
+    expect(screen.getByRole("button", { name: /send link/i })).toBeDisabled();
+  });
 });

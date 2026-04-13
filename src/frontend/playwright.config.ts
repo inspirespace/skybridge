@@ -30,6 +30,8 @@ export default defineConfig({
     reuseExistingServer: true,
     env: {
       VITE_API_BASE_URL: "http://localhost:8000/api",
+      VITE_API_REQUEST_TIMEOUT_MS: "1500",
+      VITE_E2E_AUTH_BYPASS: "1",
       VITE_FIREBASE_API_KEY: "demo-local",
       VITE_FIREBASE_APP_ID: "demo-local-app",
       VITE_FIREBASE_PROJECT_ID: "demo-local",

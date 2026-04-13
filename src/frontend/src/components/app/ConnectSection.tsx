@@ -74,6 +74,8 @@ export function ConnectSection({
   connectError?: string | null;
   onRefresh: () => void;
 }) {
+  const formDisabled = connectLocked || actionLoading;
+
   return (
     <AccordionItem
       value="connect"
@@ -136,7 +138,7 @@ export function ConnectSection({
                   data-bwignore="true"
                   data-form-type="other"
                   placeholder="Email"
-                  disabled={connectLocked}
+                  disabled={formDisabled}
                   value={cloudahoyEmail}
                   onChange={(event) => setCloudahoyEmail(event.target.value)}
                 />
@@ -153,7 +155,7 @@ export function ConnectSection({
                   data-bwignore="true"
                   data-form-type="other"
                   placeholder="Password"
-                  disabled={connectLocked}
+                  disabled={formDisabled}
                   value={cloudahoyPassword}
                   onChange={(event) => setCloudahoyPassword(event.target.value)}
                 />
@@ -175,7 +177,7 @@ export function ConnectSection({
                   data-bwignore="true"
                   data-form-type="other"
                   placeholder="Email"
-                  disabled={connectLocked}
+                  disabled={formDisabled}
                   value={flystoEmail}
                   onChange={(event) => setFlystoEmail(event.target.value)}
                 />
@@ -192,7 +194,7 @@ export function ConnectSection({
                   data-bwignore="true"
                   data-form-type="other"
                   placeholder="Password"
-                  disabled={connectLocked}
+                  disabled={formDisabled}
                   value={flystoPassword}
                   onChange={(event) => setFlystoPassword(event.target.value)}
                 />
@@ -214,7 +216,7 @@ export function ConnectSection({
                         <Input
                           id="start-date"
                           placeholder="YYYY-MM-DD"
-                          disabled={connectLocked}
+                          disabled={formDisabled}
                           value={startDateInput}
                           onChange={(event) => setStartDateInput(event.target.value)}
                           className={cn("pr-10", dateRangeError && "border-amber-400")}
@@ -224,7 +226,7 @@ export function ConnectSection({
                             <Button
                               variant="ghost"
                               size="icon"
-                              disabled={connectLocked}
+                              disabled={formDisabled}
                               className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground/80 hover:text-foreground hover:bg-transparent"
                             >
                 <CalendarIcon className="h-4 w-4 cursor-pointer" />
@@ -241,7 +243,7 @@ export function ConnectSection({
                               }}
                               fromYear={2000}
                               toYear={new Date().getFullYear() + 1}
-                              disabled={connectLocked}
+                              disabled={formDisabled}
                             />
                           </PopoverContent>
                         </Popover>
@@ -253,7 +255,7 @@ export function ConnectSection({
                         <Input
                           id="end-date"
                           placeholder="YYYY-MM-DD"
-                          disabled={connectLocked}
+                          disabled={formDisabled}
                           value={endDateInput}
                           onChange={(event) => setEndDateInput(event.target.value)}
                           className={cn("pr-10", dateRangeError && "border-amber-400")}
@@ -263,7 +265,7 @@ export function ConnectSection({
                             <Button
                               variant="ghost"
                               size="icon"
-                              disabled={connectLocked}
+                              disabled={formDisabled}
                               className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground/80 hover:text-foreground hover:bg-transparent"
                             >
                               <CalendarIcon className="h-4 w-4" />
@@ -280,7 +282,7 @@ export function ConnectSection({
                               }}
                               fromYear={2000}
                               toYear={new Date().getFullYear() + 1}
-                              disabled={connectLocked}
+                              disabled={formDisabled}
                             />
                           </PopoverContent>
                         </Popover>
@@ -298,7 +300,7 @@ export function ConnectSection({
                         setStartDateInput("");
                         setEndDateInput("");
                       }}
-                      disabled={connectLocked || (!startDateInput && !endDateInput)}
+                      disabled={formDisabled || (!startDateInput && !endDateInput)}
                       className="ml-auto h-7 px-2 text-xs font-medium text-muted-foreground/80 hover:text-foreground"
                     >
                       Clear dates
@@ -318,7 +320,7 @@ export function ConnectSection({
                     step={1}
                     inputMode="numeric"
                     placeholder="50"
-                    disabled={connectLocked}
+                    disabled={formDisabled}
                     value={maxFlights}
                     onChange={(event) => {
                       const next = event.target.value;
@@ -349,7 +351,7 @@ export function ConnectSection({
 
           <Button
             onClick={onConnectReview}
-            disabled={connectLocked || !canConnect || Boolean(dateRangeError) || actionLoading}
+            disabled={formDisabled || !canConnect || Boolean(dateRangeError)}
             className="btn-primary-glow"
           >
             Connect and review

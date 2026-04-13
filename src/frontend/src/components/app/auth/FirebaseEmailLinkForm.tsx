@@ -49,10 +49,11 @@ export function FirebaseEmailLinkForm({
           spellCheck={false}
           enterKeyHint="send"
           className={cn(
-            "h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none",
+            "h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm focus:border-slate-400 focus:outline-none disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500",
             inputClassName
           )}
           placeholder="you@example.com"
+          disabled={disabled}
           value={email}
           onChange={(event) => onEmailChange(event.target.value)}
           onKeyDown={(event) => {

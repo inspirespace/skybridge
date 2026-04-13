@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 
 vi.mock("@/hooks/use-job-snapshot", () => ({
   useJobSnapshot: vi.fn(),
@@ -11,6 +11,7 @@ vi.mock("@/hooks/use-firebase-auth", () => ({
 
 vi.mock("@/api/client", () => ({
   listJobs: vi.fn(),
+  listJobsWithOptions: vi.fn(),
   createJob: vi.fn(),
   acceptReview: vi.fn(),
   fetchArtifact: vi.fn(),
@@ -20,7 +21,7 @@ vi.mock("@/api/client", () => ({
 }));
 
 import App from "@/App";
-import { listJobs } from "@/api/client";
+import { listJobs, listJobsWithOptions } from "@/api/client";
 import { useJobSnapshot } from "@/hooks/use-job-snapshot";
 import { useFirebaseAuth } from "@/hooks/use-firebase-auth";
 import type { JobRecord } from "@/api/client";
@@ -72,6 +73,7 @@ function jobRecord(overrides: Partial<JobRecord> = {}): JobRecord {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.resetAllMocks();
   sessionStorage.clear();
 });
@@ -80,18 +82,84 @@ describe("App", () => {
   it("loads latest job when signed in without job id", async () => {
     vi.mocked(useFirebaseAuth).mockReturnValue(firebaseAuthState({ accessToken: "token" }));
     vi.mocked(useJobSnapshot).mockReturnValue(jobSnapshotState());
-    vi.mocked(listJobs).mockResolvedValue({
+    vi.mocked(listJobsWithOptions).mockResolvedValue({
       jobs: [jobRecord()],
     });
 
     render(<App />);
 
     await waitFor(() => {
-      expect(listJobs).toHaveBeenCalledWith({ token: "token" });
+      expect(listJobsWithOptions).toHaveBeenCalledWith({ token: "token" }, { retryAttempts: 1 });
     });
     await waitFor(() => {
       expect(sessionStorage.getItem(JOB_ID_KEY)).toBe("job-latest");
     });
+  });
+
+  it("shows a restore loading state while looking up the latest job after sign-in", () => {
+    const pendingLookup = new Promise<never>(() => {});
+    vi.mocked(useFirebaseAuth).mockReturnValue(firebaseAuthState({ accessToken: "token" }));
+    vi.mocked(useJobSnapshot).mockReturnValue(jobSnapshotState());
+    vi.mocked(listJobsWithOptions).mockReturnValue(pendingLookup);
+
+    render(<App />);
+
+    expect(screen.getByText(/^loading\.\.\.$/i)).toBeInTheDocument();
+    expect(screen.queryByText(/connect accounts/i)).not.toBeInTheDocument();
+  });
+
+  it("shows a restore loading state while reloading a saved job", () => {
+    sessionStorage.setItem(JOB_ID_KEY, "job-123");
+    vi.mocked(useFirebaseAuth).mockReturnValue(firebaseAuthState({ accessToken: "token" }));
+    vi.mocked(useJobSnapshot).mockReturnValue(jobSnapshotState({ loading: true }));
+
+    render(<App />);
+
+    expect(screen.getByText(/^loading\.\.\.$/i)).toBeInTheDocument();
+    expect(screen.queryByText(/connect accounts/i)).not.toBeInTheDocument();
+    expect(listJobsWithOptions).not.toHaveBeenCalled();
+    expect(listJobs).not.toHaveBeenCalled();
+  });
+
+  it("retries latest job restore after a transient lookup failure", async () => {
+    const transientError = new Error("Service unavailable") as Error & { status?: number };
+    transientError.status = 503;
+
+    vi.mocked(useFirebaseAuth).mockReturnValue(firebaseAuthState({ accessToken: "token" }));
+    vi.mocked(useJobSnapshot).mockReturnValue(jobSnapshotState());
+    vi.mocked(listJobsWithOptions)
+      .mockRejectedValueOnce(transientError)
+      .mockResolvedValueOnce({
+        jobs: [jobRecord()],
+      });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(listJobsWithOptions).toHaveBeenCalledTimes(1);
+    });
+    await waitFor(() => {
+      expect(listJobsWithOptions).toHaveBeenCalledTimes(2);
+    }, { timeout: 3000 });
+    await waitFor(() => {
+      expect(sessionStorage.getItem(JOB_ID_KEY)).toBe("job-latest");
+    });
+  }, 10000);
+
+  it("keeps the main app visible while polling an already restored job", () => {
+    sessionStorage.setItem(JOB_ID_KEY, "job-123");
+    vi.mocked(useFirebaseAuth).mockReturnValue(firebaseAuthState({ accessToken: "token" }));
+    vi.mocked(useJobSnapshot).mockReturnValue(
+      jobSnapshotState({
+        data: jobRecord({ job_id: "job-123", status: "review_running" }),
+        loading: true,
+      })
+    );
+
+    render(<App />);
+
+    expect(screen.queryByText(/^loading\.\.\.$/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/verify your flight data/i)).toBeInTheDocument();
   });
 
   it("clears local job state on auth expired error", async () => {
@@ -108,7 +176,7 @@ describe("App", () => {
       })
     );
     vi.mocked(useJobSnapshot).mockReturnValue(jobSnapshotState({ error: authError }));
-    vi.mocked(listJobs).mockResolvedValue({ jobs: [] });
+    vi.mocked(listJobsWithOptions).mockResolvedValue({ jobs: [] });
 
     render(<App />);
 

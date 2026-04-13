@@ -9,8 +9,18 @@ import { resolveAuthEmulatorBaseUrl } from "@/lib/runtime-endpoints";
 
 const EMULATOR_RETRY_ATTEMPTS = 3;
 const EMULATOR_RETRY_DELAY_MS = 600;
+const E2E_AUTH_BYPASS = (import.meta.env.VITE_E2E_AUTH_BYPASS ?? "") === "1";
+const E2E_ACCESS_TOKEN_KEY = "skybridge_e2e_access_token";
+const E2E_USER_ID_KEY = "skybridge_e2e_user_id";
+const E2E_ANONYMOUS_KEY = "skybridge_e2e_is_anonymous";
 
 type ProviderName = "google" | "apple" | "facebook" | "microsoft" | "anonymous";
+
+type E2EAuthState = {
+  token: string;
+  userId: string | null;
+  isAnonymous: boolean;
+};
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -36,6 +46,17 @@ const retryEmulatorAuth = async (fn: () => Promise<void>) => {
     throw lastError;
   }
   throw new Error("Auth emulator unavailable.");
+};
+
+const readE2EAuthState = (): E2EAuthState | null => {
+  if (!E2E_AUTH_BYPASS || typeof window === "undefined") return null;
+  const token = window.sessionStorage.getItem(E2E_ACCESS_TOKEN_KEY);
+  if (!token) return null;
+  return {
+    token,
+    userId: window.sessionStorage.getItem(E2E_USER_ID_KEY),
+    isAnonymous: window.sessionStorage.getItem(E2E_ANONYMOUS_KEY) === "1",
+  };
 };
 
 export function useFirebaseAuth({
@@ -77,6 +98,9 @@ export function useFirebaseAuth({
   const [runtimeConfigAttempted, setRuntimeConfigAttempted] = React.useState(false);
   const [runtimeConfigError, setRuntimeConfigError] = React.useState<string | null>(null);
   const authRef = React.useRef<ReturnType<typeof import("firebase/auth").getAuth> | null>(null);
+  const [e2eAuthState, setE2EAuthState] = React.useState<E2EAuthState | null>(() =>
+    readE2EAuthState()
+  );
   const effectiveConfig = React.useMemo(
     () =>
       getEffectiveFirebaseWebConfig({
@@ -105,6 +129,30 @@ export function useFirebaseAuth({
   }, [apiKey, authDomain, projectId]);
 
   React.useEffect(() => {
+    if (!E2E_AUTH_BYPASS) return;
+    const sync = () => {
+      const next = readE2EAuthState();
+      setE2EAuthState(next);
+      setAccessToken(next?.token ?? null);
+      setIdToken(next?.token ?? null);
+      setUserId(next?.userId ?? null);
+      setIsAnonymous(next?.isAnonymous ?? false);
+      setEmulatorProvider(null);
+      setEmulatorReady(true);
+      setEmailLinkPending(false);
+      setAuthReady(true);
+      setRuntimeConfigAttempted(true);
+      setRuntimeConfigError(null);
+    };
+    sync();
+    window.addEventListener("focus", sync);
+    return () => {
+      window.removeEventListener("focus", sync);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (E2E_AUTH_BYPASS) return;
     if (!enabled) return;
     if (hasConfiguredFirebaseConfig) {
       setRuntimeConfigAttempted(true);
@@ -164,6 +212,7 @@ export function useFirebaseAuth({
   }, [useEmulator, emulatorUrl, effectiveApiKey]);
 
   React.useEffect(() => {
+    if (E2E_AUTH_BYPASS) return;
     if (!useEmulator) {
       setEmulatorReady(true);
       return;
@@ -273,6 +322,12 @@ export function useFirebaseAuth({
   );
 
   const clearAuth = React.useCallback(() => {
+    if (E2E_AUTH_BYPASS && typeof window !== "undefined") {
+      window.sessionStorage.removeItem(E2E_ACCESS_TOKEN_KEY);
+      window.sessionStorage.removeItem(E2E_USER_ID_KEY);
+      window.sessionStorage.removeItem(E2E_ANONYMOUS_KEY);
+      setE2EAuthState(null);
+    }
     setAccessToken(null);
     setIdToken(null);
     setUserId(null);
@@ -311,6 +366,7 @@ export function useFirebaseAuth({
   );
 
   React.useEffect(() => {
+    if (E2E_AUTH_BYPASS) return;
     if (!enabled) return;
     if (!runtimeConfigAttempted) return;
     if (!effectiveApiKey || !effectiveAuthDomain || !effectiveProjectId) {
@@ -422,6 +478,7 @@ export function useFirebaseAuth({
 
   const startLogin = React.useCallback(
     async (provider?: ProviderName, options?: { link?: boolean }) => {
+      if (E2E_AUTH_BYPASS) return;
       if (!enabled) return;
       const auth = authRef.current;
       if (!auth) {
@@ -522,6 +579,10 @@ export function useFirebaseAuth({
     async (
       email: string
     ): Promise<{ sent: boolean; linkUrl: string | null }> => {
+      if (E2E_AUTH_BYPASS) {
+        onError?.("Email link sign-in is unavailable in Playwright auth bypass mode.");
+        return { sent: false, linkUrl: null };
+      }
       if (!enabled) return { sent: false, linkUrl: null };
       const auth = authRef.current;
       if (!auth) {
@@ -569,6 +630,10 @@ export function useFirebaseAuth({
   );
 
   const signOut = React.useCallback(async () => {
+    if (E2E_AUTH_BYPASS) {
+      clearAuth();
+      return;
+    }
     const auth = authRef.current;
     if (!auth) {
       clearAuth();
@@ -590,13 +655,13 @@ export function useFirebaseAuth({
   }, [clearAuth, useEmulator, onError]);
 
   return {
-    accessToken,
-    idToken,
-    isAnonymous,
+    accessToken: E2E_AUTH_BYPASS ? e2eAuthState?.token ?? null : accessToken,
+    idToken: E2E_AUTH_BYPASS ? e2eAuthState?.token ?? null : idToken,
+    isAnonymous: E2E_AUTH_BYPASS ? e2eAuthState?.isAnonymous ?? false : isAnonymous,
     emulatorProvider,
     emulatorReady,
     authReady,
-    userId,
+    userId: E2E_AUTH_BYPASS ? e2eAuthState?.userId ?? null : userId,
     emailLinkPending,
     startLogin,
     startEmailLink,

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Fix"
+  short_description: "Handle GitHub PR review feedback"
+  default_prompt: "Use $review-fix to process GitHub PR review comments, apply valid fixes, reply, and resolve each handled thread."

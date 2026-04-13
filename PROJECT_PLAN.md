@@ -218,6 +218,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Fix deployed Firebase email-link auth on the custom Hosting domain by allowing Firebase Auth helper iframe/script origins in Hosting CSP (`*.firebaseapp.com`, `*.web.app`, `apis.google.com`, `www.google.com`, `www.gstatic.com`) and lock that into regression coverage.
 - [x] Restore frontend deploy builds after adding the CSP regression test by exposing Node typings to frontend test files during `tsc -b` typechecking.
 - [x] Extend the Firebase clear-project task to empty the resolved Firebase Storage bucket objects as well, while clarifying the remaining limits (Auth users not deleted; Storage metrics can lag under retention/soft-delete).
+- [x] Add a repo-local Codex skill for assigned GitHub PR review handling, including review-thread discovery, inline replies, and thread resolution helpers.
 - [x] Harden Firebase Storage cleanup auth in the clear-project task: use `gcloud auth application-default print-access-token` as an extra token source, isolate gcloud in a temp config dir, and prompt for ADC login in interactive local runs when needed.
 - [x] Replace guessed Firebase bucket names in the clear-project task with Storage API project-bucket discovery so Storage cleanup clears the project’s real buckets instead of reporting false “no matching bucket” results.
 - [x] Disable Docker Compose's attached shortcut menu by default inside the devcontainer wrapper so VS Code launch terminals stop advertising unusable host-only Docker Desktop actions.
@@ -238,6 +239,10 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Remove deploy-time Firebase Auth branding auto-patching and switch deploy preflight to manual setup guidance (email-link mode, template naming, authorized domains) plus verification-only checks.
 - [x] Document Firebase Console prerequisite that Auth template "Public-facing name" is editable only when Google sign-in provider is enabled (deploy overview + docs).
 - [x] Document manual Firebase Console setup for Auth email custom sender domains, including DNS verification and the distinction from Hosting domains / Auth authorized domains.
+- [x] Disable auth/connect form inputs while sign-in or connect actions are in flight so users cannot edit credentials or email-link fields mid-request.
+- [x] Hold the signed-in app shell in an explicit restore-loading state while the latest job/session is being resolved, so the stepper does not flash step 1 before reopening the last active step.
+- [x] Time out stalled restore GET requests and cover both hung restore paths with Playwright so the generic loading state cannot block the app indefinitely.
+- [x] Fix restore follow-up regressions by retrying transient latest-job lookup failures and keeping the full-page restore loader scoped to initial job restoration instead of normal polling refreshes.
 - [x] Fix deploy authorized-domain setup overview to merge/dedupe `FIREBASE_AUTHORIZED_DOMAINS` across env sources so all configured domains (for example `.app` and `.co`) are shown and validated.
 - [x] Reduce deploy-time Git noise by staging shared backend modules under ignored `functions/_deploy_src/src` (instead of tracked `functions/src`) and updating Functions import path fallback accordingly.
 - [x] Harden deploy authorized-domain config parsing to merge all `FIREBASE_AUTHORIZED_DOMAINS` entries (including repeated keys) across env sources, and label setup output as merged-source values.

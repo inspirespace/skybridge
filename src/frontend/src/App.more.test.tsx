@@ -11,6 +11,7 @@ vi.mock("@/hooks/use-firebase-auth", () => ({
 
 vi.mock("@/api/client", () => ({
   listJobs: vi.fn(),
+  listJobsWithOptions: vi.fn(),
   createJob: vi.fn(),
   acceptReview: vi.fn(),
   fetchArtifact: vi.fn(),

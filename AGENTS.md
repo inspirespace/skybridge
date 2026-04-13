@@ -6,6 +6,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Place application/source code under `src/`.
 - Put tests under `tests/` or `test/` (match your framework).
 - Keep assets in `assets/`, and config files at the repo root.
+- Repo-local Codex skills live under `.codex/skills/`.
 - Inspector scripts live in `tools/inspector/` (dev-only helpers).
 - VNC helpers for Playwright live in `scripts/` (devcontainer use only).
 - User-facing scripts: `scripts/cleanup-merged-branches.sh` (branch cleanup), `scripts/clean-workspace.sh` (local dependency/build/log cleanup), `scripts/firebase-deploy.sh` (shared local/CI Firebase deploy flow for Functions, Hosting, and Firestore config, including first-time default Firestore database creation), `scripts/firebase-clear-project.sh` (clear Firebase resources while keeping the project, including deleting the default Firestore database), `scripts/repair-docker-socket-access.sh` (fix Docker socket permissions inside devcontainer sessions), and `scripts/docker-compose.sh` (Docker Compose wrapper that resolves host bind paths and disables the attached Compose shortcut menu when run from inside the devcontainer).
@@ -76,6 +77,7 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - `python -m src.core.cli --review` — run the CLI locally (requires Python deps).
 - CLI supports `--start-date` / `--end-date` for targeted imports (YYYY-MM-DD or ISO8601).
 - `pytest` — run backend tests (if installed).
+- `python ${CODEX_HOME:-$HOME/.codex}/skills/.system/skill-creator/scripts/quick_validate.py ./.codex/skills/<skill-name>` — validate a repo-local Codex skill after editing it.
 - `devcontainer exec --workspace-folder . pytest` — run backend tests in the devcontainer.
 - `devcontainer exec --workspace-folder . npm --prefix src/frontend run test` — run frontend unit tests in the devcontainer.
 - `devcontainer exec --workspace-folder . npm --prefix src/frontend run test:e2e` — run frontend e2e tests in the devcontainer.
