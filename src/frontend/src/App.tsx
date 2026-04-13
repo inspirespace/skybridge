@@ -35,6 +35,7 @@ import {
   createJob,
   fetchArtifact,
   listJobs,
+  listJobsWithOptions,
   deleteJob,
   downloadArtifactsZip,
   type AuthContext,
@@ -79,6 +80,8 @@ import { parseISODateInput } from "@/lib/date-input";
 const JOB_ID_KEY = "skybridge_job_id";
 const OPEN_STEP_KEY = "skybridge_open_step";
 const EMAIL_LINK_EMAIL_KEY = "skybridge_email_link_email";
+const LATEST_JOB_LOOKUP_KEY = "skybridge_latest_job_lookup_attempted";
+const RESTORE_LOADING_MAX_MS = 2500;
 const RUNNING_STALL_WARNING_SECONDS = Number.parseInt(
   import.meta.env.VITE_RUNNING_STALL_WARNING_SECONDS ?? "180",
   10
@@ -156,6 +159,7 @@ export default function App() {
   const [jobId, setJobId] = React.useState<string | null>(() =>
     readSessionValue(JOB_ID_KEY)
   );
+  const [latestJobLookupPending, setLatestJobLookupPending] = React.useState(false);
   const [showAllFlights, setShowAllFlights] = React.useState(false);
   const [reviewFlights, setReviewFlights] = React.useState<FlightSummary[] | null>(null);
   const [reviewFlightsError, setReviewFlightsError] = React.useState<string | null>(null);
@@ -238,7 +242,12 @@ export default function App() {
     [activeAccessToken]
   );
 
-  const { data: job, error: jobError, refresh } = useJobSnapshot(isSignedIn ? jobId : null, auth);
+  const {
+    data: job,
+    loading: jobLoading,
+    error: jobError,
+    refresh,
+  } = useJobSnapshot(isSignedIn ? jobId : null, auth);
 
   const flow = React.useMemo(
     () => deriveFlowState(isSignedIn, job ?? null),
@@ -247,7 +256,9 @@ export default function App() {
   const [manualOpen, setManualOpen] = React.useState<string | undefined>(() =>
     readSessionValue(OPEN_STEP_KEY) ?? undefined
   );
+  const [restoreLoadingTimedOut, setRestoreLoadingTimedOut] = React.useState(false);
   const backendResetCheckRef = React.useRef(false);
+  const latestJobLookupAttemptedRef = React.useRef(false);
   const emailLinkAutoRef = React.useRef(false);
   const openStep = React.useMemo(() => {
     if (
@@ -854,12 +865,30 @@ export default function App() {
   ]);
 
   React.useEffect(() => {
+    if (!isSignedIn) {
+      latestJobLookupAttemptedRef.current = false;
+      removeSessionValue(LATEST_JOB_LOOKUP_KEY);
+      return;
+    }
+  }, [isSignedIn]);
+
+  React.useEffect(() => {
     if (!isSignedIn) return;
-    if (jobId || actionLoading) return;
+    if (
+      jobId ||
+      actionLoading ||
+      latestJobLookupAttemptedRef.current ||
+      readSessionValue(LATEST_JOB_LOOKUP_KEY) === "1"
+    ) {
+      return;
+    }
     let cancelled = false;
+    latestJobLookupAttemptedRef.current = true;
+    setSessionValue(LATEST_JOB_LOOKUP_KEY, "1");
+    setLatestJobLookupPending(true);
     (async () => {
       try {
-        const response = await listJobs(auth);
+        const response = await listJobsWithOptions(auth, { retryAttempts: 1 });
         if (cancelled) return;
         const latest = response.jobs?.[0];
         if (latest?.job_id) {
@@ -869,6 +898,10 @@ export default function App() {
       } catch (err) {
         if (isAuthExpiredError(err)) {
           handleTokenExpired();
+        }
+      } finally {
+        if (!cancelled) {
+          setLatestJobLookupPending(false);
         }
       }
     })();
@@ -1034,6 +1067,24 @@ export default function App() {
   const checklistProgress = (completedSteps / navSteps.length) * 100;
 
   const authInitializing = !firebaseAuthReady && !authInitTimedOut;
+  const restoreRequestInFlight =
+    isSignedIn && (latestJobLookupPending || (Boolean(jobId) && jobLoading));
+
+  React.useEffect(() => {
+    if (!restoreRequestInFlight) {
+      setRestoreLoadingTimedOut(false);
+      return;
+    }
+    setRestoreLoadingTimedOut(false);
+    const timeout = window.setTimeout(() => {
+      setRestoreLoadingTimedOut(true);
+    }, RESTORE_LOADING_MAX_MS);
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [restoreRequestInFlight]);
+
+  const restoringJobState = restoreRequestInFlight && !restoreLoadingTimedOut;
 
   return (
     <div className="app-shell relative min-h-screen flex flex-col text-foreground">
@@ -1212,203 +1263,216 @@ export default function App() {
                 actionLoading={actionLoading}
               />
             )}
-            <div className="mb-4 lg:hidden">
-              <Card className="glass-card rounded-2xl">
-                <CardContent className="space-y-2 py-3">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="font-medium">Step {stepIndex} of 3</span>
-                    <span className="text-[hsl(var(--horizon))]">
-                      {nextLabel === "All steps completed"
-                        ? nextLabel
-                        : `Next: ${nextLabel}`}
-                    </span>
-                  </div>
-                  <Progress value={(stepIndex / 3) * 100} className="progress-bar-aviation" />
-                </CardContent>
-              </Card>
-            </div>
-
-            {actionNotice && (
-              <Alert className="mb-4 border-[hsl(var(--altitude))]/30 bg-[hsl(var(--altitude))]/10 text-[hsl(var(--altitude))] dark:border-[hsl(var(--altitude))]/30 dark:bg-[hsl(var(--altitude))]/10">
-                <AlertTitle>Done</AlertTitle>
-                <AlertDescription>{actionNotice.message}</AlertDescription>
-              </Alert>
-            )}
-
-            <div className="grid min-w-0 gap-4 lg:grid-cols-[280px_1fr]">
-          <aside className="hidden space-y-3 lg:sticky lg:top-20 lg:block lg:self-start">
-            <Card className="glass-card nav-panel relative overflow-hidden rounded-2xl">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.06),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.1),_transparent_60%)]" />
-              <CardContent className="space-y-4 p-5">
-                <div className="checklist-header">
-                  <p className="checklist-kicker">Import progress</p>
-                  <div className="checklist-summary-row">
-                    <span className="checklist-summary-label">
-                      {completedSteps}/{navSteps.length} complete
-                    </span>
-                    <span className="checklist-summary-next">
-                      {nextLabel === "All steps completed"
-                        ? "Done"
-                        : nextLabel}
-                    </span>
-                  </div>
-                  <Progress
-                    value={checklistProgress}
-                    className="checklist-progress"
-                    indicatorClassName="checklist-progress-indicator"
-                  />
+            {restoringJobState ? (
+              <div className="mx-auto max-w-3xl">
+                <Card className="glass-card rounded-2xl">
+                  <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-[hsl(var(--horizon))]" aria-hidden />
+                    <p className="text-sm font-medium text-foreground">Loading...</p>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <>
+                <div className="mb-4 lg:hidden">
+                  <Card className="glass-card rounded-2xl">
+                    <CardContent className="space-y-2 py-3">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="font-medium">Step {stepIndex} of 3</span>
+                        <span className="text-[hsl(var(--horizon))]">
+                          {nextLabel === "All steps completed"
+                            ? nextLabel
+                            : `Next: ${nextLabel}`}
+                        </span>
+                      </div>
+                      <Progress value={(stepIndex / 3) * 100} className="progress-bar-aviation" />
+                    </CardContent>
+                  </Card>
                 </div>
-                <div className="nav-steps-container">
-                  <div className="nav-steps gap-1.5">
-                    {navSteps.map((step, index) => {
-                      const statusLabel = step.done
-                        ? "Done"
-                        : step.active
-                          ? "Current"
-                          : step.locked
-                            ? "Locked"
-                            : "Ready";
-                      return (
-                        <div
-                          key={step.id}
-                          className={cn(
-                            "nav-step",
-                            step.active && "active",
-                            step.done && !step.active && "completed",
-                            step.locked && "locked"
-                          )}
-                        >
-                          <span className="step-indicator">
-                            {step.done ? <Check className="h-3.5 w-3.5" /> : index + 1}
-                          </span>
-                          <span className="step-content">
-                            <span className="step-title-row">
-                              <span className="step-title">{step.title}</span>
-                              <span
-                                className={cn(
-                                  "step-inline-status",
-                                  step.done && "done",
-                                  step.active && "active",
-                                  step.locked && "locked"
-                                )}
-                              >
-                                <span className="step-inline-dot" aria-hidden />
-                                <span className="step-inline-label">{statusLabel}</span>
-                              </span>
+
+                {actionNotice && (
+                  <Alert className="mb-4 border-[hsl(var(--altitude))]/30 bg-[hsl(var(--altitude))]/10 text-[hsl(var(--altitude))] dark:border-[hsl(var(--altitude))]/30 dark:bg-[hsl(var(--altitude))]/10">
+                    <AlertTitle>Done</AlertTitle>
+                    <AlertDescription>{actionNotice.message}</AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="grid min-w-0 gap-4 lg:grid-cols-[280px_1fr]">
+                  <aside className="hidden space-y-3 lg:sticky lg:top-20 lg:block lg:self-start">
+                    <Card className="glass-card nav-panel relative overflow-hidden rounded-2xl">
+                      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.06),_transparent_60%)] dark:bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.1),_transparent_60%)]" />
+                      <CardContent className="space-y-4 p-5">
+                        <div className="checklist-header">
+                          <p className="checklist-kicker">Import progress</p>
+                          <div className="checklist-summary-row">
+                            <span className="checklist-summary-label">
+                              {completedSteps}/{navSteps.length} complete
                             </span>
-                            <span className="step-subtitle">{step.subtitle}</span>
-                          </span>
+                            <span className="checklist-summary-next">
+                              {nextLabel === "All steps completed"
+                                ? "Done"
+                                : nextLabel}
+                            </span>
+                          </div>
+                          <Progress
+                            value={checklistProgress}
+                            className="checklist-progress"
+                            indicatorClassName="checklist-progress-indicator"
+                          />
                         </div>
-                      );
-                    })}
-                  </div>
+                        <div className="nav-steps-container">
+                          <div className="nav-steps gap-1.5">
+                            {navSteps.map((step, index) => {
+                              const statusLabel = step.done
+                                ? "Done"
+                                : step.active
+                                  ? "Current"
+                                  : step.locked
+                                    ? "Locked"
+                                    : "Ready";
+                              return (
+                                <div
+                                  key={step.id}
+                                  className={cn(
+                                    "nav-step",
+                                    step.active && "active",
+                                    step.done && !step.active && "completed",
+                                    step.locked && "locked"
+                                  )}
+                                >
+                                  <span className="step-indicator">
+                                    {step.done ? <Check className="h-3.5 w-3.5" /> : index + 1}
+                                  </span>
+                                  <span className="step-content">
+                                    <span className="step-title-row">
+                                      <span className="step-title">{step.title}</span>
+                                      <span
+                                        className={cn(
+                                          "step-inline-status",
+                                          step.done && "done",
+                                          step.active && "active",
+                                          step.locked && "locked"
+                                        )}
+                                      >
+                                        <span className="step-inline-dot" aria-hidden />
+                                        <span className="step-inline-label">{statusLabel}</span>
+                                      </span>
+                                    </span>
+                                    <span className="step-subtitle">{step.subtitle}</span>
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </aside>
+
+                  <section className="min-w-0 space-y-2.5 app-content-stack">
+                    <div className="glass-card-accent relative min-w-0 rounded-2xl">
+                      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.04),_transparent_58%)] dark:bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.08),_transparent_58%)]" />
+                      <Accordion
+                        type="single"
+                        collapsible
+                        value={openStep}
+                        onValueChange={handleAccordionChange}
+                      >
+                        <ConnectSection
+                          allowed={allowedSteps.has("connect")}
+                          connected={flow.connected}
+                          signedIn={flow.signedIn}
+                          connectLocked={connectLocked}
+                          canConnect={canConnect}
+                          startDate={startDate ?? undefined}
+                          endDate={endDate ?? undefined}
+                          startDateInput={startDateInput}
+                          endDateInput={endDateInput}
+                          setStartDateInput={setStartDateInput}
+                          setEndDateInput={setEndDateInput}
+                          dateRangeError={dateRangeError}
+                          maxFlights={maxFlights}
+                          cloudahoyEmail={cloudahoyEmail}
+                          cloudahoyPassword={cloudahoyPassword}
+                          flystoEmail={flystoEmail}
+                          flystoPassword={flystoPassword}
+                          setCloudahoyEmail={setCloudahoyEmail}
+                          setCloudahoyPassword={setCloudahoyPassword}
+                          setFlystoEmail={setFlystoEmail}
+                          setFlystoPassword={setFlystoPassword}
+                          setMaxFlights={setMaxFlights}
+                          onConnectReview={handleConnectReview}
+                          actionLoading={actionLoading}
+                          connectError={connectError}
+                          onRefresh={refresh}
+                        />
+
+                        <div className="border-t border-border/30 dark:border-[hsl(var(--sky-accent))]/10" />
+                        <ReviewSection
+                          allowed={allowedSteps.has("review")}
+                          reviewComplete={reviewComplete}
+                          reviewRunning={reviewRunning}
+                          reviewApproved={reviewApproved}
+                          showReviewProgress={showReviewProgress}
+                          reviewProgressCardClass={reviewProgressCardClass}
+                          reviewStage={reviewStage}
+                          elapsed={reviewElapsed}
+                          lastUpdate={reviewLastUpdate}
+                          reviewProgress={reviewProgress}
+                          reviewNoteClass={reviewNoteClass}
+                          reviewSummary={reviewSummary}
+                          flights={flights}
+                          visibleFlights={visibleFlights}
+                          showAllFlights={showAllFlights}
+                          setShowAllFlights={setShowAllFlights}
+                          reviewError={reviewError}
+                          reviewRuntimeWarning={reviewRuntimeWarning}
+                          onRefresh={refresh}
+                          canApprove={canApprove}
+                          importRunning={importRunning}
+                          importComplete={importComplete}
+                          actionLoading={actionLoading}
+                          onApproveImport={handleApproveImport}
+                          canEditFiltersNow={canEditFiltersNow}
+                          onEditFilters={handleEditFilters}
+                          formatDate={formatDate}
+                        />
+
+                        <div className="border-t border-border/30 dark:border-[hsl(var(--sky-accent))]/10" />
+                        <ImportSection
+                          allowed={allowedSteps.has("import")}
+                          importComplete={importComplete}
+                          importRunning={importRunning}
+                          reviewComplete={reviewComplete}
+                          showImportProgress={showImportProgress}
+                          importProgressCardClass={importProgressCardClass}
+                          importStage={importStage}
+                          elapsed={importElapsed}
+                          lastUpdate={importLastUpdate}
+                          importProgress={importProgress}
+                          latestImportEvent={latestImportEvent ?? null}
+                          formatFlightId={formatFlightId}
+                          formatLastUpdate={formatLastUpdate}
+                          now={now}
+                          job={job}
+                          reviewSummaryMissing={reviewSummary?.missing_tail_numbers ?? 0}
+                          retentionDays={retentionDays}
+                          onDownloadFiles={handleDownloadFiles}
+                          downloadLoading={downloadLoading}
+                          onDeleteResults={handleDeleteResults}
+                          actionLoading={actionLoading}
+                          importError={importError}
+                          importRuntimeWarning={importRuntimeWarning}
+                          onRefresh={refresh}
+                          canRetryImport={canRetryImport}
+                          onRetryImport={handleRetryImport}
+                        />
+                      </Accordion>
+                    </div>
+                  </section>
                 </div>
-              </CardContent>
-            </Card>
-          </aside>
-
-          <section className="min-w-0 space-y-2.5 app-content-stack">
-            <div className="glass-card-accent relative min-w-0 rounded-2xl">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.04),_transparent_58%)] dark:bg-[radial-gradient(circle_at_top,_hsl(var(--sky-accent)/0.08),_transparent_58%)]" />
-            <Accordion
-              type="single"
-              collapsible
-              value={openStep}
-              onValueChange={handleAccordionChange}
-            >
-              <ConnectSection
-                allowed={allowedSteps.has("connect")}
-                connected={flow.connected}
-                signedIn={flow.signedIn}
-                connectLocked={connectLocked}
-                canConnect={canConnect}
-                startDate={startDate ?? undefined}
-                endDate={endDate ?? undefined}
-                startDateInput={startDateInput}
-                endDateInput={endDateInput}
-                setStartDateInput={setStartDateInput}
-                setEndDateInput={setEndDateInput}
-                dateRangeError={dateRangeError}
-                maxFlights={maxFlights}
-                cloudahoyEmail={cloudahoyEmail}
-                cloudahoyPassword={cloudahoyPassword}
-                flystoEmail={flystoEmail}
-                flystoPassword={flystoPassword}
-                setCloudahoyEmail={setCloudahoyEmail}
-                setCloudahoyPassword={setCloudahoyPassword}
-                setFlystoEmail={setFlystoEmail}
-                setFlystoPassword={setFlystoPassword}
-                setMaxFlights={setMaxFlights}
-                onConnectReview={handleConnectReview}
-                actionLoading={actionLoading}
-                connectError={connectError}
-                onRefresh={refresh}
-              />
-
-              <div className="border-t border-border/30 dark:border-[hsl(var(--sky-accent))]/10" />
-              <ReviewSection
-                allowed={allowedSteps.has("review")}
-                reviewComplete={reviewComplete}
-                reviewRunning={reviewRunning}
-                reviewApproved={reviewApproved}
-                showReviewProgress={showReviewProgress}
-                reviewProgressCardClass={reviewProgressCardClass}
-                reviewStage={reviewStage}
-                elapsed={reviewElapsed}
-                lastUpdate={reviewLastUpdate}
-                reviewProgress={reviewProgress}
-                reviewNoteClass={reviewNoteClass}
-                reviewSummary={reviewSummary}
-                flights={flights}
-                visibleFlights={visibleFlights}
-                showAllFlights={showAllFlights}
-                setShowAllFlights={setShowAllFlights}
-                reviewError={reviewError}
-                reviewRuntimeWarning={reviewRuntimeWarning}
-                onRefresh={refresh}
-                canApprove={canApprove}
-                importRunning={importRunning}
-                importComplete={importComplete}
-                actionLoading={actionLoading}
-                onApproveImport={handleApproveImport}
-                canEditFiltersNow={canEditFiltersNow}
-                onEditFilters={handleEditFilters}
-                formatDate={formatDate}
-              />
-
-              <div className="border-t border-border/30 dark:border-[hsl(var(--sky-accent))]/10" />
-              <ImportSection
-                allowed={allowedSteps.has("import")}
-                importComplete={importComplete}
-                importRunning={importRunning}
-                reviewComplete={reviewComplete}
-                showImportProgress={showImportProgress}
-                importProgressCardClass={importProgressCardClass}
-                importStage={importStage}
-                elapsed={importElapsed}
-                lastUpdate={importLastUpdate}
-                importProgress={importProgress}
-                latestImportEvent={latestImportEvent ?? null}
-                formatFlightId={formatFlightId}
-                formatLastUpdate={formatLastUpdate}
-                now={now}
-                job={job}
-                reviewSummaryMissing={reviewSummary?.missing_tail_numbers ?? 0}
-                retentionDays={retentionDays}
-                onDownloadFiles={handleDownloadFiles}
-                downloadLoading={downloadLoading}
-                onDeleteResults={handleDeleteResults}
-                actionLoading={actionLoading}
-                importError={importError}
-                importRuntimeWarning={importRuntimeWarning}
-                onRefresh={refresh}
-                canRetryImport={canRetryImport}
-                onRetryImport={handleRetryImport}
-              />
-            </Accordion>
-            </div>
-          </section>
-        </div>
+              </>
+            )}
           </>
         )}
       </main>

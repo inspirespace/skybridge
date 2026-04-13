@@ -123,6 +123,10 @@ const RETRY_ATTEMPTS = Number.parseInt(
   import.meta.env.VITE_API_RETRY_ATTEMPTS ?? "4",
   10
 );
+const REQUEST_TIMEOUT_MS = Number.parseInt(
+  import.meta.env.VITE_API_REQUEST_TIMEOUT_MS ?? "8000",
+  10
+);
 const RETRY_DELAY_MS = Number.parseInt(
   import.meta.env.VITE_API_RETRY_DELAY_MS ?? "400",
   10
@@ -192,14 +196,50 @@ async function requestJson<T>(
   while (true) {
     attempt += 1;
     let response: Response;
+    const timeoutMs =
+      method.toUpperCase() === "GET" && Number.isFinite(REQUEST_TIMEOUT_MS)
+        ? Math.max(0, REQUEST_TIMEOUT_MS)
+        : 0;
+    let timedOut = false;
+    const controller = new AbortController();
+    let timeoutId: number | null = null;
+    const abortListener = () => {
+      controller.abort(signal?.reason);
+    };
+    signal?.addEventListener("abort", abortListener, { once: true });
     try {
-      response = await fetch(`${apiBaseUrl}${path}`, {
+      const fetchPromise = fetch(`${apiBaseUrl}${path}`, {
         method,
         headers,
-        signal,
+        signal: controller.signal,
         body: body ? JSON.stringify(body) : undefined,
       });
+      response =
+        timeoutMs > 0
+          ? await Promise.race([
+              fetchPromise,
+              new Promise<Response>((_, reject) => {
+                timeoutId = window.setTimeout(() => {
+                  timedOut = true;
+                  controller.abort();
+                  reject(new Error("Request timed out. Please try again."));
+                }, timeoutMs);
+              }),
+            ])
+          : await fetchPromise;
     } catch (err) {
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+      signal?.removeEventListener("abort", abortListener);
+      const abortedByCaller = signal?.aborted;
+      if (abortedByCaller) {
+        throw err;
+      }
+      const abortedByTimeout = timedOut && !abortedByCaller;
+      if (abortedByTimeout) {
+        throw new Error("Request timed out. Please try again.");
+      }
       if (attempt < maxAttempts) {
         const delay = Math.min(4000, RETRY_DELAY_MS * 2 ** (attempt - 1));
         await new Promise((resolve) => setTimeout(resolve, delay));
@@ -207,6 +247,10 @@ async function requestJson<T>(
       }
       throw err;
     }
+    if (timeoutId !== null) {
+      window.clearTimeout(timeoutId);
+    }
+    signal?.removeEventListener("abort", abortListener);
 
     if (response.ok) {
       return response.json() as Promise<T>;
@@ -262,8 +306,21 @@ export async function listJobs(auth: AuthContext) {
   return requestJson<JobListResponse>("/jobs", { auth });
 }
 
-export async function getJob(jobId: string, auth: AuthContext) {
-  return requestJson<JobRecord>(`/jobs/${jobId}`, { auth });
+export async function listJobsWithOptions(
+  auth: AuthContext,
+  options?: { retryAttempts?: number }
+) {
+  return requestJson<JobListResponse>("/jobs", {
+    auth,
+    retryAttempts: options?.retryAttempts,
+  });
+}
+
+export async function getJob(jobId: string, auth: AuthContext, options?: { retryAttempts?: number }) {
+  return requestJson<JobRecord>(`/jobs/${jobId}`, {
+    auth,
+    retryAttempts: options?.retryAttempts,
+  });
 }
 
 export async function acceptReview(

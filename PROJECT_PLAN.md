@@ -238,6 +238,9 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Remove deploy-time Firebase Auth branding auto-patching and switch deploy preflight to manual setup guidance (email-link mode, template naming, authorized domains) plus verification-only checks.
 - [x] Document Firebase Console prerequisite that Auth template "Public-facing name" is editable only when Google sign-in provider is enabled (deploy overview + docs).
 - [x] Document manual Firebase Console setup for Auth email custom sender domains, including DNS verification and the distinction from Hosting domains / Auth authorized domains.
+- [x] Disable auth/connect form inputs while sign-in or connect actions are in flight so users cannot edit credentials or email-link fields mid-request.
+- [x] Hold the signed-in app shell in an explicit restore-loading state while the latest job/session is being resolved, so the stepper does not flash step 1 before reopening the last active step.
+- [x] Time out stalled restore GET requests and cover both hung restore paths with Playwright so the generic loading state cannot block the app indefinitely.
 - [x] Fix deploy authorized-domain setup overview to merge/dedupe `FIREBASE_AUTHORIZED_DOMAINS` across env sources so all configured domains (for example `.app` and `.co`) are shown and validated.
 - [x] Reduce deploy-time Git noise by staging shared backend modules under ignored `functions/_deploy_src/src` (instead of tracked `functions/src`) and updating Functions import path fallback accordingly.
 - [x] Harden deploy authorized-domain config parsing to merge all `FIREBASE_AUTHORIZED_DOMAINS` entries (including repeated keys) across env sources, and label setup output as merged-source values.

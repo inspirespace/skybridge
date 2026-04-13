@@ -76,8 +76,9 @@ export function GuestUpgradeCard({
             autoCorrect="off"
             spellCheck={false}
             enterKeyHint="send"
-            className="h-11 w-full rounded-lg border border-amber-200 bg-white px-3 text-sm text-amber-900 shadow-sm focus:border-amber-300 focus:outline-none"
+            className="h-11 w-full rounded-lg border border-amber-200 bg-white px-3 text-sm text-amber-900 shadow-sm focus:border-amber-300 focus:outline-none disabled:cursor-not-allowed disabled:bg-amber-100/70 disabled:text-amber-700/70"
             placeholder="you@example.com"
+            disabled={actionLoading}
             value={emailAddress}
             onChange={(event) => onEmailChange(event.target.value)}
             onKeyDown={(event) => {
