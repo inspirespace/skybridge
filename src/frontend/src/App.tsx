@@ -81,6 +81,10 @@ const JOB_ID_KEY = "skybridge_job_id";
 const OPEN_STEP_KEY = "skybridge_open_step";
 const EMAIL_LINK_EMAIL_KEY = "skybridge_email_link_email";
 const LATEST_JOB_LOOKUP_KEY = "skybridge_latest_job_lookup_attempted";
+const LATEST_JOB_LOOKUP_PENDING = "pending";
+const LATEST_JOB_LOOKUP_DONE = "done";
+const LATEST_JOB_LOOKUP_MAX_RETRIES = 2;
+const LATEST_JOB_LOOKUP_RETRY_DELAY_MS = 1000;
 const RESTORE_LOADING_MAX_MS = 2500;
 const RUNNING_STALL_WARNING_SECONDS = Number.parseInt(
   import.meta.env.VITE_RUNNING_STALL_WARNING_SECONDS ?? "180",
@@ -154,12 +158,21 @@ const clearEmailLinkEmail = () => {
   removeStorageValue(window.localStorage, EMAIL_LINK_EMAIL_KEY);
 };
 
+const isTransientLatestJobLookupError = (error: unknown) => {
+  const status = (error as Error & { status?: number })?.status;
+  if (typeof status === "number" && [502, 503, 504].includes(status)) {
+    return true;
+  }
+  return error instanceof Error && error.message.toLowerCase().includes("timed out");
+};
+
 /** Render App component. */
 export default function App() {
   const [jobId, setJobId] = React.useState<string | null>(() =>
     readSessionValue(JOB_ID_KEY)
   );
   const [latestJobLookupPending, setLatestJobLookupPending] = React.useState(false);
+  const [latestJobLookupRetryToken, setLatestJobLookupRetryToken] = React.useState(0);
   const [showAllFlights, setShowAllFlights] = React.useState(false);
   const [reviewFlights, setReviewFlights] = React.useState<FlightSummary[] | null>(null);
   const [reviewFlightsError, setReviewFlightsError] = React.useState<string | null>(null);
@@ -259,6 +272,8 @@ export default function App() {
   const [restoreLoadingTimedOut, setRestoreLoadingTimedOut] = React.useState(false);
   const backendResetCheckRef = React.useRef(false);
   const latestJobLookupAttemptedRef = React.useRef(false);
+  const latestJobLookupRetryCountRef = React.useRef(0);
+  const latestJobLookupRetryTimeoutRef = React.useRef<number | null>(null);
   const emailLinkAutoRef = React.useRef(false);
   const openStep = React.useMemo(() => {
     if (
@@ -865,8 +880,22 @@ export default function App() {
   ]);
 
   React.useEffect(() => {
+    return () => {
+      if (latestJobLookupRetryTimeoutRef.current !== null) {
+        window.clearTimeout(latestJobLookupRetryTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  React.useEffect(() => {
     if (!isSignedIn) {
+      if (latestJobLookupRetryTimeoutRef.current !== null) {
+        window.clearTimeout(latestJobLookupRetryTimeoutRef.current);
+        latestJobLookupRetryTimeoutRef.current = null;
+      }
       latestJobLookupAttemptedRef.current = false;
+      latestJobLookupRetryCountRef.current = 0;
+      setLatestJobLookupPending(false);
       removeSessionValue(LATEST_JOB_LOOKUP_KEY);
       return;
     }
@@ -874,31 +903,62 @@ export default function App() {
 
   React.useEffect(() => {
     if (!isSignedIn) return;
+    const latestJobLookupState = readSessionValue(LATEST_JOB_LOOKUP_KEY);
     if (
       jobId ||
       actionLoading ||
       latestJobLookupAttemptedRef.current ||
-      readSessionValue(LATEST_JOB_LOOKUP_KEY) === "1"
+      latestJobLookupState === LATEST_JOB_LOOKUP_PENDING ||
+      latestJobLookupState === LATEST_JOB_LOOKUP_DONE
     ) {
       return;
     }
     let cancelled = false;
+    let settled = false;
     latestJobLookupAttemptedRef.current = true;
-    setSessionValue(LATEST_JOB_LOOKUP_KEY, "1");
+    setSessionValue(LATEST_JOB_LOOKUP_KEY, LATEST_JOB_LOOKUP_PENDING);
     setLatestJobLookupPending(true);
     (async () => {
       try {
         const response = await listJobsWithOptions(auth, { retryAttempts: 1 });
         if (cancelled) return;
+        settled = true;
+        latestJobLookupRetryCountRef.current = 0;
+        setSessionValue(LATEST_JOB_LOOKUP_KEY, LATEST_JOB_LOOKUP_DONE);
         const latest = response.jobs?.[0];
         if (latest?.job_id) {
           setSessionValue(JOB_ID_KEY, latest.job_id);
           setJobId(latest.job_id);
         }
       } catch (err) {
+        if (cancelled) return;
         if (isAuthExpiredError(err)) {
+          settled = true;
+          latestJobLookupAttemptedRef.current = false;
+          latestJobLookupRetryCountRef.current = 0;
+          removeSessionValue(LATEST_JOB_LOOKUP_KEY);
           handleTokenExpired();
+          return;
         }
+        if (
+          isTransientLatestJobLookupError(err) &&
+          latestJobLookupRetryCountRef.current < LATEST_JOB_LOOKUP_MAX_RETRIES
+        ) {
+          settled = true;
+          latestJobLookupAttemptedRef.current = false;
+          latestJobLookupRetryCountRef.current += 1;
+          removeSessionValue(LATEST_JOB_LOOKUP_KEY);
+          const retryDelay =
+            LATEST_JOB_LOOKUP_RETRY_DELAY_MS * latestJobLookupRetryCountRef.current;
+          latestJobLookupRetryTimeoutRef.current = window.setTimeout(() => {
+            latestJobLookupRetryTimeoutRef.current = null;
+            setLatestJobLookupRetryToken((value) => value + 1);
+          }, retryDelay);
+          return;
+        }
+        settled = true;
+        latestJobLookupRetryCountRef.current = 0;
+        setSessionValue(LATEST_JOB_LOOKUP_KEY, LATEST_JOB_LOOKUP_DONE);
       } finally {
         if (!cancelled) {
           setLatestJobLookupPending(false);
@@ -907,8 +967,14 @@ export default function App() {
     })();
     return () => {
       cancelled = true;
+      if (!settled) {
+        latestJobLookupAttemptedRef.current = false;
+        if (readSessionValue(LATEST_JOB_LOOKUP_KEY) === LATEST_JOB_LOOKUP_PENDING) {
+          removeSessionValue(LATEST_JOB_LOOKUP_KEY);
+        }
+      }
     };
-  }, [isSignedIn, jobId, actionLoading, auth, handleTokenExpired]);
+  }, [isSignedIn, jobId, actionLoading, auth, handleTokenExpired, latestJobLookupRetryToken]);
 
   /** Handle handleDownloadFiles. */
   const handleDownloadFiles = async () => {
@@ -1067,8 +1133,11 @@ export default function App() {
   const checklistProgress = (completedSteps / navSteps.length) * 100;
 
   const authInitializing = !firebaseAuthReady && !authInitTimedOut;
+  const initialLatestJobLookupPending =
+    latestJobLookupPending && latestJobLookupRetryCountRef.current === 0;
   const restoreRequestInFlight =
-    isSignedIn && (latestJobLookupPending || (Boolean(jobId) && jobLoading));
+    isSignedIn &&
+    (initialLatestJobLookupPending || (Boolean(jobId) && jobLoading && !job && !jobError));
 
   React.useEffect(() => {
     if (!restoreRequestInFlight) {
