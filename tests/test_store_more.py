@@ -268,7 +268,7 @@ def test_cleanup_expired_firestore_uses_delete_job_without_recursive_load(
     assert snapshot.deleted is True
 
 
-def test_cleanup_expired_sweeps_orphaned_remote_prefixes(tmp_path: Path):
+def test_cleanup_orphaned_remote_artifacts_sweeps_orphaned_remote_prefixes(tmp_path: Path):
     object_store = FakeObjectStore()
     store = JobStore(tmp_path, object_store=object_store)
     job = _job(store, user_id="user-1")
@@ -278,7 +278,7 @@ def test_cleanup_expired_sweeps_orphaned_remote_prefixes(tmp_path: Path):
     object_store.put_json(active_key, {"ok": True})
     object_store.put_json(orphan_key, {"ok": False})
 
-    deleted = store.cleanup_expired()
+    deleted = store.cleanup_orphaned_remote_artifacts()
 
-    assert deleted == 0
+    assert deleted == 1
     assert object_store.deleted == [object_store.key_for("user-1", orphan_job_id)]

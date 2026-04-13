@@ -486,7 +486,6 @@ class JobStore:
             except Exception as exc:
                 self._raise_firestore_configuration_error(exc)
                 raise
-            self.cleanup_orphaned_remote_artifacts()
             return deleted
         for job_dir in self._base_path.iterdir():
             if not job_dir.is_dir():
@@ -505,7 +504,6 @@ class JobStore:
                 except Exception:
                     pass
                 deleted += 1
-        self.cleanup_orphaned_remote_artifacts()
         return deleted
 
     def cleanup_orphaned_remote_artifacts(self) -> int:
