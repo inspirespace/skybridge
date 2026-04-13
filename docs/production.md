@@ -26,7 +26,6 @@ These values are managed by the shared deploy script. Do not configure them manu
 - `FIRESTORE_DATABASE_CREATE_MAX_WAIT_SECONDS=<seconds>` optional override for how long deploy should wait when Firebase temporarily blocks reusing a just-deleted default database id; defaults to `900`
 - `BACKEND_WORKER_MEMORY_MB=<memory>` optional override for the Pub/Sub worker memory; managed deploy default is `256` MiB. Supported values: `128`, `256`, `512`, `1024`, `2048`, `4096`, `8192`, `16384`, `32768`
 - `GCS_PREFIX=jobs`
-- `BACKEND_OBJECT_STORE_DELETE_ON_CLEAR=1` is the intended production default; only override to `0` for temporary debugging.
 - `CORS_ALLOW_ORIGINS=<comma separated origins>` (never use `*` in production)
 
 ## Frontend build configuration (Firebase)

@@ -115,23 +115,12 @@ def test_object_prefix_for_missing_job(tmp_path: Path):
     assert store._object_prefix_for_job(uuid4()) == ""
 
 
-def test_delete_job_deletes_remote_prefix_by_default(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_delete_job_always_deletes_remote_prefix(tmp_path: Path):
     store = JobStore(tmp_path, object_store=FakeObjectStore())
     job = _job(store)
-    monkeypatch.delenv("BACKEND_OBJECT_STORE_DELETE_ON_CLEAR", raising=False)
 
     store.delete_job(job.job_id, user_id=job.user_id)
     assert store.object_store.deleted == [store.object_store.key_for(job.user_id, str(job.job_id))]
-
-
-def test_delete_job_can_skip_remote_prefix_deletion(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    store = JobStore(tmp_path, object_store=FakeObjectStore())
-    job = _job(store)
-    monkeypatch.setenv("BACKEND_OBJECT_STORE_DELETE_ON_CLEAR", "0")
-
-    store.delete_job(job.job_id, user_id=job.user_id)
-
-    assert store.object_store.deleted == []
 
 
 def test_delete_job_cleans_credentials_when_encryption_key_is_configured(

@@ -11,7 +11,6 @@ import pytest
 from src.backend.models import FlightSummary, JobRecord, ReviewSummary
 from src.backend.store import (
     JobStore,
-    _bool_env,
     _coerce_location,
     _extract_locations,
     _ttl_epoch,
@@ -192,13 +191,8 @@ def test_load_artifact_falls_back_to_object_store(tmp_path: Path):
     assert payload == {"ok": True}
 
 
-def test_bool_env_and_ttl_epoch(monkeypatch: pytest.MonkeyPatch):
+def test_ttl_epoch(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("BACKEND_RETENTION_DAYS", "3")
     created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
     ttl = _ttl_epoch(created_at)
     assert ttl > int(created_at.timestamp())
-
-    monkeypatch.setenv("FLAG", "yes")
-    assert _bool_env("FLAG", False) is True
-    monkeypatch.setenv("FLAG", "0")
-    assert _bool_env("FLAG", True) is False

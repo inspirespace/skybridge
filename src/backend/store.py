@@ -230,7 +230,7 @@ class JobStore:
         job_dir = self._job_dir(job_id)
         if job_dir.exists():
             rmtree(job_dir)
-        if self._object_store and _bool_env("BACKEND_OBJECT_STORE_DELETE_ON_CLEAR", True):
+        if self._object_store:
             prefix = self._object_prefix_for_job(job_id, user_id=user_id)
             if prefix:
                 try:
@@ -734,14 +734,6 @@ def _serialize(job: JobRecord) -> dict[str, Any]:
 
     raw = job.model_dump()
     return {key: _normalize(value) for key, value in raw.items()}
-
-
-def _bool_env(name: str, default: bool) -> bool:
-    """Internal helper for bool env."""
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _delete_related_credentials(job_id: UUID) -> None:
