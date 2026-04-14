@@ -121,6 +121,25 @@ describe("App", () => {
     expect(listJobs).not.toHaveBeenCalled();
   });
 
+  it("keeps restore loading visible after resolving the latest job id until that job snapshot settles", async () => {
+    vi.mocked(useFirebaseAuth).mockReturnValue(firebaseAuthState({ accessToken: "token" }));
+    vi.mocked(useJobSnapshot).mockImplementation((jobId) =>
+      jobSnapshotState(jobId ? { loading: false } : {})
+    );
+    vi.mocked(listJobsWithOptions).mockResolvedValue({
+      jobs: [jobRecord({ job_id: "job-import-done", status: "completed" })],
+    });
+
+    render(<App />);
+
+    expect(screen.getByText(/^loading\.\.\.$/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(sessionStorage.getItem(JOB_ID_KEY)).toBe("job-import-done");
+    });
+    expect(screen.getByText(/^loading\.\.\.$/i)).toBeInTheDocument();
+    expect(screen.queryByText(/connect accounts/i)).not.toBeInTheDocument();
+  });
+
   it("retries latest job restore after a transient lookup failure", async () => {
     const transientError = new Error("Service unavailable") as Error & { status?: number };
     transientError.status = 503;

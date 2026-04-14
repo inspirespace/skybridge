@@ -85,7 +85,6 @@ const LATEST_JOB_LOOKUP_PENDING = "pending";
 const LATEST_JOB_LOOKUP_DONE = "done";
 const LATEST_JOB_LOOKUP_MAX_RETRIES = 2;
 const LATEST_JOB_LOOKUP_RETRY_DELAY_MS = 1000;
-const RESTORE_LOADING_MAX_MS = 2500;
 const RUNNING_STALL_WARNING_SECONDS = Number.parseInt(
   import.meta.env.VITE_RUNNING_STALL_WARNING_SECONDS ?? "180",
   10
@@ -269,7 +268,6 @@ export default function App() {
   const [manualOpen, setManualOpen] = React.useState<string | undefined>(() =>
     readSessionValue(OPEN_STEP_KEY) ?? undefined
   );
-  const [restoreLoadingTimedOut, setRestoreLoadingTimedOut] = React.useState(false);
   const backendResetCheckRef = React.useRef(false);
   const latestJobLookupAttemptedRef = React.useRef(false);
   const latestJobLookupRetryCountRef = React.useRef(0);
@@ -1137,23 +1135,9 @@ export default function App() {
     latestJobLookupPending && latestJobLookupRetryCountRef.current === 0;
   const restoreRequestInFlight =
     isSignedIn &&
-    (initialLatestJobLookupPending || (Boolean(jobId) && jobLoading && !job && !jobError));
+    (initialLatestJobLookupPending || (Boolean(jobId) && !job && !jobError));
 
-  React.useEffect(() => {
-    if (!restoreRequestInFlight) {
-      setRestoreLoadingTimedOut(false);
-      return;
-    }
-    setRestoreLoadingTimedOut(false);
-    const timeout = window.setTimeout(() => {
-      setRestoreLoadingTimedOut(true);
-    }, RESTORE_LOADING_MAX_MS);
-    return () => {
-      window.clearTimeout(timeout);
-    };
-  }, [restoreRequestInFlight]);
-
-  const restoringJobState = restoreRequestInFlight && !restoreLoadingTimedOut;
+  const restoringJobState = restoreRequestInFlight;
 
   return (
     <div className="app-shell relative min-h-screen flex flex-col text-foreground">
