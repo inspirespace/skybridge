@@ -256,7 +256,6 @@ export default function App() {
 
   const {
     data: job,
-    loading: jobLoading,
     error: jobError,
     refresh,
   } = useJobSnapshot(isSignedIn ? jobId : null, auth);
