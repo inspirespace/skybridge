@@ -80,6 +80,7 @@ function baseJob(overrides: Partial<JobRecord>): JobRecord {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.resetAllMocks();
   vi.unstubAllGlobals();
@@ -267,6 +268,55 @@ describe("App UI flows", () => {
     expect(
       screen.getByText(/the import may still be running; refresh if the status looks outdated/i)
     ).toBeInTheDocument();
+  });
+
+  it("auto-refreshes stalled imports on a bounded cooldown", async () => {
+    vi.useFakeTimers();
+    sessionStorage.setItem(JOB_ID_KEY, "job-123");
+    const refresh = vi.fn(async () => undefined);
+    vi.mocked(useFirebaseAuth).mockReturnValue(firebaseAuthState());
+    vi.mocked(useJobSnapshot).mockReturnValue(
+      jobSnapshotState({
+        refresh,
+        data: baseJob({
+          status: "import_running",
+          heartbeat_at: new Date(Date.now() - 181_000).toISOString(),
+          progress_stage: "Finalizing import",
+          progress_percent: 85,
+          progress_log: [
+            {
+              phase: "import",
+              stage: "Finalizing import",
+              percent: 85,
+              status: "import_running",
+              created_at: new Date(Date.now() - 181_000).toISOString(),
+            },
+          ],
+        }),
+      })
+    );
+
+    render(<App />);
+
+    await act(async () => {
+      await vi.advanceTimersToNextTimerAsync();
+    });
+    expect(refresh).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(59_000);
+    });
+    expect(refresh).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    expect(refresh).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10 * 60_000);
+    });
+    expect(refresh).toHaveBeenCalledTimes(10);
   });
 
   it("loads review rows from the artifact when the job summary is slim", async () => {

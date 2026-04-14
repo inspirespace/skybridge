@@ -1049,8 +1049,13 @@ def verify_import_report(report_path: Path, flysto: FlyStoClient) -> dict[str, i
             missing += 1
             continue
         filename = Path(file_path).name
-        log_id, signature, log_format = flysto.resolve_log_for_file(
-            filename, retries=3, delay_seconds=1.5
+        log_id, signature, log_format = _resolve_log_for_report_item(
+            flysto,
+            item,
+            filename,
+            retries=3,
+            delay_seconds=1.5,
+            logs_limit=250,
         )
         item["flysto_log_id"] = log_id
         item["flysto_signature"] = signature
@@ -1081,8 +1086,13 @@ def verify_import_report(report_path: Path, flysto: FlyStoClient) -> dict[str, i
                 missing += 1
                 continue
             filename = Path(file_path).name
-            log_id, signature, log_format = flysto.resolve_log_for_file(
-                filename, retries=6, delay_seconds=2.0, logs_limit=1000
+            log_id, signature, log_format = _resolve_log_for_report_item(
+                flysto,
+                item,
+                filename,
+                retries=6,
+                delay_seconds=2.0,
+                logs_limit=500,
             )
             item["flysto_log_id"] = log_id
             item["flysto_signature"] = signature
@@ -1121,8 +1131,13 @@ def reconcile_aircraft_from_report(report_path: Path, flysto: FlyStoClient) -> i
             if file_path:
                 filename = Path(file_path).name
                 try:
-                    _log_id, signature, log_format = flysto.resolve_log_for_file(
-                        filename, retries=3, delay_seconds=1.5
+                    _log_id, signature, log_format = _resolve_log_for_report_item(
+                        flysto,
+                        item,
+                        filename,
+                        retries=3,
+                        delay_seconds=1.5,
+                        logs_limit=250,
                     )
                 except Exception:
                     signature = signature or None
@@ -1184,12 +1199,17 @@ def reconcile_crew_from_report(
     for item in items:
         if not isinstance(item, dict):
             continue
-        log_id = item.get("flysto_log_id")
+        log_id = item.get("flysto_log_id") or item.get("flysto_upload_log_id")
         file_path = item.get("file_path")
         if file_path:
             try:
-                resolved_log_id, _signature, _format = flysto.resolve_log_for_file(
-                    Path(file_path).name
+                resolved_log_id, _signature, _format = _resolve_log_for_report_item(
+                    flysto,
+                    item,
+                    Path(file_path).name,
+                    retries=3,
+                    delay_seconds=1.5,
+                    logs_limit=250,
                 )
             except Exception:
                 resolved_log_id = None
@@ -1218,8 +1238,13 @@ def reconcile_crew_from_report(
             time.sleep(2)
             if file_path:
                 try:
-                    refreshed_log_id, _signature, _format = flysto.resolve_log_for_file(
-                        Path(file_path).name
+                    refreshed_log_id, _signature, _format = _resolve_log_for_report_item(
+                        flysto,
+                        item,
+                        Path(file_path).name,
+                        retries=3,
+                        delay_seconds=1.5,
+                        logs_limit=250,
                     )
                 except Exception:
                     refreshed_log_id = None
@@ -1248,6 +1273,50 @@ def _log_metadata_has_crew(metadata: dict[str, Any] | None, log_id: str | None) 
         if isinstance(annotations, dict) and annotations.get("crew"):
             return True
     return False
+
+
+def _resolve_log_for_report_item(
+    flysto: FlyStoClient,
+    item: dict[str, Any],
+    filename: str,
+    *,
+    retries: int,
+    delay_seconds: float,
+    logs_limit: int,
+) -> tuple[str | None, str | None, str | None]:
+    """Prefer persisted/upload-time identifiers before querying FlySto summaries again."""
+    persisted_log_id = item.get("flysto_log_id") or item.get("flysto_upload_log_id")
+    persisted_signature = (
+        item.get("flysto_source_system_id")
+        or item.get("flysto_upload_signature_hash")
+        or item.get("flysto_upload_signature")
+        or item.get("flysto_signature")
+    )
+    persisted_format = item.get("flysto_upload_format") or item.get("flysto_format")
+    if persisted_log_id or persisted_signature or persisted_format:
+        return (
+            str(persisted_log_id) if persisted_log_id else None,
+            str(persisted_signature) if persisted_signature else None,
+            str(persisted_format) if persisted_format else None,
+        )
+    upload_cache = getattr(flysto, "upload_cache", None)
+    if isinstance(upload_cache, dict):
+        upload_result = upload_cache.get(filename)
+        if upload_result:
+            log_id = getattr(upload_result, "log_id", None)
+            signature = (
+                getattr(upload_result, "signature_hash", None)
+                or getattr(upload_result, "signature", None)
+            )
+            log_format = getattr(upload_result, "log_format", None)
+            if log_id or signature or log_format:
+                return log_id, signature, log_format
+    return flysto.resolve_log_for_file(
+        filename,
+        retries=retries,
+        delay_seconds=delay_seconds,
+        logs_limit=logs_limit,
+    )
 
 
 def reconcile_metadata_from_report(

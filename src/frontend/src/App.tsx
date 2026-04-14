@@ -40,6 +40,7 @@ import {
   downloadArtifactsZip,
   type AuthContext,
   type FlightSummary,
+  type JobRecord,
   type ReviewFlightsArtifact,
   validateCredentials,
 } from "@/api/client";
@@ -89,6 +90,8 @@ const RUNNING_STALL_WARNING_SECONDS = Number.parseInt(
   import.meta.env.VITE_RUNNING_STALL_WARNING_SECONDS ?? "180",
   10
 );
+const STALLED_IMPORT_AUTO_REFRESH_INTERVAL_MS = 60_000;
+const STALLED_IMPORT_AUTO_REFRESH_MAX_ATTEMPTS = 10;
 
 const readStorageValue = (
   storage: Pick<Storage, "getItem"> | undefined,
@@ -306,6 +309,15 @@ export default function App() {
   const latestJobLookupAttemptedRef = React.useRef(false);
   const latestJobLookupRetryCountRef = React.useRef(0);
   const latestJobLookupRetryTimeoutRef = React.useRef<number | null>(null);
+  const stalledImportAutoRefreshRef = React.useRef<{
+    key: string | null;
+    attempts: number;
+    lastAt: number;
+  }>({
+    key: null,
+    attempts: 0,
+    lastAt: 0,
+  });
   const emailLinkAutoRef = React.useRef(false);
   const openStep = React.useMemo(() => {
     if (
@@ -473,6 +485,71 @@ export default function App() {
     importRunning && stalledHeartbeat
       ? `No background heartbeat for ${formatLastUpdate(job?.heartbeat_at, now)}. The import may still be running; refresh if the status looks outdated.`
       : null;
+
+  React.useEffect(() => {
+    if (!jobId || !importRunning || !stalledHeartbeat) {
+      stalledImportAutoRefreshRef.current = {
+        key: null,
+        attempts: 0,
+        lastAt: 0,
+      };
+      return;
+    }
+    const recoveryKey = [
+      jobId,
+      job?.status ?? "",
+      job?.progress_stage ?? "",
+      job?.heartbeat_at ?? job?.updated_at ?? "",
+      String(job?.worker_retry_count ?? 0),
+    ].join(":");
+    const state = stalledImportAutoRefreshRef.current;
+    if (state.key !== recoveryKey) {
+      state.key = recoveryKey;
+      state.attempts = 0;
+      state.lastAt = 0;
+    }
+    if (state.attempts >= STALLED_IMPORT_AUTO_REFRESH_MAX_ATTEMPTS) {
+      return;
+    }
+    const nowMs = Date.now();
+    const waitMs =
+      state.lastAt > 0
+        ? Math.max(0, STALLED_IMPORT_AUTO_REFRESH_INTERVAL_MS - (nowMs - state.lastAt))
+        : 0;
+    let timeout = 0;
+    let cancelled = false;
+    const scheduleRefresh = (delayMs: number) => {
+      timeout = window.setTimeout(() => {
+        if (cancelled || state.key !== recoveryKey) {
+          return;
+        }
+        if (state.attempts >= STALLED_IMPORT_AUTO_REFRESH_MAX_ATTEMPTS) {
+          return;
+        }
+        state.attempts += 1;
+        state.lastAt = Date.now();
+        void refresh();
+        if (state.attempts < STALLED_IMPORT_AUTO_REFRESH_MAX_ATTEMPTS) {
+          scheduleRefresh(STALLED_IMPORT_AUTO_REFRESH_INTERVAL_MS);
+        }
+      }, delayMs);
+    };
+    scheduleRefresh(waitMs);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [
+    jobId,
+    job?.heartbeat_at,
+    job?.progress_stage,
+    job?.status,
+    job?.updated_at,
+    job?.worker_retry_count,
+    importRunning,
+    stalledHeartbeat,
+    refresh,
+  ]);
 
   React.useEffect(() => {
     if (!isSignedIn || !jobId || !reviewComplete) {

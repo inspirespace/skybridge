@@ -72,7 +72,7 @@ class DummyFlyStoVerify(DummyFlySto):
     def resolve_log_for_file(self, filename: str, **kwargs):
         logs_limit = kwargs.get("logs_limit", 250)
         self.calls.append(logs_limit)
-        if logs_limit >= 1000:
+        if logs_limit >= 500:
             return f"log-{filename}", f"sig-{filename}", "GenericGpx"
         return None, None, None
 
@@ -181,7 +181,27 @@ def test_verify_import_report_retries_with_large_limit(tmp_path: Path):
     payload = json.loads(report_path.read_text())
     assert summary == {"attempted": 1, "resolved": 1, "missing": 0}
     assert payload["items"][0]["flysto_log_id"] == "log-F1.gpx"
-    assert 1000 in flysto.calls
+    assert 500 in flysto.calls
+
+
+def test_verify_import_report_reuses_upload_metadata_before_remote_lookup(tmp_path: Path):
+    report_path = tmp_path / "report.json"
+    report_path.write_text(
+        json.dumps({"items": [{"flight_id": "F1", "file_path": "/tmp/F1.gpx"}]})
+    )
+    flysto = DummyFlySto()
+    flysto.upload_cache["F1.gpx"] = UploadResult(
+        signature="sig-F1.gpx",
+        log_id="log-F1.gpx",
+        log_format="GenericGpx",
+    )
+
+    summary = verify_import_report(report_path, flysto)
+    payload = json.loads(report_path.read_text())
+
+    assert summary == {"attempted": 1, "resolved": 1, "missing": 0}
+    assert payload["items"][0]["flysto_log_id"] == "log-F1.gpx"
+    assert flysto.resolve_calls == []
 
 
 def test_reconcile_aircraft_from_report_defaults_unknown_garmin(tmp_path: Path):
