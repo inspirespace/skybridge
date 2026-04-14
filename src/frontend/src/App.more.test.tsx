@@ -339,4 +339,54 @@ describe("App UI flows", () => {
 
     expect(acceptReview).toHaveBeenCalledWith("job-123", {}, { token: "token" });
   });
+
+  it("keeps the import step in queued state after accept succeeds even if the snapshot is still stale", async () => {
+    sessionStorage.setItem(JOB_ID_KEY, "job-123");
+    vi.mocked(useFirebaseAuth).mockReturnValue(firebaseAuthState());
+    vi.mocked(useJobSnapshot).mockReturnValue(
+      jobSnapshotState({
+        data: baseJob({
+          status: "failed",
+          error_message: "Import credentials are unavailable. Re-enter CloudAhoy and FlySto credentials in Connect Accounts and retry.",
+          progress_stage: "Import failed",
+          progress_log: [
+            {
+              phase: "import",
+              stage: "Uploading",
+              status: "import_running",
+              created_at: "2026-01-01T10:05:00Z",
+            },
+          ],
+        }),
+      })
+    );
+    vi.mocked(acceptReview).mockResolvedValue(
+      baseJob({
+        status: "import_queued",
+        error_message: null,
+        progress_stage: "Queued",
+        progress_percent: 5,
+        updated_at: "2026-01-01T10:06:00Z",
+        progress_log: [
+          {
+            phase: "import",
+            stage: "Queued",
+            percent: 5,
+            status: "import_queued",
+            created_at: "2026-01-01T10:06:00Z",
+          },
+        ],
+      })
+    );
+
+    render(<App />);
+
+    const retryImport = await screen.findByRole("button", { name: /retry import/i });
+    await act(async () => {
+      fireEvent.click(retryImport);
+    });
+
+    expect(await screen.findByText(/^queued$/i)).toBeInTheDocument();
+    expect(screen.queryByText(/import credentials are unavailable/i)).not.toBeInTheDocument();
+  });
 });

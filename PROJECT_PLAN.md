@@ -247,6 +247,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Fix restore follow-up regressions by retrying transient latest-job lookup failures and keeping the full-page restore loader scoped to initial job restoration instead of normal polling refreshes.
 - [x] Keep the restore loading screen visible until the first restored job snapshot actually settles, avoiding a brief fallback to the new-import stepper before the real completed/imported state appears.
 - [x] Treat per-flight import errors as recoverable when the report already resolves the uploaded file to a real FlySto log, so the app does not surface a false terminal import failure before reconciliation finishes.
+- [x] Keep successful review/import queue handoffs optimistic in the app until the next snapshot catches up, so stale failed job snapshots do not briefly resurface old credential/import errors after the user clicks Import or Retry import.
 - [x] Fix deploy authorized-domain setup overview to merge/dedupe `FIREBASE_AUTHORIZED_DOMAINS` across env sources so all configured domains (for example `.app` and `.co`) are shown and validated.
 - [x] Reduce deploy-time Git noise by staging shared backend modules under ignored `functions/_deploy_src/src` (instead of tracked `functions/src`) and updating Functions import path fallback accordingly.
 - [x] Harden deploy authorized-domain config parsing to merge all `FIREBASE_AUTHORIZED_DOMAINS` entries (including repeated keys) across env sources, and label setup output as merged-source values.

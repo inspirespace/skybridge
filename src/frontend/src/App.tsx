@@ -255,10 +255,45 @@ export default function App() {
   );
 
   const {
-    data: job,
+    data: snapshotJob,
     error: jobError,
     refresh,
   } = useJobSnapshot(isSignedIn ? jobId : null, auth);
+  const [optimisticJob, setOptimisticJob] = React.useState<JobRecord | null>(null);
+  const job = React.useMemo(() => {
+    if (!optimisticJob) return snapshotJob;
+    if (!snapshotJob || snapshotJob.job_id !== optimisticJob.job_id) {
+      return optimisticJob;
+    }
+    const snapshotUpdatedAt = Date.parse(snapshotJob.updated_at);
+    const optimisticUpdatedAt = Date.parse(optimisticJob.updated_at);
+    if (
+      Number.isFinite(snapshotUpdatedAt) &&
+      Number.isFinite(optimisticUpdatedAt) &&
+      snapshotUpdatedAt >= optimisticUpdatedAt
+    ) {
+      return snapshotJob;
+    }
+    return optimisticJob;
+  }, [snapshotJob, optimisticJob]);
+
+  React.useEffect(() => {
+    if (!isSignedIn || !jobId) {
+      setOptimisticJob(null);
+      return;
+    }
+    if (snapshotJob && optimisticJob && snapshotJob.job_id === optimisticJob.job_id) {
+      const snapshotUpdatedAt = Date.parse(snapshotJob.updated_at);
+      const optimisticUpdatedAt = Date.parse(optimisticJob.updated_at);
+      if (
+        Number.isFinite(snapshotUpdatedAt) &&
+        Number.isFinite(optimisticUpdatedAt) &&
+        snapshotUpdatedAt >= optimisticUpdatedAt
+      ) {
+        setOptimisticJob(null);
+      }
+    }
+  }, [isSignedIn, jobId, snapshotJob, optimisticJob]);
 
   const flow = React.useMemo(
     () => deriveFlowState(isSignedIn, job ?? null),
@@ -659,6 +694,7 @@ export default function App() {
       };
       await validateCredentials({ credentials: payload.credentials }, auth);
       const createdJob = await createJob(payload, auth);
+      setOptimisticJob(createdJob);
       setSessionValue(JOB_ID_KEY, createdJob.job_id);
       setJobId(createdJob.job_id);
       setShowAllFlights(false);
@@ -694,11 +730,12 @@ export default function App() {
               flysto_password: flystoPassword,
             }
           : null;
-      await acceptReview(
+      const updatedJob = await acceptReview(
         jobId,
         credentialsProvided ? { credentials: credentialsProvided } : {},
         auth
       );
+      setOptimisticJob(updatedJob);
       setManualOpen("import");
       refresh();
     } catch (err) {
