@@ -1210,6 +1210,7 @@ def reconcile_crew_from_report(
                     retries=3,
                     delay_seconds=1.5,
                     logs_limit=250,
+                    prefer_persisted_log_id=False,
                 )
             except Exception:
                 resolved_log_id = None
@@ -1245,6 +1246,7 @@ def reconcile_crew_from_report(
                         retries=3,
                         delay_seconds=1.5,
                         logs_limit=250,
+                        prefer_persisted_log_id=False,
                     )
                 except Exception:
                     refreshed_log_id = None
@@ -1283,9 +1285,14 @@ def _resolve_log_for_report_item(
     retries: int,
     delay_seconds: float,
     logs_limit: int,
+    prefer_persisted_log_id: bool = True,
 ) -> tuple[str | None, str | None, str | None]:
     """Prefer persisted/upload-time identifiers before querying FlySto summaries again."""
-    persisted_log_id = item.get("flysto_log_id") or item.get("flysto_upload_log_id")
+    persisted_log_id = (
+        item.get("flysto_log_id") or item.get("flysto_upload_log_id")
+        if prefer_persisted_log_id
+        else item.get("flysto_upload_log_id")
+    )
     persisted_signature = (
         item.get("flysto_source_system_id")
         or item.get("flysto_upload_signature_hash")
