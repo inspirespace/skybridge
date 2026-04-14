@@ -220,6 +220,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Extend the Firebase clear-project task to empty the resolved Firebase Storage bucket objects as well, while clarifying the remaining limits (Auth users not deleted; Storage metrics can lag under retention/soft-delete).
 - [x] Delete Firebase Storage job-artifact prefixes by default when runs are cleared or expire, and sweep orphaned prefixes during daily cleanup so repeated reruns do not accumulate storage.
 - [x] Add a repo-local Codex skill for assigned GitHub PR review handling, including review-thread discovery, inline replies, and thread resolution helpers.
+- [x] Align the repo-local `review-fix` skill with the curated `gh-address-comments` workflow by adding feedback clustering, scope confirmation, cross-repo current-PR resolution, and full review-context fetches.
 - [x] Harden Firebase Storage cleanup auth in the clear-project task: use `gcloud auth application-default print-access-token` as an extra token source, isolate gcloud in a temp config dir, and prompt for ADC login in interactive local runs when needed.
 - [x] Replace guessed Firebase bucket names in the clear-project task with Storage API project-bucket discovery so Storage cleanup clears the project’s real buckets instead of reporting false “no matching bucket” results.
 - [x] Disable Docker Compose's attached shortcut menu by default inside the devcontainer wrapper so VS Code launch terminals stop advertising unusable host-only Docker Desktop actions.
