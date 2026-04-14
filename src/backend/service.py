@@ -347,6 +347,8 @@ class JobService:
                     crew=crew,
                     flysto=flysto if not dry_run else None,
                 )
+                if result.status == "error" and _report_item_resolves_to_flysto_log(report_item):
+                    report_item["status"] = "ok"
                 report_payload["items"] = _upsert_report_item(
                     report_payload.get("items"),
                     report_item,
@@ -374,7 +376,7 @@ class JobService:
                 self._store.write_artifact(job_id, IMPORT_CONTEXT_ARTIFACT, import_context)
                 self._store.upload_artifact(job_id, "migration.db", state_path)
 
-                if result.status == "error":
+                if result.status == "error" and report_item.get("status") == "error":
                     job.status = "failed"
                     _append_progress(
                         job,
@@ -783,6 +785,21 @@ def _recompute_import_report_stats(payload: dict) -> None:
     payload["attempted"] = payload.get("attempted") or len(items)
     payload["succeeded"] = sum(1 for item in items if item.get("status") == "ok")
     payload["failed"] = sum(1 for item in items if item.get("status") == "error")
+
+
+def _report_item_resolves_to_flysto_log(item: dict[str, object]) -> bool:
+    """Return True when a report item already maps to a concrete FlySto log."""
+    return any(
+        item.get(key)
+        for key in (
+            "flysto_log_id",
+            "flysto_upload_log_id",
+            "flysto_signature",
+            "flysto_upload_signature",
+            "flysto_upload_signature_hash",
+            "flysto_source_system_id",
+        )
+    )
 
 
 def _tail_group_complete(summaries: list[CoreFlightSummary], index: int, tail_number: str) -> bool:
