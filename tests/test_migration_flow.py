@@ -36,6 +36,7 @@ class DummyFlySto:
         """Internal helper for init  ."""
         self.assigned: list[tuple[str | None, str | None]] = []
         self.assigned_crews: list[str] = []
+        self.assigned_metadata: list[str] = []
 
     def ensure_aircraft(self, tail_number, aircraft_type=None):
         """Handle ensure aircraft."""
@@ -84,6 +85,8 @@ class DummyFlySto:
 
     def assign_metadata_for_log_id(self, log_id: str | None, remarks=None, tags=None):
         """Handle assign metadata for log id."""
+        if log_id:
+            self.assigned_metadata.append(log_id)
         return None
 
     def log_files_to_process(self):
@@ -127,7 +130,8 @@ def test_migrate_flights_uses_system_id_for_unknown_garmin(tmp_path: Path):
 
     assert stats.succeeded == 1
     assert flysto.assigned == [("system id: D-KBUH", "UnknownGarmin")]
-    assert flysto.assigned_crews == ["log-1"]
+    assert flysto.assigned_crews == ["log789"]
+    assert flysto.assigned_metadata == ["log789"]
 
 
 class DummyFlyStoSignature(DummyFlySto):
@@ -177,3 +181,40 @@ def test_migrate_flights_uses_upload_signature_hash(tmp_path: Path):
 
     assert stats.succeeded == 1
     assert flysto.assigned == [("hash999", "GenericGpx")]
+
+
+class DummyFlyStoMetadata404(DummyFlyStoSignature):
+    def assign_metadata_for_log_id(self, log_id: str | None, remarks=None, tags=None):
+        if log_id == "log-1":
+            raise RuntimeError("FlySto log-annotations failed: 404 Log not found")
+        super().assign_metadata_for_log_id(log_id, remarks=remarks, tags=tags)
+
+
+def test_migrate_flights_prefers_upload_log_id_for_metadata(tmp_path: Path):
+    """Test migrate flights uses upload log id instead of stale filename lookup for metadata."""
+    file_path = tmp_path / "flight.gpx"
+    file_path.write_text("data")
+    raw_payload = {"flt": {"Meta": {"tailNumber": "D-KBUH", "aircraftType": "WT9"}}}
+    detail = FlightDetail(
+        id="flight-1",
+        raw_payload=raw_payload,
+        file_path=str(file_path),
+    )
+    cloudahoy = DummyCloudAhoy(detail)
+    flysto = DummyFlyStoMetadata404()
+
+    _results, stats = migrate_flights(
+        cloudahoy=cloudahoy,
+        flysto=flysto,
+        dry_run=False,
+        summaries=None,
+        max_flights=None,
+        state=None,
+        force=True,
+        report_path=None,
+        review_id=None,
+        progress=None,
+    )
+
+    assert stats.succeeded == 1
+    assert flysto.assigned_metadata == ["log555"]

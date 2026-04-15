@@ -811,6 +811,11 @@ def _migrate_single(
         resolved_system_id = None
         resolved_system_format = None
         if upload_result:
+            resolved_log_id = upload_result.log_id or resolved_log_id
+            resolved_signature = (
+                upload_result.signature_hash or upload_result.signature or resolved_signature
+            )
+            resolved_format = upload_result.log_format or resolved_format
             assign_signature = upload_result.signature_hash or upload_result.signature
             assign_format = upload_result.log_format
         if not dry_run and detail.file_path:
@@ -880,11 +885,47 @@ def _migrate_single(
                         "tag_count": len(tags or []),
                     },
                 )
-            flysto.assign_metadata_for_log_id(
-                resolved_log_id,
-                remarks=remarks,
-                tags=tags,
-            )
+            try:
+                flysto.assign_metadata_for_log_id(
+                    resolved_log_id,
+                    remarks=remarks,
+                    tags=tags,
+                )
+            except Exception as error:
+                if (
+                    not detail.file_path
+                    or not _is_missing_flysto_log_error(error, operation="log-annotations")
+                ):
+                    raise
+                refreshed_log_id, refreshed_signature, refreshed_format = _resolve_log_for_report_item(
+                    flysto,
+                    {
+                        "flysto_log_id": None,
+                        "flysto_upload_log_id": upload_result.log_id if upload_result else None,
+                        "flysto_signature": None,
+                        "flysto_upload_signature": upload_result.signature if upload_result else None,
+                        "flysto_upload_signature_hash": upload_result.signature_hash if upload_result else None,
+                        "flysto_format": None,
+                        "flysto_upload_format": upload_result.log_format if upload_result else None,
+                    },
+                    Path(detail.file_path).name,
+                    retries=3,
+                    delay_seconds=1.5,
+                    logs_limit=250,
+                    prefer_persisted_log_id=False,
+                )
+                if not refreshed_log_id or refreshed_log_id == resolved_log_id:
+                    raise
+                resolved_log_id = refreshed_log_id
+                if refreshed_signature and not resolved_signature:
+                    resolved_signature = refreshed_signature
+                if refreshed_format and not resolved_format:
+                    resolved_format = refreshed_format
+                flysto.assign_metadata_for_log_id(
+                    resolved_log_id,
+                    remarks=remarks,
+                    tags=tags,
+                )
             if progress:
                 progress(
                     "flysto_assign_metadata_done",
