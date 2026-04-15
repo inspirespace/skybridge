@@ -304,7 +304,7 @@ describe("App UI flows", () => {
     expect(refresh).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(59_000);
+      await vi.advanceTimersByTimeAsync(29_000);
     });
     expect(refresh).toHaveBeenCalledTimes(1);
 
@@ -314,7 +314,7 @@ describe("App UI flows", () => {
     expect(refresh).toHaveBeenCalledTimes(2);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(10 * 60_000);
+      await vi.advanceTimersByTimeAsync(10 * 30_000);
     });
     expect(refresh).toHaveBeenCalledTimes(10);
   });

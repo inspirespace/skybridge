@@ -23,7 +23,7 @@ from .store import JobStore
 
 _logger = logging.getLogger(__name__)
 QUEUE_STALE_TIMEOUT_SECONDS = 120
-RUNNING_STALE_TIMEOUT_SECONDS = 600
+RUNNING_STALE_TIMEOUT_SECONDS = 210
 STALE_AUTO_RETRY_LIMIT = 2
 
 
