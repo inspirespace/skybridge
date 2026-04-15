@@ -844,12 +844,14 @@ def test_accept_review_prefers_upload_log_id_for_metadata_assignment(
 
         def upload_flight(self, detail: FlightDetail, dry_run: bool = False):
             self.upload_calls.append(detail.id)
-            return UploadResult(
+            result = UploadResult(
                 signature="flight-1.gpx/hash-new/log-new",
                 log_id="log-new",
                 log_format="GenericGpx",
                 signature_hash="hash-new",
             )
+            self.upload_cache[Path(detail.file_path).name] = result
+            return result
 
         def resolve_log_for_file(self, filename: str, *args, **kwargs):
             return "log-old", f"sig-{filename}", "GenericGpx"
@@ -931,12 +933,14 @@ def test_accept_review_tolerates_metadata_404_after_upload(
 
         def upload_flight(self, detail: FlightDetail, dry_run: bool = False):
             self.upload_calls.append(detail.id)
-            return UploadResult(
+            result = UploadResult(
                 signature="flight-1.gpx/hash-new/log-new",
                 log_id="log-new",
                 log_format="GenericGpx",
                 signature_hash="hash-new",
             )
+            self.upload_cache[Path(detail.file_path).name] = result
+            return result
 
         def assign_metadata_for_log_id(
             self,
@@ -965,3 +969,89 @@ def test_accept_review_tolerates_metadata_404_after_upload(
     assert result.import_report is not None
     assert result.import_report.imported_count == 1
     assert result.import_report.failed_count == 0
+
+
+def test_accept_review_tolerates_metadata_503_during_finalization(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store = JobStore(tmp_path)
+    job_service = JobService(store)
+    job = job_service.create_job("pilot")
+    job.status = "review_ready"
+    job.review_summary = service_mod.ReviewSummary(flight_count=1, total_hours=1.0, flights=[])
+    store.save_job(job)
+
+    review_payload = {
+        "review_id": "review-123",
+        "items": [
+            {
+                "flight_id": "flight-1",
+                "started_at": "2026-01-05T09:00:00Z",
+                "duration_seconds": 3600,
+                "tail_number": "N123",
+            }
+        ],
+    }
+    store.write_artifact(job.job_id, REVIEW_MANIFEST_ARTIFACT, review_payload)
+
+    exports_dir = tmp_path / "exports"
+    details = {
+        "flight-1": _detail(
+            exports_dir,
+            "flight-1",
+            datetime(2026, 1, 5, 9, 0, tzinfo=timezone.utc),
+            "N123",
+            "KSEA",
+            "KLAX",
+        ),
+    }
+
+    class Metadata503FlySto(FakeFlySto):
+        def __init__(self) -> None:
+            super().__init__()
+            self.upload_cache = {}
+            self.log_source_cache = {}
+            self.metadata_attempts = 0
+
+        def upload_flight(self, detail: FlightDetail, dry_run: bool = False):
+            self.upload_calls.append(detail.id)
+            return UploadResult(
+                signature="flight-1.gpx/hash-new/log-new",
+                log_id="log-new",
+                log_format="GenericGpx",
+                signature_hash="hash-new",
+            )
+
+        def assign_metadata_for_log_id(
+            self,
+            log_id: str | None,
+            remarks: str | None = None,
+            tags: list[str] | None = None,
+        ):
+            self.metadata_attempts += 1
+            raise RuntimeError(
+                "FlySto log-annotations failed: 503 <!DOCTYPE html><html><head>"
+                "<title>Application Error</title>"
+            )
+
+    monkeypatch.setattr(
+        service_mod,
+        "_build_cloudahoy_client",
+        lambda payload, path: FakeCloudAhoy([], details),
+    )
+    monkeypatch.setenv("BACKEND_IMPORT_BATCH_SIZE", "1")
+    monkeypatch.setattr(service_mod, "_build_flysto_client", lambda payload: Metadata503FlySto())
+    monkeypatch.setattr(service_mod, "_maybe_wait_for_processing", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(service_mod, "verify_import_report", lambda *_args, **_kwargs: {"missing": 0})
+    monkeypatch.setattr(service_mod, "reconcile_aircraft_from_report", lambda *_args, **_kwargs: 0)
+    monkeypatch.setattr(service_mod, "reconcile_crew_from_report", lambda *_args, **_kwargs: 0)
+
+    result = job_service.accept_review(job.job_id, JobAcceptRequest(credentials=_credentials()))
+
+    assert result.status == "completed"
+    assert result.import_report is not None
+    assert result.import_report.imported_count == 1
+    assert result.import_report.failed_count == 0
+    payload = store.load_artifact(job.job_id, IMPORT_REPORT_ARTIFACT)
+    assert payload["items"][0]["status"] == "ok"

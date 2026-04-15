@@ -252,3 +252,40 @@ def test_migrate_flights_tolerates_metadata_404_after_upload(tmp_path: Path):
     )
 
     assert stats.succeeded == 1
+
+
+class DummyFlyStoMetadata503Always(DummyFlyStoSignature):
+    def assign_metadata_for_log_id(self, log_id: str | None, remarks=None, tags=None):
+        raise RuntimeError(
+            "FlySto log-annotations failed: 503 <!DOCTYPE html><html><head>"
+            "<title>Application Error</title>"
+        )
+
+
+def test_migrate_flights_tolerates_metadata_503_after_upload(tmp_path: Path):
+    """Test migrate flights does not fail when FlySto metadata annotation returns 503."""
+    file_path = tmp_path / "flight.gpx"
+    file_path.write_text("data")
+    raw_payload = {"flt": {"Meta": {"tailNumber": "D-KBUH", "aircraftType": "WT9"}}}
+    detail = FlightDetail(
+        id="flight-1",
+        raw_payload=raw_payload,
+        file_path=str(file_path),
+    )
+    cloudahoy = DummyCloudAhoy(detail)
+    flysto = DummyFlyStoMetadata503Always()
+
+    _results, stats = migrate_flights(
+        cloudahoy=cloudahoy,
+        flysto=flysto,
+        dry_run=False,
+        summaries=None,
+        max_flights=None,
+        state=None,
+        force=True,
+        report_path=None,
+        review_id=None,
+        progress=None,
+    )
+
+    assert stats.succeeded == 1

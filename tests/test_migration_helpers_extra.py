@@ -283,3 +283,47 @@ def test_reconcile_metadata_reresolves_stale_log_ids(tmp_path: Path):
     assert updated == 1
     assert flysto.metadata_calls[0][0] == "log-new"
     assert payload["items"][0]["flysto_log_id"] == "log-new"
+
+
+def test_reconcile_metadata_retries_same_log_on_transient_503(tmp_path: Path):
+    report_path = tmp_path / "report.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "items": [
+                    {
+                        "flysto_log_id": "log-1",
+                        "remarks": "ok",
+                        "tags": ["a"],
+                    }
+                ]
+            }
+        )
+    )
+
+    class DummyFlyStoMetadata503Retry(DummyFlySto):
+        def __init__(self) -> None:
+            super().__init__()
+            self.attempts: list[str | None] = []
+
+        def assign_metadata_for_log_id(
+            self,
+            log_id: str | None,
+            remarks: str | None = None,
+            tags: list[str] | None = None,
+        ):
+            self.attempts.append(log_id)
+            if len(self.attempts) == 1:
+                raise RuntimeError(
+                    "FlySto log-annotations failed: 503 <!DOCTYPE html><html><head>"
+                    "<title>Application Error</title>"
+                )
+            super().assign_metadata_for_log_id(log_id, remarks=remarks, tags=tags)
+
+    flysto = DummyFlyStoMetadata503Retry()
+
+    updated = reconcile_metadata_from_report(report_path, flysto)
+
+    assert updated == 1
+    assert flysto.attempts == ["log-1", "log-1"]
+    assert flysto.metadata_calls[0][0] == "log-1"
