@@ -1277,6 +1277,12 @@ def _log_metadata_has_crew(metadata: dict[str, Any] | None, log_id: str | None) 
     return False
 
 
+def _is_missing_flysto_log_error(error: Exception, *, operation: str) -> bool:
+    """Return True when FlySto rejected an operation because the log no longer exists."""
+    message = str(error).lower()
+    return f"flysto {operation} failed: 404" in message and "log not found" in message
+
+
 def _resolve_log_for_report_item(
     flysto: FlyStoClient,
     item: dict[str, Any],
@@ -1337,14 +1343,55 @@ def reconcile_metadata_from_report(
     for item in items:
         if not isinstance(item, dict):
             continue
-        log_id = item.get("flysto_log_id")
-        if not log_id:
-            continue
         remarks = item.get("remarks")
         tags = item.get("tags")
         if not remarks and not tags:
             continue
-        flysto.assign_metadata_for_log_id(log_id, remarks=remarks, tags=tags)
+        log_id = item.get("flysto_log_id") or item.get("flysto_upload_log_id")
+        file_path = item.get("file_path")
+        if file_path:
+            try:
+                resolved_log_id, _signature, _format = _resolve_log_for_report_item(
+                    flysto,
+                    item,
+                    Path(file_path).name,
+                    retries=3,
+                    delay_seconds=1.5,
+                    logs_limit=250,
+                    prefer_persisted_log_id=False,
+                )
+            except Exception:
+                resolved_log_id = None
+            if resolved_log_id:
+                log_id = resolved_log_id
+                item["flysto_log_id"] = resolved_log_id
+        if not log_id:
+            continue
+        try:
+            flysto.assign_metadata_for_log_id(log_id, remarks=remarks, tags=tags)
+        except Exception as error:
+            if (
+                not file_path
+                or not _is_missing_flysto_log_error(error, operation="log-annotations")
+            ):
+                raise
+            try:
+                refreshed_log_id, _signature, _format = _resolve_log_for_report_item(
+                    flysto,
+                    item,
+                    Path(file_path).name,
+                    retries=3,
+                    delay_seconds=1.5,
+                    logs_limit=250,
+                    prefer_persisted_log_id=False,
+                )
+            except Exception:
+                refreshed_log_id = None
+            if not refreshed_log_id or refreshed_log_id == log_id:
+                raise
+            log_id = refreshed_log_id
+            item["flysto_log_id"] = refreshed_log_id
+            flysto.assign_metadata_for_log_id(log_id, remarks=remarks, tags=tags)
         updated += 1
     payload["metadata_reconciled_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     payload["metadata_reconciled"] = updated

@@ -243,3 +243,42 @@ def test_reconcile_metadata_updates_only_with_values(tmp_path: Path):
     updated = reconcile_metadata_from_report(report_path, flysto)
     assert updated == 1
     assert flysto.metadata_calls[0][0] == "log-1"
+
+
+def test_reconcile_metadata_reresolves_stale_log_ids(tmp_path: Path):
+    report_path = tmp_path / "report.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "items": [
+                    {
+                        "flysto_log_id": "log-old",
+                        "file_path": "/tmp/flight.g3x.csv",
+                        "remarks": "ok",
+                        "tags": ["a"],
+                    }
+                ]
+            }
+        )
+    )
+
+    class DummyFlyStoMetadataRetry(DummyFlySto):
+        def assign_metadata_for_log_id(
+            self,
+            log_id: str | None,
+            remarks: str | None = None,
+            tags: list[str] | None = None,
+        ):
+            if log_id == "log-old":
+                raise RuntimeError("FlySto log-annotations failed: 404 Log not found")
+            super().assign_metadata_for_log_id(log_id, remarks=remarks, tags=tags)
+
+    flysto = DummyFlyStoMetadataRetry()
+    flysto.resolve_sequence = [("log-new", "sig-new", "UnknownGarmin")]
+
+    updated = reconcile_metadata_from_report(report_path, flysto)
+    payload = json.loads(report_path.read_text())
+
+    assert updated == 1
+    assert flysto.metadata_calls[0][0] == "log-new"
+    assert payload["items"][0]["flysto_log_id"] == "log-new"
