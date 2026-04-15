@@ -775,6 +775,7 @@ def _migrate_single(
     progress: Callable[[str, dict], None] | None = None,
 ) -> MigrationResult:
     """Internal helper for migrate single."""
+    upload_result = None
     try:
         crew = crew or []
         if not dry_run:
@@ -892,40 +893,43 @@ def _migrate_single(
                     tags=tags,
                 )
             except Exception as error:
-                if (
-                    not detail.file_path
-                    or not _is_missing_flysto_log_error(error, operation="log-annotations")
-                ):
+                if not _is_missing_flysto_log_error(error, operation="log-annotations"):
                     raise
-                refreshed_log_id, refreshed_signature, refreshed_format = _resolve_log_for_report_item(
-                    flysto,
-                    {
-                        "flysto_log_id": None,
-                        "flysto_upload_log_id": upload_result.log_id if upload_result else None,
-                        "flysto_signature": None,
-                        "flysto_upload_signature": upload_result.signature if upload_result else None,
-                        "flysto_upload_signature_hash": upload_result.signature_hash if upload_result else None,
-                        "flysto_format": None,
-                        "flysto_upload_format": upload_result.log_format if upload_result else None,
-                    },
-                    Path(detail.file_path).name,
-                    retries=3,
-                    delay_seconds=1.5,
-                    logs_limit=250,
-                    prefer_persisted_log_id=False,
-                )
-                if not refreshed_log_id or refreshed_log_id == resolved_log_id:
-                    raise
-                resolved_log_id = refreshed_log_id
-                if refreshed_signature and not resolved_signature:
-                    resolved_signature = refreshed_signature
-                if refreshed_format and not resolved_format:
-                    resolved_format = refreshed_format
-                flysto.assign_metadata_for_log_id(
-                    resolved_log_id,
-                    remarks=remarks,
-                    tags=tags,
-                )
+                if detail.file_path:
+                    refreshed_log_id, refreshed_signature, refreshed_format = _resolve_log_for_report_item(
+                        flysto,
+                        {
+                            "flysto_log_id": None,
+                            "flysto_upload_log_id": upload_result.log_id if upload_result else None,
+                            "flysto_signature": None,
+                            "flysto_upload_signature": upload_result.signature if upload_result else None,
+                            "flysto_upload_signature_hash": upload_result.signature_hash if upload_result else None,
+                            "flysto_format": None,
+                            "flysto_upload_format": upload_result.log_format if upload_result else None,
+                        },
+                        Path(detail.file_path).name,
+                        retries=3,
+                        delay_seconds=1.5,
+                        logs_limit=250,
+                        prefer_persisted_log_id=False,
+                    )
+                    if refreshed_log_id and refreshed_log_id != resolved_log_id:
+                        resolved_log_id = refreshed_log_id
+                        if refreshed_signature and not resolved_signature:
+                            resolved_signature = refreshed_signature
+                        if refreshed_format and not resolved_format:
+                            resolved_format = refreshed_format
+                        try:
+                            flysto.assign_metadata_for_log_id(
+                                resolved_log_id,
+                                remarks=remarks,
+                                tags=tags,
+                            )
+                        except Exception as retry_error:
+                            if not _is_missing_flysto_log_error(
+                                retry_error, operation="log-annotations"
+                            ):
+                                raise
             if progress:
                 progress(
                     "flysto_assign_metadata_done",
@@ -1021,9 +1025,19 @@ def _build_report_item(
                 upload_signature_hash = upload_result.signature_hash
                 upload_log_id = upload_result.log_id
                 upload_format = upload_result.log_format
-            log_id, signature, log_format = flysto.resolve_log_for_file(
-                filename, retries=3, delay_seconds=1.5
-            )
+                log_id = upload_result.log_id
+                signature = upload_result.signature_hash or upload_result.signature
+                log_format = upload_result.log_format
+            if not log_id or not signature or not log_format:
+                resolved_log_id, resolved_signature, resolved_format = flysto.resolve_log_for_file(
+                    filename, retries=3, delay_seconds=1.5
+                )
+                if not log_id:
+                    log_id = resolved_log_id
+                if not signature:
+                    signature = resolved_signature
+                if not log_format:
+                    log_format = resolved_format
             if log_id:
                 source_format, source_system_id = flysto.log_source_cache.get(log_id, (None, None))
         except Exception:
@@ -1428,11 +1442,20 @@ def reconcile_metadata_from_report(
                 )
             except Exception:
                 refreshed_log_id = None
-            if not refreshed_log_id or refreshed_log_id == log_id:
-                raise
-            log_id = refreshed_log_id
-            item["flysto_log_id"] = refreshed_log_id
-            flysto.assign_metadata_for_log_id(log_id, remarks=remarks, tags=tags)
+            if refreshed_log_id and refreshed_log_id != log_id:
+                log_id = refreshed_log_id
+                item["flysto_log_id"] = refreshed_log_id
+                try:
+                    flysto.assign_metadata_for_log_id(log_id, remarks=remarks, tags=tags)
+                except Exception as retry_error:
+                    if not _is_missing_flysto_log_error(
+                        retry_error, operation="log-annotations"
+                    ):
+                        raise
+                else:
+                    updated += 1
+                continue
+            continue
         updated += 1
     payload["metadata_reconciled_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     payload["metadata_reconciled"] = updated

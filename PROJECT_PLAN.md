@@ -253,7 +253,7 @@ Objective: migrate production stack to Firebase-only (Functions 2nd gen + Hostin
 - [x] Fix report reconciliation to re-resolve stale `flysto_log_id` values for crew assignment retries while keeping upload-time log-id reuse for verification/finalization paths.
 - [x] Fix metadata finalization to re-resolve stale FlySto log ids before applying remarks/tags and retry once on `404 Log not found` annotation failures.
 - [x] Align stale-import auto-recovery much closer to the delayed-heartbeat warning by lowering the backend running-job stale timeout default to `210` seconds and tightening frontend stale refresh polling to `30` seconds.
-- [x] Fix initial import metadata assignment to prefer the upload-time FlySto log id over stale filename lookup results, preventing `404 Log not found` annotation failures during the live import path.
+- [x] Fix initial import metadata assignment to prefer the upload-time FlySto log id over stale filename lookup results, and treat FlySto `404 Log not found` annotation errors as recoverable so metadata glitches do not fail the whole import.
 - [x] Fix deploy authorized-domain setup overview to merge/dedupe `FIREBASE_AUTHORIZED_DOMAINS` across env sources so all configured domains (for example `.app` and `.co`) are shown and validated.
 - [x] Reduce deploy-time Git noise by staging shared backend modules under ignored `functions/_deploy_src/src` (instead of tracked `functions/src`) and updating Functions import path fallback accordingly.
 - [x] Harden deploy authorized-domain config parsing to merge all `FIREBASE_AUTHORIZED_DOMAINS` entries (including repeated keys) across env sources, and label setup output as merged-source values.

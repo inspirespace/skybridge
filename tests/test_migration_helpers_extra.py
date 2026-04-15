@@ -149,7 +149,7 @@ def test_build_report_item_enriches_flysto_fields():
         signature_hash="hash-1",
         log_format="GenericGpx",
     )
-    flysto.log_source_cache["log-flight.gpx"] = ("UnknownGarmin", "sys-1")
+    flysto.log_source_cache["log-1"] = ("UnknownGarmin", "sys-1")
     detail = FlightDetail(id="F1", raw_payload={}, file_path="/tmp/flight.gpx")
 
     item = _build_report_item(
@@ -167,7 +167,8 @@ def test_build_report_item_enriches_flysto_fields():
     assert item["flysto_upload_signature"] == "sig-1"
     assert item["flysto_upload_signature_hash"] == "hash-1"
     assert item["flysto_upload_log_id"] == "log-1"
-    assert item["flysto_log_id"] == "log-flight.gpx"
+    assert item["flysto_log_id"] == "log-1"
+    assert item["flysto_source_system_id"] == "sys-1"
 
 
 def test_verify_import_report_retries_with_large_limit(tmp_path: Path):

@@ -218,3 +218,37 @@ def test_migrate_flights_prefers_upload_log_id_for_metadata(tmp_path: Path):
 
     assert stats.succeeded == 1
     assert flysto.assigned_metadata == ["log555"]
+
+
+class DummyFlyStoMetadata404Always(DummyFlyStoSignature):
+    def assign_metadata_for_log_id(self, log_id: str | None, remarks=None, tags=None):
+        raise RuntimeError("FlySto log-annotations failed: 404 Log not found")
+
+
+def test_migrate_flights_tolerates_metadata_404_after_upload(tmp_path: Path):
+    """Test migrate flights does not fail when FlySto metadata annotation returns 404."""
+    file_path = tmp_path / "flight.gpx"
+    file_path.write_text("data")
+    raw_payload = {"flt": {"Meta": {"tailNumber": "D-KBUH", "aircraftType": "WT9"}}}
+    detail = FlightDetail(
+        id="flight-1",
+        raw_payload=raw_payload,
+        file_path=str(file_path),
+    )
+    cloudahoy = DummyCloudAhoy(detail)
+    flysto = DummyFlyStoMetadata404Always()
+
+    _results, stats = migrate_flights(
+        cloudahoy=cloudahoy,
+        flysto=flysto,
+        dry_run=False,
+        summaries=None,
+        max_flights=None,
+        state=None,
+        force=True,
+        report_path=None,
+        review_id=None,
+        progress=None,
+    )
+
+    assert stats.succeeded == 1
