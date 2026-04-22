@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 import os
 import time
 import tempfile
@@ -430,6 +431,13 @@ class JobService:
 
             if not dry_run:
                 heartbeat = lambda: _touch_heartbeat(job, store=self._store)
+                # Tick heartbeat_at every 30s from a daemon thread so the UI
+                # stale detector does not fire when FlySto's per-PUT latency
+                # temporarily exceeds the 210s stale window (e.g. during
+                # rate-limited metadata assignment).
+                background_heartbeat = _BackgroundHeartbeat(
+                    heartbeat, interval_seconds=30.0
+                )
 
                 def _make_progress(base_stage: str, base_percent: int):
                     # Emit a per-item progress event every few items so the UI
@@ -459,83 +467,84 @@ class JobService:
                     stage="Finalizing import",
                     percent=85,
                 )
-                _maybe_wait_for_processing(flysto, heartbeat=heartbeat)
-                # Load the report once and share the in-memory payload across
-                # all finalization passes; write it back to disk after the
-                # last pass completes.
-                finalization_payload = json.loads(report_path.read_text())
-                _set_import_finalization_stage(
-                    self._store,
-                    job,
-                    stage="Verifying imported flights",
-                    percent=88,
-                )
-                verify_import_report(
-                    report_path,
-                    flysto,
-                    heartbeat=heartbeat,
-                    payload=finalization_payload,
-                )
-                _set_import_finalization_stage(
-                    self._store,
-                    job,
-                    stage="Reconciling aircraft",
-                    percent=90,
-                )
-                reconcile_aircraft_from_report(
-                    report_path,
-                    flysto,
-                    heartbeat=heartbeat,
-                    payload=finalization_payload,
-                    progress=_make_progress("Reconciling aircraft", 90),
-                )
-                _set_import_finalization_stage(
-                    self._store,
-                    job,
-                    stage="Reconciling crew",
-                    percent=92,
-                )
-                reconcile_crew_from_report(
-                    report_path,
-                    flysto,
-                    review_path,
-                    cloudahoy,
-                    heartbeat=heartbeat,
-                    payload=finalization_payload,
-                    progress=_make_progress("Reconciling crew", 92),
-                )
-                _set_import_finalization_stage(
-                    self._store,
-                    job,
-                    stage="Reconciling metadata",
-                    percent=94,
-                )
-                reconcile_metadata_from_report(
-                    report_path,
-                    flysto,
-                    heartbeat=heartbeat,
-                    payload=finalization_payload,
-                    progress=_make_progress("Reconciling metadata", 94),
-                )
-                # Crew can be cleared by FlySto post-processing; reapply after the queue drains.
-                _maybe_wait_for_processing(flysto, heartbeat=heartbeat)
-                _set_import_finalization_stage(
-                    self._store,
-                    job,
-                    stage="Reapplying crew assignments",
-                    percent=96,
-                )
-                reconcile_crew_from_report(
-                    report_path,
-                    flysto,
-                    review_path,
-                    cloudahoy,
-                    heartbeat=heartbeat,
-                    payload=finalization_payload,
-                    progress=_make_progress("Reapplying crew assignments", 96),
-                    skip_if_reconciled=False,
-                )
-                report_path.write_text(json.dumps(finalization_payload, indent=2))
+                with background_heartbeat:
+                    _maybe_wait_for_processing(flysto, heartbeat=heartbeat)
+                    # Load the report once and share the in-memory payload across
+                    # all finalization passes; write it back to disk after the
+                    # last pass completes.
+                    finalization_payload = json.loads(report_path.read_text())
+                    _set_import_finalization_stage(
+                        self._store,
+                        job,
+                        stage="Verifying imported flights",
+                        percent=88,
+                    )
+                    verify_import_report(
+                        report_path,
+                        flysto,
+                        heartbeat=heartbeat,
+                        payload=finalization_payload,
+                    )
+                    _set_import_finalization_stage(
+                        self._store,
+                        job,
+                        stage="Reconciling aircraft",
+                        percent=90,
+                    )
+                    reconcile_aircraft_from_report(
+                        report_path,
+                        flysto,
+                        heartbeat=heartbeat,
+                        payload=finalization_payload,
+                        progress=_make_progress("Reconciling aircraft", 90),
+                    )
+                    _set_import_finalization_stage(
+                        self._store,
+                        job,
+                        stage="Reconciling crew",
+                        percent=92,
+                    )
+                    reconcile_crew_from_report(
+                        report_path,
+                        flysto,
+                        review_path,
+                        cloudahoy,
+                        heartbeat=heartbeat,
+                        payload=finalization_payload,
+                        progress=_make_progress("Reconciling crew", 92),
+                    )
+                    _set_import_finalization_stage(
+                        self._store,
+                        job,
+                        stage="Reconciling metadata",
+                        percent=94,
+                    )
+                    reconcile_metadata_from_report(
+                        report_path,
+                        flysto,
+                        heartbeat=heartbeat,
+                        payload=finalization_payload,
+                        progress=_make_progress("Reconciling metadata", 94),
+                    )
+                    # Crew can be cleared by FlySto post-processing; reapply after the queue drains.
+                    _maybe_wait_for_processing(flysto, heartbeat=heartbeat)
+                    _set_import_finalization_stage(
+                        self._store,
+                        job,
+                        stage="Reapplying crew assignments",
+                        percent=96,
+                    )
+                    reconcile_crew_from_report(
+                        report_path,
+                        flysto,
+                        review_path,
+                        cloudahoy,
+                        heartbeat=heartbeat,
+                        payload=finalization_payload,
+                        progress=_make_progress("Reapplying crew assignments", 96),
+                        skip_if_reconciled=False,
+                    )
+                    report_path.write_text(json.dumps(finalization_payload, indent=2))
             final_report_payload = _load_or_create_import_report(report_path, review_id, len(summaries))
             job.import_report = ImportReport(
                 imported_count=sum(1 for item in final_report_payload.get("items", []) if item.get("status") == "ok"),
@@ -1190,6 +1199,60 @@ def _touch_heartbeat(job: JobRecord, *, store: JobStore | None = None) -> None:
     job.heartbeat_at = now
     if store is not None:
         store.save_job(job)
+
+
+class _BackgroundHeartbeat:
+    """Tick a heartbeat callable in a daemon thread.
+
+    FlySto PUTs can legitimately block for 60 s × the client's retry budget,
+    so the per-item heartbeats we fire at the top of reconcile loops are not
+    enough to keep ``job.heartbeat_at`` fresher than the stale-detector
+    window. Wrap the finalization passes with this helper so Firestore
+    receives a tick every ``interval_seconds`` regardless of what the main
+    thread is doing (including blocking socket reads).
+    """
+
+    def __init__(
+        self,
+        heartbeat: Callable[[], None] | None,
+        *,
+        interval_seconds: float = 30.0,
+    ) -> None:
+        self._heartbeat = heartbeat
+        # Guard against zero/negative but allow sub-second intervals for tests.
+        self._interval = max(0.01, float(interval_seconds))
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def __enter__(self) -> "_BackgroundHeartbeat":
+        if self._heartbeat is None:
+            return self
+        self._stop.clear()
+        self._thread = threading.Thread(
+            target=self._run,
+            name="skybridge-heartbeat",
+            daemon=True,
+        )
+        self._thread.start()
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=self._interval + 2.0)
+            self._thread = None
+
+    def _run(self) -> None:
+        assert self._heartbeat is not None
+        while not self._stop.is_set():
+            # Wait first so the caller's own per-item heartbeat fires at
+            # iteration boundaries without competing with this thread.
+            if self._stop.wait(self._interval):
+                return
+            try:
+                self._heartbeat()
+            except Exception:
+                _logger.exception("Background heartbeat failed")
 
 
 def _short_flight_id(flight_id: str) -> str:
