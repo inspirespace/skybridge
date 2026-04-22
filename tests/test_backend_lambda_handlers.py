@@ -622,3 +622,196 @@ def test_delete_job_handler(store):
     response = handlers.delete_job_handler(_event("pilot", job_id=str(job.job_id)), None)
     assert response["statusCode"] == 200
     assert seen["job_id"] == str(job.job_id)
+
+
+# -----------------------------------------------------------------------------
+# reconcile_completed_import_from_report (unit) + _fail_stale_job integration
+# -----------------------------------------------------------------------------
+
+
+from src.backend.service import reconcile_completed_import_from_report
+
+
+def _seed_import_job(store, *, status: str = "import_running", phase_total: int = 2, stale: bool = True):
+    job = _job(status)
+    if stale:
+        stale_at = datetime.now(timezone.utc) - timedelta(minutes=10)
+        job.updated_at = stale_at
+        job.heartbeat_at = stale_at
+    job.phase_total = phase_total
+    job.phase_cursor = phase_total
+    store.save_job(job)
+    return job
+
+
+def test_reconcile_returns_false_when_report_missing(store):
+    job = _seed_import_job(store)
+    assert reconcile_completed_import_from_report(job, store) is False
+    assert store.load_job(job.job_id).status == "import_running"
+
+
+def test_reconcile_returns_false_when_report_partial(store):
+    job = _seed_import_job(store, phase_total=3)
+    store.write_artifact(
+        job.job_id,
+        "import-report.json",
+        {"attempted": 3, "items": [{"status": "ok"}, {"status": "ok"}]},
+    )
+    assert reconcile_completed_import_from_report(job, store) is False
+    assert store.load_job(job.job_id).status == "import_running"
+
+
+def test_reconcile_returns_false_when_any_item_errored(store):
+    job = _seed_import_job(store)
+    store.write_artifact(
+        job.job_id,
+        "import-report.json",
+        {"attempted": 2, "items": [{"status": "ok"}, {"status": "error"}]},
+    )
+    assert reconcile_completed_import_from_report(job, store) is False
+    assert store.load_job(job.job_id).status == "import_running"
+
+
+def test_reconcile_upgrades_to_completed_when_all_items_ok(store):
+    job = _seed_import_job(store)
+    store.write_artifact(
+        job.job_id,
+        "import-report.json",
+        {"attempted": 2, "items": [{"status": "ok"}, {"status": "skipped"}]},
+    )
+    assert reconcile_completed_import_from_report(job, store) is True
+    saved = store.load_job(job.job_id)
+    assert saved.status == "completed"
+    assert saved.progress_percent == 100
+    assert saved.error_message is None
+    assert saved.import_report is not None
+    assert saved.import_report.imported_count == 1
+    assert saved.import_report.skipped_count == 1
+    assert saved.import_report.failed_count == 0
+
+
+def test_reconcile_noop_when_job_not_import_phase(store):
+    job = _job("completed")
+    store.save_job(job)
+    store.write_artifact(
+        job.job_id,
+        "import-report.json",
+        {"attempted": 1, "items": [{"status": "ok"}]},
+    )
+    assert reconcile_completed_import_from_report(job, store) is False
+
+
+def test_fail_stale_job_reconciles_to_completed_when_report_shows_success(
+    store, monkeypatch: pytest.MonkeyPatch
+):
+    job = _seed_import_job(store)
+    store.write_artifact(
+        job.job_id,
+        "import-report.json",
+        {"attempted": 2, "items": [{"status": "ok"}, {"status": "ok"}]},
+    )
+    monkeypatch.setenv("BACKEND_RUNNING_STALE_TIMEOUT_SECONDS", "60")
+
+    response = handlers.get_job_handler(_event("pilot", job_id=str(job.job_id)), None)
+
+    assert response["statusCode"] == 200
+    saved = store.load_job(job.job_id)
+    assert saved.status == "completed"
+    assert saved.error_message is None
+
+
+def test_fail_stale_job_still_fails_when_report_has_error_item(
+    store, monkeypatch: pytest.MonkeyPatch
+):
+    job = _seed_import_job(store)
+    job.worker_retry_count = 2  # skip auto-retry so we reach the failure write
+    store.save_job(job)
+    store.write_artifact(
+        job.job_id,
+        "import-report.json",
+        {"attempted": 2, "items": [{"status": "ok"}, {"status": "error"}]},
+    )
+    monkeypatch.setenv("BACKEND_RUNNING_STALE_TIMEOUT_SECONDS", "60")
+    monkeypatch.setenv("BACKEND_STALE_AUTO_RETRY_LIMIT", "2")
+
+    response = handlers.get_job_handler(_event("pilot", job_id=str(job.job_id)), None)
+
+    assert response["statusCode"] == 200
+    saved = store.load_job(job.job_id)
+    assert saved.status == "failed"
+
+
+def test_process_queue_payload_except_reconciles_to_completed(
+    store, monkeypatch: pytest.MonkeyPatch
+):
+    job = _seed_import_job(store, status="import_running", stale=False)
+    store.write_artifact(
+        job.job_id,
+        "import-report.json",
+        {"attempted": 2, "items": [{"status": "ok"}, {"status": "ok"}]},
+    )
+
+    class _CredStore:
+        def claim(self, _token, _job_id, _purpose):
+            return {
+                "cloudahoy_username": "pilot",
+                "cloudahoy_password": "secret",
+                "flysto_username": "pilot",
+                "flysto_password": "secret",
+            }
+
+        def issue(self, **_kwargs):
+            return "next-token"
+
+    class _RaisingService:
+        def accept_review(self, _job_uuid, _request):
+            raise RuntimeError("finalization crashed")
+
+    monkeypatch.setattr(handlers, "_credential_store", _CredStore())
+    monkeypatch.setattr(handlers, "_service", _RaisingService())
+
+    handlers._process_queue_payload(
+        {"job_id": str(job.job_id), "purpose": "import", "token": "tok"}
+    )
+
+    saved = store.load_job(job.job_id)
+    assert saved.status == "completed"
+    assert saved.error_message is None
+
+
+def test_process_queue_payload_except_marks_failed_when_report_partial(
+    store, monkeypatch: pytest.MonkeyPatch
+):
+    job = _seed_import_job(store, status="import_running", phase_total=3, stale=False)
+    store.write_artifact(
+        job.job_id,
+        "import-report.json",
+        {"attempted": 3, "items": [{"status": "ok"}]},  # partial, below phase_total
+    )
+
+    class _CredStore:
+        def claim(self, *_a, **_k):
+            return {
+                "cloudahoy_username": "pilot",
+                "cloudahoy_password": "secret",
+                "flysto_username": "pilot",
+                "flysto_password": "secret",
+            }
+
+        def issue(self, **_kwargs):
+            return "t"
+
+    class _RaisingService:
+        def accept_review(self, *_a, **_k):
+            raise RuntimeError("boom")
+
+    monkeypatch.setattr(handlers, "_credential_store", _CredStore())
+    monkeypatch.setattr(handlers, "_service", _RaisingService())
+
+    handlers._process_queue_payload(
+        {"job_id": str(job.job_id), "purpose": "import", "token": "tok"}
+    )
+
+    saved = store.load_job(job.job_id)
+    assert saved.status == "failed"
+    assert saved.error_message and "Worker failed" in saved.error_message

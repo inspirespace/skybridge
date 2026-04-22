@@ -18,7 +18,7 @@ from .firebase_errors import FirestoreDatabaseNotConfiguredError
 from .models import CredentialValidationRequest, JobAcceptRequest, JobCreateRequest, ProgressEvent
 from .object_store import build_object_store_from_env
 from .queue import resolve_job_queue_topic_path
-from .service import JobService, validate_credentials
+from .service import JobService, reconcile_completed_import_from_report, validate_credentials
 from .store import JobStore
 
 _logger = logging.getLogger(__name__)
@@ -192,6 +192,8 @@ def _fail_stale_job(job):
     reference_time = job.heartbeat_at or job.updated_at
     age_seconds = (datetime.now(timezone.utc) - reference_time).total_seconds()
     if age_seconds < timeout_seconds:
+        return job
+    if purpose == "import" and reconcile_completed_import_from_report(job, _get_store()):
         return job
     if _can_auto_retry_stale_job(job, purpose):
         recovered = _auto_retry_stale_job(job, purpose)
@@ -787,6 +789,9 @@ def _process_queue_payload(payload: dict[str, Any]) -> None:
             store.write_token(updated_job.job_id, purpose, next_token)
             _enqueue_job(updated_job.job_id, purpose, next_token)
     except Exception as exc:
+        _logger.exception("Worker failed for job %s purpose %s", job_id, purpose)
+        if purpose == "import" and reconcile_completed_import_from_report(job, store):
+            return
         job.status = "failed"
         job.error_message = f"Worker failed: {exc}"
         job.updated_at = datetime.now(timezone.utc)

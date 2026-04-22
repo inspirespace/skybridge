@@ -6,14 +6,17 @@ job model, persisting progress and artifacts via JobStore.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import time
 import tempfile
 import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 from uuid import UUID, uuid4
+
+_logger = logging.getLogger(__name__)
 
 from src.core.cloudahoy.client import CloudAhoyClient
 from src.core.migration import (
@@ -397,6 +400,17 @@ class JobService:
             if (job.phase_cursor or 0) < total_summaries:
                 return job
 
+            # Release large per-flight buffers held by the upload loop before
+            # starting finalization, so reconcile passes run with lower memory
+            # pressure on the 256 MiB worker.
+            detail = None
+            aircraft = None
+            metadata = None
+            crew = None
+            remarks = None
+            tags = None
+            file_hash = csv_hash = metadata_hash = None
+
             _append_progress(
                 job,
                 phase="import",
@@ -407,50 +421,85 @@ class JobService:
             self._store.save_job(job)
 
             if not dry_run:
+                heartbeat = lambda: _touch_heartbeat(job, store=self._store)
                 _set_import_finalization_stage(
                     self._store,
                     job,
                     stage="Finalizing import",
                     percent=85,
                 )
-                _maybe_wait_for_processing(flysto, heartbeat=lambda: _touch_heartbeat(job, store=self._store))
+                _maybe_wait_for_processing(flysto, heartbeat=heartbeat)
+                # Load the report once and share the in-memory payload across
+                # all finalization passes; write it back to disk after the
+                # last pass completes.
+                finalization_payload = json.loads(report_path.read_text())
                 _set_import_finalization_stage(
                     self._store,
                     job,
                     stage="Verifying imported flights",
                     percent=88,
                 )
-                verify_import_report(report_path, flysto)
+                verify_import_report(
+                    report_path,
+                    flysto,
+                    heartbeat=heartbeat,
+                    payload=finalization_payload,
+                )
                 _set_import_finalization_stage(
                     self._store,
                     job,
                     stage="Reconciling aircraft",
                     percent=90,
                 )
-                reconcile_aircraft_from_report(report_path, flysto)
+                reconcile_aircraft_from_report(
+                    report_path,
+                    flysto,
+                    heartbeat=heartbeat,
+                    payload=finalization_payload,
+                )
                 _set_import_finalization_stage(
                     self._store,
                     job,
                     stage="Reconciling crew",
                     percent=92,
                 )
-                reconcile_crew_from_report(report_path, flysto, review_path, cloudahoy)
+                reconcile_crew_from_report(
+                    report_path,
+                    flysto,
+                    review_path,
+                    cloudahoy,
+                    heartbeat=heartbeat,
+                    payload=finalization_payload,
+                )
                 _set_import_finalization_stage(
                     self._store,
                     job,
                     stage="Reconciling metadata",
                     percent=94,
                 )
-                reconcile_metadata_from_report(report_path, flysto)
+                reconcile_metadata_from_report(
+                    report_path,
+                    flysto,
+                    heartbeat=heartbeat,
+                    payload=finalization_payload,
+                )
                 # Crew can be cleared by FlySto post-processing; reapply after the queue drains.
-                _maybe_wait_for_processing(flysto, heartbeat=lambda: _touch_heartbeat(job, store=self._store))
+                _maybe_wait_for_processing(flysto, heartbeat=heartbeat)
                 _set_import_finalization_stage(
                     self._store,
                     job,
                     stage="Reapplying crew assignments",
                     percent=96,
                 )
-                reconcile_crew_from_report(report_path, flysto, review_path, cloudahoy)
+                reconcile_crew_from_report(
+                    report_path,
+                    flysto,
+                    review_path,
+                    cloudahoy,
+                    heartbeat=heartbeat,
+                    payload=finalization_payload,
+                )
+                report_path.write_text(json.dumps(finalization_payload, indent=2))
             final_report_payload = _load_or_create_import_report(report_path, review_id, len(summaries))
             job.import_report = ImportReport(
                 imported_count=sum(1 for item in final_report_payload.get("items", []) if item.get("status") == "ok"),
@@ -473,6 +522,27 @@ class JobService:
             self._store.upload_artifact(job_id, "migration.db", state_path)
             return job
         except Exception as exc:
+            _logger.exception("accept_review failed for job %s", job_id)
+            # Best-effort upload of in-flight artifacts so the reconcile
+            # helper (called below) can read the most recent report state
+            # from object storage even if the local container is torn down.
+            if "state_path" in locals():
+                try:
+                    self._store.upload_artifact(job_id, "migration.db", state_path)
+                except Exception:
+                    _logger.exception("Failed to upload state.db during accept_review except")
+            if "report_path" in locals() and report_path.exists():
+                try:
+                    self._store.upload_artifact(job_id, IMPORT_REPORT_ARTIFACT, report_path)
+                except Exception:
+                    _logger.exception("Failed to upload import report during accept_review except")
+            if "context_path" in locals() and context_path.exists():
+                try:
+                    self._store.upload_artifact(job_id, IMPORT_CONTEXT_ARTIFACT, context_path)
+                except Exception:
+                    _logger.exception("Failed to upload import context during accept_review except")
+            if reconcile_completed_import_from_report(job, self._store):
+                return job
             job.status = "failed"
             _append_progress(
                 job,
@@ -483,12 +553,6 @@ class JobService:
             )
             job.error_message = f"Import failed: {exc}"
             self._store.save_job(job)
-            if "state_path" in locals():
-                self._store.upload_artifact(job_id, "migration.db", state_path)
-            if "report_path" in locals() and report_path.exists():
-                self._store.upload_artifact(job_id, IMPORT_REPORT_ARTIFACT, report_path)
-            if "context_path" in locals() and context_path.exists():
-                self._store.upload_artifact(job_id, IMPORT_CONTEXT_ARTIFACT, context_path)
             return job
 
 
@@ -785,6 +849,81 @@ def _recompute_import_report_stats(payload: dict) -> None:
     payload["attempted"] = payload.get("attempted") or len(items)
     payload["succeeded"] = sum(1 for item in items if item.get("status") == "ok")
     payload["failed"] = sum(1 for item in items if item.get("status") == "error")
+
+
+def reconcile_completed_import_from_report(job: JobRecord, store: JobStore) -> bool:
+    """Upgrade a stuck import job to ``completed`` when the persisted report shows success.
+
+    Safe to call repeatedly. Returns True only when the job was upgraded.
+    The authoritative signal is ``import-report.json``: if every expected
+    flight has a terminal ``ok``/``skipped`` status, the worker either
+    finished the upload loop and crashed during finalization, or the
+    completion write was SIGKILL'd. In both cases, the user-visible state
+    should be ``completed`` rather than ``failed``.
+    """
+    if job.status not in {"import_running", "import_queued"}:
+        return False
+    try:
+        payload = store.load_artifact(job.job_id, IMPORT_REPORT_ARTIFACT)
+    except FileNotFoundError:
+        return False
+    except Exception:
+        _logger.exception("Failed to load import-report while reconciling job %s", job.job_id)
+        return False
+    if not isinstance(payload, dict):
+        return False
+    items = [item for item in payload.get("items", []) if isinstance(item, dict)]
+    if not items:
+        return False
+    expected: int | None = None
+    if isinstance(job.phase_total, int) and job.phase_total > 0:
+        expected = job.phase_total
+    elif isinstance(payload.get("attempted"), int) and payload["attempted"] > 0:
+        expected = payload["attempted"]
+    if expected is not None and len(items) < expected:
+        return False
+    if any(item.get("status") == "error" for item in items):
+        return False
+    if not all(item.get("status") in {"ok", "skipped"} for item in items):
+        return False
+    imported = sum(1 for item in items if item.get("status") == "ok")
+    skipped = sum(1 for item in items if item.get("status") == "skipped")
+    now = datetime.now(timezone.utc)
+    job.status = "completed"
+    job.phase_cursor = job.phase_total or len(items)
+    job.progress_percent = 100
+    job.progress_stage = "Import complete"
+    job.updated_at = now
+    job.heartbeat_at = now
+    job.error_message = None
+    job.import_report = ImportReport(
+        imported_count=imported,
+        skipped_count=skipped,
+        failed_count=0,
+    )
+    job.progress_log.append(
+        ProgressEvent(
+            phase="import",
+            stage="Import complete",
+            percent=100,
+            status="completed",
+            created_at=now,
+        )
+    )
+    try:
+        store.save_job(job)
+    except Exception:
+        _logger.exception("Failed to save reconciled job %s", job.job_id)
+        return False
+    _logger.info(
+        "Reconciled job %s to completed from %s (%d/%d ok, %d skipped)",
+        job.job_id,
+        IMPORT_REPORT_ARTIFACT,
+        imported,
+        len(items),
+        skipped,
+    )
+    return True
 
 
 def _report_item_resolves_to_flysto_log(item: dict[str, object]) -> bool:

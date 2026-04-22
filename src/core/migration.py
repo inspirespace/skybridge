@@ -1066,14 +1066,32 @@ def _write_import_report(
     report_path.write_text(json.dumps(payload, indent=2))
 
 
-def verify_import_report(report_path: Path, flysto: FlyStoClient) -> dict[str, int]:
+def _safe_heartbeat(heartbeat: Callable[[], None] | None) -> None:
+    if heartbeat is None:
+        return
+    try:
+        heartbeat()
+    except Exception:
+        pass
+
+
+def verify_import_report(
+    report_path: Path,
+    flysto: FlyStoClient,
+    *,
+    heartbeat: Callable[[], None] | None = None,
+    payload: dict[str, Any] | None = None,
+) -> dict[str, int]:
     """Handle verify import report."""
-    payload = json.loads(report_path.read_text())
+    persist = payload is None
+    if payload is None:
+        payload = json.loads(report_path.read_text())
     items = payload.get("items", [])
     resolved = 0
     missing = 0
     total = 0
     for item in items:
+        _safe_heartbeat(heartbeat)
         if not isinstance(item, dict):
             continue
         total += 1
@@ -1088,7 +1106,7 @@ def verify_import_report(report_path: Path, flysto: FlyStoClient) -> dict[str, i
             filename,
             retries=3,
             delay_seconds=1.5,
-            logs_limit=250,
+            logs_limit=50,
         )
         item["flysto_log_id"] = log_id
         item["flysto_signature"] = signature
@@ -1111,6 +1129,7 @@ def verify_import_report(report_path: Path, flysto: FlyStoClient) -> dict[str, i
         missing = 0
         total = 0
         for item in items:
+            _safe_heartbeat(heartbeat)
             if not isinstance(item, dict):
                 continue
             total += 1
@@ -1140,16 +1159,26 @@ def verify_import_report(report_path: Path, flysto: FlyStoClient) -> dict[str, i
         "resolved": resolved,
         "missing": missing,
     }
-    report_path.write_text(json.dumps(payload, indent=2))
+    if persist:
+        report_path.write_text(json.dumps(payload, indent=2))
     return payload["verification"]
 
 
-def reconcile_aircraft_from_report(report_path: Path, flysto: FlyStoClient) -> int:
+def reconcile_aircraft_from_report(
+    report_path: Path,
+    flysto: FlyStoClient,
+    *,
+    heartbeat: Callable[[], None] | None = None,
+    payload: dict[str, Any] | None = None,
+) -> int:
     """Handle reconcile aircraft from report."""
-    payload = json.loads(report_path.read_text())
+    persist = payload is None
+    if payload is None:
+        payload = json.loads(report_path.read_text())
     items = payload.get("items", [])
     updated = 0
     for item in items:
+        _safe_heartbeat(heartbeat)
         if not isinstance(item, dict):
             continue
         tail_number = item.get("tail_number")
@@ -1170,7 +1199,7 @@ def reconcile_aircraft_from_report(report_path: Path, flysto: FlyStoClient) -> i
                         filename,
                         retries=3,
                         delay_seconds=1.5,
-                        logs_limit=250,
+                        logs_limit=50,
                     )
                 except Exception:
                     signature = signature or None
@@ -1205,7 +1234,8 @@ def reconcile_aircraft_from_report(report_path: Path, flysto: FlyStoClient) -> i
         updated += 1
     payload["aircraft_reconciled_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     payload["aircraft_reconciled"] = updated
-    report_path.write_text(json.dumps(payload, indent=2))
+    if persist:
+        report_path.write_text(json.dumps(payload, indent=2))
     return updated
 
 
@@ -1214,9 +1244,14 @@ def reconcile_crew_from_report(
     flysto: FlyStoClient,
     review_path: Path | None = None,
     cloudahoy: CloudAhoyClient | None = None,
+    *,
+    heartbeat: Callable[[], None] | None = None,
+    payload: dict[str, Any] | None = None,
 ) -> int:
     """Handle reconcile crew from report."""
-    payload = json.loads(report_path.read_text())
+    persist = payload is None
+    if payload is None:
+        payload = json.loads(report_path.read_text())
     items = payload.get("items", [])
     review_metadata: dict[str, dict] = {}
     if review_path and review_path.exists():
@@ -1230,6 +1265,7 @@ def reconcile_crew_from_report(
                 review_metadata[flight_id] = metadata
     updated = 0
     for item in items:
+        _safe_heartbeat(heartbeat)
         if not isinstance(item, dict):
             continue
         log_id = item.get("flysto_log_id") or item.get("flysto_upload_log_id")
@@ -1242,7 +1278,7 @@ def reconcile_crew_from_report(
                     Path(file_path).name,
                     retries=3,
                     delay_seconds=1.5,
-                    logs_limit=250,
+                    logs_limit=50,
                     prefer_persisted_log_id=False,
                 )
             except Exception:
@@ -1278,7 +1314,7 @@ def reconcile_crew_from_report(
                         Path(file_path).name,
                         retries=3,
                         delay_seconds=1.5,
-                        logs_limit=250,
+                        logs_limit=50,
                         prefer_persisted_log_id=False,
                     )
                 except Exception:
@@ -1290,7 +1326,8 @@ def reconcile_crew_from_report(
         updated += 1
     payload["crew_reconciled_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     payload["crew_reconciled"] = updated
-    report_path.write_text(json.dumps(payload, indent=2))
+    if persist:
+        report_path.write_text(json.dumps(payload, indent=2))
     return updated
 
 
@@ -1437,12 +1474,18 @@ def _assign_metadata_with_recovery(
 def reconcile_metadata_from_report(
     report_path: Path,
     flysto: FlyStoClient,
+    *,
+    heartbeat: Callable[[], None] | None = None,
+    payload: dict[str, Any] | None = None,
 ) -> int:
     """Handle reconcile metadata from report."""
-    payload = json.loads(report_path.read_text())
+    persist = payload is None
+    if payload is None:
+        payload = json.loads(report_path.read_text())
     items = payload.get("items", [])
     updated = 0
     for item in items:
+        _safe_heartbeat(heartbeat)
         if not isinstance(item, dict):
             continue
         remarks = item.get("remarks")
@@ -1459,7 +1502,7 @@ def reconcile_metadata_from_report(
                     Path(file_path).name,
                     retries=3,
                     delay_seconds=1.5,
-                    logs_limit=250,
+                    logs_limit=50,
                     prefer_persisted_log_id=False,
                 )
             except Exception:
@@ -1483,5 +1526,6 @@ def reconcile_metadata_from_report(
             updated += 1
     payload["metadata_reconciled_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     payload["metadata_reconciled"] = updated
-    report_path.write_text(json.dumps(payload, indent=2))
+    if persist:
+        report_path.write_text(json.dumps(payload, indent=2))
     return updated
