@@ -346,8 +346,12 @@ export async function fetchArtifact<T = Record<string, unknown>>(jobId: string, 
   );
 }
 
-export async function downloadArtifactsZip(jobId: string, auth: AuthContext) {
+export async function downloadArtifactsZip(jobId: string, auth: AuthContext): Promise<Blob | { downloadUrl: string; filename: string }> {
+  // Ask for JSON so the server can hand us a short-lived signed URL instead of
+  // streaming the zip through the function (which exceeded the Cloudflare 100 s
+  // edge timeout on multi-flight imports).
   const headers = await buildRequestHeaders(auth, false, false);
+  headers.set("Accept", "application/json");
   const response = await fetch(`${apiBaseUrl}/jobs/${jobId}/artifacts.zip`, {
     headers,
   });
@@ -356,6 +360,14 @@ export async function downloadArtifactsZip(jobId: string, auth: AuthContext) {
     const error = new Error(message || "Download failed");
     (error as Error & { status?: number }).status = response.status;
     throw error;
+  }
+  const contentType = response.headers.get("Content-Type") || "";
+  if (contentType.includes("application/json")) {
+    const data = (await response.json()) as { download_url?: string; filename?: string };
+    if (!data.download_url) {
+      throw new Error("Download URL missing from response");
+    }
+    return { downloadUrl: data.download_url, filename: data.filename || `skybridge-run-${jobId}.zip` };
   }
   return response.blob();
 }

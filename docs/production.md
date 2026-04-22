@@ -15,6 +15,39 @@ This is a checklist of what production needs, not a step-by-step deployment guid
 - **Firebase Hosting** for SPA + API rewrites.
   - `/api/**` rewrites to the `api` function (see `firebase.json`).
 
+## Required IAM — download signed URLs (one-time setup per project)
+
+The **Download files** button hands the browser a short-lived V4 signed URL
+for the pre-built `artifacts.zip` in GCS. Without this IAM grant the backend
+falls back to streaming the zip through the function, which exceeds the
+Cloudflare 100 s edge timeout on multi-flight imports (users see a 524 error).
+
+The Cloud Run runtime service account (`<PROJECT_NUMBER>-compute@developer.gserviceaccount.com`
+by default for Firebase Functions 2nd gen) must hold
+`roles/iam.serviceAccountTokenCreator` **on itself** so it can mint signing
+tokens without a private key on disk.
+
+Grant it once per project:
+
+```sh
+PROJECT_NUMBER=$(gcloud projects describe "$FIREBASE_PROJECT_ID" --format='value(projectNumber)')
+SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+gcloud iam service-accounts add-iam-policy-binding "$SA" \
+  --project "$FIREBASE_PROJECT_ID" \
+  --member="serviceAccount:$SA" \
+  --role=roles/iam.serviceAccountTokenCreator
+```
+
+Verify:
+
+```sh
+gcloud iam service-accounts get-iam-policy "$SA" --project "$FIREBASE_PROJECT_ID"
+# Expect a binding for roles/iam.serviceAccountTokenCreator with the SA itself listed.
+```
+
+If the compute SA was replaced with a custom service account, substitute that
+SA email for both `--member` and the target of the grant.
+
 ## Required backend environment (Firebase Functions)
 These values are managed by the shared deploy script. Do not configure them manually in the Firebase console.
 - `BACKEND_PRODUCTION=true` (enables production security guards)

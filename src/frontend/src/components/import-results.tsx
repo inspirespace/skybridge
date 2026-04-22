@@ -18,12 +18,24 @@ export function ImportResults({
 }: ImportResultsProps) {
   const skippedFailedTotal = skipped + failed;
   const totalProcessed = imported + skippedFailedTotal;
+  // Only flag for manual review when there are true failures. Skipped-only
+  // counts are almost always duplicate uploads (flight was already in FlySto)
+  // and shouldn't look like an error to the user.
   const skippedBadge =
-    skippedFailedTotal > 0 ? (
+    failed > 0 ? (
       <Badge variant="warning">Needs review</Badge>
+    ) : skipped > 0 ? (
+      <Badge variant="success">OK</Badge>
     ) : (
       <Badge variant="success">OK</Badge>
     );
+  const skippedLabel = failed > 0 ? "Skipped or failed" : skipped > 0 ? "Already in FlySto" : "Skipped or failed";
+  const skippedDescription =
+    failed > 0
+      ? `Skipped: ${skipped} · Failed: ${failed}`
+      : skipped > 0
+        ? `${skipped} flight${skipped === 1 ? " was" : "s were"} already uploaded previously and were not re-imported.`
+        : "No flights were skipped.";
   const registrationBadge =
     registrationMissing > 0 ? (
       <Badge variant="warning">Needs review</Badge>
@@ -49,8 +61,8 @@ export function ImportResults({
           badge={<Badge variant="success">OK</Badge>}
         />
         <ResultRow
-          label="Skipped or failed"
-          description={`Skipped: ${skipped} · Failed: ${failed}`}
+          label={skippedLabel}
+          description={skippedDescription}
           total={skippedFailedTotal}
           badge={skippedBadge}
         />

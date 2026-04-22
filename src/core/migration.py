@@ -1170,16 +1170,27 @@ def reconcile_aircraft_from_report(
     *,
     heartbeat: Callable[[], None] | None = None,
     payload: dict[str, Any] | None = None,
+    progress: Callable[[int, int], None] | None = None,
 ) -> int:
     """Handle reconcile aircraft from report."""
     persist = payload is None
     if payload is None:
         payload = json.loads(report_path.read_text())
     items = payload.get("items", [])
+    total = sum(1 for item in items if isinstance(item, dict))
     updated = 0
+    processed = 0
     for item in items:
         _safe_heartbeat(heartbeat)
         if not isinstance(item, dict):
+            continue
+        processed += 1
+        if progress is not None:
+            try:
+                progress(processed, total)
+            except Exception:
+                pass
+        if item.get("aircraft_reconciled") is True:
             continue
         tail_number = item.get("tail_number")
         signature = item.get("flysto_source_system_id") or (
@@ -1232,6 +1243,7 @@ def reconcile_aircraft_from_report(
             resolved_format=log_format,
         )
         updated += 1
+        item["aircraft_reconciled"] = True
     payload["aircraft_reconciled_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     payload["aircraft_reconciled"] = updated
     if persist:
@@ -1247,6 +1259,8 @@ def reconcile_crew_from_report(
     *,
     heartbeat: Callable[[], None] | None = None,
     payload: dict[str, Any] | None = None,
+    progress: Callable[[int, int], None] | None = None,
+    skip_if_reconciled: bool = True,
 ) -> int:
     """Handle reconcile crew from report."""
     persist = payload is None
@@ -1263,10 +1277,20 @@ def reconcile_crew_from_report(
             metadata = entry.get("metadata")
             if isinstance(flight_id, str) and isinstance(metadata, dict):
                 review_metadata[flight_id] = metadata
+    total = sum(1 for item in items if isinstance(item, dict))
     updated = 0
+    processed = 0
     for item in items:
         _safe_heartbeat(heartbeat)
         if not isinstance(item, dict):
+            continue
+        processed += 1
+        if progress is not None:
+            try:
+                progress(processed, total)
+            except Exception:
+                pass
+        if skip_if_reconciled and item.get("crew_reconciled") is True:
             continue
         log_id = item.get("flysto_log_id") or item.get("flysto_upload_log_id")
         file_path = item.get("file_path")
@@ -1324,6 +1348,7 @@ def reconcile_crew_from_report(
                     item["flysto_log_id"] = refreshed_log_id
             flysto.assign_crew_for_log_id(log_id, crew)
         updated += 1
+        item["crew_reconciled"] = True
     payload["crew_reconciled_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     payload["crew_reconciled"] = updated
     if persist:
@@ -1477,24 +1502,39 @@ def reconcile_metadata_from_report(
     *,
     heartbeat: Callable[[], None] | None = None,
     payload: dict[str, Any] | None = None,
+    progress: Callable[[int, int], None] | None = None,
 ) -> int:
     """Handle reconcile metadata from report."""
     persist = payload is None
     if payload is None:
         payload = json.loads(report_path.read_text())
     items = payload.get("items", [])
+    total = sum(1 for item in items if isinstance(item, dict))
     updated = 0
+    processed = 0
     for item in items:
         _safe_heartbeat(heartbeat)
         if not isinstance(item, dict):
             continue
+        processed += 1
+        if progress is not None:
+            try:
+                progress(processed, total)
+            except Exception:
+                pass
+        # Idempotent: if the item was already reconciled in a prior worker run,
+        # skip the remote PUT so auto-retry after a 540 s worker timeout does
+        # not redo the whole 46-item loop against FlySto.
+        if item.get("metadata_reconciled") is True:
+            continue
         remarks = item.get("remarks")
         tags = item.get("tags")
         if not remarks and not tags:
+            item["metadata_reconciled"] = True
             continue
         log_id = item.get("flysto_log_id") or item.get("flysto_upload_log_id")
         file_path = item.get("file_path")
-        if file_path:
+        if file_path and not log_id:
             try:
                 resolved_log_id, _signature, _format = _resolve_log_for_report_item(
                     flysto,
@@ -1524,6 +1564,7 @@ def reconcile_metadata_from_report(
             item["flysto_log_id"] = log_id
         if applied:
             updated += 1
+            item["metadata_reconciled"] = True
     payload["metadata_reconciled_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     payload["metadata_reconciled"] = updated
     if persist:

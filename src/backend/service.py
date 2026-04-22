@@ -54,6 +54,7 @@ REVIEW_MANIFEST_ARTIFACT = "review.json"
 REVIEW_FLIGHTS_ARTIFACT = "review-flights.json"
 IMPORT_REPORT_ARTIFACT = "import-report.json"
 IMPORT_CONTEXT_ARTIFACT = "import-context.json"
+ARTIFACTS_ARCHIVE_NAME = "artifacts.zip"
 
 
 class JobService:
@@ -429,6 +430,29 @@ class JobService:
 
             if not dry_run:
                 heartbeat = lambda: _touch_heartbeat(job, store=self._store)
+
+                def _make_progress(base_stage: str, base_percent: int):
+                    # Emit a per-item progress event every few items so the UI
+                    # tick refreshes during long FlySto PUT loops; never
+                    # per-item (Firestore writes + UI renders would thrash).
+                    def _on_progress(done: int, total: int) -> None:
+                        if total <= 0:
+                            return
+                        # Log at start, every 5 items, and at completion.
+                        if done != 1 and done != total and done % 5 != 0:
+                            return
+                        stage_text = f"{base_stage} ({done}/{total})"
+                        try:
+                            _set_import_finalization_stage(
+                                self._store,
+                                job,
+                                stage=stage_text,
+                                percent=base_percent,
+                            )
+                        except Exception:
+                            pass
+                    return _on_progress
+
                 _set_import_finalization_stage(
                     self._store,
                     job,
@@ -463,6 +487,7 @@ class JobService:
                     flysto,
                     heartbeat=heartbeat,
                     payload=finalization_payload,
+                    progress=_make_progress("Reconciling aircraft", 90),
                 )
                 _set_import_finalization_stage(
                     self._store,
@@ -477,6 +502,7 @@ class JobService:
                     cloudahoy,
                     heartbeat=heartbeat,
                     payload=finalization_payload,
+                    progress=_make_progress("Reconciling crew", 92),
                 )
                 _set_import_finalization_stage(
                     self._store,
@@ -489,6 +515,7 @@ class JobService:
                     flysto,
                     heartbeat=heartbeat,
                     payload=finalization_payload,
+                    progress=_make_progress("Reconciling metadata", 94),
                 )
                 # Crew can be cleared by FlySto post-processing; reapply after the queue drains.
                 _maybe_wait_for_processing(flysto, heartbeat=heartbeat)
@@ -505,6 +532,8 @@ class JobService:
                     cloudahoy,
                     heartbeat=heartbeat,
                     payload=finalization_payload,
+                    progress=_make_progress("Reapplying crew assignments", 96),
+                    skip_if_reconciled=False,
                 )
                 report_path.write_text(json.dumps(finalization_payload, indent=2))
             final_report_payload = _load_or_create_import_report(report_path, review_id, len(summaries))
@@ -527,6 +556,13 @@ class JobService:
             self._store.save_job(job)
             self._store.write_artifact(job_id, IMPORT_REPORT_ARTIFACT, final_report_payload)
             self._store.upload_artifact(job_id, "migration.db", state_path)
+            # Build the download archive once on the worker (540 s budget) so the
+            # user-facing Download button can redirect to a signed URL and never
+            # hit the Cloud Run / Cloudflare 100 s timeout.
+            try:
+                _build_and_upload_artifacts_archive(self._store, job)
+            except Exception:
+                _logger.exception("Failed to pre-build artifacts archive for job %s", job_id)
             return job
         except Exception as exc:
             _logger.exception("accept_review failed for job %s", job_id)
@@ -740,6 +776,97 @@ def _upload_detail_artifacts(store: JobStore, job_id: UUID, detail) -> None:
             path = Path(raw_value)
             if path.exists():
                 store.upload_artifact_as(job_id, f"cloudahoy_exports/{path.name}", path)
+
+
+def _build_and_upload_artifacts_archive(store: JobStore, job: JobRecord) -> None:
+    """Build the downloadable artifacts zip once and upload it to object storage.
+
+    Runs inside the worker at the end of ``accept_review`` so the user-facing
+    download endpoint can redirect to a signed URL instead of assembling the
+    archive on every click (which was exceeding the Cloudflare 100 s limit on
+    multi-flight imports).
+    """
+    object_store = getattr(store, "object_store", None)
+    if object_store is None:
+        return
+    import tempfile
+    import zipfile
+    from shutil import copyfileobj
+
+    job_uuid = job.job_id
+    user_id = job.user_id
+    job_dir = store.job_dir(job_uuid)
+    exports_local_dir = job_dir / "work" / "cloudahoy_exports"
+
+    tmp_fd, tmp_name = tempfile.mkstemp(suffix=".zip")
+    os.close(tmp_fd)
+    tmp_path = Path(tmp_name)
+    try:
+        written: set[str] = set()
+        with zipfile.ZipFile(tmp_path, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
+            # Local-first: whatever the worker still has on disk is cheaper than
+            # round-tripping through object storage.
+            if exports_local_dir.exists():
+                for path in exports_local_dir.rglob("*"):
+                    if not path.is_file() or path.name.endswith(".token"):
+                        continue
+                    arcname = f"cloudahoy_exports/{path.relative_to(exports_local_dir)}"
+                    zipf.write(path, arcname=arcname)
+                    written.add(arcname)
+            # Remote: pull every export blob we uploaded during the flight loop.
+            exports_prefix = object_store.key_for(user_id, str(job_uuid), "cloudahoy_exports")
+            try:
+                remote_names = object_store.list_prefix(exports_prefix)
+            except Exception:
+                _logger.exception("Failed to list remote exports for job %s", job_uuid)
+                remote_names = []
+            for name in remote_names:
+                if name.endswith(".token"):
+                    continue
+                arcname = f"cloudahoy_exports/{name}"
+                if arcname in written:
+                    continue
+                key = object_store.key_for(user_id, str(job_uuid), "cloudahoy_exports", name)
+                try:
+                    with tempfile.TemporaryFile() as remote_file:
+                        downloaded = object_store.download_to_file(key, remote_file)
+                        if not downloaded:
+                            continue
+                        remote_file.seek(0)
+                        with zipf.open(arcname, "w") as destination:
+                            copyfileobj(remote_file, destination)
+                        written.add(arcname)
+                except Exception:
+                    _logger.exception("Failed to fold remote export %s into archive", name)
+            # Include the small job-level artifacts so the download is self-contained.
+            for artifact_name in (
+                REVIEW_MANIFEST_ARTIFACT,
+                REVIEW_FLIGHTS_ARTIFACT,
+                IMPORT_REPORT_ARTIFACT,
+                IMPORT_CONTEXT_ARTIFACT,
+            ):
+                try:
+                    payload = store.load_artifact(job_uuid, artifact_name)
+                except FileNotFoundError:
+                    continue
+                except Exception:
+                    continue
+                try:
+                    zipf.writestr(artifact_name, json.dumps(payload, indent=2))
+                    written.add(artifact_name)
+                except Exception:
+                    _logger.exception("Failed to inline artifact %s", artifact_name)
+
+        archive_key = object_store.key_for(user_id, str(job_uuid), ARTIFACTS_ARCHIVE_NAME)
+        try:
+            object_store.put_file(archive_key, tmp_path)
+        except Exception:
+            _logger.exception("Failed to upload artifacts archive for job %s", job_uuid)
+    finally:
+        try:
+            tmp_path.unlink()
+        except OSError:
+            pass
 
 
 def _release_detail_exports(detail) -> None:

@@ -74,11 +74,25 @@ class FakeObjectStore:
     def put_json(self, key: str, payload: dict) -> None:
         self.json_payloads[key] = payload
 
-    def put_file(self, _key: str, _path) -> None:
-        return None
+    def put_file(self, key: str, path) -> None:
+        # Record bytes so exists() and get_bytes() behave realistically.
+        from pathlib import Path as _P
+
+        try:
+            self.bytes_payloads[key] = _P(str(path)).read_bytes()
+        except Exception:
+            self.bytes_payloads[key] = b""
 
     def delete_prefix(self, _prefix: str) -> None:
         return None
+
+    def exists(self, key: str) -> bool:
+        return key in self.json_payloads or key in self.bytes_payloads
+
+    def generate_signed_url(self, key: str, *, expires_in_seconds: int = 600) -> str | None:
+        if not self.exists(key):
+            return None
+        return f"https://signed.example/{key}?exp={expires_in_seconds}"
 
 
 @pytest.fixture()
@@ -525,8 +539,39 @@ def test_artifact_handlers(store):
     assert read_response["statusCode"] == 200
 
 
-def test_download_artifacts_zip_merges_remote_exports_with_local_cache(tmp_path, monkeypatch: pytest.MonkeyPatch):
-    import zipfile
+def test_download_artifacts_zip_redirects_to_signed_url_when_archive_is_pre_built(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+):
+    object_store = FakeObjectStore()
+    store = JobStore(tmp_path, object_store=object_store)
+    job = _job("completed")
+    store.save_job(job)
+    monkeypatch.setattr(handlers, "_store", store)
+    monkeypatch.setattr(
+        handlers,
+        "user_id_from_event",
+        lambda event: "pilot"
+        if (event.get("headers") or {}).get("Authorization")
+        else (_ for _ in ()).throw(Exception("missing auth")),
+    )
+
+    archive_key = object_store.key_for(job.user_id, str(job.job_id), "artifacts.zip")
+    object_store.bytes_payloads[archive_key] = b"PK\x05\x06" + b"\x00" * 18  # empty zip
+
+    event = _event("pilot", job_id=str(job.job_id))
+    event["headers"]["Accept"] = "application/json"
+    response = handlers.download_artifacts_zip_handler(event, None)
+
+    assert response["statusCode"] == 200
+    body = json.loads(response["body"])
+    assert body["download_url"].startswith("https://signed.example/")
+    assert body["filename"].endswith(".zip")
+
+
+def test_download_artifacts_zip_streams_bytes_when_signed_url_unavailable(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+):
+    import base64
 
     object_store = FakeObjectStore()
     store = JobStore(tmp_path, object_store=object_store)
@@ -541,36 +586,29 @@ def test_download_artifacts_zip_merges_remote_exports_with_local_cache(tmp_path,
         else (_ for _ in ()).throw(Exception("missing auth")),
     )
 
-    exports_dir = store.job_dir(job.job_id) / "work" / "cloudahoy_exports"
-    exports_dir.mkdir(parents=True, exist_ok=True)
-    (exports_dir / "flight-1.gpx").write_text("local-stale")
+    archive_key = object_store.key_for(job.user_id, str(job.job_id), "artifacts.zip")
+    object_store.bytes_payloads[archive_key] = b"zip-content-bytes"
 
-    remote_prefix = object_store.key_for(job.user_id, str(job.job_id), "cloudahoy_exports")
-    object_store.bytes_payloads[f"{remote_prefix}/flight-1.gpx"] = b"remote-fresh"
-    object_store.bytes_payloads[f"{remote_prefix}/flight-2.gpx"] = b"remote-second"
+    # Simulate signing being unavailable (e.g. IAM role missing).
+    monkeypatch.setattr(object_store, "generate_signed_url", lambda *_a, **_k: None)
 
-    response = handlers.download_artifacts_zip_handler(
-        _event("pilot", job_id=str(job.job_id)),
-        None,
-    )
+    event = _event("pilot", job_id=str(job.job_id))
+    event["headers"]["Accept"] = "application/json"
+    response = handlers.download_artifacts_zip_handler(event, None)
 
     assert response["statusCode"] == 200
-    assert response["bodyFilePath"]
-    with zipfile.ZipFile(response["bodyFilePath"], "r") as archive:
-        assert sorted(archive.namelist()) == ["flight-1.gpx", "flight-2.gpx"]
-        assert archive.read("flight-1.gpx") == b"remote-fresh"
-        assert archive.read("flight-2.gpx") == b"remote-second"
-    Path(response["bodyFilePath"]).unlink(missing_ok=True)
+    assert response["headers"]["Content-Type"] == "application/zip"
+    assert base64.b64decode(response["body"]) == b"zip-content-bytes"
 
 
-def test_download_artifacts_zip_falls_back_to_local_when_remote_object_is_missing(
+def test_download_artifacts_zip_falls_back_to_local_when_no_archive(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
 ):
     import zipfile
 
-    object_store = FakeObjectStore()
-    store = JobStore(tmp_path, object_store=object_store)
+    # No object_store at all — exercises the dev / single-container fallback.
+    store = JobStore(tmp_path)
     job = _job("completed")
     store.save_job(job)
     monkeypatch.setattr(handlers, "_store", store)
@@ -586,14 +624,6 @@ def test_download_artifacts_zip_falls_back_to_local_when_remote_object_is_missin
     exports_dir.mkdir(parents=True, exist_ok=True)
     (exports_dir / "flight-1.gpx").write_text("local-fallback")
 
-    original_list_prefix = object_store.list_prefix
-    remote_prefix = object_store.key_for(job.user_id, str(job.job_id), "cloudahoy_exports")
-    monkeypatch.setattr(
-        object_store,
-        "list_prefix",
-        lambda prefix: ["flight-1.gpx"] if prefix == remote_prefix else original_list_prefix(prefix),
-    )
-
     response = handlers.download_artifacts_zip_handler(
         _event("pilot", job_id=str(job.job_id)),
         None,
@@ -602,8 +632,8 @@ def test_download_artifacts_zip_falls_back_to_local_when_remote_object_is_missin
     assert response["statusCode"] == 200
     assert response["bodyFilePath"]
     with zipfile.ZipFile(response["bodyFilePath"], "r") as archive:
-        assert archive.namelist() == ["flight-1.gpx"]
-        assert archive.read("flight-1.gpx") == b"local-fallback"
+        assert archive.namelist() == ["cloudahoy_exports/flight-1.gpx"]
+        assert archive.read("cloudahoy_exports/flight-1.gpx") == b"local-fallback"
     Path(response["bodyFilePath"]).unlink(missing_ok=True)
 
 

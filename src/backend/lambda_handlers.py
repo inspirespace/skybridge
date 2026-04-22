@@ -18,7 +18,12 @@ from .firebase_errors import FirestoreDatabaseNotConfiguredError
 from .models import CredentialValidationRequest, JobAcceptRequest, JobCreateRequest, ProgressEvent
 from .object_store import build_object_store_from_env
 from .queue import resolve_job_queue_topic_path
-from .service import JobService, reconcile_completed_import_from_report, validate_credentials
+from .service import (
+    ARTIFACTS_ARCHIVE_NAME,
+    JobService,
+    reconcile_completed_import_from_report,
+    validate_credentials,
+)
 from .store import JobStore
 
 _logger = logging.getLogger(__name__)
@@ -646,8 +651,18 @@ def delete_job_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
 
 
 def download_artifacts_zip_handler(event: dict[str, Any], _context: Any) -> dict[str, Any]:
-    """Download artifacts zip handler."""
+    """Serve the pre-built artifacts archive.
+
+    The worker builds ``artifacts.zip`` once at the end of ``accept_review``
+    and uploads it to object storage. This handler redirects the browser to a
+    short-lived signed URL so the download never traverses the function (and
+    therefore never hits the Cloudflare 100 s edge timeout). If signing is
+    unavailable we stream the archive bytes through the function; for local
+    dev (no object store) we fall back to zipping the on-disk export dir.
+    """
     try:
+        import base64
+
         user_id = _user_id(event)
         if not user_id:
             return _response(401, {"detail": "Missing authentication"})
@@ -663,60 +678,88 @@ def download_artifacts_zip_handler(event: dict[str, Any], _context: Any) -> dict
         except ValueError:
             return _response(404, {"detail": "Job not found"})
 
+        store = _get_store()
+        filename = f"skybridge-run-{job_uuid}.zip"
+
+        accept = (event.get("headers") or {}).get("Accept") or (event.get("headers") or {}).get("accept") or ""
+        wants_json = "application/json" in accept.lower()
+
+        # Preferred path: hand the browser a short-lived signed URL so it can
+        # download directly from GCS (no function-in-the-middle, no Cloudflare
+        # 100 s timeout). The frontend navigates to this URL; it never needs
+        # to stream the zip through the function.
+        if store.object_store is not None:
+            archive_key = store.object_store.key_for(
+                user_id, str(job_uuid), ARTIFACTS_ARCHIVE_NAME
+            )
+            try:
+                archive_exists = store.object_store.exists(archive_key)
+            except Exception:
+                _logger.exception("Failed to check archive existence for job %s", job_uuid)
+                archive_exists = False
+            if archive_exists:
+                try:
+                    signed_url = store.object_store.generate_signed_url(
+                        archive_key, expires_in_seconds=600
+                    )
+                except Exception:
+                    _logger.exception("Failed to sign archive URL for job %s", job_uuid)
+                    signed_url = None
+                if signed_url and wants_json:
+                    return _response(200, {"download_url": signed_url, "filename": filename})
+                # Signing unavailable — stream bytes through the function. This
+                # avoids the CORS-on-GCS requirement entirely but gives up the
+                # "no function timeout" guarantee.
+                try:
+                    payload = store.object_store.get_bytes(archive_key)
+                except Exception:
+                    _logger.exception("Failed to read archive bytes for job %s", job_uuid)
+                    payload = None
+                if payload is not None:
+                    return {
+                        "statusCode": 200,
+                        "headers": {
+                            "Content-Type": "application/zip",
+                            "Content-Disposition": f'attachment; filename="{filename}"',
+                        },
+                        "isBase64Encoded": True,
+                        "body": base64.b64encode(payload).decode("ascii"),
+                    }
+                if signed_url:
+                    # Browser navigated to the endpoint directly (not via our
+                    # JSON-wanting frontend); 302 so plain <a> clicks still work.
+                    return {
+                        "statusCode": 302,
+                        "headers": {
+                            "Location": signed_url,
+                            "Cache-Control": "no-store",
+                        },
+                        "body": "",
+                    }
+
+        # Local-disk fallback (dev / single-container deployments).
+        job_dir = store.job_dir(job_uuid)
+        if not job_dir.exists():
+            return _response(
+                404,
+                {"detail": "Artifacts not available yet. If the import just completed, retry in a few seconds."},
+            )
+
         import tempfile
         import zipfile
-        from shutil import copyfileobj
 
-        store = _get_store()
-        job_dir = store.job_dir(job_uuid)
-        if not job_dir.exists() and not store.object_store:
-            return _response(404, {"detail": "Job not found"})
-
+        exports_dir = job_dir / "work" / "cloudahoy_exports"
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
         temp_file.close()
         temp_path = temp_file.name
-
         try:
-            exports_dir = job_dir / "work" / "cloudahoy_exports"
-            local_entries: dict[str, Any] = {}
-            remote_entries: set[str] = set()
             with zipfile.ZipFile(temp_path, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
                 if exports_dir.exists():
                     for path in exports_dir.rglob("*"):
-                        if not path.is_file():
+                        if not path.is_file() or path.name.endswith(".token"):
                             continue
-                        if path.name.endswith(".token"):
-                            continue
-                        arcname = str(path.relative_to(exports_dir))
-                        local_entries[arcname] = path
-                if store.object_store:
-                    prefix = store.object_store.key_for(user_id, str(job_uuid), "cloudahoy_exports")
-                    for key in store.object_store.list_prefix(prefix):
-                        if key.endswith(".token"):
-                            continue
-                        remote_entries.add(key)
-                for arcname in sorted(local_entries):
-                    if arcname in remote_entries:
-                        continue
-                    zipf.write(local_entries[arcname], arcname=arcname)
-                if store.object_store:
-                    for arcname in sorted(remote_entries):
-                        full_key = store.object_store.key_for(
-                            user_id,
-                            str(job_uuid),
-                            "cloudahoy_exports",
-                            arcname,
-                        )
-                        with tempfile.TemporaryFile() as remote_file:
-                            downloaded = store.object_store.download_to_file(full_key, remote_file)
-                            if not downloaded:
-                                if arcname in local_entries:
-                                    zipf.write(local_entries[arcname], arcname=arcname)
-                                continue
-                            remote_file.seek(0)
-                            with zipf.open(arcname, "w") as destination:
-                                copyfileobj(remote_file, destination)
-            filename = f"skybridge-run-{job_uuid}.zip"
+                        arcname = f"cloudahoy_exports/{path.relative_to(exports_dir)}"
+                        zipf.write(path, arcname=arcname)
             return {
                 "statusCode": 200,
                 "headers": {

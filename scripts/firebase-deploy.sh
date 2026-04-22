@@ -1243,6 +1243,61 @@ EOF
   echo "Deploy preflight verifies sign-in mode and authorized domains only; it does not auto-patch Firebase Auth templates or project naming." >&2
 }
 
+preflight_compute_sa_signer_role() {
+  # Ensure the Cloud Run runtime service account can mint V4 signed GET URLs
+  # for GCS. Without this role the backend falls back to streaming the
+  # download zip through the function, which exceeds the Cloudflare 100 s
+  # timeout for multi-flight imports.
+  local project_id project_number sa role
+  project_id="${PROJECT_ID:-$FIREBASE_PROJECT_ID}"
+  if [ -z "$project_id" ]; then
+    return 0
+  fi
+  if ! command -v gcloud >/dev/null 2>&1; then
+    echo "Signer preflight: gcloud not available; skipping iam.serviceAccountTokenCreator check." >&2
+    return 0
+  fi
+  project_number="$(gcloud projects describe "$project_id" --format='value(projectNumber)' 2>/dev/null || true)"
+  if [ -z "$project_number" ]; then
+    echo "Signer preflight: could not resolve project number for ${project_id}; skipping signed-URL IAM check." >&2
+    return 0
+  fi
+  sa="${project_number}-compute@developer.gserviceaccount.com"
+  role="roles/iam.serviceAccountTokenCreator"
+  local has_role
+  has_role="$(gcloud iam service-accounts get-iam-policy "$sa" \
+    --project "$project_id" \
+    --flatten='bindings[].members' \
+    --filter="bindings.role:${role} AND bindings.members:serviceAccount:${sa}" \
+    --format='value(bindings.role)' 2>/dev/null || true)"
+  if [ -n "$has_role" ]; then
+    echo "Signer preflight: ${sa} already has ${role} (download signed URLs will work)."
+    return 0
+  fi
+  echo "Signer preflight: granting ${role} to ${sa} so the Download button can redirect to signed GCS URLs..."
+  if gcloud iam service-accounts add-iam-policy-binding "$sa" \
+    --project "$project_id" \
+    --member="serviceAccount:${sa}" \
+    --role="$role" >/dev/null 2>&1; then
+    echo "Signer preflight: granted ${role} on ${sa}."
+    return 0
+  fi
+  cat >&2 <<EOF
+Signer preflight: failed to grant ${role} on ${sa}.
+The Download Files button will fall back to streaming the zip through the
+function, which can exceed the Cloudflare 100 s timeout for large imports.
+
+Grant it manually with a principal that has Project IAM Admin (roles/resourcemanager.projectIamAdmin):
+
+  gcloud iam service-accounts add-iam-policy-binding "${sa}" \\
+    --project "${project_id}" \\
+    --member="serviceAccount:${sa}" \\
+    --role=${role}
+
+(See docs/production.md "Required IAM — download signed URLs".)
+EOF
+}
+
 preflight_firebase_auth_signin_config() {
   local use_emulator
   use_emulator="$(resolve_config_value VITE_FIREBASE_USE_EMULATOR src/frontend/.env .env || true)"
@@ -1924,6 +1979,7 @@ fi
 
 prepare_managed_deploy_env
 preflight_storage_bucket
+preflight_compute_sa_signer_role
 preflight_app_check_config
 preflight_frontend_firebase_config
 preflight_firestore_database

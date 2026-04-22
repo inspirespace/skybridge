@@ -1093,13 +1093,23 @@ export default function App() {
     setDownloadLoading(true);
     setActionError(null);
     try {
-      const blob = await downloadArtifactsZip(jobId, auth);
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `skybridge-run-${jobId}.zip`;
-      link.click();
-      window.URL.revokeObjectURL(url);
+      const result = await downloadArtifactsZip(jobId, auth);
+      if (result instanceof Blob) {
+        const url = window.URL.createObjectURL(result);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `skybridge-run-${jobId}.zip`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+      } else {
+        // Signed GCS URL — navigate directly so the browser downloads from GCS
+        // and no function-in-the-middle risks another Cloudflare timeout.
+        const link = document.createElement("a");
+        link.href = result.downloadUrl;
+        link.download = result.filename;
+        link.rel = "noopener";
+        link.click();
+      }
     } catch (err) {
       if (isAuthExpiredError(err)) {
         handleTokenExpired();
