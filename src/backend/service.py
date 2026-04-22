@@ -397,19 +397,26 @@ class JobService:
                 _touch_heartbeat(job)
                 self._store.save_job(job)
 
+                # Local CloudAhoy exports have been copied to object storage;
+                # drop the files and in-memory payload so the next iteration
+                # does not compound against the 256 MiB worker budget.
+                _release_detail_exports(detail)
+                detail = None
+                aircraft = None
+                metadata = None
+                crew = None
+                remarks = None
+                tags = None
+                file_hash = csv_hash = metadata_hash = None
+                trim = getattr(flysto, "trim_caches", None)
+                if callable(trim):
+                    try:
+                        trim()
+                    except Exception:
+                        pass
+
             if (job.phase_cursor or 0) < total_summaries:
                 return job
-
-            # Release large per-flight buffers held by the upload loop before
-            # starting finalization, so reconcile passes run with lower memory
-            # pressure on the 256 MiB worker.
-            detail = None
-            aircraft = None
-            metadata = None
-            crew = None
-            remarks = None
-            tags = None
-            file_hash = csv_hash = metadata_hash = None
 
             _append_progress(
                 job,
@@ -733,6 +740,30 @@ def _upload_detail_artifacts(store: JobStore, job_id: UUID, detail) -> None:
             path = Path(raw_value)
             if path.exists():
                 store.upload_artifact_as(job_id, f"cloudahoy_exports/{path.name}", path)
+
+
+def _release_detail_exports(detail) -> None:
+    """Delete local CloudAhoy export files once they are safe on object storage."""
+    if detail is None:
+        return
+    seen: set[str] = set()
+    for attr in ("file_path", "csv_path", "raw_path", "metadata_path"):
+        raw_value = getattr(detail, attr, None)
+        if isinstance(raw_value, str) and raw_value and raw_value not in seen:
+            seen.add(raw_value)
+            try:
+                Path(raw_value).unlink(missing_ok=True)
+            except OSError:
+                pass
+    export_paths = getattr(detail, "export_paths", None)
+    if isinstance(export_paths, dict):
+        for raw_value in export_paths.values():
+            if isinstance(raw_value, str) and raw_value and raw_value not in seen:
+                seen.add(raw_value)
+                try:
+                    Path(raw_value).unlink(missing_ok=True)
+                except OSError:
+                    pass
 
 
 def _load_or_create_import_report(report_path: Path, review_id: str | None, attempted: int) -> dict:
