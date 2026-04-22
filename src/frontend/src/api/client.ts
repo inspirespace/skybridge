@@ -350,8 +350,10 @@ export async function downloadArtifactsZip(jobId: string, auth: AuthContext): Pr
   // Ask for JSON so the server can hand us a short-lived signed URL instead of
   // streaming the zip through the function (which exceeded the Cloudflare 100 s
   // edge timeout on multi-flight imports).
-  const headers = await buildRequestHeaders(auth, false, false);
-  headers.set("Accept", "application/json");
+  const headers = {
+    ...(await buildRequestHeaders(auth, false, false)),
+    Accept: "application/json",
+  };
   const response = await fetch(`${apiBaseUrl}/jobs/${jobId}/artifacts.zip`, {
     headers,
   });
