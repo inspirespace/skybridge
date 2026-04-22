@@ -471,8 +471,8 @@ export default function App() {
     now,
     importRunning
   );
-  const reviewLastUpdate = formatPhaseLastUpdate(job?.progress_log, "review", now);
-  const importLastUpdate = formatPhaseLastUpdate(job?.progress_log, "import", now);
+  const reviewLastUpdate = formatPhaseLastUpdate(job?.progress_log, "review", now, job?.heartbeat_at);
+  const importLastUpdate = formatPhaseLastUpdate(job?.progress_log, "import", now, job?.heartbeat_at);
   const heartbeatAt = job?.heartbeat_at ? Date.parse(job.heartbeat_at) : NaN;
   const stalledHeartbeat =
     Number.isFinite(heartbeatAt) &&

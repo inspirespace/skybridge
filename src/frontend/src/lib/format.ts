@@ -76,20 +76,39 @@ export function formatPhaseElapsed(
   return formatElapsed(start, end);
 }
 
-/** Format phaselastupdate. */
+/** Format phaselastupdate.
+ *
+ * Uses the most recent of either a progress_log entry for the phase or the
+ * job-level heartbeat_at, so background heartbeats keep the UI ticking
+ * even when no new progress event is emitted (e.g. during a slow FlySto
+ * PUT inside a reconcile pass).
+ */
 export function formatPhaseLastUpdate(
   log: ProgressEvent[] | undefined,
   phase: ProgressEvent["phase"],
-  now: Date
+  now: Date,
+  heartbeatAt?: string | null
 ) {
   const events = getPhaseEvents(log, phase);
-  if (!events.length) return "-";
-  const latest = events.reduce((acc, event) =>
-    new Date(event.created_at).getTime() > new Date(acc.created_at).getTime()
-      ? event
-      : acc
-  );
-  return formatLastUpdate(latest.created_at, now);
+  let latestTimestamp: string | null = null;
+  if (events.length) {
+    const latest = events.reduce((acc, event) =>
+      new Date(event.created_at).getTime() > new Date(acc.created_at).getTime()
+        ? event
+        : acc
+    );
+    latestTimestamp = latest.created_at;
+  }
+  if (heartbeatAt) {
+    if (
+      !latestTimestamp ||
+      new Date(heartbeatAt).getTime() > new Date(latestTimestamp).getTime()
+    ) {
+      latestTimestamp = heartbeatAt;
+    }
+  }
+  if (!latestTimestamp) return "-";
+  return formatLastUpdate(latestTimestamp, now);
 }
 
 /** Format flightid. */
