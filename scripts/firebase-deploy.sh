@@ -1290,9 +1290,8 @@ preflight_compute_sa_signer_role() {
     return 0
   fi
   local has_role
-  has_role="$(printf '%s' "$policy_json" | python3 - "$role" "$sa" <<'PY' 2>/dev/null || true
+  has_role="$(printf '%s' "$policy_json" | python3 -c '
 import json, sys
-
 role_want = sys.argv[1]
 member_want = f"serviceAccount:{sys.argv[2]}"
 doc = json.load(sys.stdin)
@@ -1300,8 +1299,7 @@ for binding in doc.get("bindings", []) or []:
     if binding.get("role") == role_want and member_want in (binding.get("members") or []):
         print("yes")
         break
-PY
-)"
+' "$role" "$sa" 2>/dev/null)" || true
   if [ -n "$has_role" ]; then
     echo "Signer preflight: ${sa} already has ${role} (download signed URLs will work)."
     return 0
@@ -1309,9 +1307,8 @@ PY
 
   echo "Signer preflight: granting ${role} to ${sa} so Download Files can redirect to signed GCS URLs..."
   local grant_body
-  grant_body="$(printf '%s' "$policy_json" | python3 - "$role" "$sa" <<'PY' 2>/dev/null || true
+  grant_body="$(printf '%s' "$policy_json" | python3 -c '
 import json, sys
-
 role_want = sys.argv[1]
 member_want = f"serviceAccount:{sys.argv[2]}"
 doc = json.load(sys.stdin)
@@ -1326,8 +1323,7 @@ else:
     bindings.append({"role": role_want, "members": [member_want]})
 doc["bindings"] = bindings
 print(json.dumps({"policy": doc}))
-PY
-)"
+' "$role" "$sa" 2>/dev/null)" || true
   if [ -z "$grant_body" ]; then
     echo "Signer preflight: failed to compose IAM patch; leaving configuration untouched." >&2
     echo "Signer preflight: ${manual_cmd}" >&2
