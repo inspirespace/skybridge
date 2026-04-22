@@ -31,6 +31,12 @@ class ObjectStoreProtocol(Protocol):
 
     def delete_prefix(self, prefix: str) -> None: ...
 
+    def exists(self, key: str) -> bool: ...
+
+    def generate_signed_url(
+        self, key: str, *, expires_in_seconds: int = 600
+    ) -> str | None: ...
+
 
 class GcsObjectStore:
     """GCS-backed object storage for job artifacts."""
@@ -102,6 +108,44 @@ class GcsObjectStore:
         blobs = list(self._client.list_blobs(self._bucket, prefix=prefix))
         if blobs:
             self._bucket.delete_blobs(blobs)
+
+    def exists(self, key: str) -> bool:
+        return self._bucket.blob(key).exists()
+
+    def generate_signed_url(
+        self, key: str, *, expires_in_seconds: int = 600
+    ) -> str | None:
+        """Return a V4 signed GET URL for ``key`` using the runtime SA.
+
+        Uses IAM-based signing (no private key on disk). Requires the Cloud
+        Run / Functions service account to hold ``roles/iam.serviceAccountTokenCreator``
+        on itself. Returns None if signing fails so callers can fall back to
+        streaming the object through the function.
+        """
+        import datetime as _dt
+
+        blob = self._bucket.blob(key)
+        if not blob.exists():
+            return None
+        try:
+            credentials = getattr(self._client, "_credentials", None)
+            service_account_email = getattr(credentials, "service_account_email", None)
+            if isinstance(service_account_email, str) and service_account_email and service_account_email != "default":
+                return blob.generate_signed_url(
+                    version="v4",
+                    expiration=_dt.timedelta(seconds=expires_in_seconds),
+                    method="GET",
+                    service_account_email=service_account_email,
+                    access_token=None,  # let the client fetch a token via IAM
+                )
+            # Fallback: let google-cloud-storage figure out the signer from ADC.
+            return blob.generate_signed_url(
+                version="v4",
+                expiration=_dt.timedelta(seconds=expires_in_seconds),
+                method="GET",
+            )
+        except Exception:
+            return None
 
 
 def build_object_store_from_env() -> ObjectStoreProtocol:

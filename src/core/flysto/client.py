@@ -4,7 +4,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 import json
+import os
 import re
+import tempfile
 import time
 from typing import Any
 import zipfile
@@ -62,6 +64,18 @@ class FlyStoClient:
             self.api_version = _infer_api_version(self.base_url)
         return True
 
+    def trim_caches(self, *, keep: int = 8) -> None:
+        """Cap per-file caches so long imports don't grow unbounded.
+
+        Each entry is only needed for the current flight's report item; once
+        that item is persisted, older entries are dead weight against the
+        256 MiB worker budget.
+        """
+        for cache in (self.log_cache, self.upload_cache, self.log_source_cache):
+            while len(cache) > keep:
+                oldest = next(iter(cache))
+                cache.pop(oldest, None)
+
     def upload_flight(self, flight: FlightDetail, dry_run: bool = False) -> "UploadResult | None":
         """Handle upload flight."""
         if dry_run:
@@ -74,18 +88,26 @@ class FlyStoClient:
             self.api_version = _infer_api_version(self.base_url)
 
         file_path = Path(flight.file_path)
-        payload = _build_upload_payload(file_path)
+        body_path, cleanup = _build_upload_payload(file_path)
         headers = {"content-type": "application/zip"}
         if self.api_version:
             headers["x-version"] = self.api_version
-        response = self._request(
-            session,
-            "post",
-            _upload_url(self.upload_url, self.base_url, file_path.name),
-            data=payload,
-            headers=headers,
-            timeout=120,
-        )
+        try:
+            with body_path.open("rb") as body:
+                response = self._request(
+                    session,
+                    "post",
+                    _upload_url(self.upload_url, self.base_url, file_path.name),
+                    data=body,
+                    headers=headers,
+                    timeout=120,
+                )
+        finally:
+            if cleanup:
+                try:
+                    body_path.unlink()
+                except OSError:
+                    pass
 
         if response.status_code >= 300:
             error_message = f"FlySto upload failed: {response.status_code} {response.text[:300]}"
@@ -93,7 +115,6 @@ class FlyStoClient:
                 raise RuntimeError(f"duplicate upload: {error_message}")
             raise RuntimeError(error_message)
         result = _parse_upload_response(response.text, file_path.name)
-        # Keep upload metadata for later reporting without poisoning resolve_log_for_file.
         if result:
             self.upload_cache[file_path.name] = result
         return result
@@ -827,8 +848,21 @@ class FlyStoClient:
             if not any(key.lower() == "x-version" for key in headers):
                 headers["x-version"] = self.api_version
             kwargs["headers"] = headers
+        body = kwargs.get("data")
+        seekable = body is not None and hasattr(body, "seek") and hasattr(body, "tell")
+        body_start = None
+        if seekable:
+            try:
+                body_start = body.tell()
+            except Exception:
+                seekable = False
         last_error = None
         for attempt in range(self.max_request_retries):
+            if seekable and attempt > 0:
+                try:
+                    body.seek(body_start)
+                except Exception:
+                    pass
             self._respect_rate_limit()
             try:
                 response = session.request(method, url, **kwargs)
@@ -932,15 +966,27 @@ def _validate_flight_for_upload(flight: FlightDetail) -> None:
 
 
 
-def _build_upload_payload(path: Path) -> bytes:
-    """Internal helper for build upload payload."""
-    data = path.read_bytes()
+def _build_upload_payload(path: Path) -> tuple[Path, bool]:
+    """Return a path to a zip body plus whether the caller should delete it.
+
+    The zip is built by streaming the source file through ``ZipFile.write`` so
+    the upload never holds the full file (or the compressed copy) in memory.
+    """
     if path.suffix.lower() == ".zip":
-        return data
-    buffer = __import__('io').BytesIO()
-    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr(path.name, data)
-    return buffer.getvalue()
+        return path, False
+    tmp_fd, tmp_name = tempfile.mkstemp(suffix=".zip")
+    os.close(tmp_fd)
+    tmp_path = Path(tmp_name)
+    try:
+        with zipfile.ZipFile(tmp_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            archive.write(path, arcname=path.name)
+    except Exception:
+        try:
+            tmp_path.unlink()
+        except OSError:
+            pass
+        raise
+    return tmp_path, True
 
 
 def _parse_upload_response(text: str, filename: str) -> UploadResult | None:

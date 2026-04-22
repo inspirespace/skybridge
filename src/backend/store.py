@@ -230,7 +230,7 @@ class JobStore:
         job_dir = self._job_dir(job_id)
         if job_dir.exists():
             rmtree(job_dir)
-        if self._object_store and _bool_env("BACKEND_OBJECT_STORE_DELETE_ON_CLEAR", False):
+        if self._object_store:
             prefix = self._object_prefix_for_job(job_id, user_id=user_id)
             if prefix:
                 try:
@@ -506,6 +506,78 @@ class JobStore:
                 deleted += 1
         return deleted
 
+    def cleanup_orphaned_remote_artifacts(self) -> int:
+        """Remove remote artifact prefixes that no longer have a stored job record."""
+        if not self._object_store:
+            return 0
+        root_prefix = _object_store_root_prefix(self._object_store)
+        try:
+            keys = self._object_store.list_prefix(root_prefix)
+        except Exception as exc:
+            logging.getLogger(__name__).warning(
+                "Failed to list remote artifacts under %s: %s",
+                root_prefix or "<root>",
+                exc,
+            )
+            return 0
+        if not keys:
+            return 0
+
+        active_job_ids = self._stored_job_ids()
+        orphan_prefixes: set[str] = set()
+        for key in keys:
+            parsed = _remote_job_prefix_from_artifact_key(key)
+            if parsed is None:
+                continue
+            user_id, job_id = parsed
+            if job_id not in active_job_ids:
+                orphan_prefixes.add(self._object_store.key_for(user_id, job_id))
+
+        deleted = 0
+        for prefix in sorted(orphan_prefixes):
+            try:
+                self._object_store.delete_prefix(prefix)
+                deleted += 1
+            except Exception as exc:
+                logging.getLogger(__name__).warning(
+                    "Failed to delete orphaned remote artifacts under %s: %s",
+                    prefix,
+                    exc,
+                )
+        return deleted
+
+    def _stored_job_ids(self) -> set[str]:
+        """Return stored job ids without triggering cleanup recursion."""
+        job_ids: set[str] = set()
+        if self._firestore_collection:
+            try:
+                for doc in self._firestore_collection.stream():
+                    try:
+                        job_ids.add(str(UUID(doc.id)))
+                    except ValueError:
+                        continue
+            except Exception as exc:
+                self._raise_firestore_configuration_error(exc)
+                raise
+            return job_ids
+
+        for job_dir in self._base_path.iterdir():
+            if not job_dir.is_dir():
+                continue
+            job_file = job_dir / "job.json"
+            if not job_file.exists():
+                continue
+            try:
+                job_data = json.loads(job_file.read_text())
+            except Exception:
+                continue
+            raw_job_id = job_data.get("job_id") or job_dir.name
+            try:
+                job_ids.add(str(UUID(str(raw_job_id))))
+            except ValueError:
+                continue
+        return job_ids
+
     def _is_expired(self, job: JobRecord) -> bool:
         """Internal helper for is expired."""
         retention_days = int(os.getenv("BACKEND_RETENTION_DAYS") or "7")
@@ -526,6 +598,31 @@ def _ttl_epoch(created_at: datetime) -> int:
     if created_at.tzinfo is None:
         created_at = created_at.replace(tzinfo=timezone.utc)
     return int(created_at.timestamp() + retention_days * 86400)
+
+
+def _object_store_root_prefix(object_store: ObjectStoreProtocol) -> str:
+    """Best-effort root prefix for listing all remote job artifacts."""
+    marker = "__skybridge_root_marker__"
+    key = object_store.key_for(marker).strip("/")
+    suffix = f"/{marker}"
+    if key == marker:
+        return ""
+    if key.endswith(suffix):
+        return key[: -len(suffix)]
+    return ""
+
+
+def _remote_job_prefix_from_artifact_key(key: str) -> tuple[str, str] | None:
+    """Parse a remote artifact key relative to the object-store root prefix."""
+    parts = [part for part in key.split("/") if part]
+    if len(parts) < 3:
+        return None
+    user_id, raw_job_id = parts[0], parts[1]
+    try:
+        job_id = str(UUID(raw_job_id))
+    except ValueError:
+        return None
+    return user_id, job_id
 
 
 def _extract_locations(
@@ -635,14 +732,6 @@ def _serialize(job: JobRecord) -> dict[str, Any]:
 
     raw = job.model_dump()
     return {key: _normalize(value) for key, value in raw.items()}
-
-
-def _bool_env(name: str, default: bool) -> bool:
-    """Internal helper for bool env."""
-    value = os.getenv(name)
-    if value is None:
-        return default
-    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _delete_related_credentials(job_id: UUID) -> None:

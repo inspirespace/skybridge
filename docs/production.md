@@ -8,10 +8,45 @@ This is a checklist of what production needs, not a step-by-step deployment guid
   - Jobs collection: documents keyed by `job_id`, with `user_id` field indexed.
   - Credentials collection: documents keyed by `token` with TTL configured.
 - **Cloud Scheduler** (auto-created by Functions schedule) for daily TTL cleanup.
-- **Firebase Storage** bucket for job artifacts (add a lifecycle rule; 7 days suggested).
+- **Firebase Storage** bucket for job artifacts.
+  - App cleanup deletes a job's artifact prefix immediately when the user clears a run or when TTL cleanup expires the job.
+  - Keep a bucket lifecycle rule as a safety net for unexpected orphaned objects; 7 days is still a sensible default.
 - **Pub/Sub** topic `skybridge-job-queue` for review/import jobs (Functions 2nd gen trigger; fixed by code, not a runtime toggle).
 - **Firebase Hosting** for SPA + API rewrites.
   - `/api/**` rewrites to the `api` function (see `firebase.json`).
+
+## Required IAM — download signed URLs (one-time setup per project)
+
+The **Download files** button hands the browser a short-lived V4 signed URL
+for the pre-built `artifacts.zip` in GCS. Without this IAM grant the backend
+falls back to streaming the zip through the function, which exceeds the
+Cloudflare 100 s edge timeout on multi-flight imports (users see a 524 error).
+
+The Cloud Run runtime service account (`<PROJECT_NUMBER>-compute@developer.gserviceaccount.com`
+by default for Firebase Functions 2nd gen) must hold
+`roles/iam.serviceAccountTokenCreator` **on itself** so it can mint signing
+tokens without a private key on disk.
+
+Grant it once per project:
+
+```sh
+PROJECT_NUMBER=$(gcloud projects describe "$FIREBASE_PROJECT_ID" --format='value(projectNumber)')
+SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+gcloud iam service-accounts add-iam-policy-binding "$SA" \
+  --project "$FIREBASE_PROJECT_ID" \
+  --member="serviceAccount:$SA" \
+  --role=roles/iam.serviceAccountTokenCreator
+```
+
+Verify:
+
+```sh
+gcloud iam service-accounts get-iam-policy "$SA" --project "$FIREBASE_PROJECT_ID"
+# Expect a binding for roles/iam.serviceAccountTokenCreator with the SA itself listed.
+```
+
+If the compute SA was replaced with a custom service account, substitute that
+SA email for both `--member` and the target of the grant.
 
 ## Required backend environment (Firebase Functions)
 These values are managed by the shared deploy script. Do not configure them manually in the Firebase console.
@@ -22,7 +57,7 @@ These values are managed by the shared deploy script. Do not configure them manu
 - `FIRESTORE_CREDENTIALS_COLLECTION=skybridge-credentials`
 - `FIRESTORE_DATABASE_LOCATION=<location>` optional override for first-time deploy auto-creation of the default Firestore database; defaults to `FIREBASE_REGION`
 - `FIRESTORE_DATABASE_CREATE_MAX_WAIT_SECONDS=<seconds>` optional override for how long deploy should wait when Firebase temporarily blocks reusing a just-deleted default database id; defaults to `900`
-- `BACKEND_WORKER_MEMORY_MB=<memory>` optional override for the Pub/Sub worker memory; managed deploy default is `256` MiB. Supported values: `128`, `256`, `512`, `1024`, `2048`, `4096`, `8192`, `16384`, `32768`
+- `BACKEND_WORKER_MEMORY_MB=<memory>` optional override for the Pub/Sub worker memory; managed deploy default is `512` MiB. Supported values: `128`, `256`, `512`, `1024`, `2048`, `4096`, `8192`, `16384`, `32768`
 - `GCS_PREFIX=jobs`
 - `CORS_ALLOW_ORIGINS=<comma separated origins>` (never use `*` in production)
 
@@ -68,7 +103,7 @@ The shared deploy script publishes Functions, Hosting, and Firestore configurati
 - Project id and region defaults come from `.firebaserc` (`projects.default`, `config.region`).
 - Default Functions region is `europe-west1`.
 - You can override per deploy with `FIREBASE_REGION`.
-- The worker deploys at `256 MiB` by default. If production needs more headroom, set `BACKEND_WORKER_MEMORY_MB` before deploy; the deploy preflight prints the effective worker memory in its summary.
+- The worker deploys at `512 MiB` by default. If production needs more headroom, set `BACKEND_WORKER_MEMORY_MB` before deploy; the deploy preflight prints the effective worker memory in its summary.
 - On the first deploy to a project with no Firestore database, the script creates `(default)` automatically. Override the creation location with `FIRESTORE_DATABASE_LOCATION` when needed; otherwise it uses `FIREBASE_REGION`.
 - If `(default)` was deleted just before deploy, Firebase can keep the id in a short cooldown window. The deploy script handles that by waiting and retrying instead of failing immediately.
 
@@ -106,7 +141,7 @@ Notes:
 - Use a dedicated mail/auth subdomain instead of reusing the same host that serves your app.
 
 ## Storage lifecycle rule
-Job artifacts must expire automatically. Apply a lifecycle rule to your storage bucket:
+Job artifacts should still expire automatically even though the app deletes known job prefixes itself. Apply a lifecycle rule to your storage bucket as a safety net:
 - Example JSON: `docs/firebase-storage-lifecycle.json`
 - Apply with gcloud:
   - `gcloud storage buckets update gs://<bucket> --lifecycle-file=docs/firebase-storage-lifecycle.json`

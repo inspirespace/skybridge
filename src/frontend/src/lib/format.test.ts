@@ -40,22 +40,38 @@ describe("formatPhaseElapsed", () => {
 });
 
 describe("formatPhaseLastUpdate", () => {
+  const log: ProgressEvent[] = [
+    {
+      phase: "import",
+      stage: "Queued",
+      status: "import_queued",
+      created_at: "2026-01-01T10:00:00Z",
+    },
+    {
+      phase: "import",
+      stage: "Running",
+      status: "import_running",
+      created_at: "2026-01-01T10:03:00Z",
+    },
+  ];
+  const now = new Date("2026-01-01T10:05:00Z");
+
   it("formats last update relative time", () => {
-    const log: ProgressEvent[] = [
-      {
-        phase: "import",
-        stage: "Queued",
-        status: "import_queued",
-        created_at: "2026-01-01T10:00:00Z",
-      },
-      {
-        phase: "import",
-        stage: "Running",
-        status: "import_running",
-        created_at: "2026-01-01T10:03:00Z",
-      },
-    ];
-    const now = new Date("2026-01-01T10:05:00Z");
     expect(formatPhaseLastUpdate(log, "import", now)).toBe("2m ago");
+  });
+
+  it("prefers heartbeat_at when newer than the latest progress event", () => {
+    const heartbeatAt = "2026-01-01T10:04:30Z"; // 30s before now
+    expect(formatPhaseLastUpdate(log, "import", now, heartbeatAt)).toBe("just now");
+  });
+
+  it("keeps progress timestamp when heartbeat is older", () => {
+    const heartbeatAt = "2026-01-01T10:02:00Z"; // older than latest event
+    expect(formatPhaseLastUpdate(log, "import", now, heartbeatAt)).toBe("2m ago");
+  });
+
+  it("falls back to heartbeat_at when no progress events exist", () => {
+    const heartbeatAt = "2026-01-01T10:04:00Z";
+    expect(formatPhaseLastUpdate([], "import", now, heartbeatAt)).toBe("1m ago");
   });
 });

@@ -235,7 +235,9 @@ def worker(event: pubsub_fn.CloudEvent[pubsub_fn.MessagePublishedData]) -> None:
 def cleanup_expired(_event: scheduler_fn.ScheduledEvent) -> None:
     # Cleanup job records (Firestore or local).
     try:
-        lambda_handlers._get_store().cleanup_expired()
+        store = lambda_handlers._get_store()
+        store.cleanup_expired()
+        store.cleanup_orphaned_remote_artifacts()
     except Exception:
         pass
     from google.cloud import firestore

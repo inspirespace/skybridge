@@ -775,6 +775,7 @@ def _migrate_single(
     progress: Callable[[str, dict], None] | None = None,
 ) -> MigrationResult:
     """Internal helper for migrate single."""
+    upload_result = None
     try:
         crew = crew or []
         if not dry_run:
@@ -811,6 +812,11 @@ def _migrate_single(
         resolved_system_id = None
         resolved_system_format = None
         if upload_result:
+            resolved_log_id = upload_result.log_id or resolved_log_id
+            resolved_signature = (
+                upload_result.signature_hash or upload_result.signature or resolved_signature
+            )
+            resolved_format = upload_result.log_format or resolved_format
             assign_signature = upload_result.signature_hash or upload_result.signature
             assign_format = upload_result.log_format
         if not dry_run and detail.file_path:
@@ -880,11 +886,28 @@ def _migrate_single(
                         "tag_count": len(tags or []),
                     },
                 )
-            flysto.assign_metadata_for_log_id(
-                resolved_log_id,
-                remarks=remarks,
-                tags=tags,
+            resolved_log_id, refreshed_signature, refreshed_format, _applied = (
+                _assign_metadata_with_recovery(
+                    flysto,
+                    resolved_log_id,
+                    remarks=remarks,
+                    tags=tags,
+                    file_path=detail.file_path,
+                    resolve_item={
+                        "flysto_log_id": None,
+                        "flysto_upload_log_id": upload_result.log_id if upload_result else None,
+                        "flysto_signature": None,
+                        "flysto_upload_signature": upload_result.signature if upload_result else None,
+                        "flysto_upload_signature_hash": upload_result.signature_hash if upload_result else None,
+                        "flysto_format": None,
+                        "flysto_upload_format": upload_result.log_format if upload_result else None,
+                    },
+                )
             )
+            if refreshed_signature and not resolved_signature:
+                resolved_signature = refreshed_signature
+            if refreshed_format and not resolved_format:
+                resolved_format = refreshed_format
             if progress:
                 progress(
                     "flysto_assign_metadata_done",
@@ -980,9 +1003,19 @@ def _build_report_item(
                 upload_signature_hash = upload_result.signature_hash
                 upload_log_id = upload_result.log_id
                 upload_format = upload_result.log_format
-            log_id, signature, log_format = flysto.resolve_log_for_file(
-                filename, retries=3, delay_seconds=1.5
-            )
+                log_id = upload_result.log_id
+                signature = upload_result.signature_hash or upload_result.signature
+                log_format = upload_result.log_format
+            if not log_id or not signature or not log_format:
+                resolved_log_id, resolved_signature, resolved_format = flysto.resolve_log_for_file(
+                    filename, retries=3, delay_seconds=1.5
+                )
+                if not log_id:
+                    log_id = resolved_log_id
+                if not signature:
+                    signature = resolved_signature
+                if not log_format:
+                    log_format = resolved_format
             if log_id:
                 source_format, source_system_id = flysto.log_source_cache.get(log_id, (None, None))
         except Exception:
@@ -1033,14 +1066,32 @@ def _write_import_report(
     report_path.write_text(json.dumps(payload, indent=2))
 
 
-def verify_import_report(report_path: Path, flysto: FlyStoClient) -> dict[str, int]:
+def _safe_heartbeat(heartbeat: Callable[[], None] | None) -> None:
+    if heartbeat is None:
+        return
+    try:
+        heartbeat()
+    except Exception:
+        pass
+
+
+def verify_import_report(
+    report_path: Path,
+    flysto: FlyStoClient,
+    *,
+    heartbeat: Callable[[], None] | None = None,
+    payload: dict[str, Any] | None = None,
+) -> dict[str, int]:
     """Handle verify import report."""
-    payload = json.loads(report_path.read_text())
+    persist = payload is None
+    if payload is None:
+        payload = json.loads(report_path.read_text())
     items = payload.get("items", [])
     resolved = 0
     missing = 0
     total = 0
     for item in items:
+        _safe_heartbeat(heartbeat)
         if not isinstance(item, dict):
             continue
         total += 1
@@ -1049,8 +1100,13 @@ def verify_import_report(report_path: Path, flysto: FlyStoClient) -> dict[str, i
             missing += 1
             continue
         filename = Path(file_path).name
-        log_id, signature, log_format = flysto.resolve_log_for_file(
-            filename, retries=3, delay_seconds=1.5
+        log_id, signature, log_format = _resolve_log_for_report_item(
+            flysto,
+            item,
+            filename,
+            retries=3,
+            delay_seconds=1.5,
+            logs_limit=50,
         )
         item["flysto_log_id"] = log_id
         item["flysto_signature"] = signature
@@ -1073,6 +1129,7 @@ def verify_import_report(report_path: Path, flysto: FlyStoClient) -> dict[str, i
         missing = 0
         total = 0
         for item in items:
+            _safe_heartbeat(heartbeat)
             if not isinstance(item, dict):
                 continue
             total += 1
@@ -1081,8 +1138,13 @@ def verify_import_report(report_path: Path, flysto: FlyStoClient) -> dict[str, i
                 missing += 1
                 continue
             filename = Path(file_path).name
-            log_id, signature, log_format = flysto.resolve_log_for_file(
-                filename, retries=6, delay_seconds=2.0, logs_limit=1000
+            log_id, signature, log_format = _resolve_log_for_report_item(
+                flysto,
+                item,
+                filename,
+                retries=6,
+                delay_seconds=2.0,
+                logs_limit=500,
             )
             item["flysto_log_id"] = log_id
             item["flysto_signature"] = signature
@@ -1097,17 +1159,38 @@ def verify_import_report(report_path: Path, flysto: FlyStoClient) -> dict[str, i
         "resolved": resolved,
         "missing": missing,
     }
-    report_path.write_text(json.dumps(payload, indent=2))
+    if persist:
+        report_path.write_text(json.dumps(payload, indent=2))
     return payload["verification"]
 
 
-def reconcile_aircraft_from_report(report_path: Path, flysto: FlyStoClient) -> int:
+def reconcile_aircraft_from_report(
+    report_path: Path,
+    flysto: FlyStoClient,
+    *,
+    heartbeat: Callable[[], None] | None = None,
+    payload: dict[str, Any] | None = None,
+    progress: Callable[[int, int], None] | None = None,
+) -> int:
     """Handle reconcile aircraft from report."""
-    payload = json.loads(report_path.read_text())
+    persist = payload is None
+    if payload is None:
+        payload = json.loads(report_path.read_text())
     items = payload.get("items", [])
+    total = sum(1 for item in items if isinstance(item, dict))
     updated = 0
+    processed = 0
     for item in items:
+        _safe_heartbeat(heartbeat)
         if not isinstance(item, dict):
+            continue
+        processed += 1
+        if progress is not None:
+            try:
+                progress(processed, total)
+            except Exception:
+                pass
+        if item.get("aircraft_reconciled") is True:
             continue
         tail_number = item.get("tail_number")
         signature = item.get("flysto_source_system_id") or (
@@ -1121,8 +1204,13 @@ def reconcile_aircraft_from_report(report_path: Path, flysto: FlyStoClient) -> i
             if file_path:
                 filename = Path(file_path).name
                 try:
-                    _log_id, signature, log_format = flysto.resolve_log_for_file(
-                        filename, retries=3, delay_seconds=1.5
+                    _log_id, signature, log_format = _resolve_log_for_report_item(
+                        flysto,
+                        item,
+                        filename,
+                        retries=3,
+                        delay_seconds=1.5,
+                        logs_limit=50,
                     )
                 except Exception:
                     signature = signature or None
@@ -1155,9 +1243,11 @@ def reconcile_aircraft_from_report(report_path: Path, flysto: FlyStoClient) -> i
             resolved_format=log_format,
         )
         updated += 1
+        item["aircraft_reconciled"] = True
     payload["aircraft_reconciled_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     payload["aircraft_reconciled"] = updated
-    report_path.write_text(json.dumps(payload, indent=2))
+    if persist:
+        report_path.write_text(json.dumps(payload, indent=2))
     return updated
 
 
@@ -1166,9 +1256,16 @@ def reconcile_crew_from_report(
     flysto: FlyStoClient,
     review_path: Path | None = None,
     cloudahoy: CloudAhoyClient | None = None,
+    *,
+    heartbeat: Callable[[], None] | None = None,
+    payload: dict[str, Any] | None = None,
+    progress: Callable[[int, int], None] | None = None,
+    skip_if_reconciled: bool = True,
 ) -> int:
     """Handle reconcile crew from report."""
-    payload = json.loads(report_path.read_text())
+    persist = payload is None
+    if payload is None:
+        payload = json.loads(report_path.read_text())
     items = payload.get("items", [])
     review_metadata: dict[str, dict] = {}
     if review_path and review_path.exists():
@@ -1180,16 +1277,33 @@ def reconcile_crew_from_report(
             metadata = entry.get("metadata")
             if isinstance(flight_id, str) and isinstance(metadata, dict):
                 review_metadata[flight_id] = metadata
+    total = sum(1 for item in items if isinstance(item, dict))
     updated = 0
+    processed = 0
     for item in items:
+        _safe_heartbeat(heartbeat)
         if not isinstance(item, dict):
             continue
-        log_id = item.get("flysto_log_id")
+        processed += 1
+        if progress is not None:
+            try:
+                progress(processed, total)
+            except Exception:
+                pass
+        if skip_if_reconciled and item.get("crew_reconciled") is True:
+            continue
+        log_id = item.get("flysto_log_id") or item.get("flysto_upload_log_id")
         file_path = item.get("file_path")
         if file_path:
             try:
-                resolved_log_id, _signature, _format = flysto.resolve_log_for_file(
-                    Path(file_path).name
+                resolved_log_id, _signature, _format = _resolve_log_for_report_item(
+                    flysto,
+                    item,
+                    Path(file_path).name,
+                    retries=3,
+                    delay_seconds=1.5,
+                    logs_limit=50,
+                    prefer_persisted_log_id=False,
                 )
             except Exception:
                 resolved_log_id = None
@@ -1218,8 +1332,14 @@ def reconcile_crew_from_report(
             time.sleep(2)
             if file_path:
                 try:
-                    refreshed_log_id, _signature, _format = flysto.resolve_log_for_file(
-                        Path(file_path).name
+                    refreshed_log_id, _signature, _format = _resolve_log_for_report_item(
+                        flysto,
+                        item,
+                        Path(file_path).name,
+                        retries=3,
+                        delay_seconds=1.5,
+                        logs_limit=50,
+                        prefer_persisted_log_id=False,
                     )
                 except Exception:
                     refreshed_log_id = None
@@ -1228,9 +1348,11 @@ def reconcile_crew_from_report(
                     item["flysto_log_id"] = refreshed_log_id
             flysto.assign_crew_for_log_id(log_id, crew)
         updated += 1
+        item["crew_reconciled"] = True
     payload["crew_reconciled_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     payload["crew_reconciled"] = updated
-    report_path.write_text(json.dumps(payload, indent=2))
+    if persist:
+        report_path.write_text(json.dumps(payload, indent=2))
     return updated
 
 
@@ -1250,27 +1372,201 @@ def _log_metadata_has_crew(metadata: dict[str, Any] | None, log_id: str | None) 
     return False
 
 
+def _is_missing_flysto_log_error(error: Exception, *, operation: str) -> bool:
+    """Return True when FlySto rejected an operation because the log no longer exists."""
+    message = str(error).lower()
+    return f"flysto {operation} failed: 404" in message and "log not found" in message
+
+
+def _is_retryable_flysto_error(error: Exception, *, operation: str) -> bool:
+    """Return True when FlySto rejected an operation with a transient HTTP status."""
+    message = str(error).lower()
+    return any(
+        f"flysto {operation} failed: {status}" in message
+        for status in (429, 502, 503, 504)
+    )
+
+
+def _is_recoverable_flysto_metadata_error(error: Exception) -> bool:
+    """Return True when FlySto metadata assignment should be treated as best-effort."""
+    return _is_missing_flysto_log_error(
+        error, operation="log-annotations"
+    ) or _is_retryable_flysto_error(error, operation="log-annotations")
+
+
+def _resolve_log_for_report_item(
+    flysto: FlyStoClient,
+    item: dict[str, Any],
+    filename: str,
+    *,
+    retries: int,
+    delay_seconds: float,
+    logs_limit: int,
+    prefer_persisted_log_id: bool = True,
+) -> tuple[str | None, str | None, str | None]:
+    """Prefer persisted/upload-time identifiers before querying FlySto summaries again."""
+    persisted_log_id = (
+        item.get("flysto_log_id") or item.get("flysto_upload_log_id")
+        if prefer_persisted_log_id
+        else item.get("flysto_upload_log_id")
+    )
+    persisted_signature = (
+        item.get("flysto_source_system_id")
+        or item.get("flysto_upload_signature_hash")
+        or item.get("flysto_upload_signature")
+        or item.get("flysto_signature")
+    )
+    persisted_format = item.get("flysto_upload_format") or item.get("flysto_format")
+    if persisted_log_id or persisted_signature or persisted_format:
+        return (
+            str(persisted_log_id) if persisted_log_id else None,
+            str(persisted_signature) if persisted_signature else None,
+            str(persisted_format) if persisted_format else None,
+        )
+    upload_cache = getattr(flysto, "upload_cache", None)
+    if isinstance(upload_cache, dict):
+        upload_result = upload_cache.get(filename)
+        if upload_result:
+            log_id = getattr(upload_result, "log_id", None)
+            signature = (
+                getattr(upload_result, "signature_hash", None)
+                or getattr(upload_result, "signature", None)
+            )
+            log_format = getattr(upload_result, "log_format", None)
+            if log_id or signature or log_format:
+                return log_id, signature, log_format
+    return flysto.resolve_log_for_file(
+        filename,
+        retries=retries,
+        delay_seconds=delay_seconds,
+        logs_limit=logs_limit,
+    )
+
+
+def _assign_metadata_with_recovery(
+    flysto: FlyStoClient,
+    log_id: str | None,
+    *,
+    remarks: str | None,
+    tags: list[str] | None,
+    file_path: str | None,
+    resolve_item: dict[str, Any] | None,
+) -> tuple[str | None, str | None, str | None, bool]:
+    """Assign metadata once, then retry once after a best-effort log refresh."""
+
+    def _resolve_current_log() -> tuple[str | None, str | None, str | None]:
+        if not file_path or not resolve_item:
+            return None, None, None
+        try:
+            return _resolve_log_for_report_item(
+                flysto,
+                resolve_item,
+                Path(file_path).name,
+                retries=3,
+                delay_seconds=1.5,
+                logs_limit=250,
+                prefer_persisted_log_id=False,
+            )
+        except Exception:
+            return None, None, None
+
+    current_log_id = log_id
+    current_signature = None
+    current_format = None
+    if not current_log_id:
+        current_log_id, current_signature, current_format = _resolve_current_log()
+    if not current_log_id:
+        return None, current_signature, current_format, False
+    try:
+        flysto.assign_metadata_for_log_id(current_log_id, remarks=remarks, tags=tags)
+        return current_log_id, current_signature, current_format, True
+    except Exception as error:
+        if not _is_recoverable_flysto_metadata_error(error):
+            raise
+    refreshed_log_id, refreshed_signature, refreshed_format = _resolve_current_log()
+    retry_log_id = refreshed_log_id or current_log_id
+    if not retry_log_id:
+        return current_log_id, refreshed_signature, refreshed_format, False
+    try:
+        flysto.assign_metadata_for_log_id(retry_log_id, remarks=remarks, tags=tags)
+    except Exception as retry_error:
+        if not _is_recoverable_flysto_metadata_error(retry_error):
+            raise
+        return retry_log_id, refreshed_signature, refreshed_format, False
+    return retry_log_id, refreshed_signature, refreshed_format, True
+
+
 def reconcile_metadata_from_report(
     report_path: Path,
     flysto: FlyStoClient,
+    *,
+    heartbeat: Callable[[], None] | None = None,
+    payload: dict[str, Any] | None = None,
+    progress: Callable[[int, int], None] | None = None,
 ) -> int:
     """Handle reconcile metadata from report."""
-    payload = json.loads(report_path.read_text())
+    persist = payload is None
+    if payload is None:
+        payload = json.loads(report_path.read_text())
     items = payload.get("items", [])
+    total = sum(1 for item in items if isinstance(item, dict))
     updated = 0
+    processed = 0
     for item in items:
+        _safe_heartbeat(heartbeat)
         if not isinstance(item, dict):
             continue
-        log_id = item.get("flysto_log_id")
-        if not log_id:
+        processed += 1
+        if progress is not None:
+            try:
+                progress(processed, total)
+            except Exception:
+                pass
+        # Idempotent: if the item was already reconciled in a prior worker run,
+        # skip the remote PUT so auto-retry after a 540 s worker timeout does
+        # not redo the whole 46-item loop against FlySto.
+        if item.get("metadata_reconciled") is True:
             continue
         remarks = item.get("remarks")
         tags = item.get("tags")
         if not remarks and not tags:
+            item["metadata_reconciled"] = True
             continue
-        flysto.assign_metadata_for_log_id(log_id, remarks=remarks, tags=tags)
-        updated += 1
+        log_id = item.get("flysto_log_id") or item.get("flysto_upload_log_id")
+        file_path = item.get("file_path")
+        if file_path and not log_id:
+            try:
+                resolved_log_id, _signature, _format = _resolve_log_for_report_item(
+                    flysto,
+                    item,
+                    Path(file_path).name,
+                    retries=3,
+                    delay_seconds=1.5,
+                    logs_limit=50,
+                    prefer_persisted_log_id=False,
+                )
+            except Exception:
+                resolved_log_id = None
+            if resolved_log_id:
+                log_id = resolved_log_id
+                item["flysto_log_id"] = resolved_log_id
+        if not log_id:
+            continue
+        log_id, _signature, _format, applied = _assign_metadata_with_recovery(
+            flysto,
+            log_id,
+            remarks=remarks,
+            tags=tags,
+            file_path=file_path,
+            resolve_item=item,
+        )
+        if log_id:
+            item["flysto_log_id"] = log_id
+        if applied:
+            updated += 1
+            item["metadata_reconciled"] = True
     payload["metadata_reconciled_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     payload["metadata_reconciled"] = updated
-    report_path.write_text(json.dumps(payload, indent=2))
+    if persist:
+        report_path.write_text(json.dumps(payload, indent=2))
     return updated

@@ -37,6 +37,17 @@ function setEnvDefault(target: string, ...sources: Array<string | undefined>) {
   }
 }
 
+function parsePositiveInt(value: string | undefined): number | null {
+  if (!value || !value.trim()) {
+    return null;
+  }
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+  return parsed;
+}
+
 const derivedProjectId =
   process.env.FIREBASE_PROJECT_ID ?? loadProjectIdFromFirebaserc() ?? "";
 
@@ -56,6 +67,14 @@ setEnvDefault("VITE_CLOUD_AHOY_EMAIL", process.env.CLOUD_AHOY_EMAIL);
 setEnvDefault("VITE_CLOUD_AHOY_PASSWORD", process.env.CLOUD_AHOY_PASSWORD);
 setEnvDefault("VITE_FLYSTO_EMAIL", process.env.FLYSTO_EMAIL);
 setEnvDefault("VITE_FLYSTO_PASSWORD", process.env.FLYSTO_PASSWORD);
+const runningStaleTimeoutSeconds = parsePositiveInt(
+  process.env.BACKEND_RUNNING_STALE_TIMEOUT_SECONDS
+);
+const derivedWarningSeconds =
+  runningStaleTimeoutSeconds && runningStaleTimeoutSeconds > 30
+    ? String(runningStaleTimeoutSeconds - 30)
+    : undefined;
+setEnvDefault("VITE_RUNNING_STALL_WARNING_SECONDS", derivedWarningSeconds);
 
 // https://vite.dev/config/
 export default defineConfig({

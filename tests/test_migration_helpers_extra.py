@@ -72,7 +72,7 @@ class DummyFlyStoVerify(DummyFlySto):
     def resolve_log_for_file(self, filename: str, **kwargs):
         logs_limit = kwargs.get("logs_limit", 250)
         self.calls.append(logs_limit)
-        if logs_limit >= 1000:
+        if logs_limit >= 500:
             return f"log-{filename}", f"sig-{filename}", "GenericGpx"
         return None, None, None
 
@@ -149,7 +149,7 @@ def test_build_report_item_enriches_flysto_fields():
         signature_hash="hash-1",
         log_format="GenericGpx",
     )
-    flysto.log_source_cache["log-flight.gpx"] = ("UnknownGarmin", "sys-1")
+    flysto.log_source_cache["log-1"] = ("UnknownGarmin", "sys-1")
     detail = FlightDetail(id="F1", raw_payload={}, file_path="/tmp/flight.gpx")
 
     item = _build_report_item(
@@ -167,7 +167,8 @@ def test_build_report_item_enriches_flysto_fields():
     assert item["flysto_upload_signature"] == "sig-1"
     assert item["flysto_upload_signature_hash"] == "hash-1"
     assert item["flysto_upload_log_id"] == "log-1"
-    assert item["flysto_log_id"] == "log-flight.gpx"
+    assert item["flysto_log_id"] == "log-1"
+    assert item["flysto_source_system_id"] == "sys-1"
 
 
 def test_verify_import_report_retries_with_large_limit(tmp_path: Path):
@@ -181,7 +182,27 @@ def test_verify_import_report_retries_with_large_limit(tmp_path: Path):
     payload = json.loads(report_path.read_text())
     assert summary == {"attempted": 1, "resolved": 1, "missing": 0}
     assert payload["items"][0]["flysto_log_id"] == "log-F1.gpx"
-    assert 1000 in flysto.calls
+    assert 500 in flysto.calls
+
+
+def test_verify_import_report_reuses_upload_metadata_before_remote_lookup(tmp_path: Path):
+    report_path = tmp_path / "report.json"
+    report_path.write_text(
+        json.dumps({"items": [{"flight_id": "F1", "file_path": "/tmp/F1.gpx"}]})
+    )
+    flysto = DummyFlySto()
+    flysto.upload_cache["F1.gpx"] = UploadResult(
+        signature="sig-F1.gpx",
+        log_id="log-F1.gpx",
+        log_format="GenericGpx",
+    )
+
+    summary = verify_import_report(report_path, flysto)
+    payload = json.loads(report_path.read_text())
+
+    assert summary == {"attempted": 1, "resolved": 1, "missing": 0}
+    assert payload["items"][0]["flysto_log_id"] == "log-F1.gpx"
+    assert flysto.resolve_calls == []
 
 
 def test_reconcile_aircraft_from_report_defaults_unknown_garmin(tmp_path: Path):
@@ -222,4 +243,87 @@ def test_reconcile_metadata_updates_only_with_values(tmp_path: Path):
     flysto = DummyFlySto()
     updated = reconcile_metadata_from_report(report_path, flysto)
     assert updated == 1
+    assert flysto.metadata_calls[0][0] == "log-1"
+
+
+def test_reconcile_metadata_reresolves_stale_log_ids(tmp_path: Path):
+    report_path = tmp_path / "report.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "items": [
+                    {
+                        "flysto_log_id": "log-old",
+                        "file_path": "/tmp/flight.g3x.csv",
+                        "remarks": "ok",
+                        "tags": ["a"],
+                    }
+                ]
+            }
+        )
+    )
+
+    class DummyFlyStoMetadataRetry(DummyFlySto):
+        def assign_metadata_for_log_id(
+            self,
+            log_id: str | None,
+            remarks: str | None = None,
+            tags: list[str] | None = None,
+        ):
+            if log_id == "log-old":
+                raise RuntimeError("FlySto log-annotations failed: 404 Log not found")
+            super().assign_metadata_for_log_id(log_id, remarks=remarks, tags=tags)
+
+    flysto = DummyFlyStoMetadataRetry()
+    flysto.resolve_sequence = [("log-new", "sig-new", "UnknownGarmin")]
+
+    updated = reconcile_metadata_from_report(report_path, flysto)
+    payload = json.loads(report_path.read_text())
+
+    assert updated == 1
+    assert flysto.metadata_calls[0][0] == "log-new"
+    assert payload["items"][0]["flysto_log_id"] == "log-new"
+
+
+def test_reconcile_metadata_retries_same_log_on_transient_503(tmp_path: Path):
+    report_path = tmp_path / "report.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "items": [
+                    {
+                        "flysto_log_id": "log-1",
+                        "remarks": "ok",
+                        "tags": ["a"],
+                    }
+                ]
+            }
+        )
+    )
+
+    class DummyFlyStoMetadata503Retry(DummyFlySto):
+        def __init__(self) -> None:
+            super().__init__()
+            self.attempts: list[str | None] = []
+
+        def assign_metadata_for_log_id(
+            self,
+            log_id: str | None,
+            remarks: str | None = None,
+            tags: list[str] | None = None,
+        ):
+            self.attempts.append(log_id)
+            if len(self.attempts) == 1:
+                raise RuntimeError(
+                    "FlySto log-annotations failed: 503 <!DOCTYPE html><html><head>"
+                    "<title>Application Error</title>"
+                )
+            super().assign_metadata_for_log_id(log_id, remarks=remarks, tags=tags)
+
+    flysto = DummyFlyStoMetadata503Retry()
+
+    updated = reconcile_metadata_from_report(report_path, flysto)
+
+    assert updated == 1
+    assert flysto.attempts == ["log-1", "log-1"]
     assert flysto.metadata_calls[0][0] == "log-1"

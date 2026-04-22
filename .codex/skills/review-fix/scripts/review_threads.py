@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Discover, inspect, reply to, and resolve GitHub PR review threads.
+Discover, inspect, reply to, and resolve GitHub PR review feedback.
 
 Commands:
   discover
@@ -8,8 +8,9 @@ Commands:
     assigned or review-requested to the authenticated GitHub user.
 
   fetch
-    Fetch review-thread metadata for a specific PR, including review comment
-    database IDs suitable for replies.
+    Fetch conversation comments, review submissions, and review-thread metadata
+    for a specific PR, including review comment database IDs suitable for
+    replies.
 
   reply
     Reply to a review thread by creating a pull-request review comment reply.
@@ -88,7 +89,14 @@ query($owner: String!, $repo: String!, $cursor: String) {
 
 
 FETCH_QUERY = """\
-query($owner: String!, $repo: String!, $number: Int!, $threadsCursor: String) {
+query(
+  $owner: String!,
+  $repo: String!,
+  $number: Int!,
+  $commentsCursor: String,
+  $reviewsCursor: String,
+  $threadsCursor: String
+) {
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $number) {
       number
@@ -96,6 +104,36 @@ query($owner: String!, $repo: String!, $number: Int!, $threadsCursor: String) {
       title
       state
       reviewDecision
+      comments(first: 100, after: $commentsCursor) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          id
+          body
+          createdAt
+          updatedAt
+          author {
+            login
+          }
+        }
+      }
+      reviews(first: 100, after: $reviewsCursor) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          id
+          state
+          body
+          submittedAt
+          author {
+            login
+          }
+        }
+      }
       reviewThreads(first: 100, after: $threadsCursor) {
         pageInfo {
           hasNextPage
@@ -112,6 +150,9 @@ query($owner: String!, $repo: String!, $number: Int!, $threadsCursor: String) {
           originalStartLine
           diffSide
           startDiffSide
+          resolvedBy {
+            login
+          }
           comments(first: 100) {
             nodes {
               id
@@ -189,11 +230,36 @@ def _repo_parts(repo: str | None) -> tuple[str, str]:
     return owner, name
 
 
+def _gh_pr_view_json(fields: str) -> dict[str, Any]:
+    return _run_json(["gh", "pr", "view", "--json", fields])
+
+
 def _current_pr() -> dict[str, Any] | None:
     try:
-        return _run_json(["gh", "pr", "view", "--json", "number,url,title,state"])
+        pr = _gh_pr_view_json("number,url,title,state,headRepositoryOwner,headRepository")
     except RuntimeError:
         return None
+    return {
+        "number": pr["number"],
+        "url": pr["url"],
+        "title": pr["title"],
+        "state": pr["state"],
+        "repository": (
+            f'{pr["headRepositoryOwner"]["login"]}/{pr["headRepository"]["name"]}'
+        ),
+    }
+
+
+def _current_pr_ref() -> tuple[str, str, int] | None:
+    try:
+        pr = _gh_pr_view_json("number,headRepositoryOwner,headRepository")
+    except RuntimeError:
+        return None
+    return (
+        pr["headRepositoryOwner"]["login"],
+        pr["headRepository"]["name"],
+        int(pr["number"]),
+    )
 
 
 def _viewer_login() -> str:
@@ -251,20 +317,34 @@ def _discover(repo: str | None) -> dict[str, Any]:
 
 
 def _fetch(repo: str | None, pr_number: int | None) -> dict[str, Any]:
-    owner, name = _repo_parts(repo)
-    if pr_number is None:
-        current = _current_pr()
-        if current is None:
+    if repo is None and pr_number is None:
+        current_ref = _current_pr_ref()
+        if current_ref is None:
             raise RuntimeError("No PR specified and current branch is not associated with a PR")
-        pr_number = int(current["number"])
+        owner, name, pr_number = current_ref
+    else:
+        owner, name = _repo_parts(repo)
+        if pr_number is None:
+            current = _current_pr()
+            if current is None:
+                raise RuntimeError("No PR specified and current branch is not associated with a PR")
+            pr_number = int(current["number"])
 
+    conversation_comments: list[dict[str, Any]] = []
+    reviews: list[dict[str, Any]] = []
     threads: list[dict[str, Any]] = []
-    cursor: str | None = None
+    comments_cursor: str | None = None
+    reviews_cursor: str | None = None
+    threads_cursor: str | None = None
     pr_meta: dict[str, Any] | None = None
     while True:
         fields = [f"owner={owner}", f"repo={name}", f"number={pr_number}"]
-        if cursor:
-            fields.append(f"threadsCursor={cursor}")
+        if comments_cursor:
+            fields.append(f"commentsCursor={comments_cursor}")
+        if reviews_cursor:
+            fields.append(f"reviewsCursor={reviews_cursor}")
+        if threads_cursor:
+            fields.append(f"threadsCursor={threads_cursor}")
         data = _graphql(fields, FETCH_QUERY)
         pr = data["repository"]["pullRequest"]
         if pr_meta is None:
@@ -277,7 +357,11 @@ def _fetch(repo: str | None, pr_number: int | None) -> dict[str, Any]:
                 "repository": f"{owner}/{name}",
             }
 
+        comment_page = pr["comments"]
+        review_page = pr["reviews"]
         review_threads = pr["reviewThreads"]
+        conversation_comments.extend(comment_page.get("nodes") or [])
+        reviews.extend(review_page.get("nodes") or [])
         for thread in review_threads["nodes"]:
             comments = thread["comments"]["nodes"]
             threads.append(
@@ -292,18 +376,32 @@ def _fetch(repo: str | None, pr_number: int | None) -> dict[str, Any]:
                     "original_start_line": thread["originalStartLine"],
                     "diff_side": thread["diffSide"],
                     "start_diff_side": thread["startDiffSide"],
+                    "resolved_by": (
+                        thread["resolvedBy"]["login"] if thread["resolvedBy"] else None
+                    ),
                     "root_comment_database_id": comments[0]["databaseId"] if comments else None,
                     "latest_comment_database_id": comments[-1]["databaseId"] if comments else None,
                     "comments": comments,
                 }
             )
 
-        if not review_threads["pageInfo"]["hasNextPage"]:
+        comments_cursor = (
+            comment_page["pageInfo"]["endCursor"] if comment_page["pageInfo"]["hasNextPage"] else None
+        )
+        reviews_cursor = (
+            review_page["pageInfo"]["endCursor"] if review_page["pageInfo"]["hasNextPage"] else None
+        )
+        threads_cursor = (
+            review_threads["pageInfo"]["endCursor"] if review_threads["pageInfo"]["hasNextPage"] else None
+        )
+
+        if not (comments_cursor or reviews_cursor or threads_cursor):
             break
-        cursor = review_threads["pageInfo"]["endCursor"]
 
     return {
         "pull_request": pr_meta,
+        "conversation_comments": conversation_comments,
+        "reviews": reviews,
         "review_threads": threads,
     }
 

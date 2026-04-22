@@ -6,14 +6,18 @@ job model, persisting progress and artifacts via JobStore.
 from __future__ import annotations
 
 import json
+import logging
+import threading
 import os
 import time
 import tempfile
 import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 from uuid import UUID, uuid4
+
+_logger = logging.getLogger(__name__)
 
 from src.core.cloudahoy.client import CloudAhoyClient
 from src.core.migration import (
@@ -51,6 +55,7 @@ REVIEW_MANIFEST_ARTIFACT = "review.json"
 REVIEW_FLIGHTS_ARTIFACT = "review-flights.json"
 IMPORT_REPORT_ARTIFACT = "import-report.json"
 IMPORT_CONTEXT_ARTIFACT = "import-context.json"
+ARTIFACTS_ARCHIVE_NAME = "artifacts.zip"
 
 
 class JobService:
@@ -347,6 +352,8 @@ class JobService:
                     crew=crew,
                     flysto=flysto if not dry_run else None,
                 )
+                if result.status == "error" and _report_item_resolves_to_flysto_log(report_item):
+                    report_item["status"] = "ok"
                 report_payload["items"] = _upsert_report_item(
                     report_payload.get("items"),
                     report_item,
@@ -374,7 +381,7 @@ class JobService:
                 self._store.write_artifact(job_id, IMPORT_CONTEXT_ARTIFACT, import_context)
                 self._store.upload_artifact(job_id, "migration.db", state_path)
 
-                if result.status == "error":
+                if result.status == "error" and report_item.get("status") == "error":
                     job.status = "failed"
                     _append_progress(
                         job,
@@ -392,6 +399,24 @@ class JobService:
                 _touch_heartbeat(job)
                 self._store.save_job(job)
 
+                # Local CloudAhoy exports have been copied to object storage;
+                # drop the files and in-memory payload so the next iteration
+                # does not compound against the 256 MiB worker budget.
+                _release_detail_exports(detail)
+                detail = None
+                aircraft = None
+                metadata = None
+                crew = None
+                remarks = None
+                tags = None
+                file_hash = csv_hash = metadata_hash = None
+                trim = getattr(flysto, "trim_caches", None)
+                if callable(trim):
+                    try:
+                        trim()
+                    except Exception:
+                        pass
+
             if (job.phase_cursor or 0) < total_summaries:
                 return job
 
@@ -405,50 +430,121 @@ class JobService:
             self._store.save_job(job)
 
             if not dry_run:
+                heartbeat = lambda: _touch_heartbeat(job, store=self._store)
+                # Tick heartbeat_at every 30s from a daemon thread so the UI
+                # stale detector does not fire when FlySto's per-PUT latency
+                # temporarily exceeds the 210s stale window (e.g. during
+                # rate-limited metadata assignment).
+                background_heartbeat = _BackgroundHeartbeat(
+                    heartbeat, interval_seconds=30.0
+                )
+
+                def _make_progress(base_stage: str, base_percent: int):
+                    # Emit a per-item progress event every few items so the UI
+                    # tick refreshes during long FlySto PUT loops; never
+                    # per-item (Firestore writes + UI renders would thrash).
+                    def _on_progress(done: int, total: int) -> None:
+                        if total <= 0:
+                            return
+                        # Log at start, every 5 items, and at completion.
+                        if done != 1 and done != total and done % 5 != 0:
+                            return
+                        stage_text = f"{base_stage} ({done}/{total})"
+                        try:
+                            _set_import_finalization_stage(
+                                self._store,
+                                job,
+                                stage=stage_text,
+                                percent=base_percent,
+                            )
+                        except Exception:
+                            pass
+                    return _on_progress
+
                 _set_import_finalization_stage(
                     self._store,
                     job,
                     stage="Finalizing import",
                     percent=85,
                 )
-                _maybe_wait_for_processing(flysto, heartbeat=lambda: _touch_heartbeat(job, store=self._store))
-                _set_import_finalization_stage(
-                    self._store,
-                    job,
-                    stage="Verifying imported flights",
-                    percent=88,
-                )
-                verify_import_report(report_path, flysto)
-                _set_import_finalization_stage(
-                    self._store,
-                    job,
-                    stage="Reconciling aircraft",
-                    percent=90,
-                )
-                reconcile_aircraft_from_report(report_path, flysto)
-                _set_import_finalization_stage(
-                    self._store,
-                    job,
-                    stage="Reconciling crew",
-                    percent=92,
-                )
-                reconcile_crew_from_report(report_path, flysto, review_path, cloudahoy)
-                _set_import_finalization_stage(
-                    self._store,
-                    job,
-                    stage="Reconciling metadata",
-                    percent=94,
-                )
-                reconcile_metadata_from_report(report_path, flysto)
-                # Crew can be cleared by FlySto post-processing; reapply after the queue drains.
-                _maybe_wait_for_processing(flysto, heartbeat=lambda: _touch_heartbeat(job, store=self._store))
-                _set_import_finalization_stage(
-                    self._store,
-                    job,
-                    stage="Reapplying crew assignments",
-                    percent=96,
-                )
-                reconcile_crew_from_report(report_path, flysto, review_path, cloudahoy)
+                with background_heartbeat:
+                    _maybe_wait_for_processing(flysto, heartbeat=heartbeat)
+                    # Load the report once and share the in-memory payload across
+                    # all finalization passes; write it back to disk after the
+                    # last pass completes.
+                    finalization_payload = json.loads(report_path.read_text())
+                    _set_import_finalization_stage(
+                        self._store,
+                        job,
+                        stage="Verifying imported flights",
+                        percent=88,
+                    )
+                    verify_import_report(
+                        report_path,
+                        flysto,
+                        heartbeat=heartbeat,
+                        payload=finalization_payload,
+                    )
+                    _set_import_finalization_stage(
+                        self._store,
+                        job,
+                        stage="Reconciling aircraft",
+                        percent=90,
+                    )
+                    reconcile_aircraft_from_report(
+                        report_path,
+                        flysto,
+                        heartbeat=heartbeat,
+                        payload=finalization_payload,
+                        progress=_make_progress("Reconciling aircraft", 90),
+                    )
+                    _set_import_finalization_stage(
+                        self._store,
+                        job,
+                        stage="Reconciling crew",
+                        percent=92,
+                    )
+                    reconcile_crew_from_report(
+                        report_path,
+                        flysto,
+                        review_path,
+                        cloudahoy,
+                        heartbeat=heartbeat,
+                        payload=finalization_payload,
+                        progress=_make_progress("Reconciling crew", 92),
+                    )
+                    _set_import_finalization_stage(
+                        self._store,
+                        job,
+                        stage="Reconciling metadata",
+                        percent=94,
+                    )
+                    reconcile_metadata_from_report(
+                        report_path,
+                        flysto,
+                        heartbeat=heartbeat,
+                        payload=finalization_payload,
+                        progress=_make_progress("Reconciling metadata", 94),
+                    )
+                    # Crew can be cleared by FlySto post-processing; reapply after the queue drains.
+                    _maybe_wait_for_processing(flysto, heartbeat=heartbeat)
+                    _set_import_finalization_stage(
+                        self._store,
+                        job,
+                        stage="Reapplying crew assignments",
+                        percent=96,
+                    )
+                    reconcile_crew_from_report(
+                        report_path,
+                        flysto,
+                        review_path,
+                        cloudahoy,
+                        heartbeat=heartbeat,
+                        payload=finalization_payload,
+                        progress=_make_progress("Reapplying crew assignments", 96),
+                        skip_if_reconciled=False,
+                    )
+                    report_path.write_text(json.dumps(finalization_payload, indent=2))
             final_report_payload = _load_or_create_import_report(report_path, review_id, len(summaries))
             job.import_report = ImportReport(
                 imported_count=sum(1 for item in final_report_payload.get("items", []) if item.get("status") == "ok"),
@@ -469,8 +565,36 @@ class JobService:
             self._store.save_job(job)
             self._store.write_artifact(job_id, IMPORT_REPORT_ARTIFACT, final_report_payload)
             self._store.upload_artifact(job_id, "migration.db", state_path)
+            # Build the download archive once on the worker (540 s budget) so the
+            # user-facing Download button can redirect to a signed URL and never
+            # hit the Cloud Run / Cloudflare 100 s timeout.
+            try:
+                _build_and_upload_artifacts_archive(self._store, job)
+            except Exception:
+                _logger.exception("Failed to pre-build artifacts archive for job %s", job_id)
             return job
         except Exception as exc:
+            _logger.exception("accept_review failed for job %s", job_id)
+            # Best-effort upload of in-flight artifacts so the reconcile
+            # helper (called below) can read the most recent report state
+            # from object storage even if the local container is torn down.
+            if "state_path" in locals():
+                try:
+                    self._store.upload_artifact(job_id, "migration.db", state_path)
+                except Exception:
+                    _logger.exception("Failed to upload state.db during accept_review except")
+            if "report_path" in locals() and report_path.exists():
+                try:
+                    self._store.upload_artifact(job_id, IMPORT_REPORT_ARTIFACT, report_path)
+                except Exception:
+                    _logger.exception("Failed to upload import report during accept_review except")
+            if "context_path" in locals() and context_path.exists():
+                try:
+                    self._store.upload_artifact(job_id, IMPORT_CONTEXT_ARTIFACT, context_path)
+                except Exception:
+                    _logger.exception("Failed to upload import context during accept_review except")
+            if reconcile_completed_import_from_report(job, self._store):
+                return job
             job.status = "failed"
             _append_progress(
                 job,
@@ -481,12 +605,6 @@ class JobService:
             )
             job.error_message = f"Import failed: {exc}"
             self._store.save_job(job)
-            if "state_path" in locals():
-                self._store.upload_artifact(job_id, "migration.db", state_path)
-            if "report_path" in locals() and report_path.exists():
-                self._store.upload_artifact(job_id, IMPORT_REPORT_ARTIFACT, report_path)
-            if "context_path" in locals() and context_path.exists():
-                self._store.upload_artifact(job_id, IMPORT_CONTEXT_ARTIFACT, context_path)
             return job
 
 
@@ -669,6 +787,121 @@ def _upload_detail_artifacts(store: JobStore, job_id: UUID, detail) -> None:
                 store.upload_artifact_as(job_id, f"cloudahoy_exports/{path.name}", path)
 
 
+def _build_and_upload_artifacts_archive(store: JobStore, job: JobRecord) -> None:
+    """Build the downloadable artifacts zip once and upload it to object storage.
+
+    Runs inside the worker at the end of ``accept_review`` so the user-facing
+    download endpoint can redirect to a signed URL instead of assembling the
+    archive on every click (which was exceeding the Cloudflare 100 s limit on
+    multi-flight imports).
+    """
+    object_store = getattr(store, "object_store", None)
+    if object_store is None:
+        return
+    import tempfile
+    import zipfile
+    from shutil import copyfileobj
+
+    job_uuid = job.job_id
+    user_id = job.user_id
+    job_dir = store.job_dir(job_uuid)
+    exports_local_dir = job_dir / "work" / "cloudahoy_exports"
+
+    tmp_fd, tmp_name = tempfile.mkstemp(suffix=".zip")
+    os.close(tmp_fd)
+    tmp_path = Path(tmp_name)
+    try:
+        written: set[str] = set()
+        with zipfile.ZipFile(tmp_path, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
+            # Local-first: whatever the worker still has on disk is cheaper than
+            # round-tripping through object storage.
+            if exports_local_dir.exists():
+                for path in exports_local_dir.rglob("*"):
+                    if not path.is_file() or path.name.endswith(".token"):
+                        continue
+                    arcname = f"cloudahoy_exports/{path.relative_to(exports_local_dir)}"
+                    zipf.write(path, arcname=arcname)
+                    written.add(arcname)
+            # Remote: pull every export blob we uploaded during the flight loop.
+            exports_prefix = object_store.key_for(user_id, str(job_uuid), "cloudahoy_exports")
+            try:
+                remote_names = object_store.list_prefix(exports_prefix)
+            except Exception:
+                _logger.exception("Failed to list remote exports for job %s", job_uuid)
+                remote_names = []
+            for name in remote_names:
+                if name.endswith(".token"):
+                    continue
+                arcname = f"cloudahoy_exports/{name}"
+                if arcname in written:
+                    continue
+                key = object_store.key_for(user_id, str(job_uuid), "cloudahoy_exports", name)
+                try:
+                    with tempfile.TemporaryFile() as remote_file:
+                        downloaded = object_store.download_to_file(key, remote_file)
+                        if not downloaded:
+                            continue
+                        remote_file.seek(0)
+                        with zipf.open(arcname, "w") as destination:
+                            copyfileobj(remote_file, destination)
+                        written.add(arcname)
+                except Exception:
+                    _logger.exception("Failed to fold remote export %s into archive", name)
+            # Include the small job-level artifacts so the download is self-contained.
+            for artifact_name in (
+                REVIEW_MANIFEST_ARTIFACT,
+                REVIEW_FLIGHTS_ARTIFACT,
+                IMPORT_REPORT_ARTIFACT,
+                IMPORT_CONTEXT_ARTIFACT,
+            ):
+                try:
+                    payload = store.load_artifact(job_uuid, artifact_name)
+                except FileNotFoundError:
+                    continue
+                except Exception:
+                    continue
+                try:
+                    zipf.writestr(artifact_name, json.dumps(payload, indent=2))
+                    written.add(artifact_name)
+                except Exception:
+                    _logger.exception("Failed to inline artifact %s", artifact_name)
+
+        archive_key = object_store.key_for(user_id, str(job_uuid), ARTIFACTS_ARCHIVE_NAME)
+        try:
+            object_store.put_file(archive_key, tmp_path)
+        except Exception:
+            _logger.exception("Failed to upload artifacts archive for job %s", job_uuid)
+    finally:
+        try:
+            tmp_path.unlink()
+        except OSError:
+            pass
+
+
+def _release_detail_exports(detail) -> None:
+    """Delete local CloudAhoy export files once they are safe on object storage."""
+    if detail is None:
+        return
+    seen: set[str] = set()
+    for attr in ("file_path", "csv_path", "raw_path", "metadata_path"):
+        raw_value = getattr(detail, attr, None)
+        if isinstance(raw_value, str) and raw_value and raw_value not in seen:
+            seen.add(raw_value)
+            try:
+                Path(raw_value).unlink(missing_ok=True)
+            except OSError:
+                pass
+    export_paths = getattr(detail, "export_paths", None)
+    if isinstance(export_paths, dict):
+        for raw_value in export_paths.values():
+            if isinstance(raw_value, str) and raw_value and raw_value not in seen:
+                seen.add(raw_value)
+                try:
+                    Path(raw_value).unlink(missing_ok=True)
+                except OSError:
+                    pass
+
+
 def _load_or_create_import_report(report_path: Path, review_id: str | None, attempted: int) -> dict:
     """Load the persisted import report or initialize a new one."""
     if report_path.exists():
@@ -785,6 +1018,96 @@ def _recompute_import_report_stats(payload: dict) -> None:
     payload["failed"] = sum(1 for item in items if item.get("status") == "error")
 
 
+def reconcile_completed_import_from_report(job: JobRecord, store: JobStore) -> bool:
+    """Upgrade a stuck import job to ``completed`` when the persisted report shows success.
+
+    Safe to call repeatedly. Returns True only when the job was upgraded.
+    The authoritative signal is ``import-report.json``: if every expected
+    flight has a terminal ``ok``/``skipped`` status, the worker either
+    finished the upload loop and crashed during finalization, or the
+    completion write was SIGKILL'd. In both cases, the user-visible state
+    should be ``completed`` rather than ``failed``.
+    """
+    if job.status not in {"import_running", "import_queued"}:
+        return False
+    try:
+        payload = store.load_artifact(job.job_id, IMPORT_REPORT_ARTIFACT)
+    except FileNotFoundError:
+        return False
+    except Exception:
+        _logger.exception("Failed to load import-report while reconciling job %s", job.job_id)
+        return False
+    if not isinstance(payload, dict):
+        return False
+    items = [item for item in payload.get("items", []) if isinstance(item, dict)]
+    if not items:
+        return False
+    expected: int | None = None
+    if isinstance(job.phase_total, int) and job.phase_total > 0:
+        expected = job.phase_total
+    elif isinstance(payload.get("attempted"), int) and payload["attempted"] > 0:
+        expected = payload["attempted"]
+    if expected is not None and len(items) < expected:
+        return False
+    if any(item.get("status") == "error" for item in items):
+        return False
+    if not all(item.get("status") in {"ok", "skipped"} for item in items):
+        return False
+    imported = sum(1 for item in items if item.get("status") == "ok")
+    skipped = sum(1 for item in items if item.get("status") == "skipped")
+    now = datetime.now(timezone.utc)
+    job.status = "completed"
+    job.phase_cursor = job.phase_total or len(items)
+    job.progress_percent = 100
+    job.progress_stage = "Import complete"
+    job.updated_at = now
+    job.heartbeat_at = now
+    job.error_message = None
+    job.import_report = ImportReport(
+        imported_count=imported,
+        skipped_count=skipped,
+        failed_count=0,
+    )
+    job.progress_log.append(
+        ProgressEvent(
+            phase="import",
+            stage="Import complete",
+            percent=100,
+            status="completed",
+            created_at=now,
+        )
+    )
+    try:
+        store.save_job(job)
+    except Exception:
+        _logger.exception("Failed to save reconciled job %s", job.job_id)
+        return False
+    _logger.info(
+        "Reconciled job %s to completed from %s (%d/%d ok, %d skipped)",
+        job.job_id,
+        IMPORT_REPORT_ARTIFACT,
+        imported,
+        len(items),
+        skipped,
+    )
+    return True
+
+
+def _report_item_resolves_to_flysto_log(item: dict[str, object]) -> bool:
+    """Return True when a report item already maps to a concrete FlySto log."""
+    return any(
+        item.get(key)
+        for key in (
+            "flysto_log_id",
+            "flysto_upload_log_id",
+            "flysto_signature",
+            "flysto_upload_signature",
+            "flysto_upload_signature_hash",
+            "flysto_source_system_id",
+        )
+    )
+
+
 def _tail_group_complete(summaries: list[CoreFlightSummary], index: int, tail_number: str) -> bool:
     """Return True when the current import cursor reached the last summary for a tail."""
     next_index = index + 1
@@ -876,6 +1199,60 @@ def _touch_heartbeat(job: JobRecord, *, store: JobStore | None = None) -> None:
     job.heartbeat_at = now
     if store is not None:
         store.save_job(job)
+
+
+class _BackgroundHeartbeat:
+    """Tick a heartbeat callable in a daemon thread.
+
+    FlySto PUTs can legitimately block for 60 s × the client's retry budget,
+    so the per-item heartbeats we fire at the top of reconcile loops are not
+    enough to keep ``job.heartbeat_at`` fresher than the stale-detector
+    window. Wrap the finalization passes with this helper so Firestore
+    receives a tick every ``interval_seconds`` regardless of what the main
+    thread is doing (including blocking socket reads).
+    """
+
+    def __init__(
+        self,
+        heartbeat: Callable[[], None] | None,
+        *,
+        interval_seconds: float = 30.0,
+    ) -> None:
+        self._heartbeat = heartbeat
+        # Guard against zero/negative but allow sub-second intervals for tests.
+        self._interval = max(0.01, float(interval_seconds))
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    def __enter__(self) -> "_BackgroundHeartbeat":
+        if self._heartbeat is None:
+            return self
+        self._stop.clear()
+        self._thread = threading.Thread(
+            target=self._run,
+            name="skybridge-heartbeat",
+            daemon=True,
+        )
+        self._thread.start()
+        return self
+
+    def __exit__(self, exc_type, exc, tb) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=self._interval + 2.0)
+            self._thread = None
+
+    def _run(self) -> None:
+        assert self._heartbeat is not None
+        while not self._stop.is_set():
+            # Wait first so the caller's own per-item heartbeat fires at
+            # iteration boundaries without competing with this thread.
+            if self._stop.wait(self._interval):
+                return
+            try:
+                self._heartbeat()
+            except Exception:
+                _logger.exception("Background heartbeat failed")
 
 
 def _short_flight_id(flight_id: str) -> str:

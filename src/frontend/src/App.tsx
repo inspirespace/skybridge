@@ -40,6 +40,7 @@ import {
   downloadArtifactsZip,
   type AuthContext,
   type FlightSummary,
+  type JobRecord,
   type ReviewFlightsArtifact,
   validateCredentials,
 } from "@/api/client";
@@ -85,11 +86,12 @@ const LATEST_JOB_LOOKUP_PENDING = "pending";
 const LATEST_JOB_LOOKUP_DONE = "done";
 const LATEST_JOB_LOOKUP_MAX_RETRIES = 2;
 const LATEST_JOB_LOOKUP_RETRY_DELAY_MS = 1000;
-const RESTORE_LOADING_MAX_MS = 2500;
 const RUNNING_STALL_WARNING_SECONDS = Number.parseInt(
   import.meta.env.VITE_RUNNING_STALL_WARNING_SECONDS ?? "180",
   10
 );
+const STALLED_IMPORT_AUTO_REFRESH_INTERVAL_MS = 30_000;
+const STALLED_IMPORT_AUTO_REFRESH_MAX_ATTEMPTS = 10;
 
 const readStorageValue = (
   storage: Pick<Storage, "getItem"> | undefined,
@@ -256,11 +258,45 @@ export default function App() {
   );
 
   const {
-    data: job,
-    loading: jobLoading,
+    data: snapshotJob,
     error: jobError,
     refresh,
   } = useJobSnapshot(isSignedIn ? jobId : null, auth);
+  const [optimisticJob, setOptimisticJob] = React.useState<JobRecord | null>(null);
+  const job = React.useMemo(() => {
+    if (!optimisticJob) return snapshotJob;
+    if (!snapshotJob || snapshotJob.job_id !== optimisticJob.job_id) {
+      return optimisticJob;
+    }
+    const snapshotUpdatedAt = Date.parse(snapshotJob.updated_at);
+    const optimisticUpdatedAt = Date.parse(optimisticJob.updated_at);
+    if (
+      Number.isFinite(snapshotUpdatedAt) &&
+      Number.isFinite(optimisticUpdatedAt) &&
+      snapshotUpdatedAt >= optimisticUpdatedAt
+    ) {
+      return snapshotJob;
+    }
+    return optimisticJob;
+  }, [snapshotJob, optimisticJob]);
+
+  React.useEffect(() => {
+    if (!isSignedIn || !jobId) {
+      setOptimisticJob(null);
+      return;
+    }
+    if (snapshotJob && optimisticJob && snapshotJob.job_id === optimisticJob.job_id) {
+      const snapshotUpdatedAt = Date.parse(snapshotJob.updated_at);
+      const optimisticUpdatedAt = Date.parse(optimisticJob.updated_at);
+      if (
+        Number.isFinite(snapshotUpdatedAt) &&
+        Number.isFinite(optimisticUpdatedAt) &&
+        snapshotUpdatedAt >= optimisticUpdatedAt
+      ) {
+        setOptimisticJob(null);
+      }
+    }
+  }, [isSignedIn, jobId, snapshotJob, optimisticJob]);
 
   const flow = React.useMemo(
     () => deriveFlowState(isSignedIn, job ?? null),
@@ -269,11 +305,19 @@ export default function App() {
   const [manualOpen, setManualOpen] = React.useState<string | undefined>(() =>
     readSessionValue(OPEN_STEP_KEY) ?? undefined
   );
-  const [restoreLoadingTimedOut, setRestoreLoadingTimedOut] = React.useState(false);
   const backendResetCheckRef = React.useRef(false);
   const latestJobLookupAttemptedRef = React.useRef(false);
   const latestJobLookupRetryCountRef = React.useRef(0);
   const latestJobLookupRetryTimeoutRef = React.useRef<number | null>(null);
+  const stalledImportAutoRefreshRef = React.useRef<{
+    key: string | null;
+    attempts: number;
+    lastAt: number;
+  }>({
+    key: null,
+    attempts: 0,
+    lastAt: 0,
+  });
   const emailLinkAutoRef = React.useRef(false);
   const openStep = React.useMemo(() => {
     if (
@@ -427,8 +471,8 @@ export default function App() {
     now,
     importRunning
   );
-  const reviewLastUpdate = formatPhaseLastUpdate(job?.progress_log, "review", now);
-  const importLastUpdate = formatPhaseLastUpdate(job?.progress_log, "import", now);
+  const reviewLastUpdate = formatPhaseLastUpdate(job?.progress_log, "review", now, job?.heartbeat_at);
+  const importLastUpdate = formatPhaseLastUpdate(job?.progress_log, "import", now, job?.heartbeat_at);
   const heartbeatAt = job?.heartbeat_at ? Date.parse(job.heartbeat_at) : NaN;
   const stalledHeartbeat =
     Number.isFinite(heartbeatAt) &&
@@ -441,6 +485,71 @@ export default function App() {
     importRunning && stalledHeartbeat
       ? `No background heartbeat for ${formatLastUpdate(job?.heartbeat_at, now)}. The import may still be running; refresh if the status looks outdated.`
       : null;
+
+  React.useEffect(() => {
+    if (!jobId || !importRunning || !stalledHeartbeat) {
+      stalledImportAutoRefreshRef.current = {
+        key: null,
+        attempts: 0,
+        lastAt: 0,
+      };
+      return;
+    }
+    const recoveryKey = [
+      jobId,
+      job?.status ?? "",
+      job?.progress_stage ?? "",
+      job?.heartbeat_at ?? job?.updated_at ?? "",
+      String(job?.worker_retry_count ?? 0),
+    ].join(":");
+    const state = stalledImportAutoRefreshRef.current;
+    if (state.key !== recoveryKey) {
+      state.key = recoveryKey;
+      state.attempts = 0;
+      state.lastAt = 0;
+    }
+    if (state.attempts >= STALLED_IMPORT_AUTO_REFRESH_MAX_ATTEMPTS) {
+      return;
+    }
+    const nowMs = Date.now();
+    const waitMs =
+      state.lastAt > 0
+        ? Math.max(0, STALLED_IMPORT_AUTO_REFRESH_INTERVAL_MS - (nowMs - state.lastAt))
+        : 0;
+    let timeout = 0;
+    let cancelled = false;
+    const scheduleRefresh = (delayMs: number) => {
+      timeout = window.setTimeout(() => {
+        if (cancelled || state.key !== recoveryKey) {
+          return;
+        }
+        if (state.attempts >= STALLED_IMPORT_AUTO_REFRESH_MAX_ATTEMPTS) {
+          return;
+        }
+        state.attempts += 1;
+        state.lastAt = Date.now();
+        void refresh();
+        if (state.attempts < STALLED_IMPORT_AUTO_REFRESH_MAX_ATTEMPTS) {
+          scheduleRefresh(STALLED_IMPORT_AUTO_REFRESH_INTERVAL_MS);
+        }
+      }, delayMs);
+    };
+    scheduleRefresh(waitMs);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [
+    jobId,
+    job?.heartbeat_at,
+    job?.progress_stage,
+    job?.status,
+    job?.updated_at,
+    job?.worker_retry_count,
+    importRunning,
+    stalledHeartbeat,
+    refresh,
+  ]);
 
   React.useEffect(() => {
     if (!isSignedIn || !jobId || !reviewComplete) {
@@ -662,6 +771,7 @@ export default function App() {
       };
       await validateCredentials({ credentials: payload.credentials }, auth);
       const createdJob = await createJob(payload, auth);
+      setOptimisticJob(createdJob);
       setSessionValue(JOB_ID_KEY, createdJob.job_id);
       setJobId(createdJob.job_id);
       setShowAllFlights(false);
@@ -697,11 +807,12 @@ export default function App() {
               flysto_password: flystoPassword,
             }
           : null;
-      await acceptReview(
+      const updatedJob = await acceptReview(
         jobId,
         credentialsProvided ? { credentials: credentialsProvided } : {},
         auth
       );
+      setOptimisticJob(updatedJob);
       setManualOpen("import");
       refresh();
     } catch (err) {
@@ -982,13 +1093,23 @@ export default function App() {
     setDownloadLoading(true);
     setActionError(null);
     try {
-      const blob = await downloadArtifactsZip(jobId, auth);
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `skybridge-run-${jobId}.zip`;
-      link.click();
-      window.URL.revokeObjectURL(url);
+      const result = await downloadArtifactsZip(jobId, auth);
+      if (result instanceof Blob) {
+        const url = window.URL.createObjectURL(result);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `skybridge-run-${jobId}.zip`;
+        link.click();
+        window.URL.revokeObjectURL(url);
+      } else {
+        // Signed GCS URL — navigate directly so the browser downloads from GCS
+        // and no function-in-the-middle risks another Cloudflare timeout.
+        const link = document.createElement("a");
+        link.href = result.downloadUrl;
+        link.download = result.filename;
+        link.rel = "noopener";
+        link.click();
+      }
     } catch (err) {
       if (isAuthExpiredError(err)) {
         handleTokenExpired();
@@ -1137,23 +1258,9 @@ export default function App() {
     latestJobLookupPending && latestJobLookupRetryCountRef.current === 0;
   const restoreRequestInFlight =
     isSignedIn &&
-    (initialLatestJobLookupPending || (Boolean(jobId) && jobLoading && !job && !jobError));
+    (initialLatestJobLookupPending || (Boolean(jobId) && !job && !jobError));
 
-  React.useEffect(() => {
-    if (!restoreRequestInFlight) {
-      setRestoreLoadingTimedOut(false);
-      return;
-    }
-    setRestoreLoadingTimedOut(false);
-    const timeout = window.setTimeout(() => {
-      setRestoreLoadingTimedOut(true);
-    }, RESTORE_LOADING_MAX_MS);
-    return () => {
-      window.clearTimeout(timeout);
-    };
-  }, [restoreRequestInFlight]);
-
-  const restoringJobState = restoreRequestInFlight && !restoreLoadingTimedOut;
+  const restoringJobState = restoreRequestInFlight;
 
   return (
     <div className="app-shell relative min-h-screen flex flex-col text-foreground">

@@ -12,7 +12,6 @@ import pytest
 from src.backend.models import FlightSummary, JobRecord, ReviewSummary
 from src.backend.store import (
     JobStore,
-    _bool_env,
     _coerce_location,
     _extract_locations,
     _extract_metadata_from_raw,
@@ -74,17 +73,6 @@ def job_record() -> JobRecord:
             ],
         ),
     )
-
-
-def test_bool_env_defaults(monkeypatch):
-    monkeypatch.delenv("FLAG", raising=False)
-    assert _bool_env("FLAG", True) is True
-    monkeypatch.setenv("FLAG", "1")
-    assert _bool_env("FLAG", False) is True
-    monkeypatch.setenv("FLAG", "no")
-    assert _bool_env("FLAG", True) is False
-
-
 def test_ttl_epoch_handles_naive_datetime(monkeypatch):
     naive = datetime(2026, 1, 1)
     monkeypatch.setenv("BACKEND_RETENTION_DAYS", "1")

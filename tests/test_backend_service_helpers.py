@@ -195,3 +195,43 @@ def test_append_progress_trims_log_and_updates_job() -> None:
 def test_short_flight_id(value: str, expected: str) -> None:
     """Test flight id shortening keeps short values intact."""
     assert service._short_flight_id(value) == expected
+
+
+def test_background_heartbeat_ticks_while_main_thread_blocks() -> None:
+    """Background heartbeat must fire while the main thread is stuck."""
+    import time
+
+    ticks: list[float] = []
+
+    def beat() -> None:
+        ticks.append(time.monotonic())
+
+    # 0.05s interval so the test runs fast; the real default is 30s.
+    with service._BackgroundHeartbeat(beat, interval_seconds=0.05):
+        time.sleep(0.25)
+
+    # Expect at least 2 ticks within 0.25s at 0.05s interval; allow slack for
+    # CI scheduling jitter.
+    assert len(ticks) >= 2
+
+
+def test_background_heartbeat_is_noop_when_callable_is_none() -> None:
+    """Passing None must not spawn a thread."""
+    with service._BackgroundHeartbeat(None, interval_seconds=0.01) as bh:
+        assert bh._thread is None
+
+
+def test_background_heartbeat_swallows_exceptions() -> None:
+    """A failing heartbeat must not crash the worker."""
+    import time
+
+    call_count = {"n": 0}
+
+    def flaky() -> None:
+        call_count["n"] += 1
+        raise RuntimeError("firestore unavailable")
+
+    with service._BackgroundHeartbeat(flaky, interval_seconds=0.02):
+        time.sleep(0.1)
+
+    assert call_count["n"] >= 2

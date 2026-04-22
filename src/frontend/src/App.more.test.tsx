@@ -80,6 +80,7 @@ function baseJob(overrides: Partial<JobRecord>): JobRecord {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.resetAllMocks();
   vi.unstubAllGlobals();
@@ -269,6 +270,55 @@ describe("App UI flows", () => {
     ).toBeInTheDocument();
   });
 
+  it("auto-refreshes stalled imports on a bounded cooldown", async () => {
+    vi.useFakeTimers();
+    sessionStorage.setItem(JOB_ID_KEY, "job-123");
+    const refresh = vi.fn(async () => undefined);
+    vi.mocked(useFirebaseAuth).mockReturnValue(firebaseAuthState());
+    vi.mocked(useJobSnapshot).mockReturnValue(
+      jobSnapshotState({
+        refresh,
+        data: baseJob({
+          status: "import_running",
+          heartbeat_at: new Date(Date.now() - 181_000).toISOString(),
+          progress_stage: "Finalizing import",
+          progress_percent: 85,
+          progress_log: [
+            {
+              phase: "import",
+              stage: "Finalizing import",
+              percent: 85,
+              status: "import_running",
+              created_at: new Date(Date.now() - 181_000).toISOString(),
+            },
+          ],
+        }),
+      })
+    );
+
+    render(<App />);
+
+    await act(async () => {
+      await vi.advanceTimersToNextTimerAsync();
+    });
+    expect(refresh).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(29_000);
+    });
+    expect(refresh).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    expect(refresh).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10 * 30_000);
+    });
+    expect(refresh).toHaveBeenCalledTimes(10);
+  });
+
   it("loads review rows from the artifact when the job summary is slim", async () => {
     sessionStorage.setItem(JOB_ID_KEY, "job-123");
     vi.mocked(fetchArtifact).mockResolvedValue({
@@ -338,5 +388,55 @@ describe("App UI flows", () => {
     });
 
     expect(acceptReview).toHaveBeenCalledWith("job-123", {}, { token: "token" });
+  });
+
+  it("keeps the import step in queued state after accept succeeds even if the snapshot is still stale", async () => {
+    sessionStorage.setItem(JOB_ID_KEY, "job-123");
+    vi.mocked(useFirebaseAuth).mockReturnValue(firebaseAuthState());
+    vi.mocked(useJobSnapshot).mockReturnValue(
+      jobSnapshotState({
+        data: baseJob({
+          status: "failed",
+          error_message: "Import credentials are unavailable. Re-enter CloudAhoy and FlySto credentials in Connect Accounts and retry.",
+          progress_stage: "Import failed",
+          progress_log: [
+            {
+              phase: "import",
+              stage: "Uploading",
+              status: "import_running",
+              created_at: "2026-01-01T10:05:00Z",
+            },
+          ],
+        }),
+      })
+    );
+    vi.mocked(acceptReview).mockResolvedValue(
+      baseJob({
+        status: "import_queued",
+        error_message: null,
+        progress_stage: "Queued",
+        progress_percent: 5,
+        updated_at: "2026-01-01T10:06:00Z",
+        progress_log: [
+          {
+            phase: "import",
+            stage: "Queued",
+            percent: 5,
+            status: "import_queued",
+            created_at: "2026-01-01T10:06:00Z",
+          },
+        ],
+      })
+    );
+
+    render(<App />);
+
+    const retryImport = await screen.findByRole("button", { name: /retry import/i });
+    await act(async () => {
+      fireEvent.click(retryImport);
+    });
+
+    expect(await screen.findByText(/^queued$/i)).toBeInTheDocument();
+    expect(screen.queryByText(/import credentials are unavailable/i)).not.toBeInTheDocument();
   });
 });
