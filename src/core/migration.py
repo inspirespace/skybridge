@@ -1082,40 +1082,83 @@ def verify_import_report(
     *,
     heartbeat: Callable[[], None] | None = None,
     payload: dict[str, Any] | None = None,
+    max_workers: int = 1,
 ) -> dict[str, int]:
-    """Handle verify import report."""
+    """Resolve FlySto log IDs for every report item.
+
+    When ``max_workers > 1`` the per-item log-lookup runs concurrently.
+    On the happy path :py:func:`_resolve_log_for_report_item` short-circuits
+    on persisted ``flysto_log_id`` without making any network calls, so the
+    speedup only matters when the upload step failed to persist log IDs.
+    Default ``max_workers=1`` keeps CLI behavior byte-identical.
+    """
     persist = payload is None
     if payload is None:
         payload = json.loads(report_path.read_text())
     items = payload.get("items", [])
-    resolved = 0
-    missing = 0
-    total = 0
-    for item in items:
-        _safe_heartbeat(heartbeat)
-        if not isinstance(item, dict):
-            continue
-        total += 1
+
+    def _resolve_one(item: dict[str, Any], *, retries: int, delay_seconds: float, logs_limit: int) -> str:
+        """Return the bucket each item falls into after resolution."""
         file_path = item.get("file_path")
         if not file_path:
-            missing += 1
-            continue
+            return "missing"
         filename = Path(file_path).name
         log_id, signature, log_format = _resolve_log_for_report_item(
             flysto,
             item,
             filename,
-            retries=3,
-            delay_seconds=1.5,
-            logs_limit=50,
+            retries=retries,
+            delay_seconds=delay_seconds,
+            logs_limit=logs_limit,
         )
         item["flysto_log_id"] = log_id
         item["flysto_signature"] = signature
         item["flysto_format"] = log_format
-        if log_id:
-            resolved += 1
+        return "resolved" if log_id else "missing"
+
+    def _run_pass(retries: int, delay_seconds: float, logs_limit: int) -> tuple[int, int, int]:
+        """Run one resolution pass over every dict item."""
+        eligible = [item for item in items if isinstance(item, dict)]
+        resolved = 0
+        missing = 0
+        total = len(eligible)
+        if max_workers <= 1 or len(eligible) <= 1:
+            for item in eligible:
+                _safe_heartbeat(heartbeat)
+                bucket = _resolve_one(
+                    item,
+                    retries=retries,
+                    delay_seconds=delay_seconds,
+                    logs_limit=logs_limit,
+                )
+                if bucket == "resolved":
+                    resolved += 1
+                else:
+                    missing += 1
         else:
-            missing += 1
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+
+            with ThreadPoolExecutor(max_workers=min(max_workers, len(eligible))) as pool:
+                futures = [
+                    pool.submit(
+                        _resolve_one,
+                        item,
+                        retries=retries,
+                        delay_seconds=delay_seconds,
+                        logs_limit=logs_limit,
+                    )
+                    for item in eligible
+                ]
+                for future in as_completed(futures):
+                    _safe_heartbeat(heartbeat)
+                    if future.result() == "resolved":
+                        resolved += 1
+                    else:
+                        missing += 1
+        return total, resolved, missing
+
+    total, resolved, missing = _run_pass(retries=3, delay_seconds=1.5, logs_limit=50)
+
     payload["verified_at"] = now_iso_z()
     payload["pending"] = sum(1 for item in items if not item.get("flysto_log_id"))
     try:
@@ -1125,36 +1168,13 @@ def verify_import_report(
     if processing_queue is not None:
         payload["flysto_processing_queue"] = processing_queue
 
+    # Retry pass with a wider logs_limit when FlySto's queue looks quiet —
+    # anything still missing at that point is unlikely to show up with a
+    # bigger scan, but we still try once more for safety.
     if missing > 0 and (processing_queue == 0 or processing_queue is None):
-        resolved = 0
-        missing = 0
-        total = 0
-        for item in items:
-            _safe_heartbeat(heartbeat)
-            if not isinstance(item, dict):
-                continue
-            total += 1
-            file_path = item.get("file_path")
-            if not file_path:
-                missing += 1
-                continue
-            filename = Path(file_path).name
-            log_id, signature, log_format = _resolve_log_for_report_item(
-                flysto,
-                item,
-                filename,
-                retries=6,
-                delay_seconds=2.0,
-                logs_limit=500,
-            )
-            item["flysto_log_id"] = log_id
-            item["flysto_signature"] = signature
-            item["flysto_format"] = log_format
-            if log_id:
-                resolved += 1
-            else:
-                missing += 1
+        total, resolved, missing = _run_pass(retries=6, delay_seconds=2.0, logs_limit=500)
         payload["pending"] = sum(1 for item in items if not item.get("flysto_log_id"))
+
     payload["verification"] = {
         "attempted": total,
         "resolved": resolved,
@@ -1172,27 +1192,44 @@ def reconcile_aircraft_from_report(
     heartbeat: Callable[[], None] | None = None,
     payload: dict[str, Any] | None = None,
     progress: Callable[[int, int], None] | None = None,
+    max_workers: int = 1,
 ) -> int:
-    """Handle reconcile aircraft from report."""
+    """Ensure an aircraft is assigned to every eligible import-report item.
+
+    With ``max_workers > 1`` per-item assignment runs concurrently. Default
+    ``max_workers=1`` keeps CLI behavior byte-identical.
+    """
     persist = payload is None
     if payload is None:
         payload = json.loads(report_path.read_text())
     items = payload.get("items", [])
     total = sum(1 for item in items if isinstance(item, dict))
     updated = 0
-    processed = 0
+
+    eligible: list[dict[str, Any]] = []
     for item in items:
         _safe_heartbeat(heartbeat)
         if not isinstance(item, dict):
             continue
+        if item.get("aircraft_reconciled") is True:
+            continue
+        eligible.append(item)
+
+    processed = 0
+
+    def _record(applied: bool) -> None:
+        nonlocal processed, updated
+        _safe_heartbeat(heartbeat)
         processed += 1
         if progress is not None:
             try:
                 progress(processed, total)
             except Exception:
                 pass
-        if item.get("aircraft_reconciled") is True:
-            continue
+        if applied:
+            updated += 1
+
+    def _apply_one(item: dict[str, Any]) -> bool:
         tail_number = item.get("tail_number")
         signature = item.get("flysto_source_system_id") or (
             item.get("flysto_upload_signature_hash")
@@ -1216,7 +1253,18 @@ def reconcile_aircraft_from_report(
                 except Exception:
                     signature = signature or None
                     log_format = log_format or None
-        if item.get("flysto_log_id"):
+        # Only fetch the log source when it materially improves what we have:
+        # missing signature, missing log_format, or the current signature is
+        # NOT a flysto_source_system_id (i.e. we only have an upload-time
+        # signature that FlySto may have canonicalized). This skips an
+        # expensive GET per item when the persisted source_system_id already
+        # matches what the GET would return.
+        needs_source_lookup = item.get("flysto_log_id") and (
+            not signature
+            or not log_format
+            or not item.get("flysto_source_system_id")
+        )
+        if needs_source_lookup:
             try:
                 source_format, source_system_id = flysto.resolve_log_source_for_log_id(
                     item["flysto_log_id"]
@@ -1228,7 +1276,7 @@ def reconcile_aircraft_from_report(
             except Exception:
                 pass
         if not tail_number or not signature:
-            continue
+            return False
         if not log_format:
             if Path(item.get("file_path", "")).name.lower().endswith(".g3x.csv"):
                 log_format = "UnknownGarmin"
@@ -1236,15 +1284,27 @@ def reconcile_aircraft_from_report(
                 log_format = "GenericGpx"
         aircraft = flysto.ensure_aircraft(tail_number, item.get("aircraft_type"))
         if not aircraft or not aircraft.get("id"):
-            continue
+            return False
         flysto.assign_aircraft_for_signature(
             aircraft_id=str(aircraft.get("id")),
             signature=signature,
             log_format_id="GenericGpx",
             resolved_format=log_format,
         )
-        updated += 1
         item["aircraft_reconciled"] = True
+        return True
+
+    if max_workers <= 1 or len(eligible) <= 1:
+        for item in eligible:
+            _record(_apply_one(item))
+    else:
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        with ThreadPoolExecutor(max_workers=min(max_workers, len(eligible))) as pool:
+            futures = [pool.submit(_apply_one, item) for item in eligible]
+            for future in as_completed(futures):
+                _record(future.result())
+
     payload["aircraft_reconciled_at"] = now_iso_z()
     payload["aircraft_reconciled"] = updated
     if persist:
@@ -1262,8 +1322,25 @@ def reconcile_crew_from_report(
     payload: dict[str, Any] | None = None,
     progress: Callable[[int, int], None] | None = None,
     skip_if_reconciled: bool = True,
+    verify: bool = True,
 ) -> int:
-    """Handle reconcile crew from report."""
+    """Assign crew to every eligible import-report item.
+
+    The function runs in three phases:
+
+    1. **Preamble (per-item serial)** — resolve each item's log_id and crew.
+       Items with no log_id or no crew data are dropped.
+    2. **Batched assign (one POST per distinct crew tuple)** — flights that
+       share identical crew are folded into a single ``/api/assign-crew``
+       request via :py:meth:`FlyStoClient.assign_crew_for_log_ids`. On the
+       real-world 46-flight workload this collapses ~46 POSTs into a handful.
+    3. **Verify (optional, per-item)** — if ``verify`` is True (default),
+       each log's metadata is re-fetched and crew is re-assigned individually
+       if FlySto didn't persist it. The backend reapply pass
+       (``skip_if_reconciled=False``) sets ``verify=False`` because its only
+       job is to restore crew FlySto may have cleared during post-processing
+       — it does not need to check whether the write landed.
+    """
     persist = payload is None
     if payload is None:
         payload = json.loads(report_path.read_text())
@@ -1278,9 +1355,11 @@ def reconcile_crew_from_report(
             metadata = entry.get("metadata")
             if isinstance(flight_id, str) and isinstance(metadata, dict):
                 review_metadata[flight_id] = metadata
+
     total = sum(1 for item in items if isinstance(item, dict))
-    updated = 0
     processed = 0
+    # Preamble: resolve log_id + crew for each eligible item.
+    prepared: list[tuple[dict[str, Any], str, list[dict[str, Any]]]] = []
     for item in items:
         _safe_heartbeat(heartbeat)
         if not isinstance(item, dict):
@@ -1295,6 +1374,10 @@ def reconcile_crew_from_report(
             continue
         log_id = item.get("flysto_log_id") or item.get("flysto_upload_log_id")
         file_path = item.get("file_path")
+        # Always re-resolve via prefer_persisted_log_id=False: the upload
+        # path may have left `flysto_log_id` pointing at a stale candidate.
+        # When `flysto_upload_log_id` is set this short-circuits inside
+        # `_resolve_log_for_report_item` without any network call.
         if file_path:
             try:
                 resolved_log_id, _signature, _format = _resolve_log_for_report_item(
@@ -1328,9 +1411,29 @@ def reconcile_crew_from_report(
         if not crew:
             continue
         item["crew"] = crew
-        flysto.assign_crew_for_log_id(log_id, crew)
-        if not _log_metadata_has_crew(flysto.fetch_log_metadata(log_id), log_id):
+        prepared.append((item, log_id, crew))
+
+    # Group items by identical crew so we can POST them together.
+    groups: dict[tuple, list[tuple[dict[str, Any], str, list[dict[str, Any]]]]] = {}
+    for entry in prepared:
+        key = _crew_signature(entry[2])
+        groups.setdefault(key, []).append(entry)
+
+    for group in groups.values():
+        _safe_heartbeat(heartbeat)
+        log_ids = [log_id for _item, log_id, _crew in group]
+        crew = group[0][2]
+        flysto.assign_crew_for_log_ids(log_ids, crew)
+
+    # Optional verify: catch cases where FlySto accepted the POST but did
+    # not persist the crew (seen in practice during high-traffic windows).
+    if verify:
+        for item, log_id, crew in prepared:
+            _safe_heartbeat(heartbeat)
+            if _log_metadata_has_crew(flysto.fetch_log_metadata(log_id), log_id):
+                continue
             time.sleep(2)
+            file_path = item.get("file_path")
             if file_path:
                 try:
                     refreshed_log_id, _signature, _format = _resolve_log_for_report_item(
@@ -1348,13 +1451,36 @@ def reconcile_crew_from_report(
                     log_id = refreshed_log_id
                     item["flysto_log_id"] = refreshed_log_id
             flysto.assign_crew_for_log_id(log_id, crew)
-        updated += 1
+
+    updated = len(prepared)
+    for item, _log_id, _crew in prepared:
         item["crew_reconciled"] = True
+
     payload["crew_reconciled_at"] = now_iso_z()
     payload["crew_reconciled"] = updated
     if persist:
         report_path.write_text(json.dumps(payload, indent=2))
     return updated
+
+
+def _crew_signature(crew: list[dict[str, Any]]) -> tuple:
+    """Stable hashable key for grouping items with identical crew."""
+    normalized: list[tuple] = []
+    for entry in crew or []:
+        if not isinstance(entry, dict):
+            continue
+        name = entry.get("name")
+        role = entry.get("role")
+        is_pic = entry.get("is_pic")
+        normalized.append(
+            (
+                name.strip() if isinstance(name, str) else name,
+                role,
+                bool(is_pic) if is_pic is not None else None,
+            )
+        )
+    normalized.sort(key=lambda tup: tuple(str(part) if part is not None else "" for part in tup))
+    return tuple(normalized)
 
 
 def _log_metadata_has_crew(metadata: dict[str, Any] | None, log_id: str | None) -> bool:
@@ -1459,13 +1585,17 @@ def _assign_metadata_with_recovery(
         if not file_path or not resolve_item:
             return None, None, None
         try:
+            # logs_limit matches the outer reconcile callers (commit 39f1e84)
+            # so a 50-log scan is enough: if the log isn't in the most recent
+            # 50 uploads, a 250-log scan is unlikely to find it either, and
+            # the scan itself is what made the recovery path expensive.
             return _resolve_log_for_report_item(
                 flysto,
                 resolve_item,
                 Path(file_path).name,
                 retries=3,
                 delay_seconds=1.5,
-                logs_limit=250,
+                logs_limit=50,
                 prefer_persisted_log_id=False,
             )
         except Exception:
@@ -1504,28 +1634,34 @@ def reconcile_metadata_from_report(
     heartbeat: Callable[[], None] | None = None,
     payload: dict[str, Any] | None = None,
     progress: Callable[[int, int], None] | None = None,
+    max_workers: int = 1,
 ) -> int:
-    """Handle reconcile metadata from report."""
+    """Apply remarks/tags metadata to every eligible import-report item.
+
+    FlySto's ``/api/log-annotations/{log_id}`` endpoint has no batch form, so
+    N flights = N PUTs. On real workloads that meant ~18 min for 46 flights.
+    With ``max_workers > 1`` the per-item PUTs run on a ``ThreadPoolExecutor``
+    for ``max_workers``-way concurrency; heartbeat and progress callbacks
+    still fire on the main thread as each future completes. Default
+    ``max_workers=1`` keeps CLI behavior byte-identical to the prior loop.
+    """
     persist = payload is None
     if payload is None:
         payload = json.loads(report_path.read_text())
     items = payload.get("items", [])
     total = sum(1 for item in items if isinstance(item, dict))
     updated = 0
-    processed = 0
+
+    # Pre-filter eligible items on the main thread so worker threads only do
+    # the network-bound PUT. Items with metadata_reconciled=True (from a
+    # prior worker run) or nothing to write are skipped here. We still fire
+    # the heartbeat so large reports with mostly-skipped items keep the
+    # worker alive while iterating.
+    eligible: list[dict[str, Any]] = []
     for item in items:
         _safe_heartbeat(heartbeat)
         if not isinstance(item, dict):
             continue
-        processed += 1
-        if progress is not None:
-            try:
-                progress(processed, total)
-            except Exception:
-                pass
-        # Idempotent: if the item was already reconciled in a prior worker run,
-        # skip the remote PUT so auto-retry after a 540 s worker timeout does
-        # not redo the whole 46-item loop against FlySto.
         if item.get("metadata_reconciled") is True:
             continue
         remarks = item.get("remarks")
@@ -1533,6 +1669,12 @@ def reconcile_metadata_from_report(
         if not remarks and not tags:
             item["metadata_reconciled"] = True
             continue
+        eligible.append(item)
+
+    def _apply_one(item: dict[str, Any]) -> tuple[dict[str, Any], bool]:
+        """Per-item work suitable for running on a worker thread."""
+        remarks = item.get("remarks")
+        tags = item.get("tags")
         log_id = item.get("flysto_log_id") or item.get("flysto_upload_log_id")
         file_path = item.get("file_path")
         if file_path and not log_id:
@@ -1552,7 +1694,7 @@ def reconcile_metadata_from_report(
                 log_id = resolved_log_id
                 item["flysto_log_id"] = resolved_log_id
         if not log_id:
-            continue
+            return item, False
         log_id, _signature, _format, applied = _assign_metadata_with_recovery(
             flysto,
             log_id,
@@ -1563,9 +1705,38 @@ def reconcile_metadata_from_report(
         )
         if log_id:
             item["flysto_log_id"] = log_id
+        return item, applied
+
+    processed = 0
+
+    def _record(finished_item: dict[str, Any], applied: bool) -> None:
+        nonlocal processed, updated
+        _safe_heartbeat(heartbeat)
+        processed += 1
+        if progress is not None:
+            try:
+                progress(processed, total)
+            except Exception:
+                pass
         if applied:
             updated += 1
-            item["metadata_reconciled"] = True
+            finished_item["metadata_reconciled"] = True
+
+    if max_workers <= 1 or len(eligible) <= 1:
+        # Serial path — preserves CLI behavior byte-for-byte.
+        for item in eligible:
+            finished_item, applied = _apply_one(item)
+            _record(finished_item, applied)
+    else:
+        # Parallel path — bounded concurrency for the network-bound PUT.
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        with ThreadPoolExecutor(max_workers=min(max_workers, len(eligible))) as pool:
+            futures = {pool.submit(_apply_one, item): item for item in eligible}
+            for future in as_completed(futures):
+                finished_item, applied = future.result()
+                _record(finished_item, applied)
+
     payload["metadata_reconciled_at"] = now_iso_z()
     payload["metadata_reconciled"] = updated
     if persist:

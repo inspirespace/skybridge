@@ -497,6 +497,21 @@ class FlyStoClient:
         """Handle assign crew for log id."""
         if not log_id:
             return
+        self.assign_crew_for_log_ids([log_id], crew)
+
+    def assign_crew_for_log_ids(
+        self, log_ids: list[str], crew: list[dict[str, Any]]
+    ) -> None:
+        """Assign the same crew to multiple logs in a single POST.
+
+        ``/api/assign-crew`` accepts a list of ``logIds`` alongside the names
+        and roles, so when many flights share identical crew (e.g. a pilot's
+        solo flights, a student's lessons with one instructor) we can fold
+        N assignments into one round-trip. Empty/invalid log_ids are dropped.
+        """
+        filtered_ids = [log_id for log_id in log_ids if log_id]
+        if not filtered_ids:
+            return
         names: list[str] = []
         roles: list[int | str] = []
         crew_names = [entry.get("name") for entry in crew if entry.get("name")]
@@ -516,7 +531,7 @@ class FlyStoClient:
             roles.append(_coerce_role_id(role_id))
         if not names or not roles:
             return
-        self._assign_crew([log_id], names, roles)
+        self._assign_crew(filtered_ids, names, roles)
 
     def assign_metadata_for_file(
         self,

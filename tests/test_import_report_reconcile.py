@@ -79,6 +79,12 @@ class DummyFlyStoReports(FlyStoClient):
         if log_id:
             self.assigned_crew.append(log_id)
 
+    def assign_crew_for_log_ids(self, log_ids, crew):
+        """Handle batched crew assignment (new public helper)."""
+        for log_id in log_ids:
+            if log_id:
+                self.assigned_crew.append(log_id)
+
     def assign_metadata_for_log_id(self, log_id: str | None, remarks=None, tags=None):
         """Handle assign metadata for log id."""
         if log_id:

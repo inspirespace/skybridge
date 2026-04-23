@@ -485,11 +485,19 @@ class JobService:
                         stage="Verifying imported flights",
                         percent=88,
                     )
+                    # Parallelize the per-item passes. Default 4 — FlySto
+                    # tolerates small bursts fine and it cuts metadata
+                    # reconcile from ~18 min → ~5 min on 46 flights. Env
+                    # override lets us dial back if FlySto starts 429'ing.
+                    reconcile_max_workers = max(
+                        1, _int_env("BACKEND_RECONCILE_MAX_WORKERS", 4)
+                    )
                     verify_import_report(
                         report_path,
                         flysto,
                         heartbeat=heartbeat,
                         payload=finalization_payload,
+                        max_workers=reconcile_max_workers,
                     )
                     _set_import_finalization_stage(
                         self._store,
@@ -503,6 +511,7 @@ class JobService:
                         heartbeat=heartbeat,
                         payload=finalization_payload,
                         progress=_make_progress("Reconciling aircraft", 90),
+                        max_workers=reconcile_max_workers,
                     )
                     _set_import_finalization_stage(
                         self._store,
@@ -531,8 +540,11 @@ class JobService:
                         heartbeat=heartbeat,
                         payload=finalization_payload,
                         progress=_make_progress("Reconciling metadata", 94),
+                        max_workers=reconcile_max_workers,
                     )
                     # Crew can be cleared by FlySto post-processing; reapply after the queue drains.
+                    # verify=False: this pass exists only to replay writes
+                    # FlySto may have cleared, not to validate them.
                     _maybe_wait_for_processing(flysto, heartbeat=heartbeat)
                     _set_import_finalization_stage(
                         self._store,
@@ -549,6 +561,7 @@ class JobService:
                         payload=finalization_payload,
                         progress=_make_progress("Reapplying crew assignments", 96),
                         skip_if_reconciled=False,
+                        verify=False,
                     )
                     report_path.write_text(json.dumps(finalization_payload, indent=2))
             final_report_payload = _load_or_create_import_report(report_path, review_id, len(summaries))
