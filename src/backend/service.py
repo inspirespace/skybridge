@@ -38,6 +38,12 @@ from src.core.migration import (
 from src.core.models import FlightSummary as CoreFlightSummary
 from src.core.state import MigrationState
 from src.core.flysto.client import FlyStoClient
+from src.core.time_utils import (
+    filter_summaries_by_date as _filter_summaries_by_date,
+    format_iso_z,
+    parse_date_bound as _parse_date_bound,
+    parse_iso_z,
+)
 
 from .models import (
     ImportReport,
@@ -121,7 +127,7 @@ class JobService:
                 manifest_items = [_summary_manifest_item(summary) for summary in summaries]
                 review_id = _compute_manifest_review_id(manifest_items)
                 review_payload = {
-                    "generated_at": _now().isoformat().replace("+00:00", "Z"),
+                    "generated_at": format_iso_z(_now()),
                     "review_id": review_id,
                     "count": len(manifest_items),
                     "items": manifest_items,
@@ -639,7 +645,7 @@ def _summary_from_manifest_item(item: dict[str, object]) -> CoreFlightSummary:
     raw_started_at = item.get("started_at")
     if isinstance(raw_started_at, str) and raw_started_at:
         try:
-            started_at = datetime.fromisoformat(raw_started_at.replace("Z", "+00:00"))
+            started_at = parse_iso_z(raw_started_at)
         except ValueError:
             started_at = None
     return CoreFlightSummary(
@@ -679,7 +685,7 @@ def _build_review_summary_from_rows(items: list[FlightSummary]) -> ReviewSummary
     for item in items:
         if item.date:
             try:
-                started_at = datetime.fromisoformat(item.date.replace("Z", "+00:00"))
+                started_at = parse_iso_z(item.date)
             except ValueError:
                 started_at = None
             if started_at is not None:
@@ -1343,8 +1349,7 @@ def _summaries_from_review(payload: dict) -> list[CoreFlightSummary]:
         started_raw = item.get("started_at")
         if isinstance(started_raw, str) and started_raw:
             try:
-                normalized = started_raw.replace("Z", "+00:00")
-                started_at = datetime.fromisoformat(normalized)
+                started_at = parse_iso_z(started_raw)
             except ValueError:
                 started_at = None
         summaries.append(
@@ -1445,46 +1450,6 @@ def _coerce_location(value: object) -> str | None:
         if isinstance(name, str) and name:
             return name
     return None
-
-
-def _parse_date_bound(value: str, is_end: bool) -> datetime:
-    """Internal helper for parse date bound."""
-    raw = value.strip()
-    normalized = raw.replace("Z", "+00:00")
-    if "T" not in normalized and len(normalized) == 10:
-        dt = datetime.fromisoformat(normalized)
-        if is_end:
-            dt = dt.replace(hour=23, minute=59, second=59, microsecond=999999)
-        else:
-            dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
-    else:
-        dt = datetime.fromisoformat(normalized)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt
-
-
-def _filter_summaries_by_date(
-    summaries: list[CoreFlightSummary],
-    start_date: datetime | None,
-    end_date: datetime | None,
-) -> list[CoreFlightSummary]:
-    """Internal helper for filter summaries by date."""
-    if not start_date and not end_date:
-        return summaries
-    filtered: list[CoreFlightSummary] = []
-    for summary in summaries:
-        started_at = summary.started_at
-        if started_at is None:
-            continue
-        if started_at.tzinfo is None:
-            started_at = started_at.replace(tzinfo=timezone.utc)
-        if start_date and started_at < start_date:
-            continue
-        if end_date and started_at > end_date:
-            continue
-        filtered.append(summary)
-    return filtered
 
 
 def _parse_export_formats(value: str | None) -> list[str]:

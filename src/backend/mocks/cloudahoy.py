@@ -11,6 +11,8 @@ from urllib.parse import urlparse
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 
+from src.core.time_utils import parse_iso_z
+
 app = FastAPI(title="CloudAhoy Mock")
 
 _RUN_DIR = Path(os.getenv("MOCK_RUN_DIR", "/app/tests/fixtures/run-20251228T185601Z"))
@@ -44,7 +46,7 @@ def _load_review() -> list[dict[str, Any]]:
             continue
         started_at = item.get("started_at")
         try:
-            started_dt = datetime.fromisoformat(started_at.replace("Z", "+00:00"))
+            started_dt = parse_iso_z(started_at)
         except Exception:
             started_dt = datetime.now(tz=timezone.utc)
         flights.append(

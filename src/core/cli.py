@@ -21,6 +21,11 @@ from src.core.migration import (
     verify_import_report,
 )
 from src.core.state import MigrationState
+from src.core.time_utils import (
+    filter_summaries_by_date as _filter_summaries_by_date,
+    parse_date_bound as _parse_date_bound,
+    parse_iso_z,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -157,8 +162,7 @@ def _summaries_from_review(path: Path) -> list[FlightSummary]:
         started_raw = item.get("started_at")
         if isinstance(started_raw, str) and started_raw:
             try:
-                normalized = started_raw.replace("Z", "+00:00")
-                started_at = datetime.fromisoformat(normalized)
+                started_at = parse_iso_z(started_raw)
             except ValueError:
                 started_at = None
         summaries.append(
@@ -171,46 +175,6 @@ def _summaries_from_review(path: Path) -> list[FlightSummary]:
             )
         )
     return summaries
-
-
-def _parse_date_bound(value: str, is_end: bool) -> datetime:
-    """Internal helper for parse date bound."""
-    raw = value.strip()
-    normalized = raw.replace("Z", "+00:00")
-    if "T" not in normalized and len(normalized) == 10:
-        dt = datetime.fromisoformat(normalized)
-        if is_end:
-            dt = dt.replace(hour=23, minute=59, second=59, microsecond=999999)
-        else:
-            dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
-    else:
-        dt = datetime.fromisoformat(normalized)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt
-
-
-def _filter_summaries_by_date(
-    summaries: list[FlightSummary],
-    start_date: datetime | None,
-    end_date: datetime | None,
-) -> list[FlightSummary]:
-    """Internal helper for filter summaries by date."""
-    if not start_date and not end_date:
-        return summaries
-    filtered: list[FlightSummary] = []
-    for summary in summaries:
-        started_at = summary.started_at
-        if started_at is None:
-            continue
-        if started_at.tzinfo is None:
-            started_at = started_at.replace(tzinfo=timezone.utc)
-        if start_date and started_at < start_date:
-            continue
-        if end_date and started_at > end_date:
-            continue
-        filtered.append(summary)
-    return filtered
 
 
 def _apply_run_paths(args: argparse.Namespace, run_id: str, runs_dir: str) -> tuple[Path, str]:

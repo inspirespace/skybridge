@@ -27,9 +27,3 @@ dev = [
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-
-[tool.coverage.run]
-omit = [
-  "src/core/discovery.py",
-  "src/core/discovery_cli.py",
-]

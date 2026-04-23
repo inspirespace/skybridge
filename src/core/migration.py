@@ -15,6 +15,7 @@ from src.core.cloudahoy.points import build_points_schema, points_preview
 from src.core.flysto.client import FlyStoClient
 from src.core.models import FlightDetail, FlightSummary, MigrationResult
 from src.core.state import MigrationState
+from src.core.time_utils import now_iso_z
 
 
 @dataclass(frozen=True)
@@ -170,7 +171,7 @@ def prepare_review(
     if output_path:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
-            "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "generated_at": now_iso_z(),
             "review_id": review_id,
             "count": len(items),
             "summary": _summarize_review(items),
@@ -1053,7 +1054,7 @@ def _write_import_report(
     """Internal helper for write import report."""
     report_path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "generated_at": now_iso_z(),
         "review_id": review_id,
         "attempted": stats.attempted,
         "succeeded": stats.succeeded,
@@ -1115,7 +1116,7 @@ def verify_import_report(
             resolved += 1
         else:
             missing += 1
-    payload["verified_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    payload["verified_at"] = now_iso_z()
     payload["pending"] = sum(1 for item in items if not item.get("flysto_log_id"))
     try:
         processing_queue = flysto.log_files_to_process()
@@ -1244,7 +1245,7 @@ def reconcile_aircraft_from_report(
         )
         updated += 1
         item["aircraft_reconciled"] = True
-    payload["aircraft_reconciled_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    payload["aircraft_reconciled_at"] = now_iso_z()
     payload["aircraft_reconciled"] = updated
     if persist:
         report_path.write_text(json.dumps(payload, indent=2))
@@ -1349,7 +1350,7 @@ def reconcile_crew_from_report(
             flysto.assign_crew_for_log_id(log_id, crew)
         updated += 1
         item["crew_reconciled"] = True
-    payload["crew_reconciled_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    payload["crew_reconciled_at"] = now_iso_z()
     payload["crew_reconciled"] = updated
     if persist:
         report_path.write_text(json.dumps(payload, indent=2))
@@ -1565,7 +1566,7 @@ def reconcile_metadata_from_report(
         if applied:
             updated += 1
             item["metadata_reconciled"] = True
-    payload["metadata_reconciled_at"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    payload["metadata_reconciled_at"] = now_iso_z()
     payload["metadata_reconciled"] = updated
     if persist:
         report_path.write_text(json.dumps(payload, indent=2))
