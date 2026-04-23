@@ -120,5 +120,5 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 
 ## Security & Configuration Tips
 - Never commit secrets. Use `.env` files and add an `.env.example` template.
-- Redact credentials from discovery artifacts in `data/discovery` before committing or sharing.
+- Redact credentials from any local run artifacts (e.g. files under `data/`) before committing or sharing.
 - Document required environment variables and local setup steps in `README.md`.
