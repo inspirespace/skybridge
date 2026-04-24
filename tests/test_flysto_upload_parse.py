@@ -46,7 +46,10 @@ def test_parse_upload_response_with_log_fields():
     parsed = _parse_upload_response(json.dumps(payload), "flight.gpx")
     assert parsed is not None
     assert parsed.signature == payload["signature"]
-    assert parsed.log_id == "log555"
+    # log_id is deliberately dropped — the new FlySto annotation endpoints
+    # reject the legacy numeric ID, so callers resolve the slug via
+    # /api/log-summary instead.
+    assert parsed.log_id is None
     assert parsed.log_format == "GenericGpx"
     assert parsed.signature_hash == "hash999"
 

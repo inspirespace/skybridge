@@ -1332,7 +1332,7 @@ def reconcile_crew_from_report(
     1. **Preamble (per-item serial)** — resolve each item's log_id and crew.
        Items with no log_id or no crew data are dropped.
     2. **Batched assign (one POST per distinct crew tuple)** — flights that
-       share identical crew are folded into a single ``/api/assign-crew``
+       share identical crew are folded into a single ``/api/assign-crew-role``
        request via :py:meth:`FlyStoClient.assign_crew_for_log_ids`. On the
        real-world 46-flight workload this collapses ~46 POSTs into a handful.
     3. **Verify (optional, per-item)** — if ``verify`` is True (default),

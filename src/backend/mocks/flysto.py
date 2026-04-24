@@ -115,40 +115,67 @@ async def assign_aircraft(_: Request) -> JSONResponse:
     return JSONResponse({"status": "ok"})
 
 
-@app.post("/api/assign-crew")
-async def assign_crew(request: Request) -> JSONResponse:
-    """Handle assign crew."""
+@app.post("/api/assign-crew-role")
+async def assign_crew_role(request: Request) -> JSONResponse:
+    """Handle assign crew (new FlySto API shape)."""
     payload = await request.json()
     log_ids = payload.get("logIds") if isinstance(payload, dict) else []
-    names = payload.get("names") if isinstance(payload, dict) else []
-    roles = payload.get("roles") if isinstance(payload, dict) else []
+    assignments = payload.get("assignments") if isinstance(payload, dict) else []
+    flat: list[dict[str, object]] = []
+    if isinstance(assignments, list):
+        for entry in assignments:
+            if not isinstance(entry, dict):
+                continue
+            role = entry.get("role")
+            names = entry.get("names")
+            if not isinstance(names, list):
+                continue
+            for name in names:
+                if name:
+                    flat.append({"name": name, "role": role})
     if isinstance(log_ids, list):
         for log_id in log_ids:
             if not log_id:
                 continue
             annotations = STATE.annotations.setdefault(str(log_id), {})
-            if isinstance(names, list) and isinstance(roles, list) and len(names) == len(roles):
-                annotations["crew"] = [
-                    {"name": name, "role": role}
-                    for name, role in zip(names, roles)
-                    if name
-                ]
+            if flat:
+                annotations["crew"] = list(flat)
+    return JSONResponse({"status": "ok"})
+
+
+@app.post("/api/tags")
+async def assign_tags(request: Request) -> JSONResponse:
+    """Handle tag add/remove (new FlySto API)."""
+    payload = await request.json()
+    log_ids = payload.get("logIds") if isinstance(payload, dict) else []
+    add = payload.get("add") if isinstance(payload, dict) else []
+    remove = payload.get("remove") if isinstance(payload, dict) else []
+    if isinstance(log_ids, list):
+        for log_id in log_ids:
+            if not log_id:
+                continue
+            annotations = STATE.annotations.setdefault(str(log_id), {})
+            tags = list(annotations.get("tags") or [])
+            if isinstance(add, list):
+                for tag in add:
+                    if tag and tag not in tags:
+                        tags.append(tag)
+            if isinstance(remove, list):
+                tags = [tag for tag in tags if tag not in remove]
+            annotations["tags"] = tags
     return JSONResponse({"status": "ok"})
 
 
 @app.put("/api/log-annotations/{log_id}")
 @app.post("/api/log-annotations/{log_id}")
 async def log_annotations(log_id: str, request: Request) -> JSONResponse:
-    """Handle log annotations."""
+    """Handle remarks (FlySto restricts this endpoint to ?annotations=remarks)."""
     payload = await request.json()
     annotations = STATE.annotations.setdefault(str(log_id), {})
     if isinstance(payload, dict):
         remarks = payload.get("remarks")
-        tags = payload.get("tags")
         if remarks:
             annotations["remarks"] = remarks
-        if tags:
-            annotations["tags"] = tags
     return JSONResponse({"status": "ok", "logId": log_id})
 
 

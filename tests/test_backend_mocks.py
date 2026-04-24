@@ -122,11 +122,18 @@ def test_flysto_endpoints_and_state():
     summary = client.get("/api/log-summary")
     assert summary.json()["items"]
 
-    annotations = client.post(f"/api/log-annotations/{payload['logId']}", json={"remarks": "ok", "tags": ["t1"]})
-    assert annotations.status_code == 200
+    remarks = client.put(
+        f"/api/log-annotations/{payload['logId']}?annotations=remarks",
+        json={"remarks": "ok"},
+    )
+    assert remarks.status_code == 200
+
+    tags = client.post("/api/tags", json={"logIds": [payload["logId"]], "add": ["t1"], "remove": []})
+    assert tags.status_code == 200
 
     metadata = client.get(f"/api/log-metadata?logIdString={payload['logId']}")
     assert metadata.json()["items"][0]["annotations"]["remarks"] == "ok"
+    assert "t1" in metadata.json()["items"][0]["annotations"]["tags"]
 
 
 def test_flysto_aircraft_and_crew():
@@ -144,7 +151,10 @@ def test_flysto_aircraft_and_crew():
     assert client.get("/api/crew").json()
 
     assign = client.post(
-        "/api/assign-crew",
-        json={"logIds": ["log-1"], "names": ["Pilot"], "roles": ["PIC"]},
+        "/api/assign-crew-role",
+        json={
+            "logIds": ["log-1"],
+            "assignments": [{"role": -1, "names": ["Pilot"]}],
+        },
     )
     assert assign.status_code == 200

@@ -504,10 +504,11 @@ class FlyStoClient:
     ) -> None:
         """Assign the same crew to multiple logs in a single POST.
 
-        ``/api/assign-crew`` accepts a list of ``logIds`` alongside the names
-        and roles, so when many flights share identical crew (e.g. a pilot's
-        solo flights, a student's lessons with one instructor) we can fold
-        N assignments into one round-trip. Empty/invalid log_ids are dropped.
+        ``/api/assign-crew-role`` accepts a list of ``logIds`` alongside the
+        role assignments, so when many flights share identical crew (e.g. a
+        pilot's solo flights, a student's lessons with one instructor) we can
+        fold N assignments into one round-trip. Empty/invalid log_ids are
+        dropped.
         """
         filtered_ids = [log_id for log_id in log_ids if log_id]
         if not filtered_ids:

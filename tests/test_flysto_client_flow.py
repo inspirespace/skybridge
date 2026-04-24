@@ -68,8 +68,9 @@ def test_upload_flight_success_sets_cache(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(client, "_request", fake_request)
 
     result = client.upload_flight(FlightDetail(id="f1", raw_payload={}, file_path=str(file_path)))
-    assert result.log_id == "log1"
-    assert client.upload_cache["flight.gpx"].log_id == "log1"
+    assert result.log_id is None
+    assert result.signature_hash == "sig"
+    assert client.upload_cache["flight.gpx"].signature_hash == "sig"
 
 
 def test_upload_flight_duplicate_error(tmp_path: Path, monkeypatch):

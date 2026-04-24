@@ -55,11 +55,18 @@ def test_assign_metadata_for_log_id_skips_empty():
     assert client.request_calls == []
 
 
-def test_update_log_annotations_error():
+def test_update_remarks_error():
     client = DummyFlySto()
     client.responses = [DummyResponse(status_code=500, text="boom")]
     with pytest.raises(RuntimeError):
-        client._update_log_annotations("log-1", remarks="bad")
+        client._update_remarks("log-1", "bad")
+
+
+def test_assign_tags_error():
+    client = DummyFlySto()
+    client.responses = [DummyResponse(status_code=500, text="boom")]
+    with pytest.raises(RuntimeError):
+        client._assign_tags(["log-1"], add=["t1"])
 
 
 def test_assign_crew_validation():
@@ -69,7 +76,7 @@ def test_assign_crew_validation():
         client._assign_crew(["log"], ["name", "two"], ["1"])
 
 
-def test_assign_crew_ignores_404():
+def test_assign_crew_logs_404_without_raising():
     client = DummyFlySto()
     client.responses = [DummyResponse(status_code=404, text="missing")]
     client._assign_crew(["log"], ["name"], ["1"])
