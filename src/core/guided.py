@@ -440,6 +440,8 @@ def run_guided(
             flysto,
             review_path,
             cloudahoy,
+            skip_if_reconciled=False,
+            verify=False,
         )
         console.print(f"Reconciled crew (post-processing)={reconciled_crew}")
 

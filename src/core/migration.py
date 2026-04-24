@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
 import json
+import sys
 import time
 from pathlib import Path
 import string
@@ -1608,21 +1609,31 @@ def _assign_metadata_with_recovery(
         current_log_id, current_signature, current_format = _resolve_current_log()
     if not current_log_id:
         return None, current_signature, current_format, False
+    first_error: Exception | None = None
     try:
         flysto.assign_metadata_for_log_id(current_log_id, remarks=remarks, tags=tags)
         return current_log_id, current_signature, current_format, True
     except Exception as error:
         if not _is_recoverable_flysto_metadata_error(error):
             raise
+        first_error = error
     refreshed_log_id, refreshed_signature, refreshed_format = _resolve_current_log()
     retry_log_id = refreshed_log_id or current_log_id
     if not retry_log_id:
+        print(
+            f"metadata reconcile skipped (log_id={current_log_id}): {first_error}",
+            file=sys.stderr,
+        )
         return current_log_id, refreshed_signature, refreshed_format, False
     try:
         flysto.assign_metadata_for_log_id(retry_log_id, remarks=remarks, tags=tags)
     except Exception as retry_error:
         if not _is_recoverable_flysto_metadata_error(retry_error):
             raise
+        print(
+            f"metadata reconcile gave up (log_id={retry_log_id}): {retry_error}",
+            file=sys.stderr,
+        )
         return retry_log_id, refreshed_signature, refreshed_format, False
     return retry_log_id, refreshed_signature, refreshed_format, True
 
