@@ -10,5 +10,8 @@ if [[ -f "${ENV_FILE}" ]]; then
   set +a
 fi
 
+PYTHON="${ROOT_DIR}/.venv/bin/python"
+[[ -x "${PYTHON}" ]] || PYTHON="python"
+
 PYTHONPATH="${ROOT_DIR}/src${PYTHONPATH:+:${PYTHONPATH}}" \
-  python -m core.cli --guided "$@"
+  "${PYTHON}" -m core.cli --guided "$@"
