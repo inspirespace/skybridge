@@ -584,13 +584,11 @@ class JobService:
             self._store.save_job(job)
             self._store.write_artifact(job_id, IMPORT_REPORT_ARTIFACT, final_report_payload)
             self._store.upload_artifact(job_id, "migration.db", state_path)
-            # Build the download archive once on the worker (540 s budget) so the
-            # user-facing Download button can redirect to a signed URL and never
-            # hit the Cloud Run / Cloudflare 100 s timeout.
-            try:
-                _build_and_upload_artifacts_archive(self._store, job)
-            except Exception:
-                _logger.exception("Failed to pre-build artifacts archive for job %s", job_id)
+            # Archive build runs as a separate Pub/Sub task enqueued by the
+            # caller (`_process_queue_payload`). Keeping it out of this worker
+            # invocation avoids running out of the 540 s budget mid-upload —
+            # the 106 MB fan-in from GCS for a 46-flight import can take a
+            # meaningful chunk of what's left after finalization.
             return job
         except Exception as exc:
             _logger.exception("accept_review failed for job %s", job_id)
@@ -804,6 +802,32 @@ def _upload_detail_artifacts(store: JobStore, job_id: UUID, detail) -> None:
             path = Path(raw_value)
             if path.exists():
                 store.upload_artifact_as(job_id, f"cloudahoy_exports/{path.name}", path)
+
+
+def build_artifacts_archive_for_job(store: JobStore, job_id: UUID) -> bool:
+    """Build + upload the artifacts archive for a completed job.
+
+    Called from the Pub/Sub worker when it receives a ``purpose="archive"``
+    message. The job must already be terminal (``completed``/``failed``) and
+    the import-report must exist in object storage — otherwise we refuse,
+    because the archive's point is to bundle what's on disk.
+
+    Returns True on success, False when there's nothing to do (missing
+    object store, missing job, non-terminal status).
+    """
+    try:
+        job = store.load_job(job_id)
+    except FileNotFoundError:
+        return False
+    if job.status not in {"completed", "failed"}:
+        # Don't build an archive for in-flight jobs; wait for finalization.
+        return False
+    try:
+        _build_and_upload_artifacts_archive(store, job)
+    except Exception:
+        _logger.exception("Archive build failed for job %s", job_id)
+        return False
+    return True
 
 
 def _build_and_upload_artifacts_archive(store: JobStore, job: JobRecord) -> None:

@@ -346,10 +346,20 @@ export async function fetchArtifact<T = Record<string, unknown>>(jobId: string, 
   );
 }
 
-export async function downloadArtifactsZip(jobId: string, auth: AuthContext): Promise<Blob | { downloadUrl: string; filename: string }> {
+export type DownloadArtifactsResult =
+  | Blob
+  | { downloadUrl: string; filename: string }
+  | { preparing: true; detail: string };
+
+export async function downloadArtifactsZip(
+  jobId: string,
+  auth: AuthContext
+): Promise<DownloadArtifactsResult> {
   // Ask for JSON so the server can hand us a short-lived signed URL instead of
   // streaming the zip through the function (which exceeded the Cloudflare 100 s
-  // edge timeout on multi-flight imports).
+  // edge timeout on multi-flight imports). A 202 response means the archive
+  // is being built in the background — frontend should surface a "preparing"
+  // message and let the user retry.
   const headers = {
     ...(await buildRequestHeaders(auth, false, false)),
     Accept: "application/json",
@@ -357,6 +367,16 @@ export async function downloadArtifactsZip(jobId: string, auth: AuthContext): Pr
   const response = await fetch(`${apiBaseUrl}/jobs/${jobId}/artifacts.zip`, {
     headers,
   });
+  if (response.status === 202) {
+    let detail = "Preparing your download. Try again in a moment.";
+    try {
+      const data = (await response.json()) as { detail?: string };
+      if (data.detail) detail = data.detail;
+    } catch {
+      // Fall back to the default message if body isn't JSON.
+    }
+    return { preparing: true, detail };
+  }
   if (!response.ok) {
     const message = await response.text();
     const error = new Error(message || "Download failed");

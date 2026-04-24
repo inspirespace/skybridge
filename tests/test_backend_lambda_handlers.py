@@ -845,3 +845,127 @@ def test_process_queue_payload_except_marks_failed_when_report_partial(
     saved = store.load_job(job.job_id)
     assert saved.status == "failed"
     assert saved.error_message and "Worker failed" in saved.error_message
+
+
+# -----------------------------------------------------------------------------
+# Async archive task — purpose="archive" + enqueue from completion paths
+# -----------------------------------------------------------------------------
+
+
+def test_process_queue_payload_archive_purpose_calls_builder(
+    store, monkeypatch: pytest.MonkeyPatch
+):
+    job = _seed_import_job(store, status="completed", stale=False)
+    seen: list = []
+
+    def _fake_build(passed_store, job_id):
+        seen.append((passed_store, job_id))
+        return True
+
+    monkeypatch.setattr(handlers, "build_artifacts_archive_for_job", _fake_build)
+
+    handlers._process_queue_payload(
+        {"job_id": str(job.job_id), "purpose": "archive", "token": ""}
+    )
+
+    assert len(seen) == 1
+    assert seen[0][1] == job.job_id
+
+
+def test_process_queue_payload_enqueues_archive_when_import_completes(
+    store, monkeypatch: pytest.MonkeyPatch
+):
+    job = _seed_import_job(store, status="import_running", stale=False)
+
+    enqueued: list = []
+    monkeypatch.setattr(
+        handlers,
+        "_enqueue_archive_build",
+        lambda job_id: enqueued.append(job_id) or True,
+    )
+
+    class _CredStore:
+        def claim(self, *_a, **_k):
+            return {
+                "cloudahoy_username": "pilot",
+                "cloudahoy_password": "secret",
+                "flysto_username": "pilot",
+                "flysto_password": "secret",
+            }
+
+        def issue(self, **_kwargs):
+            return "t"
+
+    class _CompletingService:
+        def accept_review(self, job_uuid, _request):
+            saved = store.load_job(job_uuid)
+            saved.status = "completed"
+            store.save_job(saved)
+            return saved
+
+    monkeypatch.setattr(handlers, "_credential_store", _CredStore())
+    monkeypatch.setattr(handlers, "_service", _CompletingService())
+
+    handlers._process_queue_payload(
+        {"job_id": str(job.job_id), "purpose": "import", "token": "tok"}
+    )
+
+    assert enqueued == [job.job_id]
+
+
+def test_fail_stale_job_enqueues_archive_when_reconcile_upgrades(
+    store, monkeypatch: pytest.MonkeyPatch
+):
+    job = _seed_import_job(store)
+    store.write_artifact(
+        job.job_id,
+        "import-report.json",
+        {"attempted": 2, "items": [{"status": "ok"}, {"status": "ok"}]},
+    )
+    monkeypatch.setenv("BACKEND_RUNNING_STALE_TIMEOUT_SECONDS", "60")
+
+    enqueued: list = []
+    monkeypatch.setattr(
+        handlers,
+        "_enqueue_archive_build",
+        lambda job_id: enqueued.append(job_id) or True,
+    )
+
+    response = handlers.get_job_handler(_event("pilot", job_id=str(job.job_id)), None)
+
+    assert response["statusCode"] == 200
+    assert enqueued == [job.job_id]
+    assert store.load_job(job.job_id).status == "completed"
+
+
+def test_download_artifacts_zip_returns_202_and_enqueues_when_missing(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+):
+    object_store = FakeObjectStore()
+    store = JobStore(tmp_path, object_store=object_store)
+    job = _job("completed")
+    store.save_job(job)
+    monkeypatch.setattr(handlers, "_store", store)
+    monkeypatch.setattr(
+        handlers,
+        "user_id_from_event",
+        lambda event: "pilot"
+        if (event.get("headers") or {}).get("Authorization")
+        else (_ for _ in ()).throw(Exception("missing auth")),
+    )
+
+    enqueued: list = []
+    monkeypatch.setattr(
+        handlers,
+        "_enqueue_archive_build",
+        lambda job_id: enqueued.append(job_id) or True,
+    )
+
+    event = _event("pilot", job_id=str(job.job_id))
+    event["headers"]["Accept"] = "application/json"
+    response = handlers.download_artifacts_zip_handler(event, None)
+
+    assert response["statusCode"] == 202
+    body = json.loads(response["body"])
+    assert body["status"] == "archive_building"
+    assert enqueued == [job.job_id]
