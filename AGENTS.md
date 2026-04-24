@@ -7,7 +7,6 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 - Put tests under `tests/` or `test/` (match your framework).
 - Keep assets in `assets/`, and config files at the repo root.
 - Repo-local Codex skills live under `.codex/skills/`.
-- Inspector scripts live in `tools/inspector/` (dev-only helpers).
 - VNC helpers for Playwright live in `scripts/` (devcontainer use only).
 - User-facing scripts: `scripts/cleanup-merged-branches.sh` (branch cleanup), `scripts/clean-workspace.sh` (local dependency/build/log cleanup), `scripts/firebase-deploy.sh` (shared local/CI Firebase deploy flow for Functions, Hosting, and Firestore config, including first-time default Firestore database creation), `scripts/firebase-clear-project.sh` (clear Firebase resources while keeping the project, including deleting the default Firestore database), `scripts/repair-docker-socket-access.sh` (fix Docker socket permissions inside devcontainer sessions), and `scripts/docker-compose.sh` (Docker Compose wrapper that resolves host bind paths and disables the attached Compose shortcut menu when run from inside the devcontainer).
 - Shared install helper: `scripts/npm-ci-frontend.sh` (resilient frontend `npm ci` with post-install package validation, nested first attempt, and one automatic cache-clean + hoisted retry when npm reports success with a broken dependency tree).
@@ -121,5 +120,5 @@ This repository contains a Dockerized Python CLI with Playwright-based automatio
 
 ## Security & Configuration Tips
 - Never commit secrets. Use `.env` files and add an `.env.example` template.
-- Redact credentials from discovery artifacts in `data/discovery` before committing or sharing.
+- Redact credentials from any local run artifacts (e.g. files under `data/`) before committing or sharing.
 - Document required environment variables and local setup steps in `README.md`.

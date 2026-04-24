@@ -10,7 +10,6 @@ This is the quickest onboarding map: where things live, how to run the stack, an
 - `tests/` — backend tests
 - `docker/` — local infra configs (HTTPS proxy, dev tooling)
 - `functions/` — Firebase Functions entrypoints (2nd gen)
-- `tools/inspector/` — dev-only inspection/probing scripts
 
 ## Local dev (fast path)
 Requirements:

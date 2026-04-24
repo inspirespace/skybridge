@@ -497,6 +497,22 @@ class FlyStoClient:
         """Handle assign crew for log id."""
         if not log_id:
             return
+        self.assign_crew_for_log_ids([log_id], crew)
+
+    def assign_crew_for_log_ids(
+        self, log_ids: list[str], crew: list[dict[str, Any]]
+    ) -> None:
+        """Assign the same crew to multiple logs in a single POST.
+
+        ``/api/assign-crew-role`` accepts a list of ``logIds`` alongside the
+        role assignments, so when many flights share identical crew (e.g. a
+        pilot's solo flights, a student's lessons with one instructor) we can
+        fold N assignments into one round-trip. Empty/invalid log_ids are
+        dropped.
+        """
+        filtered_ids = [log_id for log_id in log_ids if log_id]
+        if not filtered_ids:
+            return
         names: list[str] = []
         roles: list[int | str] = []
         crew_names = [entry.get("name") for entry in crew if entry.get("name")]
@@ -516,7 +532,7 @@ class FlyStoClient:
             roles.append(_coerce_role_id(role_id))
         if not names or not roles:
             return
-        self._assign_crew([log_id], names, roles)
+        self._assign_crew(filtered_ids, names, roles)
 
     def assign_metadata_for_file(
         self,
@@ -536,14 +552,19 @@ class FlyStoClient:
         remarks: str | None = None,
         tags: list[str] | None = None,
     ) -> None:
-        """Handle assign metadata for log id."""
+        """Handle assign metadata for log id.
+
+        FlySto split this into two endpoints: tags go through ``POST /api/tags``
+        (batch add/remove), and remarks go through
+        ``PUT /api/log-annotations/{id}?annotations=remarks``.
+        """
         if not log_id:
             return
         merged_tags = _normalize_tag_list(tags)
-        final_remarks = remarks
-        if not merged_tags and not final_remarks:
-            return
-        self._update_log_annotations(log_id, remarks=final_remarks, tags=merged_tags)
+        if merged_tags:
+            self._assign_tags([log_id], add=merged_tags, remove=[])
+        if remarks:
+            self._update_remarks(log_id, remarks)
 
     def fetch_log_metadata(
         self,
@@ -570,25 +591,48 @@ class FlyStoClient:
             return decoded
         return None
 
-    def _update_log_annotations(
-        self,
-        log_id: str,
-        remarks: str | None = None,
-        tags: list[str] | None = None,
-    ) -> None:
-        """Internal helper for update log annotations."""
-        payload: dict[str, Any] = {"logIdString": log_id}
-        if remarks:
-            payload["remarks"] = remarks
-        if tags:
-            payload["tags"] = tags
+    def _update_remarks(self, log_id: str, remarks: str) -> None:
+        """Set remarks on a log via ``PUT /api/log-annotations/{id}?annotations=remarks``."""
         session = requests.Session()
         self._ensure_session(session)
         response = self._request(
             session,
             "put",
             self.base_url.rstrip("/") + f"/api/log-annotations/{log_id}",
-            json=payload,
+            params={"annotations": "remarks"},
+            data=json.dumps({"remarks": remarks}),
+            headers={"content-type": "text/plain;charset=UTF-8"},
+            timeout=60,
+        )
+        if response.status_code >= 300:
+            raise RuntimeError(
+                f"FlySto log-annotations failed: {response.status_code} {response.text[:200]}"
+            )
+
+    def _assign_tags(
+        self,
+        log_ids: list[str],
+        add: list[str],
+        remove: list[str] | None = None,
+    ) -> None:
+        """Add/remove tags on logs via ``POST /api/tags``.
+
+        Batch endpoint — one call can tag many logs at once.
+        """
+        filtered = [log_id for log_id in log_ids if log_id]
+        add_list = [tag for tag in (add or []) if tag]
+        remove_list = [tag for tag in (remove or []) if tag]
+        if not filtered or (not add_list and not remove_list):
+            return
+        session = requests.Session()
+        self._ensure_session(session)
+        payload = {"logIds": filtered, "add": add_list, "remove": remove_list}
+        response = self._request(
+            session,
+            "post",
+            self.base_url.rstrip("/") + "/api/tags",
+            data=json.dumps(payload),
+            headers={"content-type": "text/plain;charset=UTF-8"},
             timeout=60,
         )
         if response.status_code >= 300:
@@ -602,23 +646,39 @@ class FlyStoClient:
         names: list[str],
         roles: list[int | str],
     ) -> None:
-        """Internal helper for assign crew."""
+        """Internal helper for assign crew.
+
+        Calls ``POST /api/assign-crew-role`` with
+        ``{logIds, assignments: [{role, names}]}`` — names are grouped by role.
+        """
         if not log_ids or not names or not roles:
             return
         if len(names) != len(roles):
             raise ValueError("FlySto crew assignment requires matching names and roles length.")
+        assignments_by_role: dict[int | str, list[str]] = {}
+        for name, role in zip(names, roles):
+            assignments_by_role.setdefault(role, []).append(name)
+        assignments = [
+            {"role": role, "names": role_names}
+            for role, role_names in assignments_by_role.items()
+        ]
         session = requests.Session()
         self._ensure_session(session)
-        payload = {"logIds": log_ids, "names": names, "roles": roles}
+        payload = {"logIds": log_ids, "assignments": assignments}
         response = self._request(
             session,
             "post",
-            self.base_url.rstrip("/") + "/api/assign-crew",
+            self.base_url.rstrip("/") + "/api/assign-crew-role",
             data=json.dumps(payload),
             headers={"content-type": "text/plain;charset=UTF-8"},
             timeout=60,
         )
         if response.status_code == 404:
+            import sys
+            print(
+                f"FlySto assign-crew-role 404 for logIds={log_ids}: {response.text[:200]}",
+                file=sys.stderr,
+            )
             return
         if response.status_code >= 300:
             raise RuntimeError(
@@ -990,7 +1050,15 @@ def _build_upload_payload(path: Path) -> tuple[Path, bool]:
 
 
 def _parse_upload_response(text: str, filename: str) -> UploadResult | None:
-    """Internal helper for parse upload response."""
+    """Internal helper for parse upload response.
+
+    FlySto's upload response only returns ``{"signature": "<uuid>.<ext>/<hash>/<numeric>"}``.
+    The trailing numeric is a legacy internal ID that the newer annotation
+    endpoints (``assign-crew-role``, ``tags``, ``log-annotations``) no longer
+    accept — they want the short slug like ``pawxhmxw`` which FlySto exposes
+    via ``/api/log-summary``. So we deliberately drop the numeric here and
+    force callers to resolve the slug via ``resolve_log_for_file``.
+    """
     raw = text.strip()
     if not raw:
         return None
@@ -1010,11 +1078,9 @@ def _parse_upload_response(text: str, filename: str) -> UploadResult | None:
     if isinstance(data, dict):
         sig_value = data.get("signature") or data.get("sig") or data.get("logSignature")
         log_format = data.get("format") or data.get("logFormatId") or data.get("logFormat")
-        log_id = data.get("logId") or data.get("logIdString")
     else:
         sig_value = data if isinstance(data, str) else None
         log_format = None
-        log_id = None
 
     if not sig_value:
         match = re.search(r"\"signature\"\\s*:\\s*\"([^\"]+)\"", raw)
@@ -1024,15 +1090,13 @@ def _parse_upload_response(text: str, filename: str) -> UploadResult | None:
     signature = None
     signature_hash = None
     if isinstance(sig_value, str) and sig_value:
-        signature, parsed_log_id, signature_hash = _parse_signature_field(sig_value, filename)
-        if not log_id:
-            log_id = parsed_log_id
+        signature, _legacy_numeric_id, signature_hash = _parse_signature_field(sig_value, filename)
 
-    if not signature and not log_id and not log_format:
+    if not signature and not log_format:
         return None
     return UploadResult(
         signature=signature,
-        log_id=str(log_id) if log_id else None,
+        log_id=None,
         log_format=log_format,
         signature_hash=signature_hash,
     )

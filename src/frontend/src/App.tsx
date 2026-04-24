@@ -1101,6 +1101,13 @@ export default function App() {
         link.download = `skybridge-run-${jobId}.zip`;
         link.click();
         window.URL.revokeObjectURL(url);
+      } else if ("preparing" in result) {
+        // Archive is being built in the background — surface a non-error hint
+        // so the user knows to retry instead of assuming something broke.
+        setActionError({
+          scope: "import",
+          message: result.detail,
+        });
       } else {
         // Signed GCS URL — navigate directly so the browser downloads from GCS
         // and no function-in-the-middle risks another Cloudflare timeout.

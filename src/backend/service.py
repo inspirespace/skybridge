@@ -38,6 +38,12 @@ from src.core.migration import (
 from src.core.models import FlightSummary as CoreFlightSummary
 from src.core.state import MigrationState
 from src.core.flysto.client import FlyStoClient
+from src.core.time_utils import (
+    filter_summaries_by_date as _filter_summaries_by_date,
+    format_iso_z,
+    parse_date_bound as _parse_date_bound,
+    parse_iso_z,
+)
 
 from .models import (
     ImportReport,
@@ -121,7 +127,7 @@ class JobService:
                 manifest_items = [_summary_manifest_item(summary) for summary in summaries]
                 review_id = _compute_manifest_review_id(manifest_items)
                 review_payload = {
-                    "generated_at": _now().isoformat().replace("+00:00", "Z"),
+                    "generated_at": format_iso_z(_now()),
                     "review_id": review_id,
                     "count": len(manifest_items),
                     "items": manifest_items,
@@ -479,11 +485,19 @@ class JobService:
                         stage="Verifying imported flights",
                         percent=88,
                     )
+                    # Parallelize the per-item passes. Default 4 — FlySto
+                    # tolerates small bursts fine and it cuts metadata
+                    # reconcile from ~18 min → ~5 min on 46 flights. Env
+                    # override lets us dial back if FlySto starts 429'ing.
+                    reconcile_max_workers = max(
+                        1, _int_env("BACKEND_RECONCILE_MAX_WORKERS", 4)
+                    )
                     verify_import_report(
                         report_path,
                         flysto,
                         heartbeat=heartbeat,
                         payload=finalization_payload,
+                        max_workers=reconcile_max_workers,
                     )
                     _set_import_finalization_stage(
                         self._store,
@@ -497,6 +511,7 @@ class JobService:
                         heartbeat=heartbeat,
                         payload=finalization_payload,
                         progress=_make_progress("Reconciling aircraft", 90),
+                        max_workers=reconcile_max_workers,
                     )
                     _set_import_finalization_stage(
                         self._store,
@@ -525,8 +540,11 @@ class JobService:
                         heartbeat=heartbeat,
                         payload=finalization_payload,
                         progress=_make_progress("Reconciling metadata", 94),
+                        max_workers=reconcile_max_workers,
                     )
                     # Crew can be cleared by FlySto post-processing; reapply after the queue drains.
+                    # verify=False: this pass exists only to replay writes
+                    # FlySto may have cleared, not to validate them.
                     _maybe_wait_for_processing(flysto, heartbeat=heartbeat)
                     _set_import_finalization_stage(
                         self._store,
@@ -543,6 +561,7 @@ class JobService:
                         payload=finalization_payload,
                         progress=_make_progress("Reapplying crew assignments", 96),
                         skip_if_reconciled=False,
+                        verify=False,
                     )
                     report_path.write_text(json.dumps(finalization_payload, indent=2))
             final_report_payload = _load_or_create_import_report(report_path, review_id, len(summaries))
@@ -565,13 +584,11 @@ class JobService:
             self._store.save_job(job)
             self._store.write_artifact(job_id, IMPORT_REPORT_ARTIFACT, final_report_payload)
             self._store.upload_artifact(job_id, "migration.db", state_path)
-            # Build the download archive once on the worker (540 s budget) so the
-            # user-facing Download button can redirect to a signed URL and never
-            # hit the Cloud Run / Cloudflare 100 s timeout.
-            try:
-                _build_and_upload_artifacts_archive(self._store, job)
-            except Exception:
-                _logger.exception("Failed to pre-build artifacts archive for job %s", job_id)
+            # Archive build runs as a separate Pub/Sub task enqueued by the
+            # caller (`_process_queue_payload`). Keeping it out of this worker
+            # invocation avoids running out of the 540 s budget mid-upload —
+            # the 106 MB fan-in from GCS for a 46-flight import can take a
+            # meaningful chunk of what's left after finalization.
             return job
         except Exception as exc:
             _logger.exception("accept_review failed for job %s", job_id)
@@ -639,7 +656,7 @@ def _summary_from_manifest_item(item: dict[str, object]) -> CoreFlightSummary:
     raw_started_at = item.get("started_at")
     if isinstance(raw_started_at, str) and raw_started_at:
         try:
-            started_at = datetime.fromisoformat(raw_started_at.replace("Z", "+00:00"))
+            started_at = parse_iso_z(raw_started_at)
         except ValueError:
             started_at = None
     return CoreFlightSummary(
@@ -679,7 +696,7 @@ def _build_review_summary_from_rows(items: list[FlightSummary]) -> ReviewSummary
     for item in items:
         if item.date:
             try:
-                started_at = datetime.fromisoformat(item.date.replace("Z", "+00:00"))
+                started_at = parse_iso_z(item.date)
             except ValueError:
                 started_at = None
             if started_at is not None:
@@ -785,6 +802,32 @@ def _upload_detail_artifacts(store: JobStore, job_id: UUID, detail) -> None:
             path = Path(raw_value)
             if path.exists():
                 store.upload_artifact_as(job_id, f"cloudahoy_exports/{path.name}", path)
+
+
+def build_artifacts_archive_for_job(store: JobStore, job_id: UUID) -> bool:
+    """Build + upload the artifacts archive for a completed job.
+
+    Called from the Pub/Sub worker when it receives a ``purpose="archive"``
+    message. The job must already be terminal (``completed``/``failed``) and
+    the import-report must exist in object storage — otherwise we refuse,
+    because the archive's point is to bundle what's on disk.
+
+    Returns True on success, False when there's nothing to do (missing
+    object store, missing job, non-terminal status).
+    """
+    try:
+        job = store.load_job(job_id)
+    except FileNotFoundError:
+        return False
+    if job.status not in {"completed", "failed"}:
+        # Don't build an archive for in-flight jobs; wait for finalization.
+        return False
+    try:
+        _build_and_upload_artifacts_archive(store, job)
+    except Exception:
+        _logger.exception("Archive build failed for job %s", job_id)
+        return False
+    return True
 
 
 def _build_and_upload_artifacts_archive(store: JobStore, job: JobRecord) -> None:
@@ -1343,8 +1386,7 @@ def _summaries_from_review(payload: dict) -> list[CoreFlightSummary]:
         started_raw = item.get("started_at")
         if isinstance(started_raw, str) and started_raw:
             try:
-                normalized = started_raw.replace("Z", "+00:00")
-                started_at = datetime.fromisoformat(normalized)
+                started_at = parse_iso_z(started_raw)
             except ValueError:
                 started_at = None
         summaries.append(
@@ -1445,46 +1487,6 @@ def _coerce_location(value: object) -> str | None:
         if isinstance(name, str) and name:
             return name
     return None
-
-
-def _parse_date_bound(value: str, is_end: bool) -> datetime:
-    """Internal helper for parse date bound."""
-    raw = value.strip()
-    normalized = raw.replace("Z", "+00:00")
-    if "T" not in normalized and len(normalized) == 10:
-        dt = datetime.fromisoformat(normalized)
-        if is_end:
-            dt = dt.replace(hour=23, minute=59, second=59, microsecond=999999)
-        else:
-            dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
-    else:
-        dt = datetime.fromisoformat(normalized)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt
-
-
-def _filter_summaries_by_date(
-    summaries: list[CoreFlightSummary],
-    start_date: datetime | None,
-    end_date: datetime | None,
-) -> list[CoreFlightSummary]:
-    """Internal helper for filter summaries by date."""
-    if not start_date and not end_date:
-        return summaries
-    filtered: list[CoreFlightSummary] = []
-    for summary in summaries:
-        started_at = summary.started_at
-        if started_at is None:
-            continue
-        if started_at.tzinfo is None:
-            started_at = started_at.replace(tzinfo=timezone.utc)
-        if start_date and started_at < start_date:
-            continue
-        if end_date and started_at > end_date:
-            continue
-        filtered.append(summary)
-    return filtered
 
 
 def _parse_export_formats(value: str | None) -> list[str]:

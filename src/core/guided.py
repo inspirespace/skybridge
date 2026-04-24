@@ -37,6 +37,11 @@ from src.core.migration import (
 )
 from src.core.models import FlightSummary
 from src.core.state import MigrationState
+from src.core.time_utils import (
+    filter_summaries_by_date as _filter_summaries_by_date,
+    parse_date_bound as _parse_date_bound,
+    parse_iso_z,
+)
 
 
 @dataclass
@@ -62,7 +67,7 @@ def _parse_started_at(value: str | None) -> datetime | None:
     if not value:
         return None
     try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return parse_iso_z(value)
     except ValueError:
         return None
 
@@ -93,46 +98,6 @@ def _summarize_review(path: Path) -> dict[str, Any]:
         "max_date_iso": max_date.isoformat() if max_date else None,
     }
     return summary
-
-
-def _parse_date_bound(value: str, is_end: bool) -> datetime:
-    """Internal helper for parse date bound."""
-    raw = value.strip()
-    normalized = raw.replace("Z", "+00:00")
-    if "T" not in normalized and len(normalized) == 10:
-        dt = datetime.fromisoformat(normalized)
-        if is_end:
-            dt = dt.replace(hour=23, minute=59, second=59, microsecond=999999)
-        else:
-            dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
-    else:
-        dt = datetime.fromisoformat(normalized)
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt
-
-
-def _filter_summaries_by_date(
-    summaries: list[FlightSummary],
-    start_date: datetime | None,
-    end_date: datetime | None,
-) -> list[FlightSummary]:
-    """Internal helper for filter summaries by date."""
-    if not start_date and not end_date:
-        return summaries
-    filtered: list[FlightSummary] = []
-    for summary in summaries:
-        started_at = summary.started_at
-        if started_at is None:
-            continue
-        if started_at.tzinfo is None:
-            started_at = started_at.replace(tzinfo=timezone.utc)
-        if start_date and started_at < start_date:
-            continue
-        if end_date and started_at > end_date:
-            continue
-        filtered.append(summary)
-    return filtered
 
 
 def _render_review_summary(console: Console, summary: dict[str, Any]) -> None:
@@ -475,6 +440,8 @@ def run_guided(
             flysto,
             review_path,
             cloudahoy,
+            skip_if_reconciled=False,
+            verify=False,
         )
         console.print(f"Reconciled crew (post-processing)={reconciled_crew}")
 

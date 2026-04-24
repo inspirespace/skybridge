@@ -61,23 +61,27 @@ def test_assign_aircraft_caches_known_system_id():
     assert ("GenericGpx", "abc") in client.assigned_avionics
 
 
-def test_assign_metadata_for_file_puts_remarks_and_tags():
-    """Test assign metadata for file puts remarks and tags."""
+def test_assign_metadata_for_file_splits_tags_and_remarks():
+    """Tags go to POST /api/tags, remarks go to PUT /api/log-annotations/{id}."""
     client = DummyFlySto()
 
     client.assign_metadata_for_file("A1.gpx", remarks="New remarks", tags=["cloudahoy", "cloudahoy:2025-03-20T15:37Z"])
 
     post_calls = [call for call in client.request_calls if call[0] == "post"]
-    assert not post_calls
+    tag_calls = [call for call in post_calls if "/api/tags" in call[1]]
+    assert tag_calls, "expected POST to /api/tags"
+    tag_body = json.loads(tag_calls[-1][2].get("data", "{}"))
+    assert tag_body.get("logIds") == ["log-1"]
+    assert "cloudahoy" in tag_body.get("add", [])
+    assert "cloudahoy:2025-03-20T15:37Z" in tag_body.get("add", [])
+
     put_calls = [call for call in client.request_calls if call[0] == "put"]
     assert put_calls
     _method, url, kwargs = put_calls[-1]
     assert url.endswith("/api/log-annotations/log-1")
-    payload = kwargs.get("json", {})
-    assert payload.get("logIdString") == "log-1"
-    assert payload.get("remarks") == "New remarks"
-    assert "cloudahoy" in payload.get("tags", [])
-    assert "cloudahoy:2025-03-20T15:37Z" in payload.get("tags", [])
+    assert kwargs.get("params", {}).get("annotations") == "remarks"
+    body = json.loads(kwargs.get("data", "{}"))
+    assert body == {"remarks": "New remarks"}
 
 
 def test_ensure_crew_members_tolerates_existing():
@@ -244,12 +248,11 @@ def test_assign_crew_payload_matches_ui_format():
 
     method, url, kwargs = client.request_calls[-1]
     assert method == "post"
-    assert url.endswith("/api/assign-crew")
+    assert url.endswith("/api/assign-crew-role")
     assert kwargs.get("headers", {}).get("content-type") == "text/plain;charset=UTF-8"
     payload = json.loads(kwargs.get("data", "{}"))
     assert payload["logIds"] == ["log-1"]
-    assert payload["names"] == ["Alex"]
-    assert payload["roles"] == [-6]
+    assert payload["assignments"] == [{"role": -6, "names": ["Alex"]}]
 
 
 def test_list_crew_falls_back_to_all():

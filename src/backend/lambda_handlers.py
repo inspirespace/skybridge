@@ -21,6 +21,7 @@ from .queue import resolve_job_queue_topic_path
 from .service import (
     ARTIFACTS_ARCHIVE_NAME,
     JobService,
+    build_artifacts_archive_for_job,
     reconcile_completed_import_from_report,
     validate_credentials,
 )
@@ -128,6 +129,28 @@ def _ensure_worker_queue_ready() -> None:
     raise LambdaHttpError(500, "Firebase project id is not configured for the worker queue.")
 
 
+def _enqueue_archive_build(job_id: UUID) -> bool:
+    """Publish a ``purpose="archive"`` message so the worker builds the zip.
+
+    No credentials needed for the archive task — it only reads already-uploaded
+    artifacts out of object storage. Returns False when the Pub/Sub topic
+    isn't configured (e.g. local dev) or the publish failed; callers should
+    treat that as a silent no-op so the user can retry.
+    """
+    try:
+        topic = _pubsub_topic()
+        if not topic:
+            return False
+        payload = json.dumps(
+            {"job_id": str(job_id), "purpose": "archive", "token": ""}
+        ).encode("utf-8")
+        _get_pubsub_client().publish(topic, payload).result(timeout=10)
+        return True
+    except Exception:
+        _logger.exception("Failed to enqueue archive build for job %s", job_id)
+        return False
+
+
 def _mark_enqueue_failed(job, *, phase: str, detail: str) -> None:
     """Persist immediate queue handoff failures on the job record."""
     job.status = "failed"
@@ -199,6 +222,10 @@ def _fail_stale_job(job):
     if age_seconds < timeout_seconds:
         return job
     if purpose == "import" and reconcile_completed_import_from_report(job, _get_store()):
+        # The stale-detector path just upgraded the job to completed from the
+        # persisted report, which means the worker didn't reach the archive
+        # step. Kick off a dedicated archive task so the user can download.
+        _enqueue_archive_build(job.job_id)
         return job
     if _can_auto_retry_stale_job(job, purpose):
         recovered = _auto_retry_stale_job(job, purpose)
@@ -736,6 +763,21 @@ def download_artifacts_zip_handler(event: dict[str, Any], _context: Any) -> dict
                         },
                         "body": "",
                     }
+            elif job.status == "completed":
+                # Archive missing on a completed job — can happen when the
+                # worker ran out of its 540 s budget during finalization, or
+                # when the stale-detector safety net marked the job complete
+                # without building the archive. Kick off a background build
+                # and tell the client to retry shortly. The build task is
+                # idempotent so repeated clicks are safe.
+                _enqueue_archive_build(job_uuid)
+                return _response(
+                    202,
+                    {
+                        "detail": "Preparing your download. Try again in a moment.",
+                        "status": "archive_building",
+                    },
+                )
 
         # Local-disk fallback (dev / single-container deployments).
         job_dir = store.job_dir(job_uuid)
@@ -784,11 +826,19 @@ def _process_queue_payload(payload: dict[str, Any]) -> None:
     job_id = payload.get("job_id")
     purpose = payload.get("purpose")
     token = payload.get("token")
-    if not job_id or purpose not in {"review", "import"}:
+    if not job_id or purpose not in {"review", "import", "archive"}:
         return
     try:
         job_uuid = UUID(job_id)
     except ValueError:
+        return
+    if purpose == "archive":
+        # Pure I/O task; no credentials required. Gets its own 540 s budget
+        # instead of racing the import finalization inside a single worker run.
+        try:
+            build_artifacts_archive_for_job(_get_store(), job_uuid)
+        except Exception:
+            _logger.exception("Archive task failed for job %s", job_uuid)
         return
     try:
         store = _get_store()
@@ -831,9 +881,14 @@ def _process_queue_payload(payload: dict[str, Any]) -> None:
             )
             store.write_token(updated_job.job_id, purpose, next_token)
             _enqueue_job(updated_job.job_id, purpose, next_token)
+        elif purpose == "import" and updated_job.status == "completed":
+            # Finalization finished cleanly — enqueue the archive build so it
+            # runs in its own worker invocation with a fresh 540 s budget.
+            _enqueue_archive_build(updated_job.job_id)
     except Exception as exc:
         _logger.exception("Worker failed for job %s purpose %s", job_id, purpose)
         if purpose == "import" and reconcile_completed_import_from_report(job, store):
+            _enqueue_archive_build(job.job_id)
             return
         job.status = "failed"
         job.error_message = f"Worker failed: {exc}"

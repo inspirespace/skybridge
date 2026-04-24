@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any
 from xml.etree.ElementTree import Element, SubElement, ElementTree
 
+from src.core.time_utils import format_iso_z
+
 
 INFERRED_COLUMNS: dict[int, dict[str, Any]] = {
     6: {"name": "heading_deg", "unit": "deg", "label": "heading/track", "confidence": "high"},
@@ -875,7 +877,7 @@ def write_points_gpx(
         if start_time is not None:
             timestamp = start_time + timedelta(seconds=step_seconds * idx)
             time_node = SubElement(trkpt, "time")
-            time_node.text = timestamp.isoformat().replace("+00:00", "Z")
+            time_node.text = format_iso_z(timestamp)
 
     path.parent.mkdir(parents=True, exist_ok=True)
     tree = ElementTree(gpx)
