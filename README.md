@@ -1,174 +1,154 @@
-# Skybridge
+<p align="center">
+  <img src="src/frontend/public/brand/logo-128.png" alt="Skybridge logo" width="96" height="96">
+</p>
 
-Skybridge migrates CloudAhoy flight history into FlySto.
-This repository is 100% AI written.
+<h1 align="center">Skybridge</h1>
 
-## CLI guide
+<p align="center">
+  Migrate your <strong>CloudAhoy</strong> flight history into <strong>FlySto</strong> — with a review step before anything is written.
+</p>
 
-The CLI is the interactive, guided migration tool. It walks you through review → approve → import from the terminal.
+<p align="center">
+  <a href="https://skybridge.inspirespace.co"><strong>▶ Use it now: skybridge.inspirespace.co</strong></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/inspirespace/skybridge/actions/workflows/ci.yml"><img src="https://github.com/inspirespace/skybridge/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache-2.0"></a>
+  <img src="https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white" alt="Python 3.11">
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" alt="React 19">
+  <img src="https://img.shields.io/badge/Firebase-Functions%202nd%20gen-FFCA28?logo=firebase&logoColor=black" alt="Firebase Functions 2nd gen">
+</p>
+
+---
+
+## What it does
+
+Pilots who switch from CloudAhoy to FlySto have no built-in way to bring their flight history along. Skybridge does it in three steps:
+
+1. **Connect** — enter CloudAhoy and FlySto credentials (validated, encrypted, short-lived).
+2. **Review** — Skybridge fetches every flight from CloudAhoy and builds a summary: dates, aircraft, crew, remarks, and what will be uploaded. Nothing is written to FlySto yet.
+3. **Import** — after you approve, flights are uploaded to FlySto and then reconciled so aircraft registrations, crew, remarks and tags end up on the right logs. A per-flight import report and all exported files are available for download.
+
+It runs as a hosted web app at **[skybridge.inspirespace.co](https://skybridge.inspirespace.co)**, and the same migration engine is available as a self-contained CLI.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    SPA["React SPA<br/>(Firebase Hosting)"] -- "/api/**" --> API["api<br/>Cloud Run · HTTP"]
+    API -- job state --> FS[(Firestore)]
+    API -- enqueue --> PS{{Pub/Sub}}
+    PS --> W["worker<br/>Cloud Run · 540 s"]
+    W -- heartbeat / progress --> FS
+    W -- exports, reports, artifacts.zip --> GCS[(Cloud Storage)]
+    W <--> CA[CloudAhoy]
+    W <--> FL[FlySto]
+    SPA -. live job updates .-> FS
+    SPA -. signed URL download .-> GCS
+```
+
+- **Two services, one codebase.** Firebase Functions 2nd gen deploys an HTTP `api` (60 s budget) and a Pub/Sub `worker` (540 s). Anything that can outlive an HTTP request runs in the worker.
+- **Jobs are a Firestore state machine:** `review_queued → review_running → review_ready → import_queued → import_running → completed | failed`. The SPA subscribes to the job document, so progress shows up without polling.
+- **Framework-agnostic core.** `src/core/` holds the CloudAhoy and FlySto clients and the migration logic. Both the CLI and the cloud worker call into it; `src/backend/` only adds Firebase, auth and orchestration.
+
+## Engineering notes
+
+A few problems that shaped the design — the details are in [`CLAUDE.md`](CLAUDE.md) and [`docs/backend-architecture.md`](docs/backend-architecture.md).
+
+- **Recovering from worker crashes.** Every long operation ticks `heartbeat_at`, including a background heartbeat thread for when a single FlySto request blocks for minutes. When the API sees a stale job it first checks the persisted import report: if every flight already succeeded, the job is marked `completed` rather than failed. Otherwise it re-enqueues the job a bounded number of times.
+- **Idempotent, resumable finalization.** After upload, four reconcile passes (resolve log IDs → aircraft → crew → remarks/tags) each mark items as done, so a retried job skips finished work. Crew is applied a second time after FlySto finishes processing, because FlySto can clear it during ingestion.
+- **A tight memory budget.** The worker is designed to fit in 256 MiB: uploads stream from tempfiles, client caches are trimmed after each flight, and export files are removed once they are in object storage. The import report is parsed once and shared across all reconcile passes.
+- **Downloads without timeouts.** Building a multi-flight zip on request exceeded Cloudflare's 100 s edge limit. The worker now builds `artifacts.zip` at the end of an import, and the API returns a short-lived V4 signed URL so the browser downloads straight from Cloud Storage.
+- **Credentials handled carefully.** Third-party credentials are encrypted with Fernet, held behind single-use tokens with a short TTL, and job data expires after 7 days. Firestore and Storage rules deny client writes; sign-in is passwordless email link with optional App Check.
+
+## Tech stack
+
+| Layer | Technology |
+| --- | --- |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui |
+| Backend | Python 3.11 on Firebase Functions 2nd gen (Cloud Run) |
+| Data & messaging | Firestore, Cloud Storage, Pub/Sub |
+| Auth | Firebase Auth (passwordless email link), optional App Check |
+| Testing | pytest with coverage, Vitest, Playwright |
+| Tooling | uv, npm, Dev Containers, Docker Compose, Firebase emulators, Caddy (local HTTPS) |
+
+## Getting started
+
+### Use the hosted app
+
+Go to **[skybridge.inspirespace.co](https://skybridge.inspirespace.co)**, sign in with your email, and follow the steps. No installation needed.
+
+### Run the CLI
+
+The CLI walks you through the same review → approve → import flow in the terminal and keeps local state in SQLite, so interrupted runs can be resumed.
 
 ```sh
+uv sync
 ./cloudahoy2flysto
 ```
 
-## Local dev
+Useful flags include `--dry-run`, `--start-date` / `--end-date`, `--max-flights`, `--verify-import-report` and `--reconcile-import-report`. Run `./cloudahoy2flysto --help` for the full list.
 
-Prerequisites: Docker + Docker Compose, VS Code (Dev Containers recommended), and the Dev Containers CLI (required for automation).
-Install the Dev Containers CLI with:
+### Run the full stack locally
 
-```
-npm install -g @devcontainers/cli
-```
-
-### Fresh clone quickstart (zero-config flow)
-
-Run this once after cloning (or when switching to a new Firebase project):
-
-```sh
-npm install -g firebase-tools
-firebase login
-firebase use --add
-```
-
-Notes:
-- `firebase use --add` persists your selected project in `.firebaserc` (`projects.default`), which all local scripts/tasks use automatically.
-- If you already know the id, you can run `firebase use <project-id>` instead.
+Requirements: Docker and [mkcert](https://github.com/FiloSottile/mkcert) for local HTTPS certificates.
 
 ```sh
 docker compose --profile dev up --build
 ```
-When running from inside the VS Code devcontainer, prefer:
-```sh
-./scripts/docker-compose.sh --profile dev up -d --build
-```
 
-Open https://skybridge.localhost and sign in using passwordless email link flow. The Auth emulator simulates email links locally, and the emulator UI is available at https://emulator.skybridge.localhost.
-The Firebase Functions/Hosting emulators run inside the `firebase-emulator` service.
-Emulator import/export data is stored in `.firebase-emulator/exports` (legacy `firebase-export-*` folders are moved there automatically).
-Auth emulator parity note:
-- By default (`FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN=1`), emulator startup enforces the same email-link sign-in mode as production (`signIn.email.enabled=true`, `passwordRequired=false`) via `.firebase-emulator/exports/auth_export/config.json`.
-- Backend runtime path is Firebase Functions only (`functions/main.py`) for both production and local emulator runs.
-- `mock-cloudahoy` and `mock-flysto` are dev-only helper services used by mock mode (`DEV_USE_MOCKS=1`) and are not production runtime components.
+Then open https://skybridge.localhost. This starts the Firebase emulators (Auth, Firestore, Functions, Hosting, Pub/Sub, Storage), the API, the worker and the frontend behind an HTTPS proxy. Mock CloudAhoy and FlySto services are available for offline development (`DEV_USE_MOCKS=1`).
 
-To mirror production serving behavior locally (static bundle via Firebase Hosting emulator), use:
+Certificate setup, devcontainer usage and the production-like profile are covered in [docs/local-development.md](docs/local-development.md).
+
+## Testing
 
 ```sh
-docker compose --profile prod up --build
-```
-Devcontainer equivalent:
-```sh
-./scripts/docker-compose.sh --profile prod up -d --build
-```
-This remains emulator-backed for Firebase services. It exercises the production-like Hosting/Functions path locally, but it will not surface missing remote Firebase resources such as an uncreated production Firestore database.
-On macOS, `.localhost` already resolves to `127.0.0.1`, so no hosts file change is needed. If your OS does not resolve `*.localhost`, add these entries to `/etc/hosts`:
-
-```
-127.0.0.1 skybridge.localhost
-127.0.0.1 auth.skybridge.localhost
-127.0.0.1 firestore.skybridge.localhost
-127.0.0.1 emulator.skybridge.localhost
+uv run pytest                                  # backend + CLI (~350 tests, coverage in CI)
+npm --prefix src/frontend run test -- --run    # frontend unit tests (Vitest)
+npm --prefix src/frontend run test:e2e         # end-to-end (Playwright)
 ```
 
-Local HTTPS is terminated by the Caddy container using the certificates in `docker/https/certs`. Run `mkcert` once to generate them:
+CI runs pytest with coverage on every push and pull request. See [docs/testing.md](docs/testing.md) for running everything inside the devcontainer.
 
-```
-brew install mkcert
-mkcert -install
-mkdir -p docker/https/certs
-mkcert -cert-file docker/https/certs/skybridge.localhost.pem -key-file docker/https/certs/skybridge.localhost-key.pem skybridge.localhost "*.skybridge.localhost"
-```
-
-### Logo assets
-
-The frontend logo, favicon set, web manifest icons, and social preview image (`src/frontend/public/social-preview.png`, 1280x640) are generated from `design/logo/skybridge-logo-2048x2048.webp`.
-The generator requires ImageMagick (`magick` or `convert`); the devcontainer installs ImageMagick by default.
-
-```sh
-npm --prefix src/frontend run logo:generate
-```
-
-To use a different source file for one-off generation:
-
-```sh
-npm --prefix src/frontend run logo:generate -- path/to/new-logo.webp
-```
-
-## Deploy (Firebase)
-
-Automatic GitHub Actions deploys from `main` are disabled. The repository keeps the deploy workflow file (`.github/workflows/firebase-deploy.yml`) for manual `workflow_dispatch` runs only, while local deploys continue to use `./scripts/firebase-deploy.sh`.
-Required repository secrets:
-- `FIREBASE_SERVICE_ACCOUNT` (service account JSON)
-- `BACKEND_ENCRYPTION_KEY` (32-byte urlsafe base64 Fernet key)
-- `FIREBASE_WEB_APP_ID` (optional; only needed when the project has multiple Firebase web apps)
-- `FIREBASE_APP_CHECK_SITE_KEY` (optional; only needed when App Check is enabled)
-
-The shared deploy flow generates the production Functions env file (`functions/.env.<project_id>`) and frontend env file (`src/frontend/.env.production`) during local and CI deploys. The generated Functions env file contains app-owned runtime settings only; Firebase project/region continue to come from deploy/runtime context (`FIREBASE_PROJECT_ID`, `FIREBASE_REGION`, `.firebaserc`). Non-secret defaults live in `.github/firebase-deploy.defaults.json`; no manual Firebase Functions env setup is required.
-By default, deploys enable passwordless email-link sign-in only; third-party Firebase providers stay disabled unless you opt in via `.github/firebase-deploy.defaults.json`.
-
-Manual workflow runs and local deploys share the same implementation path:
-- both invoke `./scripts/firebase-deploy.sh`
-- the workflow only provides runtime/tooling and trigger wiring
-- the script deploys Functions, Hosting, and Firestore config from `firebase.json`
-
-Manual deploy (zero-config: uses `.firebaserc` default project and prompts login if needed):
+## Deployment
 
 ```sh
 ./scripts/firebase-deploy.sh
 ```
 
-VS Code equivalent:
-- Run task: `Firebase: Deploy`
+One script, used both locally and by the manual GitHub Actions workflow. It reads the project from `.firebaserc` and deploys Functions, Hosting and Firestore config. Before changing anything remote it checks prerequisites: it creates the Firestore database if missing, resolves the web app config, verifies auth providers and authorized domains, grants the IAM role needed for signed URLs, and runs a frontend runtime smoke test.
 
-First deploy behavior (out of the box):
-- If you are not logged in, the script prompts and runs `firebase login --reauth`.
-- If frontend Firebase web config is missing, deploy preflight auto-resolves it from Firebase web app config (and creates a WEB app when required).
-- If the project is missing the default Cloud Firestore database required by the backend, deploy auto-creates `(default)` before continuing.
-- If `(default)` was just deleted, Firebase can hold the database id briefly before allowing recreation; deploy now waits and retries automatically during that cooldown.
-- In Firebase auth mode (non-emulator), deploy preflight prints a manual Firebase Auth setup overview (sign-in method, email template branding, custom sender domain, authorized domains).
+Environment variables, IAM requirements and the production checklist are in [docs/production.md](docs/production.md).
 
-Deploy preflight note:
-- Deploy script validates required local/devcontainer CLI tools first (`firebase`, `npm`, `node`, `curl`, `awk`, `sed`, `grep`, `find`) and fails fast with explicit missing-tool output.
-- If `APP_CHECK_ENFORCE=1`, CI deploys fail fast unless frontend App Check config is present (`VITE_FIREBASE_APP_CHECK_ENABLED=1` and `VITE_FIREBASE_APP_CHECK_SITE_KEY`).
-- Local deploys print a warning and continue.
-- In `firebase` auth mode without emulator, deploy fails fast if frontend Firebase web config is incomplete (`VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_PROJECT_ID`). The deploy script attempts best-effort auto-resolution from Firebase Web App SDK config.
-- If your project has multiple Firebase web apps, set `FIREBASE_WEB_APP_ID` to force which app is used for SDK config resolution during deploy preflight.
-- Deploy auto-creates the default Cloud Firestore database `(default)` when it is missing from the target Firebase project. Override the first-create location with `FIRESTORE_DATABASE_LOCATION`; otherwise it defaults to `FIREBASE_REGION`.
-- If Firebase reports that `(default)` is temporarily unavailable for recreation after deletion, deploy waits and retries up to `FIRESTORE_DATABASE_CREATE_MAX_WAIT_SECONDS` (default `900`).
-- In `firebase` auth mode without emulator, deploy preflight verifies passwordless email-link provider config (`signIn.email.enabled=true`, `signIn.email.passwordRequired=false`) when `FIREBASE_REQUIRE_EMAIL_LINK_SIGNIN=1` (default).
-- Deploy preflight does not auto-patch Firebase Auth templates or project display name. Configure friendly app/template names in Firebase Console.
-- Deploy preflight also does not configure the Firebase Auth custom sender domain for emails. Set that manually in **Authentication -> Templates -> Email address sign-in -> Customize domain**, add the Firebase-provided DNS records at your DNS provider, and wait for verification.
-- Firebase Console currently requires Google sign-in provider to be enabled before the Auth template "Public-facing name" can be edited.
-- Auth provider verification uses either Google ADC (`GOOGLE_APPLICATION_CREDENTIALS`) or Firebase CLI login token cache (`firebase login`). In CI this is enforced; local runs warn and continue only when neither source is available.
-- Deploy preflight also verifies Firebase Auth `authorizedDomains` for email-link `continueUrl` hosts. Custom Hosting domains are enforced as required; default project domains are treated as best-effort (warning-only) because Firebase may allow them implicitly without listing them in API output. Add explicit domains via `FIREBASE_AUTHORIZED_DOMAINS` (comma-separated) when needed.
-- Authorized-domain enforcement is strict by default (`FIREBASE_REQUIRE_AUTHORIZED_DOMAINS=1` unless explicitly overridden).
+## Repository layout
 
-Clear Firebase resources while keeping the project (zero-config from `.firebaserc`):
-
-```sh
-./scripts/firebase-clear-project.sh
 ```
-This now deletes the default Cloud Firestore database `(default)` after clearing its data. A later deploy recreates it automatically if needed.
-Immediate redeploy after a clear can pause for a few minutes while Firebase releases the deleted database id; the deploy script now waits and retries automatically.
+src/core/       Migration engine + CLI: CloudAhoy client, FlySto client, review/import logic
+src/backend/    HTTP handlers, job orchestration, Firestore/GCS/Pub/Sub glue, auth, crypto
+src/frontend/   React SPA and static landing/legal pages
+functions/      Firebase Functions entry points (api + worker)
+tests/          Backend and CLI test suite (pytest)
+scripts/        Deploy, cleanup and dev helpers
+docs/           Architecture, frontend, testing and production docs
+```
 
-This clears functions, Firestore, Realtime Database, Hosting, and deletes Cloud Storage buckets in the project after clearing any remaining object versions. In local interactive runs, if Cloud Storage cleanup needs Google ADC and none is available yet, the script will prompt for `gcloud auth application-default login`. It does not delete Firebase Auth users, and Storage usage charts can lag when provider-side protection settings still apply.
+## Documentation
 
-Frontend dependency install during deploy/devcontainer startup is handled by `scripts/npm-ci-frontend.sh`, which uses npm nested install strategy and one automatic retry to mitigate intermittent npm unpack `ENOENT`/tarball failures.
-Deploys are also gated by `npm --prefix src/frontend run test:runtime-smoke`, which fails fast on frontend runtime errors before any remote Firebase changes.
-
-Project id and region come from `.firebaserc` (`projects.default` and `config.region`).
-Default Functions region is `europe-west1`.
-You can override per-run with `FIREBASE_REGION`.
-Production checklist is in `docs/production.md`.
-
-## Docs
-
-- [Documentation index](docs/_index.md)
-- [Backend architecture](docs/backend-architecture.md)
-- [Codebase overview](docs/codebase-overview.md)
-- [Frontend architecture](docs/frontend.md)
+- [Codebase overview](docs/codebase-overview.md): where things live
+- [Backend architecture](docs/backend-architecture.md): serverless flow, Firestore/Storage/Pub/Sub design
+- [Frontend](docs/frontend.md): entry points and Firebase Auth setup
+- [Local development](docs/local-development.md): Docker stack, emulators, HTTPS certs
 - [Testing](docs/testing.md)
-- [Production](docs/production.md)
+- [Production](docs/production.md): env vars, IAM, deploy checklist
+
+## About this project
+
+Skybridge is built and run by [Inspirespace](https://www.inspirespace.co). The code is written entirely by AI coding agents (Claude Code, Codex) under human direction and review. The repository is an example of what that workflow produces when it is held to normal engineering standards: tests, CI, documented architecture, and production operation.
+
+Skybridge is not affiliated with CloudAhoy or FlySto. Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE).
+[Apache-2.0](LICENSE)
