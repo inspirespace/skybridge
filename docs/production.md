@@ -175,3 +175,33 @@ Job artifacts should still expire automatically even though the app deletes know
 - `BACKEND_PRODUCTION=true` — **Required in production.** Prevents emulator token bypass regardless of other settings.
 - `AUTH_EMULATOR_TRUST_TOKENS` — Never set outside local emulators; the `BACKEND_PRODUCTION` flag blocks it anyway.
 - `CORS_ALLOW_ORIGINS` — Set to your production domain(s); a warning is logged if `*` is used in production.
+
+## Deploy script behavior
+
+Automatic GitHub Actions deploys from `main` are disabled. `.github/workflows/firebase-deploy.yml` is kept for manual `workflow_dispatch` runs only. Manual workflow runs and local deploys share one implementation path: both invoke `./scripts/firebase-deploy.sh` (VS Code task: `Firebase: Deploy`); the workflow only provides runtime/tooling and trigger wiring. By default, deploys enable passwordless email-link sign-in only; third-party Firebase providers stay disabled unless you opt in via `.github/firebase-deploy.defaults.json`.
+
+First deploy behavior (out of the box):
+- If you are not logged in, the script prompts and runs `firebase login --reauth`.
+- If frontend Firebase web config is missing, deploy preflight auto-resolves it from Firebase web app config (and creates a WEB app when required).
+- In Firebase auth mode (non-emulator), deploy preflight prints a manual Firebase Auth setup overview (sign-in method, email template branding, custom sender domain, authorized domains).
+
+Preflight checks:
+- Validates required local/devcontainer CLI tools first (`firebase`, `npm`, `node`, `curl`, `awk`, `sed`, `grep`, `find`) and fails fast with explicit missing-tool output.
+- If `APP_CHECK_ENFORCE=1`, CI deploys fail fast unless frontend App Check config is present (`VITE_FIREBASE_APP_CHECK_ENABLED=1` and `VITE_FIREBASE_APP_CHECK_SITE_KEY`). Local deploys print a warning and continue.
+- Auth provider verification uses either Google ADC (`GOOGLE_APPLICATION_CREDENTIALS`) or the Firebase CLI login token cache (`firebase login`). In CI this is enforced; local runs warn and continue only when neither source is available.
+- Verifies Firebase Auth `authorizedDomains` for email-link `continueUrl` hosts. Custom Hosting domains are enforced as required; default project domains are treated as best-effort (warning-only) because Firebase may allow them implicitly without listing them in API output. Add explicit domains via `FIREBASE_AUTHORIZED_DOMAINS` (comma-separated) when needed. Enforcement is strict by default (`FIREBASE_REQUIRE_AUTHORIZED_DOMAINS=1` unless explicitly overridden).
+- Does not auto-patch Firebase Auth templates, project display name, or the custom sender domain — see the console sections above.
+
+Build hardening:
+- Frontend dependency install during deploy/devcontainer startup is handled by `scripts/npm-ci-frontend.sh`, which uses the npm nested install strategy and one automatic retry to mitigate intermittent npm unpack `ENOENT`/tarball failures.
+- Deploys are gated by `npm --prefix src/frontend run test:runtime-smoke`, which fails fast on frontend runtime errors before any remote Firebase changes.
+
+## Clearing a project
+
+Clear Firebase resources while keeping the project (zero-config from `.firebaserc`):
+
+```sh
+./scripts/firebase-clear-project.sh
+```
+
+This clears functions, Firestore, Realtime Database, Hosting, and deletes Cloud Storage buckets in the project after clearing any remaining object versions. It also deletes the default Cloud Firestore database `(default)` after clearing its data; a later deploy recreates it automatically (an immediate redeploy may pause for a few minutes while Firebase releases the deleted database id — the deploy script waits and retries). In local interactive runs, if Cloud Storage cleanup needs Google ADC and none is available yet, the script prompts for `gcloud auth application-default login`. It does not delete Firebase Auth users, and Storage usage charts can lag when provider-side protection settings still apply.
