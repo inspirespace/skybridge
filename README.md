@@ -81,14 +81,20 @@ Go to **[skybridge.inspirespace.co](https://skybridge.inspirespace.co)**, sign i
 
 ### Run the CLI
 
-The CLI walks you through the same review → approve → import flow in the terminal and keeps local state in SQLite, so interrupted runs can be resumed.
+The guided CLI walks you through the same review → approve → import flow in the terminal, prompting for date range, flight limit and export formats:
 
 ```sh
 uv sync
 ./cloudahoy2flysto
 ```
 
-Useful flags include `--dry-run`, `--start-date` / `--end-date`, `--max-flights`, `--verify-import-report` and `--reconcile-import-report`. Run `./cloudahoy2flysto --help` for the full list.
+Each run writes its review, import report, exports and SQLite state to `data/runs/<RUN_ID>/`. To resume an interrupted run instead of starting a new one, set `RUN_ID` to that run's directory name, e.g. `RUN_ID=20260101T120000Z ./cloudahoy2flysto`.
+
+The wrapper always runs guided mode. For scripted use, call the CLI module directly. That mode supports `--review`, `--approve-import`, `--dry-run`, `--verify-import-report` and `--reconcile-import-report`:
+
+```sh
+PYTHONPATH=src uv run python -m core.cli --help
+```
 
 ### Run the full stack locally
 
@@ -105,6 +111,7 @@ Certificate setup, devcontainer usage and the production-like profile are covere
 ## Testing
 
 ```sh
+uv sync --extra dev                            # installs pytest + pytest-cov
 uv run pytest                                  # backend + CLI (~350 tests, coverage in CI)
 npm --prefix src/frontend run test -- --run    # frontend unit tests (Vitest)
 npm --prefix src/frontend run test:e2e         # end-to-end (Playwright)
